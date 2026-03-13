@@ -1,0 +1,51 @@
+name = "bg-api"
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+
+# Custom Domain: bg.suparain.kr → 이 Worker가 origin
+# 배포 시 Cloudflare가 DNS AAAA 레코드 + SSL 인증서 자동 생성
+[[routes]]
+pattern = "bg.suparain.kr"
+custom_domain = true
+
+[vars]
+BASE_URL = "https://bg.suparain.kr"
+
+# D1 Database (개발)
+[[d1_databases]]
+binding = "DB"
+database_name = "bg-dev"
+database_id = "d420b951-c93b-4449-8f8c-f86c9f99a2cc"
+
+# KV Namespace (개발)
+[[kv_namespaces]]
+binding = "KV"
+id = "6aaca4b2e92f4361a5b31f39f96f4c5a"
+
+# 프로덕션 환경
+[env.production]
+
+[[env.production.routes]]
+pattern = "bg.suparain.kr"
+custom_domain = true
+
+[env.production.vars]
+BASE_URL = "https://bg.suparain.kr"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "bg-production"
+database_id = "254438d7-b1b1-45a1-afe1-2c766aba252b"
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = "fe38c181822b4729850b53ab839339b5"
+
+# Secrets (wrangler secret put 으로 등록):
+# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+# KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET
+# NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
+# APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+# CAFE24_CLIENT_ID, CAFE24_CLIENT_SECRET
+# ENCRYPTION_KEY
+# JWT_SECRET

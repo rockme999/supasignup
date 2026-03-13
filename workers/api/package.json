@@ -1,0 +1,16 @@
+{
+  "name": "@supasignup/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "@supasignup/bg-core": "*",
+    "@supasignup/cafe24-client": "*"
+  }
+}

@@ -1,0 +1,6 @@
+name = "bg-widget"
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+
+[vars]
+API_BASE_URL = "https://bg.suparain.kr"
