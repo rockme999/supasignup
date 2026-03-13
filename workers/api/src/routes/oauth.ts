@@ -167,10 +167,120 @@ oauth.get('/callback/:provider', async (c) => {
     redirectUri: `${c.env.BASE_URL}/oauth/callback/${provider}`,
     codeVerifier,
     state,
+    // Apple-specific fields for JWT client_secret generation
+    ...(provider === 'apple' ? { teamId: c.env.APPLE_TEAM_ID, keyId: c.env.APPLE_KEY_ID } : {}),
   });
 
   // Get user info from social provider
   const userInfo = await getSocialUserInfo(provider, tokens, c.env);
+
+  // Upsert user in D1 (PII encrypted)
+  const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);
+
+  // Check if this is a new signup or returning login
+  const existingShopUser = await getShopUser(c.env.DB, session.shop_id, user.user_id);
+  let action: 'signup' | 'login';
+
+  if (existingShopUser) {
+    action = 'login';
+  } else {
+    await createShopUser(c.env.DB, session.shop_id, user.user_id);
+    action = 'signup';
+  }
+
+  // Record stat
+  await recordStat(c.env.DB, session.shop_id, user.user_id, provider, action);
+
+  // Generate authorization code for Cafe24
+  const authCode = generateSecret(16);
+  const authCodeData: AuthCodeData = {
+    user_id: user.user_id,
+    shop_id: session.shop_id,
+  };
+
+  await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), {
+    expirationTtl: AUTH_CODE_TTL,
+  });
+
+  // Redirect back to Cafe24 with auth code, original state, and provider hint
+  const redirectUrl = new URL(session.redirect_uri);
+  redirectUrl.searchParams.set('code', authCode);
+  redirectUrl.searchParams.set('state', session.cafe24_state);
+  redirectUrl.searchParams.set('bg_provider', provider);
+
+  return c.redirect(redirectUrl.toString());
+});
+
+// ─── POST /callback/apple (form_post) ────────────────────────
+// Apple uses response_mode=form_post, sending code/state via POST body.
+oauth.post('/callback/apple', async (c) => {
+  const body = await c.req.parseBody();
+  const code = body['code'] as string | undefined;
+  const state = body['state'] as string | undefined;
+  const error = body['error'] as string | undefined;
+  const provider: ProviderName = 'apple';
+
+  if (error) {
+    return c.json({ error: 'social_auth_error', message: String(body['error_description'] ?? error) }, 400);
+  }
+
+  if (!code || !state) {
+    return c.json({ error: 'missing_parameters', message: 'code and state are required' }, 400);
+  }
+
+  // Restore session and PKCE from KV
+  const [sessionJson, codeVerifier] = await Promise.all([
+    c.env.KV.get(`oauth_session:${state}`),
+    c.env.KV.get(`pkce:${state}`),
+  ]);
+
+  if (!sessionJson || !codeVerifier) {
+    return c.json({ error: 'session_expired', message: 'OAuth session expired or invalid state' }, 400);
+  }
+
+  const session: OAuthSession = JSON.parse(sessionJson);
+
+  if (session.provider !== provider || session.social_state !== state) {
+    return c.json({ error: 'state_mismatch' }, 400);
+  }
+
+  // Clean up KV (one-time use)
+  await Promise.all([
+    c.env.KV.delete(`oauth_session:${state}`),
+    c.env.KV.delete(`pkce:${state}`),
+  ]);
+
+  // Exchange code for tokens at Apple
+  const tokens = await exchangeSocialCode(provider, {
+    code,
+    clientId: getSocialClientId(c.env, provider),
+    clientSecret: getSocialClientSecret(c.env, provider),
+    redirectUri: `${c.env.BASE_URL}/oauth/callback/${provider}`,
+    codeVerifier,
+    state,
+    teamId: c.env.APPLE_TEAM_ID,
+    keyId: c.env.APPLE_KEY_ID,
+  });
+
+  // Get user info from Apple id_token
+  const userInfo = await getSocialUserInfo(provider, tokens, c.env);
+
+  // Apple may send user info (name) in the POST body on first authorization
+  const userField = body['user'] as string | undefined;
+  if (userField && !userInfo.name) {
+    try {
+      const userData = JSON.parse(userField) as Record<string, unknown>;
+      const nameObj = userData.name as Record<string, string> | undefined;
+      if (nameObj) {
+        const parts = [nameObj.lastName, nameObj.firstName].filter(Boolean);
+        if (parts.length > 0) {
+          userInfo.name = parts.join(' ');
+        }
+      }
+    } catch {
+      // Ignore parse errors for user field
+    }
+  }
 
   // Upsert user in D1 (PII encrypted)
   const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);

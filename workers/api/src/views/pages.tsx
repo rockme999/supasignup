@@ -462,6 +462,207 @@ export const ShopSetupPage: FC<{
   </Layout>
 );
 
+// ─── Privacy Policy ─────────────────────────────────────────
+
+export const PrivacyPage: FC = () => (
+  <html lang="ko">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>개인정보 처리방침 - 번개가입</title>
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #333; line-height: 1.7; }
+        .privacy-wrap { max-width: 800px; margin: 0 auto; padding: 40px 24px 80px; }
+        .privacy-header { text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+        .privacy-header h1 { font-size: 28px; margin-bottom: 8px; }
+        .privacy-header .service { color: #2563eb; font-weight: 600; font-size: 15px; }
+        .privacy-header .date { color: #64748b; font-size: 14px; margin-top: 8px; }
+        .privacy-intro { font-size: 15px; color: #475569; margin-bottom: 32px; }
+        .privacy-section { margin-bottom: 32px; }
+        .privacy-section h2 { font-size: 18px; color: #1e293b; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+        .privacy-section h3 { font-size: 15px; color: #334155; margin: 16px 0 8px; }
+        .privacy-section p, .privacy-section li { font-size: 14px; color: #475569; }
+        .privacy-section ul, .privacy-section ol { padding-left: 20px; margin: 8px 0; }
+        .privacy-section li { margin-bottom: 6px; }
+        .privacy-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+        .privacy-table th, .privacy-table td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
+        .privacy-table th { background: #f8fafc; color: #334155; font-weight: 600; }
+        .privacy-table td { color: #475569; }
+        .privacy-footer { margin-top: 40px; padding-top: 24px; border-top: 2px solid #e5e7eb; text-align: center; font-size: 14px; color: #64748b; }
+        .privacy-footer a { color: #2563eb; text-decoration: none; }
+        .privacy-footer a:hover { text-decoration: underline; }
+        @media (max-width: 600px) {
+          .privacy-wrap { padding: 24px 16px 60px; }
+          .privacy-header h1 { font-size: 22px; }
+          .privacy-table { font-size: 12px; }
+          .privacy-table th, .privacy-table td { padding: 8px 6px; }
+        }
+      `}</style>
+    </head>
+    <body>
+      <div class="privacy-wrap">
+        <div class="privacy-header">
+          <h1>개인정보 처리방침</h1>
+          <div class="service">번개가입 (BungaeGaib)</div>
+          <div class="date">시행일: 2026년 3월 13일</div>
+        </div>
+
+        <p class="privacy-intro">
+          수파레인(이하 "회사")은 「개인정보 보호법」 제30조에 따라 정보주체의 개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리방침을 수립·공개합니다.
+        </p>
+
+        <div class="privacy-section">
+          <h2>제1조 (개인정보의 처리 목적)</h2>
+          <p>회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 「개인정보 보호법」 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.</p>
+          <ol>
+            <li><strong>쇼핑몰 운영자 서비스 제공</strong>: 번개가입 관리자 대시보드 회원가입 및 로그인, 서비스 이용 관리</li>
+            <li><strong>쇼핑몰 고객 소셜 로그인 제공</strong>: 카페24 쇼핑몰 고객의 소셜 로그인(Google, Kakao, Naver, Apple) 인증 처리 및 회원 연동</li>
+            <li><strong>서비스 운영 및 개선</strong>: 로그인 통계 분석, 서비스 안정성 확보</li>
+          </ol>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제2조 (처리하는 개인정보의 항목)</h2>
+          <h3>1. 쇼핑몰 운영자 (대시보드 사용자)</h3>
+          <table class="privacy-table">
+            <thead><tr><th>구분</th><th>항목</th><th>수집 방법</th></tr></thead>
+            <tbody>
+              <tr><td>필수</td><td>이메일, 이름, 비밀번호(해시 저장)</td><td>회원가입 시 직접 입력</td></tr>
+            </tbody>
+          </table>
+          <h3>2. 쇼핑몰 고객 (소셜 로그인 사용자)</h3>
+          <table class="privacy-table">
+            <thead><tr><th>구분</th><th>항목</th><th>수집 방법</th></tr></thead>
+            <tbody>
+              <tr><td>필수</td><td>소셜 프로바이더 고유 ID, 이메일, 닉네임/이름</td><td>소셜 로그인 시 프로바이더로부터 자동 수집</td></tr>
+              <tr><td>선택</td><td>프로필 사진 URL</td><td>소셜 로그인 시 프로바이더로부터 자동 수집</td></tr>
+            </tbody>
+          </table>
+          <h3>3. 자동 수집 항목</h3>
+          <table class="privacy-table">
+            <thead><tr><th>항목</th><th>수집 방법</th></tr></thead>
+            <tbody>
+              <tr><td>로그인/가입 일시, 소셜 프로바이더 종류</td><td>서비스 이용 시 자동 생성</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제3조 (개인정보의 처리 및 보유 기간)</h2>
+          <p>회사는 법령에 따른 개인정보 보유·이용 기간 또는 정보주체로부터 개인정보를 수집 시에 동의받은 개인정보 보유·이용 기간 내에서 개인정보를 처리·보유합니다.</p>
+          <table class="privacy-table">
+            <thead><tr><th>구분</th><th>보유 기간</th><th>근거</th></tr></thead>
+            <tbody>
+              <tr><td>쇼핑몰 운영자 계정 정보</td><td>회원 탈퇴 시까지</td><td>서비스 이용 계약</td></tr>
+              <tr><td>쇼핑몰 고객 소셜 로그인 정보</td><td>쇼핑몰 서비스 이용 종료 시까지</td><td>서비스 제공 목적</td></tr>
+              <tr><td>로그인 통계 데이터</td><td>수집일로부터 1년</td><td>서비스 운영 및 개선</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제4조 (개인정보의 제3자 제공)</h2>
+          <p>회사는 정보주체의 개인정보를 제1조에서 명시한 범위 내에서만 처리하며, 다음의 경우에 한하여 개인정보를 제3자에게 제공합니다.</p>
+          <table class="privacy-table">
+            <thead><tr><th>제공받는 자</th><th>제공 목적</th><th>제공 항목</th><th>보유 기간</th></tr></thead>
+            <tbody>
+              <tr><td>카페24 쇼핑몰 플랫폼</td><td>SSO 연동을 통한 회원 정보 전달</td><td>이메일, 이름, 소셜 프로바이더 ID</td><td>쇼핑몰 회원 탈퇴 시까지</td></tr>
+              <tr><td>소셜 로그인 프로바이더 (Google, Kakao, Naver, Apple)</td><td>OAuth 인증 과정</td><td>인증 토큰</td><td>인증 완료 시 즉시 파기</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제5조 (개인정보의 파기절차 및 파기방법)</h2>
+          <p>회사는 개인정보 보유 기간의 경과, 처리 목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체 없이 해당 개인정보를 파기합니다.</p>
+          <ol>
+            <li><strong>파기절차</strong>: 불필요한 개인정보는 개인정보의 처리가 불필요한 것으로 인정되는 날로부터 5일 이내에 파기합니다.</li>
+            <li><strong>파기방법</strong>: 전자적 파일 형태의 정보는 복구 및 재생이 불가능한 방법으로 영구 삭제합니다.</li>
+          </ol>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제6조 (정보주체의 권리·의무 및 행사방법)</h2>
+          <p>정보주체는 회사에 대해 언제든지 다음 각 호의 개인정보 보호 관련 권리를 행사할 수 있습니다.</p>
+          <ol>
+            <li>개인정보 열람 요구</li>
+            <li>오류 등이 있을 경우 정정 요구</li>
+            <li>삭제 요구</li>
+            <li>처리 정지 요구</li>
+          </ol>
+          <p>위 권리 행사는 이메일(privacy@suparain.kr)을 통하여 하실 수 있으며, 회사는 이에 대해 지체 없이 조치하겠습니다.</p>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제7조 (개인정보의 안전성 확보조치)</h2>
+          <p>회사는 개인정보의 안전성 확보를 위해 다음과 같은 조치를 취하고 있습니다.</p>
+          <ol>
+            <li><strong>개인정보 암호화</strong>: 개인식별정보(PII)인 이메일과 이름은 AES-GCM 알고리즘으로 암호화하여 저장합니다.</li>
+            <li><strong>비밀번호 해시 처리</strong>: 비밀번호는 PBKDF2 알고리즘(100,000회 반복)으로 해시 처리하여 저장하며, 원본 비밀번호는 저장하지 않습니다.</li>
+            <li><strong>회원 매칭용 해시</strong>: 이메일 해시(SHA-256)를 회원 매칭 목적으로 별도 저장합니다.</li>
+            <li><strong>전송 구간 암호화</strong>: 모든 데이터 전송은 HTTPS(TLS)를 통해 암호화됩니다.</li>
+            <li><strong>서버리스 아키텍처</strong>: Cloudflare Workers 서버리스 환경에서 운영되어 물리적 서버 관리로 인한 보안 위험을 최소화합니다.</li>
+            <li><strong>데이터 저장소</strong>: 데이터는 Cloudflare D1 데이터베이스에 저장되며, Cloudflare 글로벌 네트워크를 통해 보호됩니다.</li>
+          </ol>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제8조 (개인정보 보호책임자)</h2>
+          <p>회사는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 정보주체의 불만 처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.</p>
+          <ul>
+            <li><strong>개인정보 보호책임자</strong>: 수파레인 대표</li>
+            <li><strong>연락처</strong>: privacy@suparain.kr</li>
+          </ul>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제9조 (개인정보의 국외 이전)</h2>
+          <p>회사는 서비스 제공을 위해 다음과 같이 개인정보를 국외로 이전하고 있습니다.</p>
+          <table class="privacy-table">
+            <thead><tr><th>이전받는 자</th><th>이전 국가</th><th>이전 항목</th><th>이전 목적</th><th>보유 기간</th></tr></thead>
+            <tbody>
+              <tr><td>Cloudflare, Inc.</td><td>미국 (글로벌 네트워크)</td><td>암호화된 개인정보 전체</td><td>데이터 저장 및 서비스 호스팅</td><td>서비스 이용 기간</td></tr>
+              <tr><td>Google LLC</td><td>미국</td><td>OAuth 인증 정보</td><td>소셜 로그인 인증</td><td>인증 완료 시 파기</td></tr>
+              <tr><td>Apple Inc.</td><td>미국</td><td>OAuth 인증 정보</td><td>소셜 로그인 인증</td><td>인증 완료 시 파기</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:13px; color:#94a3b8; margin-top:8px">※ Kakao, Naver의 경우 국내 사업자로서 국외 이전에 해당하지 않습니다.</p>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제10조 (개인정보 자동 수집 장치의 설치·운영 및 거부)</h2>
+          <ol>
+            <li><strong>쿠키의 사용 목적</strong>: 관리자 대시보드 로그인 상태 유지 (인증 토큰 저장)</li>
+            <li><strong>쿠키의 설치·운영 및 거부</strong>: 웹 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으나, 이 경우 대시보드 로그인 기능을 이용하실 수 없습니다.</li>
+          </ol>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제11조 (권익침해 구제방법)</h2>
+          <p>정보주체는 개인정보침해로 인한 구제를 받기 위하여 아래 기관에 분쟁해결이나 상담 등을 신청할 수 있습니다.</p>
+          <ul>
+            <li>개인정보분쟁조정위원회: (국번없이) 1833-6972 (www.kopico.go.kr)</li>
+            <li>개인정보침해신고센터: (국번없이) 118 (privacy.kisa.or.kr)</li>
+            <li>대검찰청: (국번없이) 1301 (www.spo.go.kr)</li>
+            <li>경찰청: (국번없이) 182 (ecrm.police.go.kr)</li>
+          </ul>
+        </div>
+
+        <div class="privacy-section">
+          <h2>제12조 (개인정보 처리방침의 변경)</h2>
+          <p>이 개인정보 처리방침은 2026년 3월 13일부터 적용됩니다.</p>
+        </div>
+
+        <div class="privacy-footer">
+          <p><strong>수파레인 (suparain)</strong></p>
+          <p><a href="https://bg.suparain.kr">https://bg.suparain.kr</a></p>
+        </div>
+      </div>
+    </body>
+  </html>
+);
+
 // ─── Settings ────────────────────────────────────────────────
 
 export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name }) => (

@@ -22,6 +22,10 @@ export interface SocialExchangeParams {
   redirectUri: string;
   codeVerifier: string;
   state?: string;
+  /** Apple-specific: Team ID from Apple Developer account */
+  teamId?: string;
+  /** Apple-specific: Key ID for the private key */
+  keyId?: string;
 }
 
 // ─── Build social OAuth authorization URL ────────────────────
@@ -75,7 +79,7 @@ export async function getSocialUserInfo(
     case 'naver':
       return getNaverUserInfo(tokens);
     case 'apple':
-      return getAppleUserInfo(tokens);
+      return getAppleUserInfo(tokens, env.APPLE_CLIENT_ID);
   }
 }
 
@@ -257,7 +261,84 @@ async function getNaverUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserIn
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Apple
+// Apple – JWT client_secret generation & helpers
+// ═══════════════════════════════════════════════════════════════
+
+/** Base64url-encode a Uint8Array (no padding). */
+function base64urlEncode(data: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < data.byteLength; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Base64url-encode a UTF-8 string. */
+function base64urlEncodeString(str: string): string {
+  return base64urlEncode(new TextEncoder().encode(str));
+}
+
+/**
+ * Generate an Apple client_secret JWT signed with ES256.
+ *
+ * Apple requires client_secret to be a short-lived JWT:
+ *   Header:  {"alg":"ES256","kid":"<KEY_ID>"}
+ *   Payload: {"iss":"<TEAM_ID>","iat":<now>,"exp":<now+300>,
+ *             "aud":"https://appleid.apple.com","sub":"<CLIENT_ID>"}
+ *   Signed with the ECDSA P-256 private key from Apple (.p8 file).
+ *
+ * Uses Web Crypto API only (Cloudflare Workers compatible).
+ */
+async function generateAppleClientSecret(
+  privateKeyPem: string,
+  keyId: string,
+  teamId: string,
+  clientId: string,
+): Promise<string> {
+  // 1. Import PEM private key
+  const pemBody = privateKeyPem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\s/g, '');
+  const keyBuffer = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    keyBuffer.buffer,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign'],
+  );
+
+  // 2. Build JWT header + payload
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'ES256', kid: keyId };
+  const payload = {
+    iss: teamId,
+    iat: now,
+    exp: now + 300, // 5 minutes
+    aud: 'https://appleid.apple.com',
+    sub: clientId,
+  };
+
+  const encodedHeader = base64urlEncodeString(JSON.stringify(header));
+  const encodedPayload = base64urlEncodeString(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  // 3. Sign with ECDSA P-256 SHA-256
+  // Web Crypto produces IEEE P1363 format (r||s, 64 bytes) which is what JWT expects.
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    key,
+    new TextEncoder().encode(signingInput),
+  );
+
+  const encodedSignature = base64urlEncode(new Uint8Array(signature));
+  return `${signingInput}.${encodedSignature}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Apple – OAuth flow
 // ═══════════════════════════════════════════════════════════════
 
 function buildAppleAuthUrl(p: SocialAuthUrlParams): string {
@@ -272,10 +353,17 @@ function buildAppleAuthUrl(p: SocialAuthUrlParams): string {
 }
 
 async function exchangeAppleCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
-  // Apple requires a JWT client_secret signed with ES256
-  // p.clientSecret here is the APPLE_PRIVATE_KEY
-  // Full JWT generation will be implemented in Week 3
-  const clientSecret = p.clientSecret; // TODO: generate JWT in Week 3
+  if (!p.teamId || !p.keyId) {
+    throw new Error('Apple OAuth requires teamId and keyId');
+  }
+
+  // Generate ES256-signed JWT client_secret from APPLE_PRIVATE_KEY
+  const clientSecret = await generateAppleClientSecret(
+    p.clientSecret, // PEM private key
+    p.keyId,
+    p.teamId,
+    p.clientId,
+  );
 
   const resp = await fetch('https://appleid.apple.com/auth/token', {
     method: 'POST',
@@ -297,16 +385,35 @@ async function exchangeAppleCode(p: SocialExchangeParams): Promise<OAuthTokenRes
   return resp.json() as Promise<OAuthTokenResponse>;
 }
 
-async function getAppleUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> {
-  // Apple sends user info in id_token (JWT)
-  // Decode JWT payload without verification (we already verified via token exchange)
+async function getAppleUserInfo(
+  tokens: OAuthTokenResponse,
+  clientId?: string,
+): Promise<OAuthUserInfo> {
   const idToken = tokens.id_token;
   if (!idToken) {
     throw new Error('Apple id_token missing from token response');
   }
 
   const payloadPart = idToken.split('.')[1];
-  const payload = JSON.parse(atob(payloadPart)) as Record<string, unknown>;
+  // Handle base64url → base64 for atob
+  const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+  const payload = JSON.parse(atob(base64)) as Record<string, unknown>;
+
+  // Validate id_token claims
+  // The token came directly from Apple's token endpoint, so signature verification
+  // is not strictly necessary, but we validate essential claims.
+  if (payload.iss !== 'https://appleid.apple.com') {
+    throw new Error(`Apple id_token invalid issuer: ${payload.iss}`);
+  }
+
+  if (clientId && payload.aud !== clientId) {
+    throw new Error(`Apple id_token audience mismatch: expected ${clientId}, got ${payload.aud}`);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp === 'number' && payload.exp < now) {
+    throw new Error('Apple id_token has expired');
+  }
 
   return {
     provider: 'apple',

@@ -18,6 +18,7 @@ import {
   ShopDetailPage,
   ShopSetupPage,
   SettingsPage,
+  PrivacyPage,
 } from '../views/pages';
 
 type PageEnv = {
@@ -26,6 +27,12 @@ type PageEnv = {
 };
 
 const pages = new Hono<PageEnv>();
+
+// ─── Public standalone pages ─────────────────────────────────
+
+pages.get('/privacy', (c) => {
+  return c.html(<PrivacyPage />);
+});
 
 // ─── Auth check middleware (cookie-based, redirect to login) ─
 
