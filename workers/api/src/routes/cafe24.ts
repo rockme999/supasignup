@@ -11,6 +11,7 @@ import type { Env } from '@supasignup/bg-core';
 import { generateId, generateSecret } from '@supasignup/bg-core';
 import { Cafe24Client, verifyAppLaunchHmac, verifyWebhookHmac } from '@supasignup/cafe24-client';
 import { hashPassword } from '../services/password';
+import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
 
 const cafe24 = new Hono<{ Bindings: Env }>();
@@ -45,13 +46,11 @@ cafe24.get('/install', async (c) => {
   oauthUrl.searchParams.set('redirect_uri', `${c.env.BASE_URL}/api/cafe24/callback`);
   oauthUrl.searchParams.set('scope', [
     'mall.read_store',
+    'mall.write_store',
     'mall.read_customer',
     'mall.write_customer',
-    'mall.read_personal',
     'mall.read_application',
     'mall.write_application',
-    'mall.read_scripttag',
-    'mall.write_scripttag',
   ].join(','));
   oauthUrl.searchParams.set('state', mallId);
 
@@ -124,8 +123,18 @@ cafe24.get('/callback', async (c) => {
     // Non-fatal: continue even if ScriptTag fails
   }
 
+  // Auto-login: issue JWT cookie for the owner so they can access the dashboard
+  const token = await createToken(shop.owner_id, c.env.JWT_SECRET);
+  const cookie = `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
+
   // Redirect to dashboard setup page
-  return c.redirect(`${c.env.BASE_URL}/dashboard/shops/${shop.shop_id}/setup`);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': `${c.env.BASE_URL}/dashboard/shops/${shop.shop_id}/setup`,
+      'Set-Cookie': cookie,
+    },
+  });
 });
 
 // ─── POST /webhook ───────────────────────────────────────────

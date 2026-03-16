@@ -49,12 +49,8 @@ oauth.get('/authorize', async (c) => {
   const provider = c.req.query('provider') as ProviderName | undefined;
   const cafe24State = c.req.query('state'); // state from Cafe24
 
-  if (!clientId || !redirectUri || !provider || !cafe24State) {
-    return c.json({ error: 'missing_parameters', message: 'client_id, redirect_uri, provider, state are required' }, 400);
-  }
-
-  if (!VALID_PROVIDERS.includes(provider)) {
-    return c.json({ error: 'invalid_provider', message: `provider must be one of: ${VALID_PROVIDERS.join(', ')}` }, 400);
+  if (!clientId || !redirectUri || !cafe24State) {
+    return c.json({ error: 'missing_parameters', message: 'client_id, redirect_uri, state are required' }, 400);
   }
 
   // Look up shop
@@ -74,8 +70,36 @@ oauth.get('/authorize', async (c) => {
     return c.json({ error: 'invalid_redirect_uri', message: 'redirect_uri is not registered' }, 400);
   }
 
-  // Check provider is enabled for this shop
+  // If no provider specified, check cookie hint from widget, else show selection page
   const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
+  if (!provider) {
+    // Check for provider hint cookie (set by widget before triggering Cafe24 SSO)
+    const cookieHeader = c.req.header('Cookie') ?? '';
+    const providerMatch = cookieHeader.match(/bg_provider=(\w+)/);
+    const hintProvider = providerMatch?.[1] as ProviderName | undefined;
+
+    if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
+      // Use the hint — clear cookie by setting expired, then continue with this provider
+      const currentUrl = new URL(c.req.url);
+      currentUrl.searchParams.set('provider', hintProvider);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': currentUrl.toString(),
+          'Set-Cookie': 'bg_provider=; Path=/; Max-Age=0; SameSite=Lax',
+        },
+      });
+    }
+
+    const currentUrl = new URL(c.req.url);
+    return c.html(renderProviderSelectPage(enabledProviders, currentUrl));
+  }
+
+  if (!VALID_PROVIDERS.includes(provider)) {
+    return c.json({ error: 'invalid_provider', message: `provider must be one of: ${VALID_PROVIDERS.join(', ')}` }, 400);
+  }
+
+  // Check provider is enabled for this shop
   if (!enabledProviders.includes(provider)) {
     return c.json({ error: 'provider_disabled', message: `${provider} is not enabled for this shop` }, 400);
   }
@@ -369,14 +393,10 @@ oauth.post('/token', async (c) => {
   });
 });
 
-// ─── GET /userinfo ───────────────────────────────────────────
-oauth.get('/userinfo', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ error: 'invalid_token' }, 401);
-  }
+// ─── /userinfo (GET with Bearer token OR POST with access_token body) ───
+// Cafe24 SSO sends access_token as POST body parameter.
 
-  const accessToken = authHeader.slice(7);
+async function handleUserInfo(c: { env: Env; req: { header: (k: string) => string | undefined }; json: (body: unknown, status?: number) => Response }, accessToken: string) {
   const tokenJson = await c.env.KV.get(`access_token:${accessToken}`);
   if (!tokenJson) {
     return c.json({ error: 'invalid_token', message: 'Token expired or invalid' }, 401);
@@ -404,6 +424,30 @@ oauth.get('/userinfo', async (c) => {
     profile_image: user.profile_image ?? '',
     provider: user.provider,
   });
+}
+
+oauth.get('/userinfo', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ error: 'invalid_token' }, 401);
+  }
+  return handleUserInfo(c, authHeader.slice(7));
+});
+
+oauth.post('/userinfo', async (c) => {
+  const body = await c.req.parseBody();
+  const accessToken = body['access_token'] as string | undefined;
+
+  // Also check Authorization header as fallback
+  if (!accessToken) {
+    const authHeader = c.req.header('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      return handleUserInfo(c, authHeader.slice(7));
+    }
+    return c.json({ error: 'invalid_token', message: 'access_token is required' }, 401);
+  }
+
+  return handleUserInfo(c, accessToken);
 });
 
 // ─── Helper: get social client ID/secret from env ────────────
@@ -424,6 +468,62 @@ function getSocialClientSecret(env: Env, provider: ProviderName): string {
     case 'naver': return env.NAVER_CLIENT_SECRET;
     case 'apple': return env.APPLE_PRIVATE_KEY; // Apple uses private key as "secret"
   }
+}
+
+// ─── Provider selection page (when provider param is missing) ──
+
+const PROVIDER_STYLES: Record<string, { name: string; color: string; bg: string; icon: string }> = {
+  google: { name: 'Google', color: '#fff', bg: '#4285f4', icon: 'G' },
+  kakao: { name: '카카오', color: '#000', bg: '#fee500', icon: 'K' },
+  naver: { name: '네이버', color: '#fff', bg: '#03c75a', icon: 'N' },
+  apple: { name: 'Apple', color: '#fff', bg: '#000', icon: '' },
+};
+
+function renderProviderSelectPage(enabledProviders: string[], currentUrl: URL): string {
+  const buttons = enabledProviders
+    .filter((p) => PROVIDER_STYLES[p])
+    .map((p) => {
+      const s = PROVIDER_STYLES[p];
+      const url = new URL(currentUrl.toString());
+      url.searchParams.set('provider', p);
+      return `<a href="${url.toString()}" class="btn" style="background:${s.bg};color:${s.color}">
+        <span class="icon">${s.icon}</span>${s.name}로 계속하기
+      </a>`;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로그인 - 번개가입</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:40px 32px;width:100%;max-width:380px;text-align:center}
+.logo{font-size:32px;margin-bottom:4px}
+h1{font-size:20px;color:#1e293b;margin-bottom:8px}
+.sub{font-size:14px;color:#64748b;margin-bottom:28px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:10px;transition:opacity .15s}
+.btn:hover{opacity:.9}
+.icon{font-weight:700;font-size:18px}
+.footer{margin-top:24px;font-size:12px;color:#94a3b8}
+.footer a{color:#2563eb;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">⚡</div>
+  <h1>번개가입</h1>
+  <p class="sub">소셜 계정으로 간편하게 로그인하세요</p>
+  ${buttons}
+  <div class="footer">
+    <a href="/privacy">개인정보 처리방침</a>
+  </div>
+</div>
+</body>
+</html>`;
 }
 
 export default oauth;

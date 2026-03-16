@@ -250,6 +250,18 @@ export const WIDGET_JS = `(function() {
     var config = this.config;
     if (!config) return;
 
+    // Try to trigger Cafe24 native SSO flow if available.
+    // If Cafe24 SSO is properly configured, it will redirect to our authorize URL
+    // with its own state and redirect_uri, enabling proper login session creation.
+    var ssoTriggerUrl = this.findSsoTrigger();
+    if (ssoTriggerUrl) {
+      // Set provider hint cookie so our authorize page can skip provider selection
+      try { document.cookie = 'bg_provider=' + provider + ';path=/;max-age=300;SameSite=Lax'; } catch(e) {}
+      window.location.href = ssoTriggerUrl;
+      return;
+    }
+
+    // Fallback: direct OAuth flow (user authenticated on our side but no Cafe24 login session)
     var authUrl = this.baseUrl + '/oauth/authorize'
       + '?client_id=' + encodeURIComponent(config.client_id)
       + '&redirect_uri=' + encodeURIComponent(window.location.origin + '/member/login.html')
@@ -257,6 +269,13 @@ export const WIDGET_JS = `(function() {
       + '&state=' + encodeURIComponent(this.generateState());
 
     window.location.href = authUrl;
+  };
+
+  BGWidget.prototype.findSsoTrigger = function() {
+    // Look for Cafe24 SSO button/link on the page that triggers native SSO flow
+    var ssoLinks = document.querySelectorAll('a[href*="loginSso"], a[href*="sso_service"]');
+    if (ssoLinks.length > 0) return ssoLinks[0].getAttribute('href');
+    return null;
   };
 
   BGWidget.prototype.generateState = function() {

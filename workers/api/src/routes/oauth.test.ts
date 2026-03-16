@@ -105,8 +105,10 @@ describe('GET /oauth/authorize', () => {
   });
 
   it('returns 400 for invalid provider', async () => {
-    const { app, env } = createApp();
-    const url = '/oauth/authorize?client_id=x&redirect_uri=http://a.com&provider=invalid&state=s';
+    const mockFirst = vi.fn().mockResolvedValue(TEST_SHOP);
+    const { app, env } = createApp({ mockFirst });
+    const redirectUri = encodeURIComponent('https://testmall.cafe24api.com/api/v2/oauth/callback');
+    const url = `/oauth/authorize?client_id=bg_test_client_id&redirect_uri=${redirectUri}&provider=invalid&state=s`;
     const resp = await app.request(url, {}, env);
     expect(resp.status).toBe(400);
     const body = await resp.json() as Record<string, unknown>;
@@ -317,5 +319,54 @@ describe('GET /oauth/userinfo', () => {
     expect(body.name).toBe('홍길동');
     expect(body.profile_image).toBe('https://example.com/photo.jpg');
     expect(body.provider).toBe('google');
+  });
+});
+
+describe('POST /oauth/userinfo (Cafe24 SSO compatibility)', () => {
+  it('returns user info when access_token is in POST body', async () => {
+    const encryptionKey = 'a'.repeat(64);
+    const { encrypt } = await import('@supasignup/bg-core');
+    const encryptedEmail = await encrypt('post@example.com', encryptionKey);
+    const encryptedName = await encrypt('김철수', encryptionKey);
+
+    const mockUser = {
+      user_id: 'user_002',
+      provider: 'kakao',
+      provider_uid: 'k_456',
+      email: encryptedEmail,
+      email_hash: 'def456',
+      name: encryptedName,
+      profile_image: null,
+      raw_data: null,
+      created_at: '2026-03-13',
+      updated_at: '2026-03-13',
+    };
+
+    const mockFirst = vi.fn().mockResolvedValue(mockUser);
+    const { app, env, kv } = createApp({ mockFirst });
+
+    const tokenData = JSON.stringify({ user_id: 'user_002', shop_id: 'shop_001' });
+    await kv.put('access_token:post_token', tokenData);
+
+    const resp = await app.request('/oauth/userinfo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'access_token=post_token',
+    }, env);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as Record<string, unknown>;
+    expect(body.id).toBe('user_002');
+    expect(body.email).toBe('post@example.com');
+    expect(body.name).toBe('김철수');
+  });
+
+  it('returns 401 when no access_token in POST body', async () => {
+    const { app, env } = createApp();
+    const resp = await app.request('/oauth/userinfo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: '',
+    }, env);
+    expect(resp.status).toBe(401);
   });
 });

@@ -40,11 +40,17 @@ widget.get('/config', async (c) => {
     ? []
     : JSON.parse(shop.enabled_providers);
 
+  // Build SSO callback URI from mall_id for Cafe24 platform
+  const ssoCallbackUri = shop.platform === 'cafe24' && shop.mall_id
+    ? `https://${shop.mall_id}.cafe24.com/Api/Member/OAuth2ClientCallback/sso/`
+    : undefined;
+
   const config = {
     shop_id: shop.shop_id,
     client_id: shop.client_id,
     providers,
     base_url: c.env.BASE_URL,
+    sso_callback_uri: ssoCallbackUri,
   };
 
   // Cache in KV

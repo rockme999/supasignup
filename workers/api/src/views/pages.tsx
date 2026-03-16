@@ -409,8 +409,12 @@ export const ShopSetupPage: FC<{
     <div class="card">
       <h2>1. Client 정보</h2>
       <div class="code-block">
-        <button class="copy-btn" data-copy={clientId}>복사</button>
+        <button class="copy-btn" data-copy={clientId} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
         Client ID: {clientId}
+      </div>
+      <div class="code-block" style="margin-top:8px">
+        <button class="copy-btn" data-copy={shop.client_secret} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+        Client Secret: {shop.client_secret}
       </div>
     </div>
 
@@ -422,7 +426,7 @@ export const ShopSetupPage: FC<{
         <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid #f1f5f9">
           <strong style="text-transform:capitalize">{entry.provider}</strong>
           <div class="code-block" style="margin-top:8px">
-            <button class="copy-btn" data-copy={entry.authorize_url}>복사</button>
+            <button class="copy-btn" data-copy={entry.authorize_url} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
             Authorize URL: {entry.authorize_url}
           </div>
         </div>
@@ -434,14 +438,14 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Token URL</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/token`}>복사</button>
+          <button class="copy-btn" data-copy={`${baseUrl}/oauth/token`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
           {baseUrl}/oauth/token
         </div>
       </div>
       <div>
         <strong>UserInfo URL</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/userinfo`}>복사</button>
+          <button class="copy-btn" data-copy={`${baseUrl}/oauth/userinfo`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
           {baseUrl}/oauth/userinfo
         </div>
       </div>

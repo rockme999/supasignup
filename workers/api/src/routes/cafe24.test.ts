@@ -67,6 +67,7 @@ function createTestApp() {
     CAFE24_CLIENT_ID: 'cafe24_test_cid',
     CAFE24_CLIENT_SECRET: 'cafe24_test_secret',
     ENCRYPTION_KEY: 'a'.repeat(64),
+    JWT_SECRET: 'test_jwt_secret_key_for_testing',
   } as Env;
 
   return { app, env, kv, d1 };
