@@ -61,4 +61,17 @@ widget.get('/config', async (c) => {
   return c.json(config);
 });
 
+// ─── GET /hint ───────────────────────────────────────────────
+// Store provider hint in KV so authorize can auto-select provider
+// Called by widget before triggering Cafe24 SSO (cross-domain cookie won't work)
+widget.get('/hint', async (c) => {
+  const clientId = c.req.query('client_id');
+  const provider = c.req.query('provider');
+  if (!clientId || !provider) {
+    return c.json({ error: 'missing_params' }, 400);
+  }
+  await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
+  return c.json({ ok: true });
+});
+
 export default widget;

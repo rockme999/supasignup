@@ -70,25 +70,16 @@ oauth.get('/authorize', async (c) => {
     return c.json({ error: 'invalid_redirect_uri', message: 'redirect_uri is not registered' }, 400);
   }
 
-  // If no provider specified, check cookie hint from widget, else show selection page
+  // If no provider specified, check KV hint (set by widget before Cafe24 SSO trigger)
   const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
   if (!provider) {
-    // Check for provider hint cookie (set by widget before triggering Cafe24 SSO)
-    const cookieHeader = c.req.header('Cookie') ?? '';
-    const providerMatch = cookieHeader.match(/bg_provider=(\w+)/);
-    const hintProvider = providerMatch?.[1] as ProviderName | undefined;
-
+    // Check KV for provider hint (cross-domain safe, set via /api/widget/hint)
+    const hintProvider = await c.env.KV.get(`provider_hint:${clientId}`) as ProviderName | null;
     if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
-      // Use the hint — clear cookie by setting expired, then continue with this provider
+      await c.env.KV.delete(`provider_hint:${clientId}`);
       const currentUrl = new URL(c.req.url);
       currentUrl.searchParams.set('provider', hintProvider);
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': currentUrl.toString(),
-          'Set-Cookie': 'bg_provider=; Path=/; Max-Age=0; SameSite=Lax',
-        },
-      });
+      return c.redirect(currentUrl.toString());
     }
 
     const currentUrl = new URL(c.req.url);
@@ -226,11 +217,16 @@ oauth.get('/callback/:provider', async (c) => {
     expirationTtl: AUTH_CODE_TTL,
   });
 
-  // Redirect back to Cafe24 with auth code, original state, and provider hint
+  // Redirect back with auth code and original state
+  // For SSO callback URIs, only send code + state (Cafe24 SSO expects standard OAuth params only)
+  // For login page URIs, also include bg_provider hint for smart button
   const redirectUrl = new URL(session.redirect_uri);
   redirectUrl.searchParams.set('code', authCode);
   redirectUrl.searchParams.set('state', session.cafe24_state);
-  redirectUrl.searchParams.set('bg_provider', provider);
+  const isSsoCallback = session.redirect_uri.includes('/OAuth2ClientCallback/');
+  if (!isSsoCallback) {
+    redirectUrl.searchParams.set('bg_provider', provider);
+  }
 
   return c.redirect(redirectUrl.toString());
 });
@@ -334,11 +330,14 @@ oauth.post('/callback/apple', async (c) => {
     expirationTtl: AUTH_CODE_TTL,
   });
 
-  // Redirect back to Cafe24 with auth code, original state, and provider hint
+  // Redirect back with auth code and original state
   const redirectUrl = new URL(session.redirect_uri);
   redirectUrl.searchParams.set('code', authCode);
   redirectUrl.searchParams.set('state', session.cafe24_state);
-  redirectUrl.searchParams.set('bg_provider', provider);
+  const isSsoCallback = session.redirect_uri.includes('/OAuth2ClientCallback/');
+  if (!isSsoCallback) {
+    redirectUrl.searchParams.set('bg_provider', provider);
+  }
 
   return c.redirect(redirectUrl.toString());
 });
