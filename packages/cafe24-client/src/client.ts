@@ -561,15 +561,11 @@ export class Cafe24Client {
     mallId: string,
     accessToken: string,
     src: string,
-    display: string[] = [
+    displayLocation: string[] = [
       "main",
       "product_list",
       "product_detail",
-      "basket",
-      "order",
-      "order_result",
-      "search",
-      "myshop",
+      "member_login",
     ],
   ): Promise<ScriptTag> {
     const result = await this.apiPost<{ scripttag: ScriptTag }>(
@@ -577,7 +573,7 @@ export class Cafe24Client {
       accessToken,
       "/admin/scripttags",
       {
-        request: { src, display },
+        request: { src, display_location: displayLocation },
       },
     );
     return result.scripttag;
@@ -611,6 +607,32 @@ export class Cafe24Client {
       "/admin/scripttags",
     );
     return result.scripttags ?? [];
+  }
+
+  // ──────────────────────────────────────────────
+  // Webhook management
+  // ──────────────────────────────────────────────
+
+  /**
+   * Register a webhook subscription.
+   *
+   * @see https://developers.cafe24.com/docs/api/admin/#webhooks
+   */
+  async createWebhook(
+    mallId: string,
+    accessToken: string,
+    event: string,
+    url: string,
+  ): Promise<Record<string, unknown>> {
+    const result = await this.apiPost<{ webhook: Record<string, unknown> }>(
+      mallId,
+      accessToken,
+      '/admin/webhooks',
+      {
+        request: { event, url },
+      },
+    );
+    return result.webhook;
   }
 
   // ──────────────────────────────────────────────

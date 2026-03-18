@@ -46,7 +46,7 @@ const oauth = new Hono<{ Bindings: Env }>();
 oauth.get('/authorize', async (c) => {
   const clientId = c.req.query('client_id');
   const redirectUri = c.req.query('redirect_uri');
-  const provider = c.req.query('provider') as ProviderName | undefined;
+  let provider = c.req.query('provider') as ProviderName | undefined;
   const cafe24State = c.req.query('state'); // state from Cafe24
 
   if (!clientId || !redirectUri || !cafe24State) {
@@ -76,14 +76,13 @@ oauth.get('/authorize', async (c) => {
     // Check KV for provider hint (cross-domain safe, set via /api/widget/hint)
     const hintProvider = await c.env.KV.get(`provider_hint:${clientId}`) as ProviderName | null;
     if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
-      await c.env.KV.delete(`provider_hint:${clientId}`);
+      // Don't delete hint — Cafe24 may call authorize multiple times; let TTL (60s) handle cleanup
+      provider = hintProvider;
+    } else {
+      // No hint found — show provider selection page
       const currentUrl = new URL(c.req.url);
-      currentUrl.searchParams.set('provider', hintProvider);
-      return c.redirect(currentUrl.toString());
+      return c.html(renderProviderSelectPage(enabledProviders, currentUrl));
     }
-
-    const currentUrl = new URL(c.req.url);
-    return c.html(renderProviderSelectPage(enabledProviders, currentUrl));
   }
 
   if (!VALID_PROVIDERS.includes(provider)) {
@@ -130,7 +129,8 @@ oauth.get('/authorize', async (c) => {
     codeChallenge,
   });
 
-  return c.redirect(authUrl);
+  // Use JS redirect to reset Referer (required for Naver which checks Referer against service URL)
+  return c.html(`<html><head><meta name="referrer" content="no-referrer"></head><body><script>window.location.href=${JSON.stringify(authUrl)};</script></body></html>`);
 });
 
 // ─── GET /callback/:provider ─────────────────────────────────
@@ -159,7 +159,8 @@ oauth.get('/callback/:provider', async (c) => {
   ]);
 
   if (!sessionJson || !codeVerifier) {
-    return c.json({ error: 'session_expired', message: 'OAuth session expired or invalid state' }, 400);
+    // Session already consumed (duplicate callback) — close popup gracefully
+    return c.html('<html><body><script>window.close();if(!window.closed)window.location.href="/";</script></body></html>');
   }
 
   const session: OAuthSession = JSON.parse(sessionJson);
@@ -255,7 +256,8 @@ oauth.post('/callback/apple', async (c) => {
   ]);
 
   if (!sessionJson || !codeVerifier) {
-    return c.json({ error: 'session_expired', message: 'OAuth session expired or invalid state' }, 400);
+    // Session already consumed (duplicate callback) — close popup gracefully
+    return c.html('<html><body><script>window.close();if(!window.closed)window.location.href="/";</script></body></html>');
   }
 
   const session: OAuthSession = JSON.parse(sessionJson);

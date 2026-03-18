@@ -251,12 +251,15 @@ export const WIDGET_JS = `(function() {
     if (!config) return;
 
     // For Cafe24: store provider hint in KV, then trigger native SSO flow
-    // Use Image beacon (fire-and-forget) to avoid async popup blocking
+    // Use fetch + waitUntil pattern to ensure hint is stored before SSO trigger
     if (config.sso_callback_uri && typeof MemberAction !== 'undefined' && MemberAction.snsLogin) {
       var hintUrl = this.baseUrl + '/api/widget/hint?client_id=' + encodeURIComponent(config.client_id) + '&provider=' + encodeURIComponent(provider);
-      new Image().src = hintUrl;
       var returnUrl = encodeURIComponent(window.location.pathname || '/index.html');
-      MemberAction.snsLogin('sso', returnUrl);
+      fetch(hintUrl, { mode: 'cors' }).then(function() {
+        MemberAction.snsLogin('sso', returnUrl);
+      }).catch(function() {
+        MemberAction.snsLogin('sso', returnUrl);
+      });
       return;
     }
 

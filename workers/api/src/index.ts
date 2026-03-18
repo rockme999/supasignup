@@ -31,7 +31,9 @@ app.onError((err, c) => {
   return c.json({ error: 'internal_server_error', message: 'An unexpected error occurred' }, 500);
 });
 
-// ── Health check ─────────────────────────────────────────────
+// ── Root / Health check ──────────────────────────────────────
+app.get('/', (c) => c.redirect('/dashboard'));
+
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'bg-api' });
 });

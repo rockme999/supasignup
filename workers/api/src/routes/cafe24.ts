@@ -83,20 +83,33 @@ cafe24.get('/callback', async (c) => {
   // Get store info
   const storeInfo = await client.getStoreInfo(mallId, tokens.access_token);
 
-  // Create or update shop
+  // Create or update shop (include soft-deleted shops for reinstall)
   let shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
 
+  if (!shop) {
+    // Check for soft-deleted shop (reinstall case)
+    shop = await c.env.DB
+      .prepare('SELECT * FROM shops WHERE mall_id = ? AND platform = ?')
+      .bind(mallId, 'cafe24')
+      .first();
+  }
+
   if (shop) {
-    // Update existing shop tokens
+    // Update existing shop tokens + restore if soft-deleted
     await updateShop(c.env.DB, shop.shop_id, {
       shop_name: storeInfo.shop_name || shop.shop_name,
       shop_url: storeInfo.shop_domain || shop.shop_url,
       platform_access_token: tokens.access_token,
       platform_refresh_token: tokens.refresh_token,
     });
+    // Restore soft-deleted shop
+    if (shop.deleted_at) {
+      await c.env.DB
+        .prepare('UPDATE shops SET deleted_at = NULL WHERE shop_id = ?')
+        .bind(shop.shop_id)
+        .run();
+    }
   } else {
-    // Need an owner — for now, create a default owner or use a placeholder
-    // In production, this will be linked to the dashboard registration
     shop = await createShop(c.env.DB, {
       mall_id: mallId,
       platform: 'cafe24',
@@ -105,7 +118,10 @@ cafe24.get('/callback', async (c) => {
       owner_id: await getOrCreateDefaultOwner(c.env.DB, mallId),
       platform_access_token: tokens.access_token,
       platform_refresh_token: tokens.refresh_token,
-      allowed_redirect_uris: [`https://${mallId}.cafe24api.com/api/v2/oauth/callback`],
+      allowed_redirect_uris: [
+        `https://${mallId}.cafe24api.com/api/v2/oauth/callback`,
+        `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso/`,
+      ],
     });
   }
 
@@ -123,6 +139,9 @@ cafe24.get('/callback', async (c) => {
     // Non-fatal: continue even if ScriptTag fails
   }
 
+  // Note: Webhook (app_uninstalled) is registered manually in Cafe24 Developer Center
+  // URL: {BASE_URL}/api/cafe24/webhook
+
   // Auto-login: issue JWT cookie for the owner so they can access the dashboard
   const token = await createToken(shop.owner_id, c.env.JWT_SECRET);
   const cookie = `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
@@ -139,23 +158,40 @@ cafe24.get('/callback', async (c) => {
 
 // ─── POST /webhook ───────────────────────────────────────────
 cafe24.post('/webhook', async (c) => {
-  const signature = c.req.header('X-Cafe24-Hmac-SHA256');
-  if (!signature) {
-    return c.json({ error: 'missing_signature' }, 401);
-  }
-
   const body = await c.req.text();
-  const valid = await verifyWebhookHmac(body, signature, c.env.CAFE24_CLIENT_SECRET);
-  if (!valid) {
-    return c.json({ error: 'invalid_signature' }, 401);
+
+  // Log all headers and payload for debugging
+  const headers: Record<string, string> = {};
+  c.req.raw.headers.forEach((v, k) => { headers[k] = v; });
+  console.info('Webhook headers:', JSON.stringify(headers));
+  console.info('Webhook body:', body);
+
+  // Auth: HMAC signature or x-api-key
+  const signature = c.req.header('X-Cafe24-Hmac-SHA256');
+  const apiKey = c.req.header('x-api-key');
+
+  if (signature) {
+    const valid = await verifyWebhookHmac(body, signature, c.env.CAFE24_CLIENT_SECRET);
+    if (!valid) {
+      console.error('HMAC verification failed');
+      return c.json({ error: 'invalid_signature' }, 401);
+    }
+  } else if (apiKey) {
+    if (apiKey !== c.env.CAFE24_WEBHOOK_API_KEY) {
+      console.error(`API key mismatch: received=${apiKey}`);
+      return c.json({ error: 'invalid_api_key' }, 401);
+    }
+  } else {
+    console.error('No authentication header found');
+    return c.json({ error: 'missing_authentication' }, 401);
   }
 
-  const payload = JSON.parse(body) as { event_no?: number; resource: Record<string, unknown> };
+  const payload = JSON.parse(body) as { event_no?: number; resource?: Record<string, unknown> };
   const eventNo = payload.event_no;
 
-  // App uninstall event
-  if (eventNo === 90001 || eventNo === 90002) {
-    const mallId = payload.resource.mall_id as string | undefined;
+  // App uninstall event (90001: expired, 90002: legacy uninstall, 90077: app deleted)
+  if (eventNo === 90001 || eventNo === 90002 || eventNo === 90077) {
+    const mallId = payload.resource?.mall_id as string | undefined;
     if (mallId) {
       const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
       if (shop) {
@@ -165,7 +201,7 @@ cafe24.post('/webhook', async (c) => {
     }
   }
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, debug_event_no: eventNo, debug_payload_keys: Object.keys(payload) });
 });
 
 // ─── Helper: default owner for auto-install ──────────────────

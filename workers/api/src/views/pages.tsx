@@ -388,62 +388,64 @@ export const ShopDetailPage: FC<{
 
 // ─── Shop Setup (SSO Guide) ─────────────────────────────────
 
-type SsoEntry = {
-  provider: string;
-  authorize_url: string;
-};
-
 export const ShopSetupPage: FC<{
   shop: ShopDetail;
   clientId: string;
-  ssoEntries: SsoEntry[];
   baseUrl: string;
-}> = ({ shop, clientId, ssoEntries, baseUrl }) => (
+}> = ({ shop, clientId, baseUrl }) => (
   <Layout title="SSO 설정" loggedIn currentPath="/dashboard/shops">
     <h1>{shop.shop_name || shop.mall_id} - SSO 설정 가이드</h1>
 
     <div class="alert alert-info">
-      카페24 쇼핑몰 관리자 &gt; 앱 &gt; SSO(Single Sign-On) 설정에서 아래 정보를 등록하세요.
+      카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 기본 설정 &gt; <strong>외부 로그인 설정</strong>에서 아래 정보를 등록하세요.
     </div>
 
     <div class="card">
-      <h2>1. Client 정보</h2>
-      <div class="code-block">
-        <button class="copy-btn" data-copy={clientId} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
-        Client ID: {clientId}
-      </div>
-      <div class="code-block" style="margin-top:8px">
-        <button class="copy-btn" data-copy={shop.client_secret} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
-        Client Secret: {shop.client_secret}
-      </div>
-    </div>
+      <h2>1. SSO 로그인 연동 등록</h2>
+      <p style="font-size:13px; color:#64748b; margin-bottom:16px">외부 로그인 설정 &gt; SSO 로그인 연동 등록에서 아래 정보를 입력합니다.</p>
 
-    <div class="card">
-      <h2>2. SSO 항목 등록 (프로바이더별)</h2>
-      <p style="font-size:13px; color:#64748b; margin-bottom:16px">활성화된 프로바이더마다 아래 URL을 등록합니다.</p>
-
-      {ssoEntries.map((entry) => (
-        <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid #f1f5f9">
-          <strong style="text-transform:capitalize">{entry.provider}</strong>
-          <div class="code-block" style="margin-top:8px">
-            <button class="copy-btn" data-copy={entry.authorize_url} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
-            Authorize URL: {entry.authorize_url}
-          </div>
-        </div>
-      ))}
-    </div>
-
-    <div class="card">
-      <h2>3. 공통 URL</h2>
       <div style="margin-bottom:12px">
-        <strong>Token URL</strong>
+        <strong>연동 서비스명</strong>
+        <div class="code-block">
+          <button class="copy-btn" data-copy="번개가입" onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          번개가입
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <strong>Client ID</strong>
+        <div class="code-block">
+          <button class="copy-btn" data-copy={clientId} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          {clientId}
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <strong>Client Secret</strong>
+        <div class="code-block">
+          <button class="copy-btn" data-copy={shop.client_secret} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          {shop.client_secret}
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <strong>Authorize Redirect URL</strong>
+        <div class="code-block">
+          <button class="copy-btn" data-copy={`${baseUrl}/oauth/authorize`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          {baseUrl}/oauth/authorize
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <strong>Access Token Return API</strong>
         <div class="code-block">
           <button class="copy-btn" data-copy={`${baseUrl}/oauth/token`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
           {baseUrl}/oauth/token
         </div>
       </div>
-      <div>
-        <strong>UserInfo URL</strong>
+
+      <div style="margin-bottom:12px">
+        <strong>User info Return API</strong>
         <div class="code-block">
           <button class="copy-btn" data-copy={`${baseUrl}/oauth/userinfo`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
           {baseUrl}/oauth/userinfo
@@ -452,11 +454,11 @@ export const ShopSetupPage: FC<{
     </div>
 
     <div class="card">
-      <h2>4. Account Linking 활성화</h2>
+      <h2>2. 설정 확인</h2>
       <ol style="padding-left:20px; font-size:14px; line-height:1.8">
-        <li>카페24 관리자 &gt; 앱 &gt; SSO 설정으로 이동</li>
-        <li>Account Linking 옵션을 <strong>활성화</strong></li>
-        <li>이메일 기반 매칭 활성화 (동일 이메일 → 기존 회원 연결)</li>
+        <li>사용 여부: <strong>사용함</strong> 선택</li>
+        <li>약관동의 사전 진행 여부: 체크 권장 (추가 팝업 생략)</li>
+        <li>저장 후 쇼핑몰 로그인 페이지에서 번개가입 버튼 확인</li>
       </ol>
     </div>
 

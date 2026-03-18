@@ -146,6 +146,7 @@ export interface Env {
   APPLE_PRIVATE_KEY: string;
   CAFE24_CLIENT_ID: string;
   CAFE24_CLIENT_SECRET: string;
+  CAFE24_WEBHOOK_API_KEY: string;
   ENCRYPTION_KEY: string;
   JWT_SECRET: string;
 }

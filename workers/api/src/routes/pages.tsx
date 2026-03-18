@@ -247,21 +247,10 @@ pages.get('/dashboard/shops/:id/setup', async (c) => {
 
   if (!shop) return c.redirect('/dashboard/shops');
 
-  const providers = (() => {
-    try { return JSON.parse((shop as any).enabled_providers || '[]') as string[]; }
-    catch { return [] as string[]; }
-  })();
-
-  const ssoEntries = providers.map((provider) => ({
-    provider,
-    authorize_url: `${c.env.BASE_URL}/oauth/authorize?provider=${provider}`,
-  }));
-
   return c.html(
     <ShopSetupPage
       shop={shop as any}
       clientId={(shop as any).client_id}
-      ssoEntries={ssoEntries}
       baseUrl={c.env.BASE_URL}
     />
   );
