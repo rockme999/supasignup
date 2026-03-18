@@ -562,9 +562,6 @@ export class Cafe24Client {
     accessToken: string,
     src: string,
     displayLocation: string[] = [
-      "main",
-      "product_list",
-      "product_detail",
       "member_login",
       "member_join",
     ],
