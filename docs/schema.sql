@@ -1,5 +1,8 @@
 -- 번개가입 (BG) D1 Schema
 -- Tech Spec v1.1
+-- 변경 이력:
+--   2026-03-19: owners.role 컬럼 추가 (Phase 8 관리자 앱)
+--   2026-03-19: audit_logs 테이블 추가 (Phase 8 관리자 감사 로그)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -9,6 +12,7 @@ CREATE TABLE IF NOT EXISTS owners (
   email      TEXT NOT NULL UNIQUE,
   name       TEXT,
   password_hash TEXT NOT NULL,
+  role       TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -128,3 +132,19 @@ CREATE TABLE IF NOT EXISTS user_providers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_providers_user_id ON user_providers(user_id);
+
+-- ============================================================
+-- 8. audit_logs - Admin audit trail
+-- ============================================================
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id          TEXT PRIMARY KEY,
+  actor_id    TEXT NOT NULL,
+  action      TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id   TEXT,
+  detail      TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_id ON audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);

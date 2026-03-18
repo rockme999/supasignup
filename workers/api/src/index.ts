@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from '@supasignup/bg-core';
+import { handleScheduled } from './services/scheduled';
 
 import oauthRoutes from './routes/oauth';
 import widgetRoutes from './routes/widget';
@@ -9,6 +10,7 @@ import statsRoutes from './routes/stats';
 import cafe24Routes from './routes/cafe24';
 import billingRoutes from './routes/billing';
 import pageRoutes from './routes/pages';
+import adminRoutes from './routes/admin';
 import { WIDGET_JS } from './widget/buttons';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -55,6 +57,12 @@ app.route('/api/dashboard', dashboardRoutes);
 app.route('/api/dashboard', statsRoutes);
 app.route('/api/cafe24', cafe24Routes);
 app.route('/api/dashboard/billing', billingRoutes);
+app.route('/admin', adminRoutes);
 app.route('/', pageRoutes);
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(handleScheduled(env));
+  },
+};

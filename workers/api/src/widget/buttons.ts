@@ -127,7 +127,6 @@ export const WIDGET_JS = `(function() {
       console.warn('[번개가입] client_id not found. scripts found:', scripts.length);
       return;
     }
-    console.info('[번개가입] init: clientId=' + clientId + ', readyState=' + document.readyState + ', path=' + location.pathname);
 
     // Save last provider from URL (after OAuth callback)
     this.saveLastProvider();
@@ -174,7 +173,6 @@ export const WIDGET_JS = `(function() {
       .then(function(config) {
         self.config = config;
         self.baseUrl = config.base_url || self.getApiBase();
-        console.info('[번개가입] config loaded: providers=' + JSON.stringify(config.providers) + ', disabled=' + config.disabled);
         if (config.providers && config.providers.length > 0) {
           self.render();
         }
@@ -202,7 +200,6 @@ export const WIDGET_JS = `(function() {
       this.container.id = 'bg-widget';
       // Try to find Cafe24 login page area
       var target = this.findLoginPage();
-      console.info('[번개가입] render: target=' + (target ? target.className || target.id : 'null') + ', path=' + location.pathname);
       if (target) {
         target.parentNode.insertBefore(this.container, target);
       } else {

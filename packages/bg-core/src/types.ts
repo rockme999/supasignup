@@ -24,6 +24,7 @@ export interface Owner {
   email: string;
   name: string | null;
   password_hash: string;
+  role: 'user' | 'admin';
   created_at: string;
   updated_at: string;
 }

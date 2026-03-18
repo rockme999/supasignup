@@ -152,8 +152,26 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
         .preview-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; border: none; cursor: default; }
         .preview-btn.kakao-btn { color: #191919; }
 
+        /* Mobile hamburger menu */
+        .mobile-header { display: none; align-items: center; justify-content: space-between; padding: 12px 16px; background: #1e293b; color: #e2e8f0; }
+        .mobile-logo { font-size: 16px; font-weight: 700; }
+        .mobile-logo span { color: #fbbf24; }
+        .hamburger { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
+        .hamburger span { display: block; width: 22px; height: 2px; background: #e2e8f0; border-radius: 2px; transition: all 0.2s; }
+        .mobile-nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+        .mobile-nav-overlay.open { display: block; }
+        .mobile-nav-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #1e293b; z-index: 101; transform: translateX(-100%); transition: transform 0.25s ease; padding: 20px 0; }
+        .mobile-nav-drawer.open { transform: translateX(0); }
+        .mobile-nav-drawer .sidebar-logo { padding: 0 20px 20px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #334155; margin-bottom: 12px; }
+        .mobile-nav-drawer .sidebar-logo span { color: #fbbf24; }
+        .mobile-nav-drawer nav a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #94a3b8; font-size: 14px; }
+        .mobile-nav-drawer nav a:hover, .mobile-nav-drawer nav a.active { background: #334155; color: #f1f5f9; text-decoration: none; }
+        .mobile-nav-drawer .sidebar-footer { padding: 16px 20px; border-top: 1px solid #334155; margin-top: auto; }
+        .mobile-nav-drawer .sidebar-footer a { color: #94a3b8; font-size: 13px; }
+
         @media (max-width: 768px) {
           .sidebar { display: none; }
+          .mobile-header { display: flex; }
           .main { padding: 16px; }
           .stat-grid { grid-template-columns: 1fr 1fr; }
           .filter-bar { flex-direction: column; }
@@ -166,6 +184,35 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
     <body>
       {loggedIn ? (
         <div class="app">
+          {/* Mobile header (visible only on small screens) */}
+          <div class="mobile-header">
+            <div class="mobile-logo">⚡ <span>번개가입</span></div>
+            <button class="hamburger" id="hamburger-btn" aria-label="메뉴 열기">
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
+
+          {/* Mobile nav overlay + drawer */}
+          <div class="mobile-nav-overlay" id="mobile-nav-overlay"></div>
+          <div class="mobile-nav-drawer" id="mobile-nav-drawer">
+            <div class="sidebar-logo">⚡ <span>번개가입</span></div>
+            <nav>
+              {navItems.map((item) => (
+                <a
+                  href={item.path}
+                  class={currentPath === item.path || (item.path !== '/dashboard' && currentPath?.startsWith(item.path)) ? 'active' : ''}
+                >
+                  {item.icon} {item.label}
+                </a>
+              ))}
+            </nav>
+            <div class="sidebar-footer">
+              <a href="/dashboard/logout">로그아웃</a>
+            </div>
+          </div>
+
           <aside class="sidebar">
             <div class="sidebar-logo">⚡ <span>번개가입</span></div>
             <nav>
@@ -191,6 +238,26 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
       )}
 
       <script>{`
+        // Mobile hamburger menu handler
+        (function() {
+          var btn = document.getElementById('hamburger-btn');
+          var overlay = document.getElementById('mobile-nav-overlay');
+          var drawer = document.getElementById('mobile-nav-drawer');
+          if (!btn) return;
+          function openNav() {
+            overlay.classList.add('open');
+            drawer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+          }
+          function closeNav() {
+            overlay.classList.remove('open');
+            drawer.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+          btn.addEventListener('click', openNav);
+          overlay.addEventListener('click', closeNav);
+        })();
+
         // Copy button handler
         document.querySelectorAll('.copy-btn').forEach(btn => {
           btn.addEventListener('click', function() {

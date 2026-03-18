@@ -2,6 +2,9 @@ name = "bg-api"
 main = "src/index.ts"
 compatibility_date = "2026-03-01"
 
+[triggers]
+crons = ["0 * * * *"]
+
 # Custom Domain: bg.suparain.kr → 이 Worker가 origin
 # 배포 시 Cloudflare가 DNS AAAA 레코드 + SSL 인증서 자동 생성
 [[routes]]
@@ -24,6 +27,9 @@ id = "6aaca4b2e92f4361a5b31f39f96f4c5a"
 
 # 프로덕션 환경
 [env.production]
+
+[env.production.triggers]
+crons = ["0 * * * *"]
 
 [[env.production.routes]]
 pattern = "bg.suparain.kr"
