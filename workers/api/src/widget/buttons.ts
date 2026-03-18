@@ -282,7 +282,7 @@ export const WIDGET_JS = `(function() {
   };
 
   BGWidget.prototype.findLoginPage = function() {
-    // Cafe24 login page selectors
+    // Cafe24 login & signup page selectors
     var selectors = [
       '#member_login',
       '.xans-member-login',
@@ -290,6 +290,12 @@ export const WIDGET_JS = `(function() {
       '.member_login_box',
       'form[action*="login"]',
       '#contents .login',
+      '#member_join',
+      '.xans-member-join',
+      '.join_wrap',
+      '.member_join_box',
+      'form[action*="join"]',
+      '#contents .join',
     ];
 
     for (var i = 0; i < selectors.length; i++) {

@@ -566,6 +566,7 @@ export class Cafe24Client {
       "product_list",
       "product_detail",
       "member_login",
+      "member_join",
     ],
   ): Promise<ScriptTag> {
     const result = await this.apiPost<{ scripttag: ScriptTag }>(
