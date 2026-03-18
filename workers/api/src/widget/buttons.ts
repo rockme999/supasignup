@@ -255,6 +255,8 @@ export const WIDGET_JS = `(function() {
     if (config.sso_callback_uri && typeof MemberAction !== 'undefined' && MemberAction.snsLogin) {
       var hintUrl = this.baseUrl + '/api/widget/hint?client_id=' + encodeURIComponent(config.client_id) + '&provider=' + encodeURIComponent(provider);
       var returnUrl = encodeURIComponent(window.location.pathname || '/index.html');
+      // Save last provider to localStorage for smart button (Cafe24 SSO doesn't pass bg_provider back)
+      try { localStorage.setItem('bg_last_provider', provider); } catch (e) {}
       fetch(hintUrl, { mode: 'cors' }).then(function() {
         MemberAction.snsLogin('sso', returnUrl);
       }).catch(function() {
