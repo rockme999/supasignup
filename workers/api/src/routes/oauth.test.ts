@@ -161,11 +161,12 @@ describe('GET /oauth/authorize', () => {
     const url = `/oauth/authorize?client_id=bg_test_client_id&redirect_uri=${redirectUri}&provider=google&state=cafe24_state_abc`;
     const resp = await app.request(url, {}, env);
 
-    expect(resp.status).toBe(302);
-    const location = resp.headers.get('Location')!;
-    expect(location).toContain('accounts.google.com');
-    expect(location).toContain('code_challenge=');
-    expect(location).toContain('code_challenge_method=S256');
+    // authorize returns a JS redirect page (200 HTML) to reset Referer (required for Naver)
+    expect(resp.status).toBe(200);
+    const html = await resp.text();
+    expect(html).toContain('accounts.google.com');
+    expect(html).toContain('code_challenge');
+    expect(html).toContain('code_challenge_method');
 
     // Verify KV was called to store session and PKCE
     expect(kv.put).toHaveBeenCalledTimes(2);

@@ -8,8 +8,10 @@ import cafe24Routes from './cafe24';
 
 // ─── Mock cafe24-client ──────────────────────────────────────
 
-vi.mock('@supasignup/cafe24-client', () => {
+vi.mock('@supasignup/cafe24-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@supasignup/cafe24-client')>();
   return {
+    ...actual,
     Cafe24Client: vi.fn().mockImplementation(() => ({
       exchangeCode: vi.fn().mockResolvedValue({
         access_token: 'at_123',
@@ -166,7 +168,7 @@ describe('POST /api/cafe24/webhook', () => {
     }, env);
     expect(resp.status).toBe(401);
     const body = await resp.json() as Record<string, unknown>;
-    expect(body.error).toBe('missing_signature');
+    expect(body.error).toBe('missing_authentication');
   });
 
   it('handles app uninstall webhook', async () => {

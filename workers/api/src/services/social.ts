@@ -499,8 +499,10 @@ async function getDiscordUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUser
 // Facebook
 // ═══════════════════════════════════════════════════════════════
 
+const FB_API_VERSION = 'v25.0';
+
 function buildFacebookAuthUrl(p: SocialAuthUrlParams): string {
-  const url = new URL('https://www.facebook.com/v25.0/dialog/oauth');
+  const url = new URL(`https://www.facebook.com/${FB_API_VERSION}/dialog/oauth`);
   url.searchParams.set('client_id', p.clientId);
   url.searchParams.set('redirect_uri', p.redirectUri);
   url.searchParams.set('response_type', 'code');
@@ -511,7 +513,7 @@ function buildFacebookAuthUrl(p: SocialAuthUrlParams): string {
 }
 
 async function exchangeFacebookCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
-  const resp = await fetch('https://graph.facebook.com/v25.0/oauth/access_token', {
+  const resp = await fetch(`https://graph.facebook.com/${FB_API_VERSION}/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -607,6 +609,7 @@ async function getXUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> 
   }
 
   const body = await resp.json() as { data: Record<string, unknown> };
+  if (!body.data) throw new Error('X userinfo: unexpected response format');
   const data = body.data;
 
   return {
@@ -679,6 +682,16 @@ async function getLineUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInf
       // Handle base64url → base64 for atob
       const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(atob(base64)) as Record<string, unknown>;
+
+      // Validate id_token claims (iss, exp)
+      if (payload.iss !== 'https://access.line.me') {
+        throw new Error(`LINE id_token invalid issuer: ${payload.iss}`);
+      }
+      const now = Math.floor(Date.now() / 1000);
+      if (typeof payload.exp === 'number' && payload.exp < now) {
+        throw new Error('LINE id_token has expired');
+      }
+
       email = payload.email as string | undefined;
     } catch {
       // Ignore JWT decode errors; email remains undefined
@@ -734,11 +747,13 @@ export async function verifyTelegramAuth(
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 
-  // 5. timing-safe 비교
-  if (computedHash.length !== hash.length) return false;
-  let result = 0;
-  for (let i = 0; i < computedHash.length; i++) {
-    result |= computedHash.charCodeAt(i) ^ hash.charCodeAt(i);
+  // 5. timing-safe 비교 (length가 달라도 항상 64자와 비교하여 timing leak 방지)
+  const HASH_LEN = 64;
+  const expected = computedHash.padEnd(HASH_LEN, '0');
+  const received = hash.padEnd(HASH_LEN, '0');
+  let result = computedHash.length ^ hash.length; // length 차이도 XOR로
+  for (let i = 0; i < HASH_LEN; i++) {
+    result |= expected.charCodeAt(i) ^ received.charCodeAt(i);
   }
   return result === 0;
 }

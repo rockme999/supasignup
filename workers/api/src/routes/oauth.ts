@@ -116,17 +116,17 @@ oauth.get('/authorize', async (c) => {
     social_state: socialState,
   };
 
-  await Promise.all([
-    c.env.KV.put(`oauth_session:${socialState}`, JSON.stringify(session), { expirationTtl: SESSION_TTL }),
-    c.env.KV.put(`pkce:${socialState}`, codeVerifier, { expirationTtl: SESSION_TTL }),
-  ]);
-
-  // Telegram uses Login Widget — redirect to an intermediate page instead of OAuth
+  // Telegram uses Login Widget — skip oauth_session/pkce, use dedicated telegram_session only
   if (provider === 'telegram') {
     const telegramSessionId = generateSecret(16);
     await c.env.KV.put(`telegram_session:${telegramSessionId}`, JSON.stringify(session), { expirationTtl: SESSION_TTL });
     return c.redirect(`${c.env.BASE_URL}/oauth/telegram-login?session=${telegramSessionId}`);
   }
+
+  await Promise.all([
+    c.env.KV.put(`oauth_session:${socialState}`, JSON.stringify(session), { expirationTtl: SESSION_TTL }),
+    c.env.KV.put(`pkce:${socialState}`, codeVerifier, { expirationTtl: SESSION_TTL }),
+  ]);
 
   // Build social OAuth URL and redirect
   const authUrl = buildSocialAuthUrl(provider, {
@@ -365,8 +365,19 @@ oauth.get('/telegram-login', async (c) => {
     return c.text('Invalid or expired session', 400);
   }
 
-  // TODO: TELEGRAM_BOT_USERNAME 환경변수로 설정 필요
   const botUsername = c.env.TELEGRAM_BOT_USERNAME;
+
+  // XSS 방지: sessionId와 botUsername을 HTML attribute에 안전하게 삽입
+  const safeSessionId = sessionId
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const safeBotUsername = botUsername
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
   return c.html(`<!DOCTYPE html>
 <html>
@@ -382,10 +393,10 @@ oauth.get('/telegram-login', async (c) => {
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" data-session="${safeSessionId}" data-bot="${safeBotUsername}">
     <h2>Telegram으로 계속하기</h2>
     <script async src="https://telegram.org/js/telegram-widget.js?22"
-      data-telegram-login="${botUsername}"
+      data-telegram-login="${safeBotUsername}"
       data-size="large"
       data-onauth="onTelegramAuth(user)"
       data-request-access="write">
@@ -393,9 +404,12 @@ oauth.get('/telegram-login', async (c) => {
     <p>Telegram 계정으로 로그인합니다</p>
   </div>
   <script>
+    var container = document.querySelector('.container');
+    var sessionId = container.getAttribute('data-session');
+    var botUsername = container.getAttribute('data-bot');
     function onTelegramAuth(user) {
       var params = new URLSearchParams(user);
-      params.append('session', '${sessionId}');
+      params.append('session', sessionId);
       fetch('/oauth/callback/telegram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -447,9 +461,9 @@ oauth.post('/callback/telegram', async (c) => {
     return c.json({ error: 'invalid_signature' }, 401);
   }
 
-  // auth_date 검증 (24시간 이내)
+  // auth_date 검증 (5분 이내)
   const authDate = parseInt(telegramData['auth_date'] ?? '');
-  if (isNaN(authDate) || Date.now() / 1000 - authDate > 86400) {
+  if (isNaN(authDate) || Date.now() / 1000 - authDate > 300) {
     return c.json({ error: 'expired_auth' }, 401);
   }
 
