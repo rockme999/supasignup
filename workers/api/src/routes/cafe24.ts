@@ -9,7 +9,7 @@
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { generateId, generateSecret } from '@supasignup/bg-core';
-import { Cafe24Client, verifyAppLaunchHmac, verifyWebhookHmac } from '@supasignup/cafe24-client';
+import { Cafe24Client, verifyAppLaunchHmac, verifyWebhookHmac, PAYMENT_COMPLETE, REFUND_COMPLETE } from '@supasignup/cafe24-client';
 import { hashPassword } from '../services/password';
 import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
@@ -197,6 +197,57 @@ cafe24.post('/webhook', async (c) => {
       if (shop) {
         await softDeleteShop(c.env.DB, shop.shop_id);
         console.info(`Shop soft-deleted: mall=${mallId}, shop_id=${shop.shop_id}`);
+      }
+    }
+  }
+
+  // ─── Payment complete (90157) ─────────────────────────────
+  if (eventNo === PAYMENT_COMPLETE) {
+    const orderId = payload.resource?.order_id as string | undefined;
+    if (orderId) {
+      // Find pending subscription by payment_id
+      const sub = await c.env.DB
+        .prepare("SELECT * FROM subscriptions WHERE payment_id = ? AND status = 'pending'")
+        .bind(orderId)
+        .first<{ id: string; shop_id: string; plan: string }>();
+
+      if (sub) {
+        // Activate subscription
+        await c.env.DB
+          .prepare("UPDATE subscriptions SET status = 'active', started_at = datetime('now') WHERE id = ?")
+          .bind(sub.id)
+          .run();
+
+        // Upgrade shop plan
+        await updateShop(c.env.DB, sub.shop_id, { plan: sub.plan as 'monthly' | 'yearly' });
+        console.info(`Payment complete: subscription=${sub.id}, shop=${sub.shop_id}, plan=${sub.plan}`);
+      } else {
+        console.warn(`Payment webhook: no pending subscription for order_id=${orderId}`);
+      }
+    }
+  }
+
+  // ─── Refund complete (90159) ──────────────────────────────
+  if (eventNo === REFUND_COMPLETE) {
+    const orderId = payload.resource?.order_id as string | undefined;
+    if (orderId) {
+      const sub = await c.env.DB
+        .prepare("SELECT * FROM subscriptions WHERE payment_id = ? AND status = 'active'")
+        .bind(orderId)
+        .first<{ id: string; shop_id: string }>();
+
+      if (sub) {
+        // Cancel subscription
+        await c.env.DB
+          .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?")
+          .bind(sub.id)
+          .run();
+
+        // Downgrade shop plan to free
+        await updateShop(c.env.DB, sub.shop_id, { plan: 'free' });
+        console.info(`Refund complete: subscription=${sub.id}, shop=${sub.shop_id}, reverted to free`);
+      } else {
+        console.warn(`Refund webhook: no active subscription for order_id=${orderId}`);
       }
     }
   }

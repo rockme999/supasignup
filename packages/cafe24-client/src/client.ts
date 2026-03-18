@@ -636,6 +636,53 @@ export class Cafe24Client {
   }
 
   // ──────────────────────────────────────────────
+  // Appstore order (in-app payment)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Create an appstore order for in-app payment.
+   *
+   * @see https://developers.cafe24.com/docs/api/admin/#appstore-orders
+   */
+  async createAppstoreOrder(
+    mallId: string,
+    accessToken: string,
+    orderName: string,
+    orderAmount: number,
+    returnUrl: string,
+  ): Promise<{ order_id: string; confirmation_url: string }> {
+    const result = await this.apiPost<{
+      order: { order_id: string; confirmation_url: string };
+    }>(mallId, accessToken, '/admin/appstore/orders', {
+      request: {
+        order_name: orderName,
+        order_amount: String(orderAmount),
+        return_url: returnUrl,
+        automatic_payment: 'F',
+      },
+    });
+    return result.order;
+  }
+
+  /**
+   * Get an appstore order by order_id.
+   */
+  async getAppstoreOrder(
+    mallId: string,
+    accessToken: string,
+    orderId: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const result = await this.apiGet<{
+        order: Record<string, unknown>;
+      }>(mallId, accessToken, `/admin/appstore/orders/${orderId}`);
+      return result.order ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ──────────────────────────────────────────────
   // Webhook verification
   // ──────────────────────────────────────────────
 

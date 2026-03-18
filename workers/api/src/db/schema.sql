@@ -82,15 +82,19 @@ CREATE INDEX IF NOT EXISTS idx_shop_users_user_id ON shop_users(user_id);
 CREATE TABLE IF NOT EXISTS subscriptions (
   id         TEXT PRIMARY KEY,
   owner_id   TEXT NOT NULL REFERENCES owners(owner_id),
+  shop_id    TEXT NOT NULL REFERENCES shops(shop_id),
   plan       TEXT NOT NULL CHECK (plan IN ('monthly', 'yearly')),
-  status     TEXT NOT NULL CHECK (status IN ('active', 'cancelled', 'expired')),
-  started_at TEXT NOT NULL,
+  status     TEXT NOT NULL CHECK (status IN ('pending', 'active', 'cancelled', 'expired')),
+  payment_id TEXT,
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_owner_id ON subscriptions(owner_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_payment_id ON subscriptions(payment_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_shop_id ON subscriptions(shop_id);
 
 -- ============================================================
 -- 6. login_stats - Statistics

@@ -689,9 +689,10 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
 type BillingPageProps = {
   billingShops: BillingShop[];
   month: string;
+  shops: { shop_id: string; shop_name: string; mall_id: string }[];
 };
 
-export const BillingPage: FC<BillingPageProps> = ({ billingShops, month }) => {
+export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }) => {
   const hasOverLimit = billingShops.some(s => s.is_over_limit);
   const hasNearLimit = billingShops.some(s => s.needs_upgrade && !s.is_over_limit);
 
@@ -779,7 +780,7 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month }) => {
               <li>고급 통계</li>
               <li>우선 지원</li>
             </ul>
-            <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;cursor:not-allowed">준비 중</button>
+            <button class="btn btn-primary btn-sm subscribe-btn" data-plan="monthly">월간 플랜 전환</button>
           </div>
           <div class="plan-card">
             <h3>연간</h3>
@@ -791,10 +792,56 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month }) => {
               <li>고급 통계</li>
               <li>우선 지원</li>
             </ul>
-            <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;cursor:not-allowed">준비 중</button>
+            <button class="btn btn-primary btn-sm subscribe-btn" data-plan="yearly">연간 플랜 전환</button>
           </div>
         </div>
       </div>
+
+      {shops.length > 0 && (
+        <div class="card" style="margin-top:16px">
+          <h2>결제할 쇼핑몰 선택</h2>
+          <div class="form-group">
+            <select id="billingShopSelect">
+              {shops.map(s => (
+                <option value={s.shop_id}>{s.shop_name || s.mall_id}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <script>{`
+        document.querySelectorAll('.subscribe-btn').forEach(function(btn) {
+          btn.addEventListener('click', async function() {
+            var shopSelect = document.getElementById('billingShopSelect');
+            if (!shopSelect) { alert('등록된 쇼핑몰이 없습니다.'); return; }
+            var shopId = shopSelect.value;
+            var plan = this.dataset.plan;
+            var planName = plan === 'monthly' ? '월간 (₩29,900/월)' : '연간 (₩329,900/년)';
+            if (!confirm(planName + ' 플랜으로 전환하시겠습니까?')) return;
+            this.disabled = true;
+            this.textContent = '처리 중...';
+            try {
+              var resp = await apiCall('POST', '/api/dashboard/billing/subscribe', { plan: plan, shop_id: shopId });
+              if (resp.ok) {
+                var data = await resp.json();
+                window.open(data.confirmation_url, 'cafe24_payment', 'width=600,height=700');
+              } else {
+                var err = await resp.json();
+                alert(err.message || '결제 주문 생성에 실패했습니다.');
+              }
+            } catch(e) {
+              alert('네트워크 오류가 발생했습니다.');
+            }
+            this.disabled = false;
+            this.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+          });
+        });
+
+        window.addEventListener('message', function(e) {
+          if (e.data === 'billing_complete') { location.reload(); }
+        });
+      `}</script>
     </Layout>
   );
 };

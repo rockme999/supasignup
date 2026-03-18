@@ -7,6 +7,7 @@ import widgetRoutes from './routes/widget';
 import dashboardRoutes from './routes/dashboard';
 import statsRoutes from './routes/stats';
 import cafe24Routes from './routes/cafe24';
+import billingRoutes from './routes/billing';
 import pageRoutes from './routes/pages';
 import { WIDGET_JS } from './widget/buttons';
 
@@ -53,6 +54,7 @@ app.route('/api/widget', widgetRoutes);
 app.route('/api/dashboard', dashboardRoutes);
 app.route('/api/dashboard', statsRoutes);
 app.route('/api/cafe24', cafe24Routes);
+app.route('/api/dashboard/billing', billingRoutes);
 app.route('/', pageRoutes);
 
 export default app;

@@ -321,6 +321,11 @@ pages.get('/dashboard/billing', async (c) => {
     .bind(`${yearMonth}-01`, nextMonthFirst, ownerId)
     .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>();
 
+  const shopsResult = await c.env.DB
+    .prepare('SELECT shop_id, shop_name, mall_id FROM shops WHERE owner_id = ? AND deleted_at IS NULL')
+    .bind(ownerId)
+    .all<{ shop_id: string; shop_name: string; mall_id: string }>();
+
   const billingShops = (billingResult.results ?? []).map((shop) => ({
     ...shop,
     usage_percent: shop.plan === 'free'
@@ -331,7 +336,7 @@ pages.get('/dashboard/billing', async (c) => {
   }));
 
   return c.html(
-    <BillingPage billingShops={billingShops} month={yearMonth} />
+    <BillingPage billingShops={billingShops} month={yearMonth} shops={shopsResult.results ?? []} />
   );
 });
 

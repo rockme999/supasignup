@@ -53,8 +53,10 @@ export interface ShopUser {
 export interface Subscription {
   id: string;
   owner_id: string;
+  shop_id: string;
   plan: 'monthly' | 'yearly';
-  status: 'active' | 'cancelled' | 'expired';
+  status: 'pending' | 'active' | 'cancelled' | 'expired';
+  payment_id: string | null;
   started_at: string;
   expires_at: string;
   created_at: string;
