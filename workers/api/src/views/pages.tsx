@@ -690,9 +690,10 @@ type BillingPageProps = {
   billingShops: BillingShop[];
   month: string;
   shops: { shop_id: string; shop_name: string; mall_id: string }[];
+  currentPlan: string;
 };
 
-export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }) => {
+export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, currentPlan }) => {
   const hasOverLimit = billingShops.some(s => s.is_over_limit);
   const hasNearLimit = billingShops.some(s => s.needs_upgrade && !s.is_over_limit);
 
@@ -760,7 +761,7 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }
       <div id="plans">
         <h2 style="margin: 24px 0 16px">플랜 비교</h2>
         <div class="plan-grid">
-          <div class="plan-card current">
+          <div class={`plan-card${currentPlan === 'free' ? ' current' : ''}`}>
             <h3>무료</h3>
             <div class="price">₩0<small>/월</small></div>
             <ul>
@@ -769,9 +770,9 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }
               <li>기본 통계</li>
               <li>이메일 지원</li>
             </ul>
-            <span class="badge badge-green">현재 플랜</span>
+            {currentPlan === 'free' && <span class="badge badge-green">현재 플랜</span>}
           </div>
-          <div class="plan-card">
+          <div class={`plan-card${currentPlan === 'monthly' ? ' current' : ''}`}>
             <h3>월간</h3>
             <div class="price">₩29,900<small>/월</small></div>
             <ul>
@@ -780,9 +781,12 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }
               <li>고급 통계</li>
               <li>우선 지원</li>
             </ul>
-            <button class="btn btn-primary btn-sm subscribe-btn" data-plan="monthly">월간 플랜 전환</button>
+            {currentPlan === 'monthly'
+              ? <span class="badge badge-green">현재 플랜</span>
+              : <button class="btn btn-primary btn-sm subscribe-btn" data-plan="monthly">월간 플랜 전환</button>
+            }
           </div>
-          <div class="plan-card">
+          <div class={`plan-card${currentPlan === 'yearly' ? ' current' : ''}`}>
             <h3>연간</h3>
             <div class="price">₩329,900<small>/년</small></div>
             <p style="font-size:12px;color:#22c55e;margin-bottom:8px">월 ₩27,492 (8% 할인)</p>
@@ -792,18 +796,21 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }
               <li>고급 통계</li>
               <li>우선 지원</li>
             </ul>
-            <button class="btn btn-primary btn-sm subscribe-btn" data-plan="yearly">연간 플랜 전환</button>
+            {currentPlan === 'yearly'
+              ? <span class="badge badge-green">현재 플랜</span>
+              : <button class="btn btn-primary btn-sm subscribe-btn" data-plan="yearly">연간 플랜 전환</button>
+            }
           </div>
         </div>
       </div>
 
-      {shops.length > 0 && (
+      {shops.length > 0 && billingShops.some(s => s.plan === 'free') && (
         <div class="card" style="margin-top:16px">
           <h2>결제할 쇼핑몰 선택</h2>
           <div class="form-group">
             <select id="billingShopSelect">
-              {shops.map(s => (
-                <option value={s.shop_id}>{s.shop_name || s.mall_id}</option>
+              {billingShops.filter(s => s.plan === 'free').map(s => (
+                <option value={s.shop_id}>{s.shop_name || s.shop_id}</option>
               ))}
             </select>
           </div>
@@ -817,29 +824,32 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops }
             if (!shopSelect) { alert('등록된 쇼핑몰이 없습니다.'); return; }
             var shopId = shopSelect.value;
             var plan = this.dataset.plan;
-            var planName = plan === 'monthly' ? '월간 (₩29,900/월)' : '연간 (₩329,900/년)';
+            var planName = plan === 'monthly' ? '월간 (\\u20A929,900/월)' : '연간 (\\u20A9329,900/년)';
             if (!confirm(planName + ' 플랜으로 전환하시겠습니까?')) return;
             this.disabled = true;
             this.textContent = '처리 중...';
             try {
-              var resp = await apiCall('POST', '/api/dashboard/billing/subscribe', { plan: plan, shop_id: shopId });
+              var resp = await fetch('/api/dashboard/billing/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ plan: plan, shop_id: shopId })
+              });
               if (resp.ok) {
                 var data = await resp.json();
-                window.open(data.confirmation_url, 'cafe24_payment', 'width=600,height=700');
+                window.location.href = data.confirmation_url;
               } else {
                 var err = await resp.json();
                 alert(err.message || '결제 주문 생성에 실패했습니다.');
+                this.disabled = false;
+                this.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
               }
             } catch(e) {
               alert('네트워크 오류가 발생했습니다.');
+              this.disabled = false;
+              this.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
             }
-            this.disabled = false;
-            this.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
           });
-        });
-
-        window.addEventListener('message', function(e) {
-          if (e.data === 'billing_complete') { location.reload(); }
         });
       `}</script>
     </Layout>

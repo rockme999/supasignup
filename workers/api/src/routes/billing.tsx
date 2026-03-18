@@ -52,14 +52,20 @@ billing.post('/subscribe', async (c) => {
     return c.json({ error: 'no_platform_token', message: '카페24 앱 재설치가 필요합니다.' }, 400);
   }
 
-  // Check for existing pending subscription
+  // [M8] 검증된 shop.shop_id 사용
   const existing = await c.env.DB
-    .prepare("SELECT id FROM subscriptions WHERE shop_id = ? AND status = 'pending'")
-    .bind(body.shop_id)
-    .first();
+    .prepare("SELECT id, created_at FROM subscriptions WHERE shop_id = ? AND status = 'pending'")
+    .bind(shop.shop_id)
+    .first<{ id: string; created_at: string }>();
 
   if (existing) {
-    // Cancel old pending
+    const createdAt = new Date(existing.created_at).getTime();
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    if (createdAt > tenMinutesAgo) {
+      // [M2] 최근 10분 이내 pending 존재 → 중복 방어
+      return c.json({ error: 'payment_in_progress', message: '이미 결제가 진행 중입니다. 잠시 후 다시 시도하세요.' }, 409);
+    }
+    // 10분 이상 된 pending → 타임아웃 처리 [M1]
     await c.env.DB
       .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?")
       .bind(existing.id)
@@ -87,7 +93,7 @@ billing.post('/subscribe', async (c) => {
       `INSERT INTO subscriptions (id, owner_id, shop_id, plan, status, expires_at)
        VALUES (?, ?, ?, ?, 'pending', ?)`,
     )
-    .bind(subId, ownerId, body.shop_id, body.plan, expiresAt.toISOString())
+    .bind(subId, ownerId, shop.shop_id, body.plan, expiresAt.toISOString())
     .run();
 
   // Create Cafe24 appstore order
@@ -137,6 +143,27 @@ billing.post('/subscribe', async (c) => {
       .bind(order.order_id, subId)
       .run();
 
+    // C3: 웹훅이 먼저 도착했는지 KV 확인 (레이스 컨디션 대비)
+    const pendingWebhook = await c.env.KV.get(`webhook:payment:${order.order_id}`);
+    if (pendingWebhook) {
+      // 웹훅이 먼저 도착했었음 → 즉시 결제 완료 처리
+      const now = new Date();
+      const expiresAt = new Date(now);
+      if (body.plan === 'monthly') {
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      } else {
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      }
+      await c.env.DB.batch([
+        c.env.DB.prepare("UPDATE subscriptions SET status = 'active', started_at = datetime('now'), expires_at = ? WHERE id = ?")
+          .bind(expiresAt.toISOString(), subId),
+        c.env.DB.prepare("UPDATE shops SET plan = ?, updated_at = datetime('now') WHERE shop_id = ?")
+          .bind(body.plan, shop.shop_id),
+      ]);
+      await c.env.KV.delete(`webhook:payment:${order.order_id}`);
+      console.info(`Deferred payment processed: subscription=${subId}, order=${order.order_id}`);
+    }
+
     return c.json({ confirmation_url: order.confirmation_url, subscription_id: subId });
   } catch (err: any) {
     console.error('Cafe24 order creation failed:', err);
@@ -156,21 +183,19 @@ billing.post('/subscribe', async (c) => {
 billing.get('/return', (c) => {
   // This is the return URL after Cafe24 payment.
   // Actual plan change happens via webhook (event_no=90157).
-  // This page just closes the popup and refreshes the parent.
+  // Redirect back to billing page after short delay.
   return c.html(
     <html lang="ko">
       <head><title>결제 완료 - 번개가입</title></head>
       <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#f5f5f5">
         <div style="text-align:center;background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08)">
           <h2 style="margin-bottom:8px">결제가 완료되었습니다</h2>
-          <p style="color:#64748b;font-size:14px">잠시 후 자동으로 닫힙니다.</p>
+          <p style="color:#64748b;font-size:14px">잠시 후 대시보드로 이동합니다.</p>
         </div>
         <script>{`
-          if (window.opener) {
-            window.opener.postMessage('billing_complete', '*');
-            window.opener.location.reload();
-          }
-          setTimeout(function() { window.close(); }, 1500);
+          setTimeout(function() {
+            window.location.href = '/dashboard/billing';
+          }, 2000);
         `}</script>
       </body>
     </html>

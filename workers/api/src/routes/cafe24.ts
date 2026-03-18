@@ -212,17 +212,27 @@ cafe24.post('/webhook', async (c) => {
         .first<{ id: string; shop_id: string; plan: string }>();
 
       if (sub) {
-        // Activate subscription
-        await c.env.DB
-          .prepare("UPDATE subscriptions SET status = 'active', started_at = datetime('now') WHERE id = ?")
-          .bind(sub.id)
-          .run();
-
-        // Upgrade shop plan
-        await updateShop(c.env.DB, sub.shop_id, { plan: sub.plan as 'monthly' | 'yearly' });
+        // [M4] expires_at을 결제 확정 시점에 재계산
+        const expiresAt = new Date();
+        if (sub.plan === 'monthly') {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        } else {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        }
+        await c.env.DB.batch([
+          c.env.DB.prepare("UPDATE subscriptions SET status = 'active', started_at = datetime('now'), expires_at = ? WHERE id = ?")
+            .bind(expiresAt.toISOString(), sub.id),
+          c.env.DB.prepare("UPDATE shops SET plan = ?, updated_at = datetime('now') WHERE shop_id = ?").bind(sub.plan, sub.shop_id),
+        ]);
         console.info(`Payment complete: subscription=${sub.id}, shop=${sub.shop_id}, plan=${sub.plan}`);
       } else {
-        console.warn(`Payment webhook: no pending subscription for order_id=${orderId}`);
+        // payment_id가 아직 저장되지 않은 경우를 대비하여 KV에 임시 저장 (5분 TTL)
+        await c.env.KV.put(`webhook:payment:${orderId}`, JSON.stringify({
+          order_id: orderId,
+          event_no: eventNo,
+          received_at: new Date().toISOString(),
+        }), { expirationTtl: 300 });
+        console.warn(`Payment webhook: no pending subscription for order_id=${orderId}, saved to KV for deferred processing`);
       }
     }
   }
@@ -237,22 +247,28 @@ cafe24.post('/webhook', async (c) => {
         .first<{ id: string; shop_id: string }>();
 
       if (sub) {
-        // Cancel subscription
-        await c.env.DB
-          .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?")
-          .bind(sub.id)
-          .run();
+        // 다른 active 구독이 남아있는지 확인 [M3]
+        const otherActive = await c.env.DB
+          .prepare("SELECT COUNT(*) as cnt FROM subscriptions WHERE shop_id = ? AND status = 'active' AND id != ?")
+          .bind(sub.shop_id, sub.id)
+          .first<{ cnt: number }>();
 
-        // Downgrade shop plan to free
-        await updateShop(c.env.DB, sub.shop_id, { plan: 'free' });
-        console.info(`Refund complete: subscription=${sub.id}, shop=${sub.shop_id}, reverted to free`);
+        const stmts = [
+          c.env.DB.prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?").bind(sub.id),
+        ];
+        // 다른 active가 없을 때만 plan을 free로 다운그레이드
+        if (!otherActive || otherActive.cnt === 0) {
+          stmts.push(c.env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(sub.shop_id));
+        }
+        await c.env.DB.batch(stmts);
+        console.info(`Refund complete: subscription=${sub.id}, shop=${sub.shop_id}, reverted=${!otherActive || otherActive.cnt === 0}`);
       } else {
         console.warn(`Refund webhook: no active subscription for order_id=${orderId}`);
       }
     }
   }
 
-  return c.json({ ok: true, debug_event_no: eventNo, debug_payload_keys: Object.keys(payload) });
+  return c.json({ ok: true });
 });
 
 // ─── Helper: default owner for auto-install ──────────────────

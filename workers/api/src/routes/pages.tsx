@@ -309,22 +309,20 @@ pages.get('/dashboard/billing', async (c) => {
   const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
 
-  const billingResult = await c.env.DB
-    .prepare(
+  const [billingResult, shopsResult] = await Promise.all([
+    c.env.DB.prepare(
       `SELECT s.shop_id, s.shop_name, s.plan,
         (SELECT COUNT(*) FROM login_stats ls
          WHERE ls.shop_id = s.shop_id AND ls.action = 'signup'
          AND ls.created_at >= ? AND ls.created_at < ?) as monthly_signups
        FROM shops s
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
-    )
-    .bind(`${yearMonth}-01`, nextMonthFirst, ownerId)
-    .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>();
-
-  const shopsResult = await c.env.DB
-    .prepare('SELECT shop_id, shop_name, mall_id FROM shops WHERE owner_id = ? AND deleted_at IS NULL')
-    .bind(ownerId)
-    .all<{ shop_id: string; shop_name: string; mall_id: string }>();
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL`
+    ).bind(`${yearMonth}-01`, nextMonthFirst, ownerId)
+     .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>(),
+    c.env.DB.prepare('SELECT shop_id, shop_name, mall_id FROM shops WHERE owner_id = ? AND deleted_at IS NULL')
+      .bind(ownerId)
+      .all<{ shop_id: string; shop_name: string; mall_id: string }>(),
+  ]);
 
   const billingShops = (billingResult.results ?? []).map((shop) => ({
     ...shop,
@@ -335,8 +333,12 @@ pages.get('/dashboard/billing', async (c) => {
     is_over_limit: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_MONTHLY_LIMIT,
   }));
 
+  // 현재 플랜 결정 (유료 shop이 하나라도 있으면 해당 플랜)
+  const paidShop = billingShops.find(s => s.plan !== 'free');
+  const currentPlan = paidShop ? paidShop.plan : 'free';
+
   return c.html(
-    <BillingPage billingShops={billingShops} month={yearMonth} shops={shopsResult.results ?? []} />
+    <BillingPage billingShops={billingShops} month={yearMonth} shops={shopsResult.results ?? []} currentPlan={currentPlan} />
   );
 });
 
