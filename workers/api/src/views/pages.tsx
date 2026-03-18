@@ -825,8 +825,6 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
             var shopId = shopSelect.value;
             var plan = this.dataset.plan;
             var btnEl = this;
-            var planName = plan === 'monthly' ? '월간 (₩29,900/월)' : '연간 (₩329,900/년)';
-            if (!confirm(planName + ' 플랜으로 전환하시겠습니까?')) return;
             var popup = window.open('about:blank', 'cafe24_payment', 'width=1280,height=680,scrollbars=yes');
             btnEl.disabled = true;
             btnEl.textContent = '처리 중...';

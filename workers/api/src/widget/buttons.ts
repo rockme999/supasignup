@@ -183,7 +183,7 @@ export const WIDGET_JS = `(function() {
     flash.textContent = '\\u26A1';
     title.appendChild(flash);
     var titleText = document.createElement('span');
-    titleText.textContent = ' 간편 회원가입';
+    titleText.textContent = ' 간편 로그인';
     title.appendChild(titleText);
     this.container.appendChild(title);
 
@@ -232,7 +232,7 @@ export const WIDGET_JS = `(function() {
 
     // Label
     var label = document.createElement('span');
-    label.textContent = info.name + '로 시작하기';
+    label.textContent = info.name + '로 계속하기';
     btn.appendChild(label);
 
     // Click handler
