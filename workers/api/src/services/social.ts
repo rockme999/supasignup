@@ -171,6 +171,9 @@ async function getGoogleUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserI
     name: data.name as string | undefined,
     profileImage: data.picture as string | undefined,
     rawData: data,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }
 
@@ -183,7 +186,7 @@ function buildKakaoAuthUrl(p: SocialAuthUrlParams): string {
   url.searchParams.set('client_id', p.clientId);
   url.searchParams.set('redirect_uri', p.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'profile_nickname profile_image account_email');
+  url.searchParams.set('scope', 'profile_nickname profile_image account_email phone_number birthyear birthday gender');
   url.searchParams.set('state', p.state);
   // Kakao doesn't support PKCE natively, but we still track it server-side
   return url.toString();
@@ -230,6 +233,11 @@ async function getKakaoUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserIn
     name: profile.nickname as string | undefined,
     profileImage: profile.profile_image_url as string | undefined,
     rawData: data,
+    phone: account.phone_number as string | undefined,
+    birthday: account.birthyear && account.birthday
+      ? `${account.birthyear}-${account.birthday}`
+      : undefined,
+    gender: account.gender as string | undefined,
   };
 }
 
@@ -288,6 +296,11 @@ async function getNaverUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserIn
     name: response.name as string | undefined,
     profileImage: response.profile_image as string | undefined,
     rawData: data,
+    phone: response.mobile as string | undefined,
+    birthday: response.birthyear && response.birthday
+      ? `${response.birthyear}-${response.birthday}`
+      : undefined,
+    gender: response.gender as string | undefined,
   };
 }
 
@@ -476,6 +489,9 @@ async function getDiscordUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUser
     name: (data.global_name ?? data.username) as string | undefined,
     profileImage,
     rawData: data,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }
 
@@ -536,6 +552,9 @@ async function getFacebookUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUse
     name: data.name as string | undefined,
     profileImage: pictureData.url as string | undefined,
     rawData: data,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }
 
@@ -597,6 +616,9 @@ async function getXUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> 
     name: data.name as string | undefined,
     profileImage: data.profile_image_url as string | undefined,
     rawData: body as Record<string, unknown>,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }
 
@@ -670,6 +692,9 @@ async function getLineUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInf
     name: data.displayName as string | undefined,
     profileImage: data.pictureUrl as string | undefined,
     rawData: data,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }
 
@@ -729,6 +754,9 @@ export function getTelegramUserInfo(data: Record<string, string>): OAuthUserInfo
     name: [data.first_name, data.last_name].filter(Boolean).join(' ') || undefined,
     profileImage: data.photo_url || undefined,
     rawData: data as unknown as Record<string, unknown>,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }
 
@@ -768,5 +796,8 @@ async function getAppleUserInfo(
     email: payload.email as string | undefined,
     name: undefined, // Apple only sends name on first auth (via form_post user field)
     rawData: payload,
+    phone: undefined,
+    birthday: undefined,
+    gender: undefined,
   };
 }

@@ -562,18 +562,21 @@ async function handleUserInfo(c: { env: Env; req: { header: (k: string) => strin
   }
 
   // Decrypt PII
-  const email = user.email
-    ? await decrypt(user.email, c.env.ENCRYPTION_KEY)
-    : null;
-  const name = user.name
-    ? await decrypt(user.name, c.env.ENCRYPTION_KEY)
-    : null;
+  const [email, name, phone, birthday] = await Promise.all([
+    user.email ? decrypt(user.email, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
+    user.name ? decrypt(user.name, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
+    user.phone ? decrypt(user.phone, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
+    user.birthday ? decrypt(user.birthday, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
+  ]);
 
   // Return in Cafe24 SSO standard format
   return c.json({
     id: user.user_id,
     email: email ?? '',
     name: name ?? '',
+    phone: phone ?? '',
+    birthday: birthday ?? '',
+    gender: user.gender ?? '',
     profile_image: user.profile_image ?? '',
     provider: user.provider,
   });

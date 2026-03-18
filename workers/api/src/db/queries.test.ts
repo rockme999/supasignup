@@ -223,17 +223,23 @@ describe('upsertUser', () => {
       name: 'ENCRYPTED',
       profile_image: 'https://example.com/photo.jpg',
     };
-    // 1st: SELECT existing → null, 2nd: INSERT, 3rd: SELECT inserted
-    db._setFirstSequence([null, null, newUser]);
+    // 1st: SELECT by provider → null (no existing provider match)
+    // 2nd: SELECT by email_hash → null (no existing email match, account linking skip)
+    // 3rd: INSERT user → null (run returns no first)
+    // 4th: INSERT user_providers → null
+    // 5th: SELECT inserted user → newUser
+    db._setFirstSequence([null, null, null, null, newUser]);
 
     const result = await upsertUser(db as unknown as D1Database, testUserInfo, ENCRYPTION_KEY);
 
-    // Verify SELECT then INSERT was called
+    // Verify SELECT by provider then SELECT by email_hash then INSERT was called
     expect(db._queries[0]).toContain('SELECT * FROM users WHERE provider');
-    expect(db._queries[1]).toContain('INSERT INTO users');
+    expect(db._queries[1]).toContain('SELECT * FROM users WHERE email_hash');
+    const insertQueryIdx = db._queries.findIndex(q => q.includes('INSERT INTO users'));
+    expect(insertQueryIdx).toBeGreaterThan(-1);
 
     // Verify encrypted values are not plaintext
-    const insertBinds = db._binds[1];
+    const insertBinds = db._binds[insertQueryIdx];
     expect(insertBinds[3]).not.toBe('test@example.com'); // email is encrypted
     expect(insertBinds[5]).not.toBe('홍길동'); // name is encrypted
     // email_hash should be a hex string (SHA-256)
@@ -248,34 +254,45 @@ describe('upsertUser', () => {
       provider_uid: 'g_12345',
     };
     const updatedUser = { ...existingUser, email: 'ENCRYPTED', name: 'ENCRYPTED' };
-    // 1st: SELECT existing → found, 2nd: UPDATE, 3rd: SELECT updated
-    db._setFirstSequence([existingUser, null, updatedUser]);
+    // 1st: SELECT by provider → found
+    // 2nd: UPDATE (run, no first needed)
+    // 3rd: INSERT OR IGNORE user_providers (run)
+    // 4th: SELECT updated user → updatedUser
+    db._setFirstSequence([existingUser, null, null, updatedUser]);
 
     const result = await upsertUser(db as unknown as D1Database, testUserInfo, ENCRYPTION_KEY);
 
-    expect(db._queries[1]).toContain('UPDATE users SET');
-    expect(db._queries[1]).toContain('email = ?');
-    expect(db._queries[1]).toContain('email_hash = ?');
+    const updateQueryIdx = db._queries.findIndex(q => q.includes('UPDATE users SET'));
+    expect(updateQueryIdx).toBeGreaterThan(-1);
+    expect(db._queries[updateQueryIdx]).toContain('email = ?');
+    expect(db._queries[updateQueryIdx]).toContain('email_hash = ?');
   });
 
   it('generates consistent email_hash for same email', async () => {
     const db1 = createMockD1();
-    db1._setFirstSequence([null, null, { user_id: 'u1' }]);
+    db1._setFirstSequence([null, null, null, null, { user_id: 'u1' }]);
     await upsertUser(db1 as unknown as D1Database, testUserInfo, ENCRYPTION_KEY);
 
     const db2 = createMockD1();
-    db2._setFirstSequence([null, null, { user_id: 'u2' }]);
+    db2._setFirstSequence([null, null, null, null, { user_id: 'u2' }]);
     await upsertUser(db2 as unknown as D1Database, testUserInfo, ENCRYPTION_KEY);
 
     // email_hash should be the same for same email
-    const hash1 = db1._binds[1][4];
-    const hash2 = db2._binds[1][4];
+    const insertIdx1 = db1._queries.findIndex(q => q.includes('INSERT INTO users'));
+    const insertIdx2 = db2._queries.findIndex(q => q.includes('INSERT INTO users'));
+    const hash1 = db1._binds[insertIdx1][4];
+    const hash2 = db2._binds[insertIdx2][4];
     expect(hash1).toBe(hash2);
   });
 
   it('handles null email and name', async () => {
     const db = createMockD1();
-    db._setFirstSequence([null, null, { user_id: 'u1' }]);
+    // 1st: SELECT by provider → null
+    // email is null so no email_hash lookup
+    // 2nd: INSERT user (run)
+    // 3rd: INSERT user_providers (run)
+    // 4th: SELECT inserted → { user_id: 'u1' }
+    db._setFirstSequence([null, null, null, { user_id: 'u1' }]);
 
     await upsertUser(db as unknown as D1Database, {
       provider: 'apple',
@@ -283,7 +300,8 @@ describe('upsertUser', () => {
       rawData: { sub: 'apple_123' },
     }, ENCRYPTION_KEY);
 
-    const insertBinds = db._binds[1];
+    const insertQueryIdx = db._queries.findIndex(q => q.includes('INSERT INTO users'));
+    const insertBinds = db._binds[insertQueryIdx];
     expect(insertBinds[3]).toBeNull(); // email
     expect(insertBinds[4]).toBeNull(); // email_hash
     expect(insertBinds[5]).toBeNull(); // name

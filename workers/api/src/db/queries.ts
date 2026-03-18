@@ -140,16 +140,45 @@ export async function softDeleteShop(
 
 // ─── User queries (PII encrypted) ───────────────────────────
 
+export async function getUserByEmailHash(
+  db: D1Database,
+  emailHash: string,
+): Promise<User | null> {
+  return db
+    .prepare('SELECT * FROM users WHERE email_hash = ?')
+    .bind(emailHash)
+    .first<User>();
+}
+
+export async function getUserProviders(
+  db: D1Database,
+  userId: string,
+): Promise<Array<{ provider: string; provider_uid: string; linked_at: string }>> {
+  const result = await db
+    .prepare('SELECT provider, provider_uid, linked_at FROM user_providers WHERE user_id = ?')
+    .bind(userId)
+    .all();
+  return (result.results ?? []) as Array<{ provider: string; provider_uid: string; linked_at: string }>;
+}
+
+export async function addUserProvider(
+  db: D1Database,
+  userId: string,
+  provider: string,
+  providerUid: string,
+): Promise<void> {
+  await db
+    .prepare('INSERT OR IGNORE INTO user_providers (id, user_id, provider, provider_uid) VALUES (?, ?, ?, ?)')
+    .bind(generateId(), userId, provider, providerUid)
+    .run();
+}
+
 export async function upsertUser(
   db: D1Database,
   userInfo: OAuthUserInfo,
   encryptionKey: string,
 ): Promise<User> {
-  const existing = await db
-    .prepare('SELECT * FROM users WHERE provider = ? AND provider_uid = ?')
-    .bind(userInfo.provider, userInfo.providerUid)
-    .first<User>();
-
+  // Prepare encrypted/hashed PII
   const encryptedEmail = userInfo.email
     ? await encrypt(userInfo.email, encryptionKey)
     : null;
@@ -163,12 +192,26 @@ export async function upsertUser(
     JSON.stringify(userInfo.rawData),
     encryptionKey,
   );
+  const encryptedPhone = userInfo.phone
+    ? await encrypt(userInfo.phone, encryptionKey)
+    : null;
+  const encryptedBirthday = userInfo.birthday
+    ? await encrypt(userInfo.birthday, encryptionKey)
+    : null;
+  const gender = userInfo.gender ?? null;
 
-  if (existing) {
+  // 1. Look up by provider + provider_uid (same provider, same account)
+  const existingByProvider = await db
+    .prepare('SELECT * FROM users WHERE provider = ? AND provider_uid = ?')
+    .bind(userInfo.provider, userInfo.providerUid)
+    .first<User>();
+
+  if (existingByProvider) {
+    // Update existing user
     await db
       .prepare(
         `UPDATE users SET email = ?, email_hash = ?, name = ?, profile_image = ?,
-         raw_data = ?, updated_at = datetime('now')
+         raw_data = ?, phone = ?, birthday = ?, gender = ?, updated_at = datetime('now')
          WHERE user_id = ?`,
       )
       .bind(
@@ -177,21 +220,61 @@ export async function upsertUser(
         encryptedName,
         userInfo.profileImage ?? null,
         encryptedRawData,
-        existing.user_id,
+        encryptedPhone,
+        encryptedBirthday,
+        gender,
+        existingByProvider.user_id,
       )
       .run();
 
+    await addUserProvider(db, existingByProvider.user_id, userInfo.provider, userInfo.providerUid);
+
     return (await db
       .prepare('SELECT * FROM users WHERE user_id = ?')
-      .bind(existing.user_id)
+      .bind(existingByProvider.user_id)
       .first<User>())!;
   }
 
+  // 2. Account linking: look up by email_hash (same email, different provider)
+  if (emailHash) {
+    const existingByEmail = await getUserByEmailHash(db, emailHash);
+    if (existingByEmail) {
+      // Link new provider to existing user (auto-linking)
+      await addUserProvider(db, existingByEmail.user_id, userInfo.provider, userInfo.providerUid);
+
+      // Update user info with latest data from new provider
+      await db
+        .prepare(
+          `UPDATE users SET email = ?, email_hash = ?, name = ?, profile_image = ?,
+           raw_data = ?, phone = ?, birthday = ?, gender = ?, updated_at = datetime('now')
+           WHERE user_id = ?`,
+        )
+        .bind(
+          encryptedEmail,
+          emailHash,
+          encryptedName,
+          userInfo.profileImage ?? null,
+          encryptedRawData,
+          encryptedPhone,
+          encryptedBirthday,
+          gender,
+          existingByEmail.user_id,
+        )
+        .run();
+
+      return (await db
+        .prepare('SELECT * FROM users WHERE user_id = ?')
+        .bind(existingByEmail.user_id)
+        .first<User>())!;
+    }
+  }
+
+  // 3. Create new user
   const userId = generateId();
   await db
     .prepare(
-      `INSERT INTO users (user_id, provider, provider_uid, email, email_hash, name, profile_image, raw_data)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (user_id, provider, provider_uid, email, email_hash, name, profile_image, raw_data, phone, birthday, gender)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       userId,
@@ -202,8 +285,13 @@ export async function upsertUser(
       encryptedName,
       userInfo.profileImage ?? null,
       encryptedRawData,
+      encryptedPhone,
+      encryptedBirthday,
+      gender,
     )
     .run();
+
+  await addUserProvider(db, userId, userInfo.provider, userInfo.providerUid);
 
   return (await db
     .prepare('SELECT * FROM users WHERE user_id = ?')

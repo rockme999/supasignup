@@ -37,6 +37,9 @@ export interface User {
   name: string | null; // AES-GCM encrypted
   profile_image: string | null;
   raw_data: string | null; // AES-GCM encrypted JSON
+  phone: string | null; // AES-GCM encrypted
+  birthday: string | null; // AES-GCM encrypted
+  gender: string | null; // plaintext
   created_at: string;
   updated_at: string;
 }
@@ -99,6 +102,9 @@ export interface OAuthUserInfo {
   name?: string;
   profileImage?: string;
   rawData: Record<string, unknown>;
+  phone?: string;
+  birthday?: string;
+  gender?: string;
 }
 
 // KV session types
