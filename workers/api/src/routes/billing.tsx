@@ -52,25 +52,11 @@ billing.post('/subscribe', async (c) => {
     return c.json({ error: 'no_platform_token', message: '카페24 앱 재설치가 필요합니다.' }, 400);
   }
 
-  // [M8] 검증된 shop.shop_id 사용
-  const existing = await c.env.DB
-    .prepare("SELECT id, created_at FROM subscriptions WHERE shop_id = ? AND status = 'pending'")
+  // 기존 pending 구독이 있으면 취소하고 새로 생성
+  await c.env.DB
+    .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE shop_id = ? AND status = 'pending'")
     .bind(shop.shop_id)
-    .first<{ id: string; created_at: string }>();
-
-  if (existing) {
-    const createdAt = new Date(existing.created_at).getTime();
-    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-    if (createdAt > tenMinutesAgo) {
-      // [M2] 최근 10분 이내 pending 존재 → 중복 방어
-      return c.json({ error: 'payment_in_progress', message: '이미 결제가 진행 중입니다. 잠시 후 다시 시도하세요.' }, 409);
-    }
-    // 10분 이상 된 pending → 타임아웃 처리 [M1]
-    await c.env.DB
-      .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?")
-      .bind(existing.id)
-      .run();
-  }
+    .run();
 
   const price = PLAN_PRICES[body.plan];
   const orderName = body.plan === 'monthly'
@@ -190,16 +176,55 @@ billing.get('/return', (c) => {
       <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#f5f5f5">
         <div style="text-align:center;background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08)">
           <h2 style="margin-bottom:8px">결제가 완료되었습니다</h2>
-          <p style="color:#64748b;font-size:14px">잠시 후 대시보드로 이동합니다.</p>
+          <p style="color:#64748b;font-size:14px">잠시 후 자동으로 닫힙니다.</p>
         </div>
-        <script>{`
-          setTimeout(function() {
-            window.location.href = '/dashboard/billing';
-          }, 2000);
-        `}</script>
+        <script dangerouslySetInnerHTML={{__html: `
+          if (window.opener) {
+            window.opener.location.reload();
+          }
+          setTimeout(function() { window.close(); }, 2000);
+          setTimeout(function() { window.location.href = '/dashboard/billing'; }, 3000);
+        `}} />
       </body>
     </html>
   );
+});
+
+// ─── POST /cancel ───────────────────────────────────────────
+
+billing.post('/cancel', async (c) => {
+  const ownerId = c.get('ownerId');
+  const body = await c.req.json<{ subscription_id: string }>();
+
+  if (!body.subscription_id) {
+    return c.json({ error: 'missing_parameters' }, 400);
+  }
+
+  // pending 상태만 취소 가능, 본인 소유 확인
+  const result = await c.env.DB
+    .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ? AND owner_id = ? AND status = 'pending'")
+    .bind(body.subscription_id, ownerId)
+    .run();
+
+  return c.json({ ok: true, cancelled: result.meta.changes > 0 });
+});
+
+// ─── GET /status/:subscription_id ───────────────────────────
+
+billing.get('/status/:id', async (c) => {
+  const ownerId = c.get('ownerId');
+  const subId = c.req.param('id');
+
+  const sub = await c.env.DB
+    .prepare('SELECT status, plan FROM subscriptions WHERE id = ? AND owner_id = ?')
+    .bind(subId, ownerId)
+    .first<{ status: string; plan: string }>();
+
+  if (!sub) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  return c.json({ status: sub.status, plan: sub.plan });
 });
 
 export default billing;

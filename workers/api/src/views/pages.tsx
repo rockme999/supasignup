@@ -817,17 +817,19 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
         </div>
       )}
 
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         document.querySelectorAll('.subscribe-btn').forEach(function(btn) {
           btn.addEventListener('click', async function() {
             var shopSelect = document.getElementById('billingShopSelect');
             if (!shopSelect) { alert('등록된 쇼핑몰이 없습니다.'); return; }
             var shopId = shopSelect.value;
             var plan = this.dataset.plan;
-            var planName = plan === 'monthly' ? '월간 (\\u20A929,900/월)' : '연간 (\\u20A9329,900/년)';
+            var btnEl = this;
+            var planName = plan === 'monthly' ? '월간 (₩29,900/월)' : '연간 (₩329,900/년)';
             if (!confirm(planName + ' 플랜으로 전환하시겠습니까?')) return;
-            this.disabled = true;
-            this.textContent = '처리 중...';
+            var popup = window.open('about:blank', 'cafe24_payment', 'width=600,height=700,scrollbars=yes');
+            btnEl.disabled = true;
+            btnEl.textContent = '처리 중...';
             try {
               var resp = await fetch('/api/dashboard/billing/subscribe', {
                 method: 'POST',
@@ -837,21 +839,50 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
               });
               if (resp.ok) {
                 var data = await resp.json();
-                window.location.href = data.confirmation_url;
+                var subId = data.subscription_id;
+                if (popup && !popup.closed) { popup.location.href = data.confirmation_url; }
+                else { window.location.href = data.confirmation_url; return; }
+
+                // 팝업 닫힘 감지
+                var checkPopup = setInterval(function() {
+                  if (!popup || popup.closed) {
+                    clearInterval(checkPopup);
+                    // 구독 상태 확인
+                    fetch('/api/dashboard/billing/status/' + subId, { credentials: 'same-origin' })
+                      .then(function(r) { return r.json(); })
+                      .then(function(s) {
+                        if (s.status === 'active') {
+                          // 결제 완료 → 페이지 새로고침
+                          location.reload();
+                        } else {
+                          // 결제 미완료 → 버튼 복원
+                          btnEl.disabled = false;
+                          btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+                        }
+                      })
+                      .catch(function() {
+                        btnEl.disabled = false;
+                        btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+                      });
+                  }
+                }, 1000);
               } else {
                 var err = await resp.json();
                 alert(err.message || '결제 주문 생성에 실패했습니다.');
-                this.disabled = false;
-                this.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+                if (popup && !popup.closed) popup.close();
+                btnEl.disabled = false;
+                btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
               }
             } catch(e) {
-              alert('네트워크 오류가 발생했습니다.');
-              this.disabled = false;
-              this.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+              alert('오류: ' + e.message);
+              if (popup && !popup.closed) popup.close();
+              btnEl.disabled = false;
+              btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
             }
           });
         });
-      `}</script>
+      `}} />
+
     </Layout>
   );
 };
