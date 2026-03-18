@@ -12,6 +12,8 @@ type LayoutProps = PropsWithChildren<{
 const navItems = [
   { path: '/dashboard', label: '홈', icon: '📊' },
   { path: '/dashboard/shops', label: '쇼핑몰 관리', icon: '🏪' },
+  { path: '/dashboard/stats', label: '통합 통계', icon: '📈' },
+  { path: '/dashboard/billing', label: '플랜/과금', icon: '💳' },
   { path: '/dashboard/settings', label: '계정 설정', icon: '⚙️' },
 ];
 
@@ -97,10 +99,67 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
         .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
         .empty-state p { font-size: 15px; margin-bottom: 16px; }
 
+        /* Progress bar */
+        .progress-bar { background: #e5e7eb; border-radius: 8px; height: 24px; overflow: hidden; position: relative; }
+        .progress-bar-fill { height: 100%; border-radius: 8px; transition: width 0.3s; display: flex; align-items: center; padding: 0 8px; }
+        .progress-bar-label { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+        .progress-bar-outer { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .progress-bar-name { font-size: 13px; font-weight: 600; min-width: 64px; }
+        .progress-bar-value { font-size: 12px; color: #64748b; min-width: 60px; text-align: right; }
+
+        /* SVG Chart */
+        .chart-container { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px; }
+        .chart-container h3 { font-size: 16px; margin-bottom: 16px; }
+
+        /* Filter controls */
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
+        .filter-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; }
+        .filter-bar select:focus { outline: none; border-color: #2563eb; }
+
+        /* Tab navigation */
+        .tab-nav { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; gap: 0; }
+        .tab-nav a { padding: 10px 20px; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab-nav a:hover { color: #1e293b; text-decoration: none; }
+        .tab-nav a.active { color: #2563eb; border-bottom-color: #2563eb; }
+
+        /* Alert banner with action button */
+        .alert-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .alert-banner .btn { flex-shrink: 0; }
+
+        /* Plan cards */
+        .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .plan-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; text-align: center; transition: border-color 0.15s; }
+        .plan-card.current { border-color: #2563eb; background: #eff6ff; }
+        .plan-card h3 { font-size: 18px; margin-bottom: 4px; }
+        .plan-card .price { font-size: 28px; font-weight: 700; margin: 12px 0; }
+        .plan-card .price small { font-size: 14px; font-weight: 400; color: #64748b; }
+        .plan-card ul { list-style: none; text-align: left; font-size: 13px; margin: 16px 0; }
+        .plan-card ul li { padding: 4px 0; }
+        .plan-card ul li::before { content: '✓ '; color: #22c55e; font-weight: 700; }
+
+        /* Provider colors */
+        .provider-google { background: #4285f4; }
+        .provider-kakao { background: #fee500; }
+        .provider-naver { background: #03c75a; }
+        .provider-apple { background: #000000; }
+        .provider-toss { background: #0064ff; }
+        .provider-discord { background: #5865f2; }
+        .provider-telegram { background: #26a5e4; }
+        .provider-tiktok { background: #000000; }
+
+        /* Provider preview */
+        .preview-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 32px; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .preview-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; border: none; cursor: default; }
+        .preview-btn.kakao-btn { color: #191919; }
+
         @media (max-width: 768px) {
           .sidebar { display: none; }
           .main { padding: 16px; }
           .stat-grid { grid-template-columns: 1fr 1fr; }
+          .filter-bar { flex-direction: column; }
+          .plan-grid { grid-template-columns: 1fr; }
+          .alert-banner { flex-direction: column; align-items: flex-start; }
+          .tab-nav { overflow-x: auto; }
         }
       `}</style>
     </head>
@@ -113,7 +172,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
               {navItems.map((item) => (
                 <a
                   href={item.path}
-                  class={currentPath === item.path ? 'active' : ''}
+                  class={currentPath === item.path || (item.path !== '/dashboard' && currentPath?.startsWith(item.path)) ? 'active' : ''}
                 >
                   {item.icon} {item.label}
                 </a>

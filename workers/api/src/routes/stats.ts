@@ -11,7 +11,7 @@
 
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
-import { FREE_PLAN_MONTHLY_LIMIT } from '@supasignup/bg-core';
+import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
 import { authMiddleware } from '../middleware/auth';
 
 type StatsEnv = {
@@ -26,6 +26,33 @@ stats.use('*', authMiddleware);
 // ─── GET /stats ──────────────────────────────────────────────
 stats.get('/stats', async (c) => {
   const ownerId = c.get('ownerId');
+  const shopIdFilter = c.req.query('shop_id') || null;
+  const period = c.req.query('period') || null; // today, 7d, 30d, month
+
+  // Build date filter
+  let dateFilter = '';
+  let dateParam: string | null = null;
+  const today = new Date().toISOString().slice(0, 10);
+  const yearMonth = today.slice(0, 7);
+
+  if (period === 'today') {
+    dateFilter = ' AND ls.created_at >= ?';
+    dateParam = today;
+  } else if (period === '7d') {
+    dateFilter = " AND ls.created_at >= DATE('now', '-7 days')";
+  } else if (period === '30d') {
+    dateFilter = " AND ls.created_at >= DATE('now', '-30 days')";
+  } else if (period === 'month') {
+    dateFilter = ' AND ls.created_at >= ?';
+    dateParam = `${yearMonth}-01`;
+  }
+
+  const shopFilter = shopIdFilter ? ' AND ls.shop_id = ?' : '';
+
+  // Build params array
+  const baseParams: (string | null)[] = [ownerId];
+  if (dateParam) baseParams.push(dateParam);
+  if (shopIdFilter) baseParams.push(shopIdFilter);
 
   // Total signups / logins
   const totalResult = await c.env.DB
@@ -36,45 +63,50 @@ stats.get('/stats', async (c) => {
         SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL${dateFilter}${shopFilter}`,
     )
-    .bind(ownerId)
+    .bind(...baseParams)
     .first<{ total: number; signups: number; logins: number }>();
 
-  // Today's signups
-  const today = new Date().toISOString().slice(0, 10);
+  // Today's signups (always today regardless of filter)
+  const todayParams: (string | null)[] = [ownerId, today];
+  if (shopIdFilter) todayParams.push(shopIdFilter);
   const todayResult = await c.env.DB
     .prepare(
       `SELECT COUNT(*) as cnt FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.action = 'signup' AND ls.created_at >= ?`,
+       AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
     )
-    .bind(ownerId, today)
+    .bind(...todayParams)
     .first<{ cnt: number }>();
 
-  // This month's signups
-  const yearMonth = today.slice(0, 7);
+  // This month's signups (always current month regardless of filter)
+  const monthParams: (string | null)[] = [ownerId, `${yearMonth}-01`];
+  if (shopIdFilter) monthParams.push(shopIdFilter);
   const monthResult = await c.env.DB
     .prepare(
       `SELECT COUNT(*) as cnt FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.action = 'signup' AND ls.created_at >= ?`,
+       AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
     )
-    .bind(ownerId, `${yearMonth}-01`)
+    .bind(...monthParams)
     .first<{ cnt: number }>();
 
   // Per-provider breakdown
+  const providerParams: (string | null)[] = [ownerId];
+  if (dateParam) providerParams.push(dateParam);
+  if (shopIdFilter) providerParams.push(shopIdFilter);
   const providerResult = await c.env.DB
     .prepare(
       `SELECT ls.provider, COUNT(*) as cnt
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'${dateFilter}${shopFilter}
        GROUP BY ls.provider`,
     )
-    .bind(ownerId)
+    .bind(...providerParams)
     .all<{ provider: string; cnt: number }>();
 
   const providerStats: Record<string, number> = {};
@@ -89,6 +121,44 @@ stats.get('/stats', async (c) => {
     today_signups: todayResult?.cnt ?? 0,
     month_signups: monthResult?.cnt ?? 0,
     by_provider: providerStats,
+  });
+});
+
+// ─── GET /stats/daily ───────────────────────────────────────
+stats.get('/stats/daily', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopIdFilter = c.req.query('shop_id') || null;
+  const period = c.req.query('period') || '30d';
+
+  let days = 30;
+  if (period === 'today') days = 1;
+  else if (period === '7d') days = 7;
+  else if (period === '90d') days = 90;
+  else if (period === 'month') {
+    const now = new Date();
+    days = now.getUTCDate(); // 현재 월 1일부터 오늘까지 일수
+  }
+
+  const shopFilter = shopIdFilter ? ' AND ls.shop_id = ?' : '';
+  const params: string[] = [ownerId];
+  if (shopIdFilter) params.push(shopIdFilter);
+
+  const dailyResult = await c.env.DB
+    .prepare(
+      `SELECT DATE(ls.created_at) as day, ls.action, COUNT(*) as cnt
+       FROM login_stats ls
+       JOIN shops s ON ls.shop_id = s.shop_id
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL
+       AND ls.created_at >= DATE('now', '-${days} days')${shopFilter}
+       GROUP BY day, ls.action
+       ORDER BY day`,
+    )
+    .bind(...params)
+    .all<{ day: string; action: string; cnt: number }>();
+
+  return c.json({
+    daily: dailyResult.results ?? [],
+    period,
   });
 });
 
@@ -148,6 +218,7 @@ stats.get('/billing/status', async (c) => {
 
   const now = new Date();
   const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
 
   // Get all shops with their monthly signup count
   const result = await c.env.DB
@@ -159,7 +230,7 @@ stats.get('/billing/status', async (c) => {
        FROM shops s
        WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
     )
-    .bind(`${yearMonth}-01`, `${yearMonth}-32`, ownerId)
+    .bind(`${yearMonth}-01`, nextMonthFirst, ownerId)
     .all<{
       shop_id: string;
       shop_name: string;
@@ -174,7 +245,7 @@ stats.get('/billing/status', async (c) => {
     usage_percent: shop.plan === 'free'
       ? Math.round((shop.monthly_signups / FREE_PLAN_MONTHLY_LIMIT) * 100)
       : null,
-    needs_upgrade: shop.plan === 'free' && shop.monthly_signups >= 80,
+    needs_upgrade: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_WARN_THRESHOLD,
     is_over_limit: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_MONTHLY_LIMIT,
   }));
 

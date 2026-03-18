@@ -4,6 +4,121 @@
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
 
+// ─── Helper Components ──────────────────────────────────────
+
+const providerColors: Record<string, string> = {
+  google: '#4285f4',
+  kakao: '#fee500',
+  naver: '#03c75a',
+  apple: '#000000',
+  toss: '#0064ff',
+  discord: '#5865f2',
+  telegram: '#26a5e4',
+  tiktok: '#000000',
+};
+
+const providerDisplayNames: Record<string, string> = {
+  google: 'Google',
+  kakao: '카카오',
+  naver: '네이버',
+  apple: 'Apple',
+  toss: '토스',
+  discord: 'Discord',
+  telegram: 'Telegram',
+  tiktok: 'TikTok',
+};
+
+function parseProviders(raw: string | null | undefined): string[] {
+  try { return JSON.parse(raw || '[]'); } catch { return []; }
+}
+
+const ProgressBar: FC<{ label: string; value: number; max: number; color?: string }> = ({ label, value, max, color }) => {
+  const percent = max > 0 ? Math.min(Math.round((value / max) * 100), 100) : 0;
+  const barColor = color || '#2563eb';
+  return (
+    <div class="progress-bar-outer">
+      <span class="progress-bar-name">{label}</span>
+      <div class="progress-bar" style="flex:1">
+        <div class="progress-bar-fill" style={`width:${Math.max(percent, 2)}%;background:${barColor}`}>
+          {percent >= 15 && <span class="progress-bar-label">{percent}%</span>}
+        </div>
+      </div>
+      <span class="progress-bar-value">{value} ({percent}%)</span>
+    </div>
+  );
+};
+
+type DailyData = { day: string; action: string; cnt: number };
+
+const LineChart: FC<{ data: DailyData[]; width?: number; height?: number }> = ({ data, width = 700, height = 200 }) => {
+  if (data.length === 0) {
+    return <div class="empty-state" style="padding:24px"><p>데이터가 없습니다.</p></div>;
+  }
+
+  const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  // Aggregate by day
+  const dayMap = new Map<string, { signup: number; login: number }>();
+  for (const d of data) {
+    if (!dayMap.has(d.day)) dayMap.set(d.day, { signup: 0, login: 0 });
+    const entry = dayMap.get(d.day)!;
+    if (d.action === 'signup') entry.signup += d.cnt;
+    else if (d.action === 'login') entry.login += d.cnt;
+  }
+
+  const days = Array.from(dayMap.keys()).sort();
+  const maxVal = Math.max(1, ...days.map(d => {
+    const e = dayMap.get(d)!;
+    return Math.max(e.signup, e.login);
+  }));
+
+  const xScale = (i: number) => padding.left + (days.length > 1 ? (i / (days.length - 1)) * chartW : chartW / 2);
+  const yScale = (v: number) => padding.top + chartH - (v / maxVal) * chartH;
+
+  const signupPoints = days.map((d, i) => `${xScale(i)},${yScale(dayMap.get(d)!.signup)}`).join(' ');
+  const loginPoints = days.map((d, i) => `${xScale(i)},${yScale(dayMap.get(d)!.login)}`).join(' ');
+
+  // Y-axis labels (5 ticks)
+  const yTicks = [0, 1, 2, 3, 4].map(i => Math.round((maxVal / 4) * i));
+
+  // X-axis labels (show every ~5th day)
+  const xStep = Math.max(1, Math.floor(days.length / 6));
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style="width:100%;max-width:700px;height:auto">
+      {/* Grid lines */}
+      {yTicks.map(v => (
+        <line x1={padding.left} y1={yScale(v)} x2={width - padding.right} y2={yScale(v)} stroke="#e5e7eb" stroke-width="1" />
+      ))}
+      {/* Y-axis labels */}
+      {yTicks.map(v => (
+        <text x={padding.left - 8} y={yScale(v) + 4} text-anchor="end" font-size="11" fill="#94a3b8">{v}</text>
+      ))}
+      {/* X-axis labels */}
+      {days.map((d, i) => i % xStep === 0 ? (
+        <text x={xScale(i)} y={height - 8} text-anchor="middle" font-size="10" fill="#94a3b8">{d.slice(5)}</text>
+      ) : null)}
+      {/* Lines */}
+      <polyline points={signupPoints} fill="none" stroke="#2563eb" stroke-width="2" />
+      <polyline points={loginPoints} fill="none" stroke="#22c55e" stroke-width="2" />
+      {/* Dots */}
+      {days.map((d, i) => (
+        <circle cx={xScale(i)} cy={yScale(dayMap.get(d)!.signup)} r="3" fill="#2563eb" />
+      ))}
+      {days.map((d, i) => (
+        <circle cx={xScale(i)} cy={yScale(dayMap.get(d)!.login)} r="3" fill="#22c55e" />
+      ))}
+      {/* Legend */}
+      <rect x={width - 160} y={4} width="10" height="10" fill="#2563eb" rx="2" />
+      <text x={width - 146} y={13} font-size="11" fill="#475569">가입</text>
+      <rect x={width - 100} y={4} width="10" height="10" fill="#22c55e" rx="2" />
+      <text x={width - 86} y={13} font-size="11" fill="#475569">로그인</text>
+    </svg>
+  );
+};
+
 // ─── Login / Register ────────────────────────────────────────
 
 export const LoginPage: FC<{ error?: string }> = ({ error }) => (
@@ -141,53 +256,65 @@ export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[] }> = (
 
     {Object.keys(stats.by_provider).length > 0 && (
       <div class="card">
-        <h2>소셜별 가입 현황</h2>
-        <table>
-          <thead><tr><th>프로바이더</th><th>가입 수</th><th>비율</th></tr></thead>
-          <tbody>
-            {Object.entries(stats.by_provider).map(([provider, count]) => (
-              <tr>
-                <td>{provider}</td>
-                <td>{count}</td>
-                <td>{stats.total_signups > 0 ? Math.round((count / stats.total_signups) * 100) : 0}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">소셜별 가입 현황</h2>
+          <a href="/dashboard/stats" style="font-size:13px">자세히 보기 →</a>
+        </div>
+        {Object.entries(stats.by_provider).map(([provider, count]) => (
+          <ProgressBar
+            label={providerDisplayNames[provider] || provider}
+            value={count}
+            max={stats.total_signups}
+            color={providerColors[provider]}
+          />
+        ))}
       </div>
     )}
 
     {billingShops.some((s) => s.needs_upgrade) && (
       <div class="alert alert-warn">
-        무료 플랜 한도(100건/월)에 근접한 쇼핑몰이 있습니다. 쇼핑몰 관리에서 확인하세요.
+        무료 플랜 한도(100건/월)에 근접한 쇼핑몰이 있습니다. <a href="/dashboard/billing">과금 현황 확인 →</a>
       </div>
     )}
 
     <div class="card">
-      <h2>쇼핑몰 과금 현황</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin-bottom:0">쇼핑몰 과금 현황</h2>
+        <a href="/dashboard/billing" style="font-size:13px">자세히 보기 →</a>
+      </div>
       {billingShops.length === 0 ? (
         <div class="empty-state">
           <p>등록된 쇼핑몰이 없습니다.</p>
           <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">쇼핑몰 등록</a>
         </div>
       ) : (
-        <table>
-          <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>상태</th></tr></thead>
-          <tbody>
-            {billingShops.map((shop) => (
-              <tr>
-                <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
-                <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                <td>{shop.monthly_signups}{shop.usage_percent !== null && <span style="color:#94a3b8"> / 100 ({shop.usage_percent}%)</span>}</td>
-                <td>
-                  {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
-                  {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
-                  {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          {billingShops.filter(s => s.plan === 'free').map((shop) => (
+            <ProgressBar
+              label={shop.shop_name || shop.shop_id}
+              value={shop.monthly_signups}
+              max={100}
+              color={shop.is_over_limit ? '#ef4444' : shop.needs_upgrade ? '#f59e0b' : '#22c55e'}
+            />
+          ))}
+          <table style="margin-top:12px">
+            <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>상태</th></tr></thead>
+            <tbody>
+              {billingShops.map((shop) => (
+                <tr>
+                  <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
+                  <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
+                  <td>{shop.monthly_signups}{shop.usage_percent !== null && <span style="color:#94a3b8"> / 100 ({shop.usage_percent}%)</span>}</td>
+                  <td>
+                    {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
+                    {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
+                    {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
     </div>
   </Layout>
@@ -225,7 +352,7 @@ export const ShopsPage: FC<{ shops: ShopListItem[] }> = ({ shops }) => (
           <thead><tr><th>쇼핑몰명</th><th>Mall ID</th><th>플랫폼</th><th>플랜</th><th>프로바이더</th><th></th></tr></thead>
           <tbody>
             {shops.map((shop) => {
-              const providers = (() => { try { return JSON.parse(shop.enabled_providers || '[]'); } catch { return []; } })();
+              const providers = parseProviders(shop.enabled_providers);
               return (
                 <tr>
                   <td>{shop.shop_name || '-'}</td>
@@ -301,6 +428,7 @@ type ShopDetail = {
   plan: string;
   enabled_providers: string;
   created_at: string;
+  sso_configured: number;
 };
 
 export const ShopDetailPage: FC<{
@@ -308,12 +436,17 @@ export const ShopDetailPage: FC<{
   monthlySignups: number;
   baseUrl: string;
 }> = ({ shop, monthlySignups, baseUrl }) => {
-  const providers = (() => { try { return JSON.parse(shop.enabled_providers || '[]') as string[]; } catch { return [] as string[]; } })();
-  const allProviders = ['kakao', 'naver', 'google', 'apple'];
+  const providers = parseProviders(shop.enabled_providers);
 
   return (
     <Layout title={shop.shop_name || shop.mall_id} loggedIn currentPath="/dashboard/shops">
-      <h1>{shop.shop_name || shop.mall_id} 설정</h1>
+      <h1>{shop.shop_name || shop.mall_id}</h1>
+
+      <div class="tab-nav">
+        <a href={`/dashboard/shops/${shop.shop_id}`} class="active">설정</a>
+        <a href={`/dashboard/shops/${shop.shop_id}/providers`}>프로바이더</a>
+        <a href={`/dashboard/shops/${shop.shop_id}/setup`}>SSO 가이드</a>
+      </div>
 
       <div class="card">
         <h2>기본 정보</h2>
@@ -337,46 +470,33 @@ export const ShopDetailPage: FC<{
       </div>
 
       <div class="card">
-        <h2>소셜 프로바이더 설정</h2>
-        <form id="providerForm">
-          {allProviders.map((p) => (
-            <div class="provider-toggle">
-              <label class="toggle">
-                <input type="checkbox" name="providers" value={p} checked={providers.includes(p)} />
-                <span class="toggle-slider"></span>
-              </label>
-              <span style="font-weight:600; text-transform:capitalize">{p}</span>
-            </div>
-          ))}
-          <div style="margin-top:16px">
-            <button type="submit" class="btn btn-primary btn-sm">프로바이더 저장</button>
-          </div>
-        </form>
-        <script>{`
-          document.getElementById('providerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const checked = [...e.target.querySelectorAll('input[name=providers]:checked')].map(i => i.value);
-            if (checked.length === 0) { alert('최소 1개의 프로바이더를 선택해야 합니다.'); return; }
-            const resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/providers', { providers: checked });
-            if (resp.ok) { alert('프로바이더 설정이 저장되었습니다.'); location.reload(); }
-            else { const data = await resp.json(); alert(data.error || '저장 중 오류가 발생했습니다.'); }
-          });
-        `}</script>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">소셜 프로바이더</h2>
+          <a href={`/dashboard/shops/${shop.shop_id}/providers`} class="btn btn-outline btn-sm">관리 →</a>
+        </div>
+        <p style="font-size:13px; color:#64748b">
+          활성: {providers.length > 0 ? providers.map(p => providerDisplayNames[p] || p).join(', ') : '없음'}
+        </p>
       </div>
 
-      <div class="card">
-        <h2>SSO 설정 가이드</h2>
-        <a href={`/dashboard/shops/${shop.shop_id}/setup`} class="btn btn-outline btn-sm">SSO 설정 보기</a>
+      <div class="card" style={`border: 1px solid ${shop.sso_configured ? '#dcfce7' : '#fef3c7'}`}>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h2 style="margin-bottom:4px">SSO 설정 {shop.sso_configured ? <span class="badge badge-green">완료</span> : <span class="badge badge-yellow">미완료</span>}</h2>
+            <p style="font-size:13px;color:#64748b">카페24 관리자에서 SSO 연동 설정이 필요합니다.</p>
+          </div>
+          <a href={`/dashboard/shops/${shop.shop_id}/setup`} class="btn btn-primary btn-sm">SSO 설정 가이드</a>
+        </div>
       </div>
 
       <div class="card" style="border: 1px solid #fee2e2">
         <h2 style="color:#991b1b">위험 영역</h2>
         <p style="font-size:13px; color:#64748b; margin-bottom:12px">쇼핑몰을 삭제하면 소셜 로그인이 비활성화됩니다.</p>
-        <button id="deleteShopBtn" class="btn btn-danger btn-sm">쇼핑몰 삭제</button>
+        <button id="deleteShopBtn" class="btn btn-danger btn-sm" data-shop-id={shop.shop_id}>쇼핑몰 삭제</button>
         <script>{`
-          document.getElementById('deleteShopBtn').addEventListener('click', async () => {
+          document.getElementById('deleteShopBtn').addEventListener('click', async function() {
             if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-            const resp = await apiCall('DELETE', '/api/dashboard/shops/${shop.shop_id}');
+            const resp = await apiCall('DELETE', '/api/dashboard/shops/' + this.dataset.shopId);
             if (resp.ok) { window.location.href = '/dashboard/shops'; }
             else { alert('삭제 중 오류가 발생했습니다.'); }
           });
@@ -394,7 +514,13 @@ export const ShopSetupPage: FC<{
   baseUrl: string;
 }> = ({ shop, clientId, baseUrl }) => (
   <Layout title="SSO 설정" loggedIn currentPath="/dashboard/shops">
-    <h1>{shop.shop_name || shop.mall_id} - SSO 설정 가이드</h1>
+    <h1>{shop.shop_name || shop.mall_id}</h1>
+
+    <div class="tab-nav">
+      <a href={`/dashboard/shops/${shop.shop_id}`}>설정</a>
+      <a href={`/dashboard/shops/${shop.shop_id}/providers`}>프로바이더</a>
+      <a href={`/dashboard/shops/${shop.shop_id}/setup`} class="active">SSO 가이드</a>
+    </div>
 
     <div class="alert alert-info">
       카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 기본 설정 &gt; <strong>외부 로그인 설정</strong>에서 아래 정보를 등록하세요.
@@ -407,7 +533,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>연동 서비스명</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy="번개가입" onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          <button class="copy-btn" data-copy="번개가입">복사</button>
           번개가입
         </div>
       </div>
@@ -415,7 +541,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Client ID</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={clientId} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          <button class="copy-btn" data-copy={clientId}>복사</button>
           {clientId}
         </div>
       </div>
@@ -423,7 +549,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Client Secret</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={shop.client_secret} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          <button class="copy-btn" data-copy={shop.client_secret}>복사</button>
           {shop.client_secret}
         </div>
       </div>
@@ -431,7 +557,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Authorize Redirect URL</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/authorize`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          <button class="copy-btn" data-copy={`${baseUrl}/oauth/authorize`}>복사</button>
           {baseUrl}/oauth/authorize
         </div>
       </div>
@@ -439,7 +565,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Access Token Return API</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/token`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          <button class="copy-btn" data-copy={`${baseUrl}/oauth/token`}>복사</button>
           {baseUrl}/oauth/token
         </div>
       </div>
@@ -447,7 +573,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>User info Return API</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/userinfo`} onclick="navigator.clipboard.writeText(this.dataset.copy);this.textContent='복사됨!';setTimeout(()=>this.textContent='복사',1500)">복사</button>
+          <button class="copy-btn" data-copy={`${baseUrl}/oauth/userinfo`}>복사</button>
           {baseUrl}/oauth/userinfo
         </div>
       </div>
@@ -467,6 +593,326 @@ export const ShopSetupPage: FC<{
     </div>
   </Layout>
 );
+
+// ─── Stats Page ─────────────────────────────────────────────
+
+type StatsPageProps = {
+  stats: HomeStats;
+  daily: DailyData[];
+  shops: { shop_id: string; shop_name: string }[];
+  currentShopId: string | null;
+  currentPeriod: string;
+};
+
+export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShopId, currentPeriod }) => {
+  const periodOptions = [
+    { value: '', label: '전체 기간' },
+    { value: 'today', label: '오늘' },
+    { value: '7d', label: '최근 7일' },
+    { value: '30d', label: '최근 30일' },
+    { value: 'month', label: '이번 달' },
+  ];
+
+  return (
+    <Layout title="통합 통계" loggedIn currentPath="/dashboard/stats">
+      <h1>통합 통계</h1>
+
+      <div class="filter-bar">
+        <select id="shopFilter" onchange="applyFilters()">
+          <option value="">전체 쇼핑몰</option>
+          {shops.map(s => (
+            <option value={s.shop_id} selected={currentShopId === s.shop_id}>{s.shop_name || s.shop_id}</option>
+          ))}
+        </select>
+        <select id="periodFilter" onchange="applyFilters()">
+          {periodOptions.map(opt => (
+            <option value={opt.value} selected={currentPeriod === opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">가입</div>
+          <div class="value">{stats.total_signups.toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">로그인</div>
+          <div class="value">{stats.total_logins.toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">오늘 가입</div>
+          <div class="value">{stats.today_signups}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">이번 달 가입</div>
+          <div class="value">{stats.month_signups}</div>
+        </div>
+      </div>
+
+      {Object.keys(stats.by_provider).length > 0 && (
+        <div class="card">
+          <h2>소셜별 가입 비율</h2>
+          {Object.entries(stats.by_provider).map(([provider, count]) => (
+            <ProgressBar
+              label={providerDisplayNames[provider] || provider}
+              value={count}
+              max={stats.total_signups}
+              color={providerColors[provider]}
+            />
+          ))}
+        </div>
+      )}
+
+      <div class="chart-container">
+        <h3>일별 추이</h3>
+        <LineChart data={daily} />
+      </div>
+
+      <script>{`
+        function applyFilters() {
+          const shop = document.getElementById('shopFilter').value;
+          const period = document.getElementById('periodFilter').value;
+          const params = new URLSearchParams();
+          if (shop) params.set('shop_id', shop);
+          if (period) params.set('period', period);
+          const qs = params.toString();
+          window.location.href = '/dashboard/stats' + (qs ? '?' + qs : '');
+        }
+      `}</script>
+    </Layout>
+  );
+};
+
+// ─── Billing Page ───────────────────────────────────────────
+
+type BillingPageProps = {
+  billingShops: BillingShop[];
+  month: string;
+};
+
+export const BillingPage: FC<BillingPageProps> = ({ billingShops, month }) => {
+  const hasOverLimit = billingShops.some(s => s.is_over_limit);
+  const hasNearLimit = billingShops.some(s => s.needs_upgrade && !s.is_over_limit);
+
+  return (
+    <Layout title="플랜/과금" loggedIn currentPath="/dashboard/billing">
+      <h1>플랜/과금</h1>
+
+      {hasOverLimit && (
+        <div class="alert alert-error">
+          <div class="alert-banner">
+            <span>무료 플랜 한도(100건/월)를 초과한 쇼핑몰이 있습니다. 소셜 로그인 버튼이 비활성화됩니다.</span>
+            <a href="#plans" class="btn btn-primary btn-sm">유료 전환</a>
+          </div>
+        </div>
+      )}
+      {!hasOverLimit && hasNearLimit && (
+        <div class="alert alert-warn">
+          <div class="alert-banner">
+            <span>무료 플랜 한도(100건/월)에 근접한 쇼핑몰이 있습니다.</span>
+            <a href="#plans" class="btn btn-outline btn-sm">플랜 확인</a>
+          </div>
+        </div>
+      )}
+
+      <div class="card">
+        <h2>{month} 사용 현황</h2>
+
+        {billingShops.length === 0 ? (
+          <div class="empty-state">
+            <p>등록된 쇼핑몰이 없습니다.</p>
+          </div>
+        ) : (
+          <>
+            {billingShops.filter(s => s.plan === 'free').map((shop) => (
+              <ProgressBar
+                label={shop.shop_name || shop.shop_id}
+                value={shop.monthly_signups}
+                max={100}
+                color={shop.is_over_limit ? '#ef4444' : shop.needs_upgrade ? '#f59e0b' : '#22c55e'}
+              />
+            ))}
+
+            <table style="margin-top:16px">
+              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>한도</th><th>상태</th></tr></thead>
+              <tbody>
+                {billingShops.map((shop) => (
+                  <tr>
+                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
+                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
+                    <td>{shop.monthly_signups}</td>
+                    <td>{shop.plan === 'free' ? '100건/월' : '무제한'}</td>
+                    <td>
+                      {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
+                      {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
+                      {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      <div id="plans">
+        <h2 style="margin: 24px 0 16px">플랜 비교</h2>
+        <div class="plan-grid">
+          <div class="plan-card current">
+            <h3>무료</h3>
+            <div class="price">₩0<small>/월</small></div>
+            <ul>
+              <li>월 100건 신규 가입</li>
+              <li>소셜 로그인 4종</li>
+              <li>기본 통계</li>
+              <li>이메일 지원</li>
+            </ul>
+            <span class="badge badge-green">현재 플랜</span>
+          </div>
+          <div class="plan-card">
+            <h3>월간</h3>
+            <div class="price">₩29,900<small>/월</small></div>
+            <ul>
+              <li>무제한 신규 가입</li>
+              <li>소셜 로그인 4종</li>
+              <li>고급 통계</li>
+              <li>우선 지원</li>
+            </ul>
+            <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;cursor:not-allowed">준비 중</button>
+          </div>
+          <div class="plan-card">
+            <h3>연간</h3>
+            <div class="price">₩329,900<small>/년</small></div>
+            <p style="font-size:12px;color:#22c55e;margin-bottom:8px">월 ₩27,492 (8% 할인)</p>
+            <ul>
+              <li>무제한 신규 가입</li>
+              <li>소셜 로그인 4종</li>
+              <li>고급 통계</li>
+              <li>우선 지원</li>
+            </ul>
+            <button class="btn btn-outline btn-sm" disabled style="opacity:0.5;cursor:not-allowed">준비 중</button>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+// ─── Provider Management Page ───────────────────────────────
+
+export const ProvidersPage: FC<{
+  shop: ShopDetail;
+  baseUrl: string;
+}> = ({ shop, baseUrl }) => {
+  const providers = parseProviders(shop.enabled_providers);
+  const mvpProviders = ['google', 'kakao', 'naver', 'apple'];
+  const phase2Providers = ['toss', 'discord', 'telegram', 'tiktok'];
+
+  return (
+    <Layout title="프로바이더 관리" loggedIn currentPath="/dashboard/shops">
+      <h1>{shop.shop_name || shop.mall_id}</h1>
+
+      <div class="tab-nav">
+        <a href={`/dashboard/shops/${shop.shop_id}`}>설정</a>
+        <a href={`/dashboard/shops/${shop.shop_id}/providers`} class="active">프로바이더</a>
+        <a href={`/dashboard/shops/${shop.shop_id}/setup`}>SSO 가이드</a>
+      </div>
+
+      <div class="card">
+        <h2>소셜 프로바이더 설정</h2>
+        <p style="font-size:13px; color:#64748b; margin-bottom:16px">사용할 소셜 로그인 프로바이더를 선택하세요. 최소 1개 이상 활성화해야 합니다.</p>
+        <form id="providerForm" data-shop-id={shop.shop_id}>
+          {mvpProviders.map((p) => (
+            <div class="provider-toggle">
+              <label class="toggle">
+                <input type="checkbox" name="providers" value={p} checked={providers.includes(p)} />
+                <span class="toggle-slider"></span>
+              </label>
+              <span style={`font-weight:600;display:inline-flex;align-items:center;gap:8px`}>
+                <span style={`display:inline-block;width:12px;height:12px;border-radius:50%;background:${providerColors[p]}`}></span>
+                {providerDisplayNames[p]}
+              </span>
+            </div>
+          ))}
+
+          <h3 style="margin-top:24px;margin-bottom:12px;font-size:14px;color:#64748b">Phase 2 (준비 중)</h3>
+          {phase2Providers.map((p) => (
+            <div class="provider-toggle" style="opacity:0.5">
+              <label class="toggle">
+                <input type="checkbox" disabled />
+                <span class="toggle-slider" style="cursor:not-allowed"></span>
+              </label>
+              <span style="font-weight:600;display:inline-flex;align-items:center;gap:8px">
+                <span style={`display:inline-block;width:12px;height:12px;border-radius:50%;background:${providerColors[p]}`}></span>
+                {providerDisplayNames[p]}
+                <span class="badge badge-gray">준비 중</span>
+              </span>
+            </div>
+          ))}
+
+          <div style="margin-top:16px">
+            <button type="submit" class="btn btn-primary btn-sm">프로바이더 저장</button>
+          </div>
+        </form>
+        <script>{`
+          document.getElementById('providerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const checked = [...e.target.querySelectorAll('input[name=providers]:checked')].map(i => i.value);
+            if (checked.length === 0) { alert('최소 1개의 프로바이더를 선택해야 합니다.'); return; }
+            const shopId = e.target.dataset.shopId;
+            const resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: checked });
+            if (resp.ok) { alert('프로바이더 설정이 저장되었습니다.'); location.reload(); }
+            else { const data = await resp.json(); alert(data.error || '저장 중 오류가 발생했습니다.'); }
+          });
+        `}</script>
+      </div>
+
+      <div class="card">
+        <h2>미리보기</h2>
+        <p style="font-size:13px; color:#64748b; margin-bottom:16px">활성화된 프로바이더의 로그인 버튼 미리보기입니다.</p>
+        <div class="preview-area" id="previewArea">
+          {providers.length === 0 ? (
+            <p style="color:#94a3b8">프로바이더를 선택하면 미리보기가 표시됩니다.</p>
+          ) : (
+            providers.map(p => (
+              <span class={`preview-btn ${p === 'kakao' ? 'kakao-btn' : ''}`} style={`background:${providerColors[p]}`}>
+                {providerDisplayNames[p]}로 시작
+              </span>
+            ))
+          )}
+        </div>
+        <script>{`
+          // Live preview update
+          document.querySelectorAll('#providerForm input[name=providers]').forEach(cb => {
+            cb.addEventListener('change', () => {
+              const checked = [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(i => i.value);
+              const colors = ${JSON.stringify(providerColors)};
+              const names = ${JSON.stringify(providerDisplayNames)};
+              const area = document.getElementById('previewArea');
+              if (checked.length === 0) {
+                area.textContent = '';
+                var msg = document.createElement('p');
+                msg.style.color = '#94a3b8';
+                msg.textContent = '프로바이더를 선택하면 미리보기가 표시됩니다.';
+                area.appendChild(msg);
+              } else {
+                area.textContent = '';
+                checked.forEach(function(p) {
+                  var span = document.createElement('span');
+                  span.className = 'preview-btn' + (p === 'kakao' ? ' kakao-btn' : '');
+                  span.style.background = colors[p] || '#999';
+                  span.textContent = (names[p] || p) + '로 시작';
+                  area.appendChild(span);
+                });
+              }
+            });
+          });
+        `}</script>
+      </div>
+    </Layout>
+  );
+};
 
 // ─── Privacy Policy ─────────────────────────────────────────
 

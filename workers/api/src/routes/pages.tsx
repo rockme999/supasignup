@@ -6,7 +6,7 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
-import { FREE_PLAN_MONTHLY_LIMIT } from '@supasignup/bg-core';
+import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
 import { verifyToken } from '../services/jwt';
 import { hashPassword, verifyPassword } from '../services/password';
 import {
@@ -17,6 +17,9 @@ import {
   ShopNewPage,
   ShopDetailPage,
   ShopSetupPage,
+  StatsPage,
+  BillingPage,
+  ProvidersPage,
   SettingsPage,
   PrivacyPage,
 } from '../views/pages';
@@ -24,6 +27,19 @@ import {
 type PageEnv = {
   Bindings: Env;
   Variables: { ownerId: string };
+};
+
+type ShopRow = {
+  shop_id: string;
+  shop_name: string;
+  mall_id: string;
+  client_id: string;
+  client_secret: string;
+  platform: string;
+  plan: string;
+  enabled_providers: string;
+  sso_configured: number;
+  created_at: string;
 };
 
 const pages = new Hono<PageEnv>();
@@ -85,9 +101,14 @@ pages.get('/dashboard/logout', (c) => {
 pages.get('/dashboard', async (c) => {
   const ownerId = c.get('ownerId');
 
-  // Fetch stats
-  const totalResult = await c.env.DB
-    .prepare(
+  const today = new Date().toISOString().slice(0, 10);
+  const yearMonth = today.slice(0, 7);
+  const now = new Date();
+  const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+  const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  const [totalResult, todayResult, monthResult, providerResult, billingResult] = await Promise.all([
+    c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
         SUM(CASE WHEN action = 'signup' THEN 1 ELSE 0 END) as signups,
@@ -95,69 +116,52 @@ pages.get('/dashboard', async (c) => {
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
-    )
-    .bind(ownerId)
-    .first<{ total: number; signups: number; logins: number }>();
+    ).bind(ownerId).first<{ total: number; signups: number; logins: number }>(),
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayResult = await c.env.DB
-    .prepare(
+    c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
        AND ls.action = 'signup' AND ls.created_at >= ?`,
-    )
-    .bind(ownerId, today)
-    .first<{ cnt: number }>();
+    ).bind(ownerId, today).first<{ cnt: number }>(),
 
-  const yearMonth = today.slice(0, 7);
-  const monthResult = await c.env.DB
-    .prepare(
+    c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
        AND ls.action = 'signup' AND ls.created_at >= ?`,
-    )
-    .bind(ownerId, `${yearMonth}-01`)
-    .first<{ cnt: number }>();
+    ).bind(ownerId, `${yearMonth}-01`).first<{ cnt: number }>(),
 
-  const providerResult = await c.env.DB
-    .prepare(
+    c.env.DB.prepare(
       `SELECT ls.provider, COUNT(*) as cnt
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'
        GROUP BY ls.provider`,
-    )
-    .bind(ownerId)
-    .all<{ provider: string; cnt: number }>();
+    ).bind(ownerId).all<{ provider: string; cnt: number }>(),
 
-  const byProvider: Record<string, number> = {};
-  for (const row of providerResult.results ?? []) {
-    byProvider[row.provider] = row.cnt;
-  }
-
-  // Fetch billing
-  const now = new Date();
-  const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  const billingResult = await c.env.DB
-    .prepare(
+    c.env.DB.prepare(
       `SELECT s.shop_id, s.shop_name, s.plan,
         (SELECT COUNT(*) FROM login_stats ls
          WHERE ls.shop_id = s.shop_id AND ls.action = 'signup'
          AND ls.created_at >= ? AND ls.created_at < ?) as monthly_signups
        FROM shops s
        WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
-    )
-    .bind(`${billingMonth}-01`, `${billingMonth}-32`, ownerId)
-    .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>();
+    ).bind(`${billingMonth}-01`, nextMonthFirst, ownerId)
+     .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>(),
+  ]);
+
+  const byProvider: Record<string, number> = {};
+  for (const row of providerResult.results ?? []) {
+    byProvider[row.provider] = row.cnt;
+  }
 
   const billingShops = (billingResult.results ?? []).map((shop) => ({
     ...shop,
     usage_percent: shop.plan === 'free'
       ? Math.round((shop.monthly_signups / FREE_PLAN_MONTHLY_LIMIT) * 100)
       : null,
-    needs_upgrade: shop.plan === 'free' && shop.monthly_signups >= 80,
+    needs_upgrade: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_WARN_THRESHOLD,
     is_over_limit: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_MONTHLY_LIMIT,
   }));
 
@@ -175,6 +179,162 @@ pages.get('/dashboard', async (c) => {
   );
 });
 
+// ─── Stats Page ─────────────────────────────────────────────
+
+pages.get('/dashboard/stats', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopIdFilter = c.req.query('shop_id') || null;
+  const period = c.req.query('period') || '';
+
+  // Build date filter
+  let dateFilter = '';
+  let dateParam: string | null = null;
+  const today = new Date().toISOString().slice(0, 10);
+  const yearMonth = today.slice(0, 7);
+
+  if (period === 'today') {
+    dateFilter = ' AND ls.created_at >= ?';
+    dateParam = today;
+  } else if (period === '7d') {
+    dateFilter = " AND ls.created_at >= DATE('now', '-7 days')";
+  } else if (period === '30d') {
+    dateFilter = " AND ls.created_at >= DATE('now', '-30 days')";
+  } else if (period === 'month') {
+    dateFilter = ' AND ls.created_at >= ?';
+    dateParam = `${yearMonth}-01`;
+  }
+
+  const shopFilter = shopIdFilter ? ' AND ls.shop_id = ?' : '';
+
+  // Build params
+  const baseParams: (string | null)[] = [ownerId];
+  if (dateParam) baseParams.push(dateParam);
+  if (shopIdFilter) baseParams.push(shopIdFilter);
+
+  // Build per-query params
+  const todayParams: (string | null)[] = [ownerId, today];
+  if (shopIdFilter) todayParams.push(shopIdFilter);
+
+  const monthParams: (string | null)[] = [ownerId, `${yearMonth}-01`];
+  if (shopIdFilter) monthParams.push(shopIdFilter);
+
+  const providerParams: (string | null)[] = [ownerId];
+  if (dateParam) providerParams.push(dateParam);
+  if (shopIdFilter) providerParams.push(shopIdFilter);
+
+  let dailyDays = 30;
+  if (period === '7d') dailyDays = 7;
+  else if (period === 'today') dailyDays = 1;
+
+  const dailyParams: string[] = [ownerId];
+  if (shopIdFilter) dailyParams.push(shopIdFilter);
+
+  // All queries in parallel
+  const [totalResult, todayResult, monthResult, providerResult, dailyResult, shopsResult] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN action = 'signup' THEN 1 ELSE 0 END) as signups,
+        SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins
+       FROM login_stats ls
+       JOIN shops s ON ls.shop_id = s.shop_id
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL${dateFilter}${shopFilter}`,
+    ).bind(...baseParams).first<{ total: number; signups: number; logins: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM login_stats ls
+       JOIN shops s ON ls.shop_id = s.shop_id
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL
+       AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
+    ).bind(...todayParams).first<{ cnt: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM login_stats ls
+       JOIN shops s ON ls.shop_id = s.shop_id
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL
+       AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
+    ).bind(...monthParams).first<{ cnt: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT ls.provider, COUNT(*) as cnt
+       FROM login_stats ls
+       JOIN shops s ON ls.shop_id = s.shop_id
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'${dateFilter}${shopFilter}
+       GROUP BY ls.provider`,
+    ).bind(...providerParams).all<{ provider: string; cnt: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT DATE(ls.created_at) as day, ls.action, COUNT(*) as cnt
+       FROM login_stats ls
+       JOIN shops s ON ls.shop_id = s.shop_id
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL
+       AND ls.created_at >= DATE('now', '-${dailyDays} days')${shopFilter}
+       GROUP BY day, ls.action
+       ORDER BY day`,
+    ).bind(...dailyParams).all<{ day: string; action: string; cnt: number }>(),
+
+    c.env.DB.prepare(
+      'SELECT shop_id, shop_name FROM shops WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at',
+    ).bind(ownerId).all<{ shop_id: string; shop_name: string }>(),
+  ]);
+
+  const byProvider: Record<string, number> = {};
+  for (const row of providerResult.results ?? []) {
+    byProvider[row.provider] = row.cnt;
+  }
+
+  return c.html(
+    <StatsPage
+      stats={{
+        total_signups: totalResult?.signups ?? 0,
+        total_logins: totalResult?.logins ?? 0,
+        today_signups: todayResult?.cnt ?? 0,
+        month_signups: monthResult?.cnt ?? 0,
+        by_provider: byProvider,
+      }}
+      daily={dailyResult.results ?? []}
+      shops={shopsResult.results ?? []}
+      currentShopId={shopIdFilter}
+      currentPeriod={period}
+    />
+  );
+});
+
+// ─── Billing Page ───────────────────────────────────────────
+
+pages.get('/dashboard/billing', async (c) => {
+  const ownerId = c.get('ownerId');
+
+  const now = new Date();
+  const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+
+  const billingResult = await c.env.DB
+    .prepare(
+      `SELECT s.shop_id, s.shop_name, s.plan,
+        (SELECT COUNT(*) FROM login_stats ls
+         WHERE ls.shop_id = s.shop_id AND ls.action = 'signup'
+         AND ls.created_at >= ? AND ls.created_at < ?) as monthly_signups
+       FROM shops s
+       WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
+    )
+    .bind(`${yearMonth}-01`, nextMonthFirst, ownerId)
+    .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>();
+
+  const billingShops = (billingResult.results ?? []).map((shop) => ({
+    ...shop,
+    usage_percent: shop.plan === 'free'
+      ? Math.round((shop.monthly_signups / FREE_PLAN_MONTHLY_LIMIT) * 100)
+      : null,
+    needs_upgrade: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_WARN_THRESHOLD,
+    is_over_limit: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_MONTHLY_LIMIT,
+  }));
+
+  return c.html(
+    <BillingPage billingShops={billingShops} month={yearMonth} />
+  );
+});
+
 // ─── Shops ───────────────────────────────────────────────────
 
 pages.get('/dashboard/shops', async (c) => {
@@ -185,9 +345,9 @@ pages.get('/dashboard/shops', async (c) => {
        FROM shops WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
     )
     .bind(ownerId)
-    .all();
+    .all<{ shop_id: string; shop_name: string; mall_id: string; platform: string; plan: string; enabled_providers: string; created_at: string }>();
 
-  return c.html(<ShopsPage shops={(result.results ?? []) as any} />);
+  return c.html(<ShopsPage shops={result.results ?? []} />);
 });
 
 pages.get('/dashboard/shops/new', (c) => {
@@ -200,16 +360,16 @@ pages.get('/dashboard/shops/:id', async (c) => {
 
   const shop = await c.env.DB
     .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, created_at
+      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at
        FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
     )
     .bind(shopId, ownerId)
-    .first();
+    .first<ShopRow>();
 
   if (!shop) return c.redirect('/dashboard/shops');
 
   // Mask secret
-  const secret = (shop as any).client_secret as string;
+  const secret = shop.client_secret;
   const masked = secret.length > 8
     ? secret.slice(0, 4) + '****' + secret.slice(-4)
     : '****';
@@ -226,7 +386,7 @@ pages.get('/dashboard/shops/:id', async (c) => {
 
   return c.html(
     <ShopDetailPage
-      shop={{ ...(shop as any), client_secret: masked }}
+      shop={{ ...shop, client_secret: masked }}
       monthlySignups={countResult?.cnt ?? 0}
       baseUrl={c.env.BASE_URL}
     />
@@ -239,18 +399,40 @@ pages.get('/dashboard/shops/:id/setup', async (c) => {
 
   const shop = await c.env.DB
     .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, created_at
+      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at
        FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
     )
     .bind(shopId, ownerId)
-    .first();
+    .first<ShopRow>();
 
   if (!shop) return c.redirect('/dashboard/shops');
 
   return c.html(
     <ShopSetupPage
-      shop={shop as any}
-      clientId={(shop as any).client_id}
+      shop={shop}
+      clientId={shop.client_id}
+      baseUrl={c.env.BASE_URL}
+    />
+  );
+});
+
+pages.get('/dashboard/shops/:id/providers', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await c.env.DB
+    .prepare(
+      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at
+       FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
+    )
+    .bind(shopId, ownerId)
+    .first<ShopRow>();
+
+  if (!shop) return c.redirect('/dashboard/shops');
+
+  return c.html(
+    <ProvidersPage
+      shop={shop}
       baseUrl={c.env.BASE_URL}
     />
   );
@@ -276,7 +458,12 @@ pages.get('/dashboard/settings', async (c) => {
 // ─── Settings API (password change) ─────────────────────────
 
 pages.put('/api/dashboard/settings/password', async (c) => {
-  const ownerId = c.get('ownerId');
+  // 명시적 인증 체크 (미들웨어 범위 밖이므로)
+  const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
+  if (!ownerId) {
+    return c.json({ error: 'unauthorized' }, 401);
+  }
+
   const body = await c.req.json<{ current_password: string; new_password: string }>();
 
   if (!body.current_password || !body.new_password || body.new_password.length < 8) {

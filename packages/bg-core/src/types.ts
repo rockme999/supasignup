@@ -153,6 +153,7 @@ export interface Env {
 
 // Billing
 export const FREE_PLAN_MONTHLY_LIMIT = 100;
+export const FREE_PLAN_WARN_THRESHOLD = 80;
 export const PLANS = {
   FREE: 'free',
   MONTHLY: 'monthly',
