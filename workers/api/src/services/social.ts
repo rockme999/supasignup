@@ -43,6 +43,17 @@ export function buildSocialAuthUrl(
       return buildNaverAuthUrl(params);
     case 'apple':
       return buildAppleAuthUrl(params);
+    case 'discord':
+      return buildDiscordAuthUrl(params);
+    case 'facebook':
+      return buildFacebookAuthUrl(params);
+    case 'x':
+      return buildXAuthUrl(params);
+    case 'line':
+      return buildLineAuthUrl(params);
+    case 'telegram':
+      // Telegram uses Login Widget, not a standard OAuth authorize URL
+      return '';
   }
 }
 
@@ -61,6 +72,16 @@ export async function exchangeSocialCode(
       return exchangeNaverCode(params);
     case 'apple':
       return exchangeAppleCode(params);
+    case 'discord':
+      return exchangeDiscordCode(params);
+    case 'facebook':
+      return exchangeFacebookCode(params);
+    case 'x':
+      return exchangeXCode(params);
+    case 'line':
+      return exchangeLineCode(params);
+    case 'telegram':
+      throw new Error('Telegram does not use code exchange; use verifyTelegramAuth instead');
   }
 }
 
@@ -80,6 +101,16 @@ export async function getSocialUserInfo(
       return getNaverUserInfo(tokens);
     case 'apple':
       return getAppleUserInfo(tokens, env.APPLE_CLIENT_ID);
+    case 'discord':
+      return getDiscordUserInfo(tokens);
+    case 'facebook':
+      return getFacebookUserInfo(tokens);
+    case 'x':
+      return getXUserInfo(tokens);
+    case 'line':
+      return getLineUserInfo(tokens);
+    case 'telegram':
+      throw new Error('Telegram does not use token-based userinfo; use getTelegramUserInfo instead');
   }
 }
 
@@ -383,6 +414,322 @@ async function exchangeAppleCode(p: SocialExchangeParams): Promise<OAuthTokenRes
   }
 
   return resp.json() as Promise<OAuthTokenResponse>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Discord
+// ═══════════════════════════════════════════════════════════════
+
+function buildDiscordAuthUrl(p: SocialAuthUrlParams): string {
+  const url = new URL('https://discord.com/api/oauth2/authorize');
+  url.searchParams.set('client_id', p.clientId);
+  url.searchParams.set('redirect_uri', p.redirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'identify email');
+  url.searchParams.set('state', p.state);
+  url.searchParams.set('code_challenge', p.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  return url.toString();
+}
+
+async function exchangeDiscordCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
+  const resp = await fetch('https://discord.com/api/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: p.code,
+      client_id: p.clientId,
+      client_secret: p.clientSecret,
+      redirect_uri: p.redirectUri,
+      code_verifier: p.codeVerifier,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Discord token exchange failed: ${resp.status} ${text}`);
+  }
+
+  return resp.json() as Promise<OAuthTokenResponse>;
+}
+
+async function getDiscordUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> {
+  const resp = await fetch('https://discord.com/api/users/@me', {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Discord userinfo failed: ${resp.status}`);
+  }
+
+  const data = await resp.json() as Record<string, unknown>;
+  const avatar = data.avatar as string | null | undefined;
+  const profileImage = avatar
+    ? `https://cdn.discordapp.com/avatars/${data.id}/${avatar}.png`
+    : undefined;
+
+  return {
+    provider: 'discord',
+    providerUid: String(data.id),
+    email: data.email as string | undefined,
+    name: (data.global_name ?? data.username) as string | undefined,
+    profileImage,
+    rawData: data,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Facebook
+// ═══════════════════════════════════════════════════════════════
+
+function buildFacebookAuthUrl(p: SocialAuthUrlParams): string {
+  const url = new URL('https://www.facebook.com/v25.0/dialog/oauth');
+  url.searchParams.set('client_id', p.clientId);
+  url.searchParams.set('redirect_uri', p.redirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'email,public_profile');
+  url.searchParams.set('state', p.state);
+  // Facebook does not officially support PKCE; no code_challenge sent
+  return url.toString();
+}
+
+async function exchangeFacebookCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
+  const resp = await fetch('https://graph.facebook.com/v25.0/oauth/access_token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: p.code,
+      client_id: p.clientId,
+      client_secret: p.clientSecret,
+      redirect_uri: p.redirectUri,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Facebook token exchange failed: ${resp.status} ${text}`);
+  }
+
+  return resp.json() as Promise<OAuthTokenResponse>;
+}
+
+async function getFacebookUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> {
+  const resp = await fetch(
+    'https://graph.facebook.com/me?fields=id,name,email,picture.type(large)',
+    { headers: { Authorization: `Bearer ${tokens.access_token}` } },
+  );
+
+  if (!resp.ok) {
+    throw new Error(`Facebook userinfo failed: ${resp.status}`);
+  }
+
+  const data = await resp.json() as Record<string, unknown>;
+  const picture = (data.picture ?? {}) as Record<string, unknown>;
+  const pictureData = (picture.data ?? {}) as Record<string, unknown>;
+
+  return {
+    provider: 'facebook',
+    providerUid: String(data.id),
+    email: data.email as string | undefined,
+    name: data.name as string | undefined,
+    profileImage: pictureData.url as string | undefined,
+    rawData: data,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// X (Twitter)
+// ═══════════════════════════════════════════════════════════════
+
+function buildXAuthUrl(p: SocialAuthUrlParams): string {
+  const url = new URL('https://x.com/i/oauth2/authorize');
+  url.searchParams.set('client_id', p.clientId);
+  url.searchParams.set('redirect_uri', p.redirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'users.read users.email offline.access');
+  url.searchParams.set('state', p.state);
+  url.searchParams.set('code_challenge', p.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  return url.toString();
+}
+
+async function exchangeXCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
+  const resp = await fetch('https://api.x.com/2/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: p.code,
+      client_id: p.clientId,
+      client_secret: p.clientSecret,
+      redirect_uri: p.redirectUri,
+      code_verifier: p.codeVerifier,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`X token exchange failed: ${resp.status} ${text}`);
+  }
+
+  return resp.json() as Promise<OAuthTokenResponse>;
+}
+
+async function getXUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> {
+  const resp = await fetch(
+    'https://api.x.com/2/users/me?user.fields=id,name,username,profile_image_url',
+    { headers: { Authorization: `Bearer ${tokens.access_token}` } },
+  );
+
+  if (!resp.ok) {
+    throw new Error(`X userinfo failed: ${resp.status}`);
+  }
+
+  const body = await resp.json() as { data: Record<string, unknown> };
+  const data = body.data;
+
+  return {
+    provider: 'x',
+    providerUid: String(data.id),
+    email: undefined, // X requires elevated access for email; treat as null
+    name: data.name as string | undefined,
+    profileImage: data.profile_image_url as string | undefined,
+    rawData: body as Record<string, unknown>,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LINE
+// ═══════════════════════════════════════════════════════════════
+
+function buildLineAuthUrl(p: SocialAuthUrlParams): string {
+  const url = new URL('https://access.line.me/oauth2/v2.1/authorize');
+  url.searchParams.set('client_id', p.clientId);
+  url.searchParams.set('redirect_uri', p.redirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'profile openid email');
+  url.searchParams.set('state', p.state);
+  url.searchParams.set('code_challenge', p.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  return url.toString();
+}
+
+async function exchangeLineCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
+  const resp = await fetch('https://api.line.me/oauth2/v2.1/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: p.code,
+      client_id: p.clientId,
+      client_secret: p.clientSecret,
+      redirect_uri: p.redirectUri,
+      code_verifier: p.codeVerifier,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`LINE token exchange failed: ${resp.status} ${text}`);
+  }
+
+  return resp.json() as Promise<OAuthTokenResponse>;
+}
+
+async function getLineUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInfo> {
+  const resp = await fetch('https://api.line.me/v2/profile', {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+
+  if (!resp.ok) {
+    throw new Error(`LINE userinfo failed: ${resp.status}`);
+  }
+
+  const data = await resp.json() as Record<string, unknown>;
+
+  // Extract email from id_token (JWT) if available
+  let email: string | undefined;
+  if (tokens.id_token) {
+    try {
+      const payloadPart = (tokens.id_token as string).split('.')[1];
+      // Handle base64url → base64 for atob
+      const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64)) as Record<string, unknown>;
+      email = payload.email as string | undefined;
+    } catch {
+      // Ignore JWT decode errors; email remains undefined
+    }
+  }
+
+  return {
+    provider: 'line',
+    providerUid: String(data.userId),
+    email,
+    name: data.displayName as string | undefined,
+    profileImage: data.pictureUrl as string | undefined,
+    rawData: data,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Telegram Login Widget
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Verify Telegram Login Widget data using HMAC-SHA-256.
+ * See: https://core.telegram.org/widgets/login#checking-authorization
+ */
+export async function verifyTelegramAuth(
+  data: Record<string, string>,
+  botToken: string,
+): Promise<boolean> {
+  // 1. hash 필드를 분리
+  const hash = data.hash;
+  if (!hash) return false;
+
+  // 2. 나머지 필드를 알파벳순 정렬, "key=value" 형식으로 \n 연결
+  const checkFields = Object.keys(data)
+    .filter(k => k !== 'hash')
+    .sort()
+    .map(k => `${k}=${data[k]}`)
+    .join('\n');
+
+  // 3. SHA-256(botToken)을 secret key로 사용
+  const encoder = new TextEncoder();
+  const secretKeyData = await crypto.subtle.digest('SHA-256', encoder.encode(botToken));
+  const secretKey = await crypto.subtle.importKey(
+    'raw', secretKeyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+
+  // 4. HMAC-SHA-256 계산
+  const signature = await crypto.subtle.sign('HMAC', secretKey, encoder.encode(checkFields));
+  const computedHash = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  // 5. timing-safe 비교
+  if (computedHash.length !== hash.length) return false;
+  let result = 0;
+  for (let i = 0; i < computedHash.length; i++) {
+    result |= computedHash.charCodeAt(i) ^ hash.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Extract user info from verified Telegram auth data.
+ */
+export function getTelegramUserInfo(data: Record<string, string>): OAuthUserInfo {
+  return {
+    provider: 'telegram',
+    providerUid: String(data.id),
+    email: undefined, // Telegram doesn't provide email
+    name: [data.first_name, data.last_name].filter(Boolean).join(' ') || undefined,
+    profileImage: data.photo_url || undefined,
+    rawData: data as unknown as Record<string, unknown>,
+  };
 }
 
 async function getAppleUserInfo(

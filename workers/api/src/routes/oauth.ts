@@ -33,9 +33,9 @@ import {
   isOverFreeLimit,
   getUserById,
 } from '../db/queries';
-import { buildSocialAuthUrl, exchangeSocialCode, getSocialUserInfo } from '../services/social';
+import { buildSocialAuthUrl, exchangeSocialCode, getSocialUserInfo, verifyTelegramAuth, getTelegramUserInfo } from '../services/social';
 
-const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple'];
+const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
 const SESSION_TTL = 600; // 10 minutes
 const AUTH_CODE_TTL = 300; // 5 minutes
 const ACCESS_TOKEN_TTL = 7200; // 2 hours
@@ -120,6 +120,13 @@ oauth.get('/authorize', async (c) => {
     c.env.KV.put(`oauth_session:${socialState}`, JSON.stringify(session), { expirationTtl: SESSION_TTL }),
     c.env.KV.put(`pkce:${socialState}`, codeVerifier, { expirationTtl: SESSION_TTL }),
   ]);
+
+  // Telegram uses Login Widget — redirect to an intermediate page instead of OAuth
+  if (provider === 'telegram') {
+    const telegramSessionId = generateSecret(16);
+    await c.env.KV.put(`telegram_session:${telegramSessionId}`, JSON.stringify(session), { expirationTtl: SESSION_TTL });
+    return c.redirect(`${c.env.BASE_URL}/oauth/telegram-login?session=${telegramSessionId}`);
+  }
 
   // Build social OAuth URL and redirect
   const authUrl = buildSocialAuthUrl(provider, {
@@ -344,6 +351,151 @@ oauth.post('/callback/apple', async (c) => {
   return c.redirect(redirectUrl.toString());
 });
 
+// ─── GET /telegram-login ─────────────────────────────────────
+// Telegram Login Widget 중간 페이지. Telegram Bot Widget을 렌더링하고
+// 로그인 완료 시 POST /oauth/callback/telegram으로 데이터를 전송한다.
+oauth.get('/telegram-login', async (c) => {
+  const sessionId = c.req.query('session');
+  if (!sessionId) {
+    return c.text('Missing session', 400);
+  }
+
+  const sessionData = await c.env.KV.get(`telegram_session:${sessionId}`);
+  if (!sessionData) {
+    return c.text('Invalid or expired session', 400);
+  }
+
+  // TODO: TELEGRAM_BOT_USERNAME 환경변수로 설정 필요
+  const botUsername = c.env.TELEGRAM_BOT_USERNAME;
+
+  return c.html(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Telegram 로그인 - 번개가입</title>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:-apple-system,sans-serif; background:#f5f5f5; }
+    .container { text-align:center; padding:40px; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+    h2 { margin-bottom:20px; color:#333; }
+    p { color:#666; font-size:14px; margin-top:16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Telegram으로 계속하기</h2>
+    <script async src="https://telegram.org/js/telegram-widget.js?22"
+      data-telegram-login="${botUsername}"
+      data-size="large"
+      data-onauth="onTelegramAuth(user)"
+      data-request-access="write">
+    </script>
+    <p>Telegram 계정으로 로그인합니다</p>
+  </div>
+  <script>
+    function onTelegramAuth(user) {
+      var params = new URLSearchParams(user);
+      params.append('session', '${sessionId}');
+      fetch('/oauth/callback/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+      }).then(function(resp) {
+        return resp.json();
+      }).then(function(data) {
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+        }
+      }).catch(function(err) {
+        alert('로그인 실패: ' + err.message);
+      });
+    }
+  </script>
+</body>
+</html>`);
+});
+
+// ─── POST /callback/telegram ─────────────────────────────────
+// Telegram Login Widget 데이터 수신 및 HMAC-SHA-256 검증 후 auth code 발급.
+oauth.post('/callback/telegram', async (c) => {
+  const body = await c.req.parseBody();
+  const sessionId = body['session'] as string | undefined;
+
+  if (!sessionId) {
+    return c.json({ error: 'missing_session' }, 400);
+  }
+
+  // KV에서 세션 복원
+  const sessionData = await c.env.KV.get(`telegram_session:${sessionId}`);
+  if (!sessionData) {
+    return c.json({ error: 'invalid_session' }, 400);
+  }
+  const session: OAuthSession = JSON.parse(sessionData);
+  await c.env.KV.delete(`telegram_session:${sessionId}`);
+
+  // Telegram 데이터 추출 (session 필드 제외)
+  const telegramData: Record<string, string> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (key !== 'session' && typeof value === 'string') {
+      telegramData[key] = value;
+    }
+  }
+
+  // HMAC 검증
+  const isValid = await verifyTelegramAuth(telegramData, c.env.TELEGRAM_BOT_TOKEN);
+  if (!isValid) {
+    return c.json({ error: 'invalid_signature' }, 401);
+  }
+
+  // auth_date 검증 (24시간 이내)
+  const authDate = parseInt(telegramData['auth_date'] ?? '');
+  if (isNaN(authDate) || Date.now() / 1000 - authDate > 86400) {
+    return c.json({ error: 'expired_auth' }, 401);
+  }
+
+  // 사용자 정보 추출
+  const userInfo = getTelegramUserInfo(telegramData);
+
+  // Shop 조회
+  const shop = await getShopById(c.env.DB, session.shop_id);
+  if (!shop) {
+    return c.json({ error: 'shop_not_found' }, 400);
+  }
+
+  // Upsert user
+  const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);
+
+  // Check/create shop_user
+  const existingShopUser = await getShopUser(c.env.DB, shop.shop_id, user.user_id);
+  let action: 'signup' | 'login';
+
+  if (existingShopUser) {
+    action = 'login';
+  } else {
+    await createShopUser(c.env.DB, shop.shop_id, user.user_id);
+    action = 'signup';
+  }
+
+  // Record stat
+  await recordStat(c.env.DB, shop.shop_id, user.user_id, 'telegram', action);
+
+  // Generate auth code
+  const authCode = generateSecret(16);
+  const authCodeData: AuthCodeData = { user_id: user.user_id, shop_id: shop.shop_id };
+  await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), { expirationTtl: AUTH_CODE_TTL });
+
+  // Build redirect URL
+  const redirectUrl = new URL(session.redirect_uri);
+  redirectUrl.searchParams.set('code', authCode);
+  redirectUrl.searchParams.set('state', session.cafe24_state);
+  const isSsoCallback = session.redirect_uri.includes('/OAuth2ClientCallback/');
+  if (!isSsoCallback) {
+    redirectUrl.searchParams.set('bg_provider', 'telegram');
+  }
+
+  return c.json({ redirect_url: redirectUrl.toString() });
+});
+
 // ─── POST /token ─────────────────────────────────────────────
 oauth.post('/token', async (c) => {
   const body = await c.req.parseBody();
@@ -459,6 +611,11 @@ function getSocialClientId(env: Env, provider: ProviderName): string {
     case 'kakao': return env.KAKAO_CLIENT_ID;
     case 'naver': return env.NAVER_CLIENT_ID;
     case 'apple': return env.APPLE_CLIENT_ID;
+    case 'discord': return env.DISCORD_CLIENT_ID;
+    case 'facebook': return env.FACEBOOK_APP_ID;
+    case 'x': return env.X_CLIENT_ID;
+    case 'line': return env.LINE_CHANNEL_ID;
+    case 'telegram': return env.TELEGRAM_BOT_USERNAME;
   }
 }
 
@@ -468,6 +625,11 @@ function getSocialClientSecret(env: Env, provider: ProviderName): string {
     case 'kakao': return env.KAKAO_CLIENT_SECRET;
     case 'naver': return env.NAVER_CLIENT_SECRET;
     case 'apple': return env.APPLE_PRIVATE_KEY; // Apple uses private key as "secret"
+    case 'discord': return env.DISCORD_CLIENT_SECRET;
+    case 'facebook': return env.FACEBOOK_APP_SECRET;
+    case 'x': return env.X_CLIENT_SECRET;
+    case 'line': return env.LINE_CHANNEL_SECRET;
+    case 'telegram': return env.TELEGRAM_BOT_TOKEN;
   }
 }
 
@@ -478,6 +640,11 @@ const PROVIDER_STYLES: Record<string, { name: string; color: string; bg: string;
   kakao: { name: '카카오', color: '#000', bg: '#fee500', icon: 'K' },
   naver: { name: '네이버', color: '#fff', bg: '#03c75a', icon: 'N' },
   apple: { name: 'Apple', color: '#fff', bg: '#000', icon: '' },
+  discord: { name: 'Discord', color: '#fff', bg: '#5865F2', icon: 'D' },
+  facebook: { name: 'Facebook', color: '#fff', bg: '#1877F2', icon: 'f' },
+  x: { name: 'X', color: '#fff', bg: '#000000', icon: 'X' },
+  line: { name: 'LINE', color: '#fff', bg: '#06C755', icon: 'L' },
+  telegram: { name: 'Telegram', color: '#fff', bg: '#0088cc', icon: '' },
 };
 
 function renderProviderSelectPage(enabledProviders: string[], currentUrl: URL): string {

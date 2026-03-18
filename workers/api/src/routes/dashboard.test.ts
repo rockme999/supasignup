@@ -317,7 +317,7 @@ describe('PUT /api/dashboard/shops/:id/providers', () => {
     const resp = await app.request('/api/dashboard/shops/s1/providers', {
       method: 'PUT',
       headers: { Authorization: auth, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ providers: ['google', 'facebook'] }),
+      body: JSON.stringify({ providers: ['google', 'invalid_provider'] }),
     }, env);
     expect(resp.status).toBe(400);
     const body = await resp.json() as Record<string, unknown>;

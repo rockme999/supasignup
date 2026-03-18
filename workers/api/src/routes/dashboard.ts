@@ -29,7 +29,7 @@ import {
   getMonthlySignupCount,
 } from '../db/queries';
 
-const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple'];
+const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
 const COOKIE_MAX_AGE = 86400; // 24 hours
 
 type DashboardEnv = {

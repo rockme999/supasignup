@@ -72,7 +72,7 @@ export interface LoginStat {
 }
 
 // OAuth types
-export type ProviderName = 'google' | 'kakao' | 'naver' | 'apple';
+export type ProviderName = 'google' | 'kakao' | 'naver' | 'apple' | 'discord' | 'facebook' | 'x' | 'line' | 'telegram';
 
 export interface ProviderInfo {
   name: ProviderName;
@@ -146,6 +146,16 @@ export interface Env {
   APPLE_TEAM_ID: string;
   APPLE_KEY_ID: string;
   APPLE_PRIVATE_KEY: string;
+  DISCORD_CLIENT_ID: string;
+  DISCORD_CLIENT_SECRET: string;
+  FACEBOOK_APP_ID: string;
+  FACEBOOK_APP_SECRET: string;
+  X_CLIENT_ID: string;
+  X_CLIENT_SECRET: string;
+  LINE_CHANNEL_ID: string;
+  LINE_CHANNEL_SECRET: string;
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_BOT_USERNAME: string;
   CAFE24_CLIENT_ID: string;
   CAFE24_CLIENT_SECRET: string;
   CAFE24_WEBHOOK_API_KEY: string;

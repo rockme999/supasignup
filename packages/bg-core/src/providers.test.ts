@@ -3,9 +3,9 @@ import { PROVIDER_INFO, DEFAULT_PROVIDER_ORDER } from "./providers";
 import type { ProviderName } from "./types";
 
 describe("PROVIDER_INFO", () => {
-  const allProviders: ProviderName[] = ["google", "kakao", "naver", "apple"];
+  const allProviders: ProviderName[] = ["google", "kakao", "naver", "apple", "discord", "facebook", "x", "line", "telegram"];
 
-  it("contains all 4 providers", () => {
+  it("contains all 9 providers", () => {
     expect(Object.keys(PROVIDER_INFO).sort()).toEqual(allProviders.sort());
   });
 
@@ -21,9 +21,9 @@ describe("PROVIDER_INFO", () => {
 });
 
 describe("DEFAULT_PROVIDER_ORDER", () => {
-  it("contains all 4 providers", () => {
-    expect(DEFAULT_PROVIDER_ORDER).toHaveLength(4);
-    expect(new Set(DEFAULT_PROVIDER_ORDER).size).toBe(4);
+  it("contains all 9 providers", () => {
+    expect(DEFAULT_PROVIDER_ORDER).toHaveLength(9);
+    expect(new Set(DEFAULT_PROVIDER_ORDER).size).toBe(9);
   });
 
   it("starts with kakao (Korean market priority)", () => {
