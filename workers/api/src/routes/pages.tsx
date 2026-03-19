@@ -22,12 +22,20 @@ import {
   ProvidersPage,
   SettingsPage,
   PrivacyPage,
+  AdminHomePage,
+  AdminShopsPage,
+  AdminSubscriptionsPage,
+  AdminAuditLogPage,
 } from '../views/pages';
 
 type PageEnv = {
   Bindings: Env;
   Variables: { ownerId: string };
 };
+
+function escapeLike(s: string): string {
+  return s.replace(/[%_\\]/g, '\\$&');
+}
 
 type ShopRow = {
   shop_id: string;
@@ -226,7 +234,11 @@ pages.get('/dashboard/stats', async (c) => {
   if (period === '7d') dailyDays = 7;
   else if (period === 'today') dailyDays = 1;
 
-  const dailyParams: string[] = [ownerId];
+  const sinceDate = new Date();
+  sinceDate.setUTCDate(sinceDate.getUTCDate() - dailyDays);
+  const sinceDateStr = sinceDate.toISOString().slice(0, 10);
+
+  const dailyParams: string[] = [ownerId, sinceDateStr];
   if (shopIdFilter) dailyParams.push(shopIdFilter);
 
   // All queries in parallel
@@ -268,7 +280,7 @@ pages.get('/dashboard/stats', async (c) => {
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.created_at >= DATE('now', '-${dailyDays} days')${shopFilter}
+       AND ls.created_at >= ?${shopFilter}
        GROUP BY day, ls.action
        ORDER BY day`,
     ).bind(...dailyParams).all<{ day: string; action: string; cnt: number }>(),
@@ -494,6 +506,152 @@ pages.put('/api/dashboard/settings/password', async (c) => {
     .run();
 
   return c.json({ ok: true });
+});
+
+// ─── Admin SSR 페이지 ─────────────────────────────────────────
+
+// 관리자 인증 미들웨어 (SSR 페이지용 — 인증 실패 시 리다이렉트)
+pages.use('/admin/*', async (c, next) => {
+  const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
+  if (!ownerId) return c.redirect('/dashboard/login');
+
+  const owner = await c.env.DB.prepare('SELECT role FROM owners WHERE owner_id = ?')
+    .bind(ownerId)
+    .first<{ role: string }>();
+
+  if (!owner || owner.role !== 'admin') {
+    return c.redirect('/dashboard');
+  }
+
+  c.set('ownerId', ownerId);
+  return next();
+});
+
+// GET /admin — 관리자 홈
+pages.get('/admin', async (c) => {
+  const [statsResult, recentLogsResult] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+        (SELECT COUNT(*) FROM shops) as total_shops,
+        (SELECT COUNT(*) FROM shops WHERE deleted_at IS NULL) as active_shops,
+        (SELECT COUNT(*) FROM login_stats WHERE action = 'signup') as total_signups`,
+    ).first<{ total_shops: number; active_shops: number; total_signups: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT a.id, o.email as actor_email, a.action, a.target_type, a.target_id, a.detail, a.created_at
+       FROM audit_logs a
+       LEFT JOIN owners o ON a.actor_id = o.owner_id
+       ORDER BY a.created_at DESC LIMIT 5`,
+    ).all<{ id: string; actor_email: string | null; action: string; target_type: string; target_id: string | null; detail: string | null; created_at: string }>(),
+  ]);
+
+  const providerResult = await c.env.DB.prepare(
+    `SELECT provider, COUNT(*) as cnt FROM login_stats WHERE action = 'signup' GROUP BY provider ORDER BY cnt DESC`,
+  ).all<{ provider: string; cnt: number }>();
+
+  return c.html(
+    <AdminHomePage
+      stats={{
+        total_shops: statsResult?.total_shops ?? 0,
+        active_shops: statsResult?.active_shops ?? 0,
+        total_signups: statsResult?.total_signups ?? 0,
+        provider_distribution: providerResult.results ?? [],
+      }}
+      recentLogs={recentLogsResult.results ?? []}
+    />
+  );
+});
+
+// GET /admin/shops — 전체 쇼핑몰
+pages.get('/admin/shops', async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  const search = c.req.query('search') || '';
+
+  let query =
+    'SELECT s.shop_id, s.shop_name, s.mall_id, s.plan, s.deleted_at, s.created_at, o.email as owner_email FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE 1=1';
+  const params: string[] = [];
+
+  const escapedSearch = search ? escapeLike(search) : '';
+  if (search) {
+    query += " AND (s.mall_id LIKE ? ESCAPE '\\' OR s.shop_name LIKE ? ESCAPE '\\' OR o.email LIKE ? ESCAPE '\\')";
+    params.push(`%${escapedSearch}%`, `%${escapedSearch}%`, `%${escapedSearch}%`);
+  }
+
+  query += ' ORDER BY s.created_at DESC LIMIT ? OFFSET ?';
+  params.push(String(limit), String(offset));
+
+  const countQuery = search
+    ? "SELECT COUNT(*) as total FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE (s.mall_id LIKE ? ESCAPE '\\' OR s.shop_name LIKE ? ESCAPE '\\' OR o.email LIKE ? ESCAPE '\\')"
+    : 'SELECT COUNT(*) as total FROM shops';
+
+  const [shopsResult, countResult] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all<{
+      shop_id: string; shop_name: string; mall_id: string; plan: string;
+      deleted_at: string | null; created_at: string; owner_email: string;
+    }>(),
+    search
+      ? c.env.DB.prepare(countQuery).bind(`%${escapedSearch}%`, `%${escapedSearch}%`, `%${escapedSearch}%`).first<{ total: number }>()
+      : c.env.DB.prepare(countQuery).first<{ total: number }>(),
+  ]);
+
+  const total = countResult?.total ?? 0;
+
+  return c.html(
+    <AdminShopsPage
+      shops={shopsResult.results ?? []}
+      pagination={{ page, pages: Math.ceil(total / limit), total }}
+      search={search}
+    />
+  );
+});
+
+// GET /admin/subscriptions — 전체 구독 현황
+pages.get('/admin/subscriptions', async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT sub.subscription_id, sub.shop_id, sub.plan, sub.status, sub.started_at, sub.expires_at, sub.created_at,
+            s.mall_id, s.shop_name, o.email as owner_email
+     FROM subscriptions sub
+     JOIN shops s ON sub.shop_id = s.shop_id
+     JOIN owners o ON sub.owner_id = o.owner_id
+     ORDER BY sub.created_at DESC LIMIT 100`,
+  ).all<{
+    subscription_id: string; shop_id: string; shop_name: string; mall_id: string;
+    owner_email: string; plan: string; status: string;
+    started_at: string | null; expires_at: string | null; created_at: string;
+  }>();
+
+  return c.html(
+    <AdminSubscriptionsPage subscriptions={result.results ?? []} />
+  );
+});
+
+// GET /admin/audit-log — 감사 로그
+pages.get('/admin/audit-log', async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = 50;
+  const offset = (page - 1) * limit;
+
+  const result = await c.env.DB.prepare(
+    `SELECT a.id, a.action, a.target_type, a.target_id, a.detail, a.created_at, o.email as actor_email
+     FROM audit_logs a
+     LEFT JOIN owners o ON a.actor_id = o.owner_id
+     ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
+  )
+    .bind(limit, offset)
+    .all<{
+      id: string; action: string; target_type: string; target_id: string | null;
+      detail: string | null; created_at: string; actor_email: string | null;
+    }>();
+
+  return c.html(
+    <AdminAuditLogPage
+      logs={result.results ?? []}
+      page={page}
+      limit={limit}
+    />
+  );
 });
 
 export default pages;

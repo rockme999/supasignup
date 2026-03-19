@@ -19,6 +19,7 @@ BASE_URL = "https://bg.suparain.kr"
 binding = "DB"
 database_name = "bg-dev"
 database_id = "d420b951-c93b-4449-8f8c-f86c9f99a2cc"
+migrations_dir = "migrations"
 
 # KV Namespace (개발)
 [[kv_namespaces]]

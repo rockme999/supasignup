@@ -1201,6 +1201,420 @@ export const PrivacyPage: FC = () => (
   </html>
 );
 
+// ─── Admin Pages ─────────────────────────────────────────────
+
+// --- Admin Home ---
+
+type AdminStats = {
+  total_shops: number;
+  active_shops: number;
+  total_signups: number;
+  provider_distribution: { provider: string; cnt: number }[];
+};
+
+type AdminAuditLogEntry = {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  detail: string | null;
+  created_at: string;
+};
+
+export const AdminHomePage: FC<{
+  stats: AdminStats;
+  recentLogs: AdminAuditLogEntry[];
+}> = ({ stats, recentLogs }) => (
+  <Layout title="관리자 홈" loggedIn isAdmin currentPath="/admin">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <h1 style="margin-bottom:0">관리자 대시보드</h1>
+      <span class="badge badge-red" style="font-size:13px">ADMIN</span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="label">전체 쇼핑몰</div>
+        <div class="value">{stats.total_shops.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">활성 쇼핑몰</div>
+        <div class="value">{stats.active_shops.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">전체 가입자</div>
+        <div class="value">{stats.total_signups.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">정지된 쇼핑몰</div>
+        <div class="value">{(stats.total_shops - stats.active_shops).toLocaleString()}</div>
+      </div>
+    </div>
+
+    {stats.provider_distribution.length > 0 && (
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">프로바이더별 가입 분포</h2>
+        </div>
+        {stats.provider_distribution.map((row) => (
+          <ProgressBar
+            label={providerDisplayNames[row.provider] || row.provider}
+            value={row.cnt}
+            max={stats.total_signups}
+            color={providerColors[row.provider]}
+          />
+        ))}
+      </div>
+    )}
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin-bottom:0">최근 감사 로그</h2>
+        <a href="/admin/audit-log" style="font-size:13px">전체 보기 →</a>
+      </div>
+      {recentLogs.length === 0 ? (
+        <div class="empty-state"><p>감사 로그가 없습니다.</p></div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>시간</th>
+              <th>관리자</th>
+              <th>액션</th>
+              <th>대상</th>
+              <th>상세</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentLogs.map((log) => (
+              <tr>
+                <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
+                <td style="font-size:13px">{log.actor_email || '-'}</td>
+                <td><span class="badge badge-gray">{log.action}</span></td>
+                <td style="font-size:13px">{log.target_type}{log.target_id ? ` / ${log.target_id.slice(0, 8)}…` : ''}</td>
+                <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </Layout>
+);
+
+// --- Admin Shops ---
+
+type AdminShopRow = {
+  shop_id: string;
+  shop_name: string;
+  mall_id: string;
+  owner_email: string;
+  plan: string;
+  deleted_at: string | null;
+  created_at: string;
+};
+
+type AdminShopsPagination = {
+  page: number;
+  pages: number;
+  total: number;
+};
+
+export const AdminShopsPage: FC<{
+  shops: AdminShopRow[];
+  pagination: AdminShopsPagination;
+  search: string;
+}> = ({ shops, pagination, search }) => (
+  <Layout title="전체 쇼핑몰" loggedIn isAdmin currentPath="/admin/shops">
+    <h1>전체 쇼핑몰 관리</h1>
+
+    <div class="filter-bar" style="margin-bottom:16px">
+      <form id="searchForm" style="display:flex;gap:8px;flex:1">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="쇼핑몰명, Mall ID, 이메일 검색..."
+          value={search}
+          style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"
+        />
+        <button type="submit" class="btn btn-primary btn-sm" style="width:auto">검색</button>
+        {search && <a href="/admin/shops" class="btn btn-outline btn-sm">초기화</a>}
+      </form>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:13px;color:#64748b">전체 {pagination.total}개</span>
+        {pagination.pages > 1 && (
+          <span style="font-size:13px;color:#64748b">{pagination.page} / {pagination.pages} 페이지</span>
+        )}
+      </div>
+
+      {shops.length === 0 ? (
+        <div class="empty-state"><p>쇼핑몰이 없습니다.</p></div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>쇼핑몰명</th>
+              <th>Mall ID</th>
+              <th>소유자 이메일</th>
+              <th>플랜</th>
+              <th>상태</th>
+              <th>등록일</th>
+              <th>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shops.map((shop) => (
+              <tr>
+                <td>{shop.shop_name || '-'}</td>
+                <td><code style="font-size:12px">{shop.mall_id}</code></td>
+                <td style="font-size:13px">{shop.owner_email}</td>
+                <td>
+                  <select
+                    class="plan-select"
+                    data-shop-id={shop.shop_id}
+                    style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
+                  >
+                    <option value="free" selected={shop.plan === 'free'}>무료</option>
+                    <option value="monthly" selected={shop.plan === 'monthly'}>월간</option>
+                    <option value="yearly" selected={shop.plan === 'yearly'}>연간</option>
+                  </select>
+                </td>
+                <td>
+                  {shop.deleted_at
+                    ? <span class="badge badge-red">정지</span>
+                    : <span class="badge badge-green">활성</span>
+                  }
+                </td>
+                <td style="font-size:12px;color:#64748b">{shop.created_at.slice(0, 10)}</td>
+                <td>
+                  <div style="display:flex;gap:6px">
+                    <button
+                      class="btn btn-outline btn-sm plan-save-btn"
+                      data-shop-id={shop.shop_id}
+                      style="font-size:11px;padding:4px 8px"
+                    >
+                      저장
+                    </button>
+                    {shop.deleted_at ? (
+                      <button
+                        class="btn btn-primary btn-sm status-btn"
+                        data-shop-id={shop.shop_id}
+                        data-action="activate"
+                        style="font-size:11px;padding:4px 8px"
+                      >
+                        활성화
+                      </button>
+                    ) : (
+                      <button
+                        class="btn btn-danger btn-sm status-btn"
+                        data-shop-id={shop.shop_id}
+                        data-action="suspend"
+                        style="font-size:11px;padding:4px 8px"
+                      >
+                        정지
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {pagination.pages > 1 && (
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+          {pagination.page > 1 && (
+            <a href={`/admin/shops?page=${pagination.page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">이전</a>
+          )}
+          <span style="padding:6px 12px;font-size:13px;color:#64748b">{pagination.page} / {pagination.pages}</span>
+          {pagination.page < pagination.pages && (
+            <a href={`/admin/shops?page=${pagination.page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">다음</a>
+          )}
+        </div>
+      )}
+    </div>
+
+    <script>{`
+      // 검색 폼
+      document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var q = document.getElementById('searchInput').value.trim();
+        window.location.href = '/admin/shops' + (q ? '?search=' + encodeURIComponent(q) : '');
+      });
+
+      // 플랜 저장 버튼
+      document.querySelectorAll('.plan-save-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var shopId = this.dataset.shopId;
+          var row = this.closest('tr');
+          var select = row.querySelector('.plan-select');
+          var plan = select.value;
+          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/plan', { plan: plan });
+          if (resp.ok) {
+            this.textContent = '저장됨!';
+            setTimeout(function() { btn.textContent = '저장'; }, 1500);
+          } else {
+            var data = await resp.json();
+            alert(data.error || '플랜 변경 중 오류가 발생했습니다.');
+          }
+        });
+      });
+
+      // 정지/활성화 버튼
+      document.querySelectorAll('.status-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var shopId = this.dataset.shopId;
+          var action = this.dataset.action;
+          var label = action === 'suspend' ? '정지' : '활성화';
+          if (!confirm('이 쇼핑몰을 ' + label + '하시겠습니까?')) return;
+          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/status', { action: action });
+          if (resp.ok) {
+            location.reload();
+          } else {
+            var data = await resp.json();
+            alert(data.error || '상태 변경 중 오류가 발생했습니다.');
+          }
+        });
+      });
+    `}</script>
+  </Layout>
+);
+
+// --- Admin Subscriptions ---
+
+type AdminSubscriptionRow = {
+  subscription_id: string;
+  shop_id: string;
+  shop_name: string;
+  mall_id: string;
+  owner_email: string;
+  plan: string;
+  status: string;
+  started_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export const AdminSubscriptionsPage: FC<{
+  subscriptions: AdminSubscriptionRow[];
+}> = ({ subscriptions }) => (
+  <Layout title="구독 현황" loggedIn isAdmin currentPath="/admin/subscriptions">
+    <h1>전체 구독 현황</h1>
+
+    <div class="card">
+      <div style="margin-bottom:16px">
+        <span style="font-size:13px;color:#64748b">전체 {subscriptions.length}건</span>
+      </div>
+
+      {subscriptions.length === 0 ? (
+        <div class="empty-state"><p>구독 내역이 없습니다.</p></div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>쇼핑몰명</th>
+              <th>Mall ID</th>
+              <th>소유자</th>
+              <th>플랜</th>
+              <th>상태</th>
+              <th>시작일</th>
+              <th>만료일</th>
+            </tr>
+          </thead>
+          <tbody>
+            {subscriptions.map((sub) => {
+              let statusBadge: string;
+              let badgeClass: string;
+              if (sub.status === 'active') { statusBadge = '활성'; badgeClass = 'badge-green'; }
+              else if (sub.status === 'expired') { statusBadge = '만료'; badgeClass = 'badge-gray'; }
+              else if (sub.status === 'cancelled') { statusBadge = '취소'; badgeClass = 'badge-red'; }
+              else { statusBadge = sub.status; badgeClass = 'badge-gray'; }
+
+              return (
+                <tr>
+                  <td>{sub.shop_name || '-'}</td>
+                  <td><code style="font-size:12px">{sub.mall_id}</code></td>
+                  <td style="font-size:13px">{sub.owner_email}</td>
+                  <td>
+                    <span class={`badge ${sub.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
+                      {sub.plan === 'free' ? '무료' : sub.plan === 'monthly' ? '월간' : sub.plan === 'yearly' ? '연간' : sub.plan}
+                    </span>
+                  </td>
+                  <td><span class={`badge ${badgeClass}`}>{statusBadge}</span></td>
+                  <td style="font-size:12px;color:#64748b">{sub.started_at ? sub.started_at.slice(0, 10) : '-'}</td>
+                  <td style="font-size:12px;color:#64748b">{sub.expires_at ? sub.expires_at.slice(0, 10) : '-'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </Layout>
+);
+
+// --- Admin Audit Log ---
+
+export const AdminAuditLogPage: FC<{
+  logs: AdminAuditLogEntry[];
+  page: number;
+  limit: number;
+}> = ({ logs, page, limit }) => (
+  <Layout title="감사 로그" loggedIn isAdmin currentPath="/admin/audit-log">
+    <h1>감사 로그</h1>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:13px;color:#64748b">{(page - 1) * limit + 1}–{(page - 1) * limit + logs.length}번째 항목</span>
+        <span style="font-size:13px;color:#64748b">페이지 {page}</span>
+      </div>
+
+      {logs.length === 0 ? (
+        <div class="empty-state"><p>감사 로그가 없습니다.</p></div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>시간</th>
+              <th>관리자</th>
+              <th>액션</th>
+              <th>대상 유형</th>
+              <th>대상 ID</th>
+              <th>상세</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => (
+              <tr>
+                <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
+                <td style="font-size:13px">{log.actor_email || <span style="color:#94a3b8">시스템</span>}</td>
+                <td><span class="badge badge-gray">{log.action}</span></td>
+                <td style="font-size:13px">{log.target_type}</td>
+                <td style="font-size:12px;font-family:monospace;color:#64748b">{log.target_id ? log.target_id.slice(0, 12) + '…' : '-'}</td>
+                <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+        {page > 1 && (
+          <a href={`/admin/audit-log?page=${page - 1}`} class="btn btn-outline btn-sm">이전</a>
+        )}
+        <span style="padding:6px 12px;font-size:13px;color:#64748b">페이지 {page}</span>
+        {logs.length === limit && (
+          <a href={`/admin/audit-log?page=${page + 1}`} class="btn btn-outline btn-sm">다음</a>
+        )}
+      </div>
+    </div>
+  </Layout>
+);
+
 // ─── Settings ────────────────────────────────────────────────
 
 export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name }) => (

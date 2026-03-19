@@ -18,9 +18,14 @@ const admin = new Hono<AdminEnv>();
 // 모든 /admin/* 라우트에 관리자 인증 적용
 admin.use('/*', adminAuth);
 
+// LIKE 패턴 특수문자 이스케이프 (%, _, \)
+function escapeLike(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 // ─── GET /shops — 전체 쇼핑몰 목록 ──────────────────────────
 admin.get('/shops', async (c) => {
-  const page = parseInt(c.req.query('page') || '1');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = 20;
   const offset = (page - 1) * limit;
   const search = c.req.query('search') || '';
@@ -30,9 +35,10 @@ admin.get('/shops', async (c) => {
   const params: string[] = [];
 
   if (search) {
+    const escaped = escapeLike(search);
     query +=
-      ' AND (s.mall_id LIKE ? OR s.shop_name LIKE ? OR o.email LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      ' AND (s.mall_id LIKE ? ESCAPE \'\\\' OR s.shop_name LIKE ? ESCAPE \'\\\' OR o.email LIKE ? ESCAPE \'\\\')';
+    params.push(`%${escaped}%`, `%${escaped}%`, `%${escaped}%`);
   }
 
   query += ' ORDER BY s.created_at DESC LIMIT ? OFFSET ?';
@@ -41,11 +47,12 @@ admin.get('/shops', async (c) => {
   const result = await c.env.DB.prepare(query).bind(...params).all();
 
   const countQuery = search
-    ? 'SELECT COUNT(*) as total FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE s.deleted_at IS NULL AND (s.mall_id LIKE ? OR s.shop_name LIKE ? OR o.email LIKE ?)'
+    ? 'SELECT COUNT(*) as total FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE s.deleted_at IS NULL AND (s.mall_id LIKE ? ESCAPE \'\\\' OR s.shop_name LIKE ? ESCAPE \'\\\' OR o.email LIKE ? ESCAPE \'\\\')'
     : 'SELECT COUNT(*) as total FROM shops WHERE deleted_at IS NULL';
+  const escapedSearch = search ? escapeLike(search) : '';
   const countResult = search
     ? await c.env.DB.prepare(countQuery)
-        .bind(`%${search}%`, `%${search}%`, `%${search}%`)
+        .bind(`%${escapedSearch}%`, `%${escapedSearch}%`, `%${escapedSearch}%`)
         .first<{ total: number }>()
     : await c.env.DB.prepare(countQuery).first<{ total: number }>();
 
@@ -64,7 +71,15 @@ admin.get('/shops', async (c) => {
 admin.get('/shops/:id', async (c) => {
   const shopId = c.req.param('id');
   const shop = await c.env.DB.prepare(
-    'SELECT s.*, o.email as owner_email, o.name as owner_name FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE s.shop_id = ?',
+    `SELECT
+      s.shop_id, s.mall_id, s.platform, s.shop_name, s.shop_url,
+      s.owner_id, s.client_id, s.enabled_providers,
+      s.allowed_redirect_uris, s.plan, s.sso_configured,
+      s.deleted_at, s.created_at, s.updated_at,
+      o.email as owner_email, o.name as owner_name
+    FROM shops s
+    JOIN owners o ON s.owner_id = o.owner_id
+    WHERE s.shop_id = ?`,
   )
     .bind(shopId)
     .first();
@@ -182,7 +197,7 @@ admin.get('/subscriptions', async (c) => {
 
 // ─── GET /audit-log — 감사 로그 ─────────────────────────────
 admin.get('/audit-log', async (c) => {
-  const page = parseInt(c.req.query('page') || '1');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = 50;
   const offset = (page - 1) * limit;
 

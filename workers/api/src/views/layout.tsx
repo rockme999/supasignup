@@ -7,6 +7,7 @@ type LayoutProps = PropsWithChildren<{
   title: string;
   loggedIn?: boolean;
   currentPath?: string;
+  isAdmin?: boolean;
 }>;
 
 const navItems = [
@@ -17,7 +18,14 @@ const navItems = [
   { path: '/dashboard/settings', label: '계정 설정', icon: '⚙️' },
 ];
 
-export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children }) => (
+const adminNavItems = [
+  { path: '/admin', label: '관리자 홈', icon: '🔑' },
+  { path: '/admin/shops', label: '전체 쇼핑몰', icon: '🏬' },
+  { path: '/admin/subscriptions', label: '구독 현황', icon: '💰' },
+  { path: '/admin/audit-log', label: '감사 로그', icon: '📋' },
+];
+
+export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, children }) => (
   <html lang="ko">
     <head>
       <meta charset="utf-8" />
@@ -207,6 +215,20 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
                   {item.icon} {item.label}
                 </a>
               ))}
+              {isAdmin && (
+                <>
+                  <div style="border-top:1px solid #334155;margin:12px 0"></div>
+                  <div style="padding:4px 20px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">관리자</div>
+                  {adminNavItems.map((item) => (
+                    <a
+                      href={item.path}
+                      class={currentPath === item.path || (item.path !== '/admin' && currentPath?.startsWith(item.path)) ? 'active' : ''}
+                    >
+                      {item.icon} {item.label}
+                    </a>
+                  ))}
+                </>
+              )}
             </nav>
             <div class="sidebar-footer">
               <a href="/dashboard/logout">로그아웃</a>
@@ -224,6 +246,20 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, children
                   {item.icon} {item.label}
                 </a>
               ))}
+              {isAdmin && (
+                <>
+                  <div style="border-top:1px solid #334155;margin:12px 0"></div>
+                  <div style="padding:4px 20px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">관리자</div>
+                  {adminNavItems.map((item) => (
+                    <a
+                      href={item.path}
+                      class={currentPath === item.path || (item.path !== '/admin' && currentPath?.startsWith(item.path)) ? 'active' : ''}
+                    >
+                      {item.icon} {item.label}
+                    </a>
+                  ))}
+                </>
+              )}
             </nav>
             <div class="sidebar-footer">
               <a href="/dashboard/logout">로그아웃</a>

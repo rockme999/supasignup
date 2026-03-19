@@ -11,6 +11,7 @@ import cafe24Routes from './routes/cafe24';
 import billingRoutes from './routes/billing';
 import pageRoutes from './routes/pages';
 import adminRoutes from './routes/admin';
+import facebookRoutes from './routes/facebook';
 import { WIDGET_JS } from './widget/buttons';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -23,6 +24,13 @@ app.use('/api/widget/*', cors({
 
 // ── CORS: Dashboard routes (restricted origin) ──────────────
 app.use('/api/dashboard/*', cors({
+  origin: 'https://bg.suparain.kr',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// ── CORS: Admin API routes (restricted origin) ───────────────
+app.use('/api/admin/*', cors({
   origin: 'https://bg.suparain.kr',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -56,8 +64,9 @@ app.route('/api/widget', widgetRoutes);
 app.route('/api/dashboard', dashboardRoutes);
 app.route('/api/dashboard', statsRoutes);
 app.route('/api/cafe24', cafe24Routes);
+app.route('/api/facebook', facebookRoutes);
 app.route('/api/dashboard/billing', billingRoutes);
-app.route('/admin', adminRoutes);
+app.route('/api/admin', adminRoutes);
 app.route('/', pageRoutes);
 
 export default {
