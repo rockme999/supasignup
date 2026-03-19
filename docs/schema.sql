@@ -3,6 +3,7 @@
 -- 변경 이력:
 --   2026-03-19: owners.role 컬럼 추가 (Phase 8 관리자 앱)
 --   2026-03-19: audit_logs 테이블 추가 (Phase 8 관리자 감사 로그)
+--   2026-03-20: owners.deleted_at 컬럼 추가 (계정 탈퇴 soft delete)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -13,6 +14,7 @@ CREATE TABLE IF NOT EXISTS owners (
   name       TEXT,
   password_hash TEXT NOT NULL,
   role       TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  deleted_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

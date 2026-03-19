@@ -152,15 +152,16 @@ export const LoginPage: FC<{ error?: string }> = ({ error }) => (
           document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
+            var btn = form.querySelector('button[type=submit]');
             const resp = await apiCall('POST', '/api/dashboard/auth/login', {
               email: form.email.value,
               password: form.password.value,
-            });
+            }, btn);
             if (resp.ok) {
               window.location.href = '/dashboard';
             } else {
               const data = await resp.json();
-              alert(data.error === 'rate_limited' ? '로그인 시도 횟수 초과. 5분 후 다시 시도하세요.' : '이메일 또는 비밀번호가 올바르지 않습니다.');
+              showToast('error', data.error === 'rate_limited' ? '로그인 시도 횟수 초과. 5분 후 다시 시도하세요.' : '이메일 또는 비밀번호가 올바르지 않습니다.');
             }
           });
         `}</script>
@@ -189,6 +190,10 @@ export const RegisterPage: FC<{ error?: string }> = ({ error }) => (
             <label>비밀번호</label>
             <input type="password" name="password" required placeholder="8자 이상" minlength={8} />
           </div>
+          <div class="form-group">
+            <label>비밀번호 확인</label>
+            <input type="password" name="password_confirm" required placeholder="비밀번호 재입력" minlength={8} />
+          </div>
           <button type="submit" class="btn btn-primary">회원가입</button>
         </form>
         <p style="text-align:center; margin-top:16px; font-size:13px; color:#64748b">
@@ -198,17 +203,22 @@ export const RegisterPage: FC<{ error?: string }> = ({ error }) => (
           document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
+            if (form.password.value !== form.password_confirm.value) {
+              showToast('error', '비밀번호가 일치하지 않습니다.');
+              return;
+            }
+            var btn = form.querySelector('button[type=submit]');
             const resp = await apiCall('POST', '/api/dashboard/auth/register', {
               name: form.name.value,
               email: form.email.value,
               password: form.password.value,
-            });
+            }, btn);
             if (resp.ok) {
               window.location.href = '/dashboard';
             } else {
               const data = await resp.json();
               const messages = { email_exists: '이미 가입된 이메일입니다.', weak_password: '비밀번호는 8자 이상이어야 합니다.' };
-              alert(messages[data.error] || '회원가입 중 오류가 발생했습니다.');
+              showToast('error', messages[data.error] || '회원가입 중 오류가 발생했습니다.');
             }
           });
         `}</script>
@@ -303,23 +313,25 @@ export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[] }> = (
               color={shop.is_over_limit ? '#ef4444' : shop.needs_upgrade ? '#f59e0b' : '#22c55e'}
             />
           ))}
-          <table style="margin-top:12px">
-            <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>상태</th></tr></thead>
-            <tbody>
-              {billingShops.map((shop) => (
-                <tr>
-                  <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
-                  <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                  <td>{shop.monthly_signups}{shop.usage_percent !== null && <span style="color:#94a3b8"> / 100 ({shop.usage_percent}%)</span>}</td>
-                  <td>
-                    {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
-                    {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
-                    {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div style="overflow-x:auto">
+            <table style="margin-top:12px">
+              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>상태</th></tr></thead>
+              <tbody>
+                {billingShops.map((shop) => (
+                  <tr>
+                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
+                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
+                    <td>{shop.monthly_signups}{shop.usage_percent !== null && <span style="color:#94a3b8"> / 100 ({shop.usage_percent}%)</span>}</td>
+                    <td>
+                      {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
+                      {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
+                      {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>
@@ -338,42 +350,63 @@ type ShopListItem = {
   created_at: string;
 };
 
-export const ShopsPage: FC<{ shops: ShopListItem[] }> = ({ shops }) => (
+export const ShopsPage: FC<{ shops: ShopListItem[]; currentSearch?: string }> = ({ shops, currentSearch }) => (
   <Layout title="쇼핑몰 관리" loggedIn currentPath="/dashboard/shops">
     <h1>쇼핑몰 관리</h1>
-    <div style="margin-bottom: 16px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">+ 쇼핑몰 등록</a>
+      <div class="filter-bar" style="flex:1;min-width:200px">
+        <input
+          type="text"
+          id="shopSearch"
+          placeholder="쇼핑몰명 또는 Mall ID 검색"
+          value={currentSearch || ''}
+          onkeyup="if(event.key==='Enter')applySearch()"
+          style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;flex:1;max-width:300px"
+        />
+        <button onclick="applySearch()" class="btn btn-outline btn-sm">검색</button>
+        {currentSearch && <a href="/dashboard/shops" class="btn btn-outline btn-sm">초기화</a>}
+      </div>
     </div>
 
     {shops.length === 0 ? (
       <div class="card">
         <div class="empty-state">
-          <p>등록된 쇼핑몰이 없습니다.</p>
-          <p style="font-size:13px">카페24 앱 설치를 통해 자동으로 등록되거나, 직접 등록할 수 있습니다.</p>
+          <p>{currentSearch ? '검색 결과가 없습니다.' : '등록된 쇼핑몰이 없습니다.'}</p>
+          {!currentSearch && <p style="font-size:13px">카페24 앱 설치를 통해 자동으로 등록되거나, 직접 등록할 수 있습니다.</p>}
         </div>
       </div>
     ) : (
       <div class="card">
-        <table>
-          <thead><tr><th>쇼핑몰명</th><th>Mall ID</th><th>플랫폼</th><th>플랜</th><th>프로바이더</th><th></th></tr></thead>
-          <tbody>
-            {shops.map((shop) => {
-              const providers = parseProviders(shop.enabled_providers);
-              return (
-                <tr>
-                  <td>{shop.shop_name || '-'}</td>
-                  <td>{shop.mall_id}</td>
-                  <td>{shop.platform || 'cafe24'}</td>
-                  <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                  <td>{(providers as string[]).join(', ') || '-'}</td>
-                  <td><a href={`/dashboard/shops/${shop.shop_id}`}>설정</a></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>쇼핑몰명</th><th>Mall ID</th><th>플랫폼</th><th>플랜</th><th>프로바이더</th><th></th></tr></thead>
+            <tbody>
+              {shops.map((shop) => {
+                const providers = parseProviders(shop.enabled_providers);
+                return (
+                  <tr>
+                    <td>{shop.shop_name || '-'}</td>
+                    <td>{shop.mall_id}</td>
+                    <td>{shop.platform || 'cafe24'}</td>
+                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
+                    <td>{(providers as string[]).join(', ') || '-'}</td>
+                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>설정</a></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     )}
+
+    <script>{`
+      function applySearch() {
+        var q = document.getElementById('shopSearch').value.trim();
+        window.location.href = '/dashboard/shops' + (q ? '?search=' + encodeURIComponent(q) : '');
+      }
+    `}</script>
   </Layout>
 );
 
@@ -404,17 +437,18 @@ export const ShopNewPage: FC = () => (
         document.getElementById('newShopForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const form = e.target;
+          var btn = form.querySelector('button[type=submit]');
           const resp = await apiCall('POST', '/api/dashboard/shops', {
             mall_id: form.mall_id.value,
             shop_name: form.shop_name.value || undefined,
             platform: form.platform.value,
-          });
+          }, btn);
           if (resp.ok) {
             const data = await resp.json();
             window.location.href = '/dashboard/shops/' + data.shop.shop_id;
           } else {
             const data = await resp.json();
-            alert(data.error === 'duplicate_mall_id' ? '이미 등록된 Mall ID입니다.' : '등록 중 오류가 발생했습니다.');
+            showToast('error', data.error === 'duplicate_mall_id' ? '이미 등록된 Mall ID입니다.' : '등록 중 오류가 발생했습니다.');
           }
         });
       `}</script>
@@ -456,23 +490,25 @@ export const ShopDetailPage: FC<{
 
       <div class="card">
         <h2>기본 정보</h2>
-        <table>
-          <tbody>
-            <tr><th style="width:140px">Shop ID</th><td>{shop.shop_id}</td></tr>
-            <tr><th>Mall ID</th><td>{shop.mall_id}</td></tr>
-            <tr><th>플랫폼</th><td>{shop.platform || 'cafe24'}</td></tr>
-            <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td></tr>
-            <tr><th>이번 달 가입</th><td>{monthlySignups}{shop.plan === 'free' && ' / 100'}</td></tr>
-            <tr><th>Client ID</th><td>
-              <code>{shop.client_id}</code>
-              <button class="copy-btn" data-copy={shop.client_id} style="position:static; margin-left:8px">복사</button>
-            </td></tr>
-            <tr><th>Client Secret</th><td>
-              <code>{shop.client_secret}</code>
-              <span style="color:#94a3b8; font-size:12px; margin-left:8px">(마스킹됨)</span>
-            </td></tr>
-          </tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table>
+            <tbody>
+              <tr><th style="width:140px">Shop ID</th><td>{shop.shop_id}</td></tr>
+              <tr><th>Mall ID</th><td>{shop.mall_id}</td></tr>
+              <tr><th>플랫폼</th><td>{shop.platform || 'cafe24'}</td></tr>
+              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td></tr>
+              <tr><th>이번 달 가입</th><td>{monthlySignups}{shop.plan === 'free' && ' / 100'}</td></tr>
+              <tr><th>Client ID</th><td>
+                <code>{shop.client_id}</code>
+                <button class="copy-btn" data-copy={shop.client_id} style="position:static; margin-left:8px">복사</button>
+              </td></tr>
+              <tr><th>Client Secret</th><td>
+                <code>{shop.client_secret}</code>
+                <span style="color:#94a3b8; font-size:12px; margin-left:8px">(마스킹됨)</span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="card">
@@ -502,9 +538,10 @@ export const ShopDetailPage: FC<{
         <script>{`
           document.getElementById('deleteShopBtn').addEventListener('click', async function() {
             if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-            const resp = await apiCall('DELETE', '/api/dashboard/shops/' + this.dataset.shopId);
+            var btn = this;
+            const resp = await apiCall('DELETE', '/api/dashboard/shops/' + this.dataset.shopId, undefined, btn);
             if (resp.ok) { window.location.href = '/dashboard/shops'; }
-            else { alert('삭제 중 오류가 발생했습니다.'); }
+            else { showToast('error', '삭제 중 오류가 발생했습니다.'); }
           });
         `}</script>
       </div>
@@ -742,24 +779,26 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
               />
             ))}
 
-            <table style="margin-top:16px">
-              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>한도</th><th>상태</th></tr></thead>
-              <tbody>
-                {billingShops.map((shop) => (
-                  <tr>
-                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
-                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                    <td>{shop.monthly_signups}</td>
-                    <td>{shop.plan === 'free' ? '100건/월' : '무제한'}</td>
-                    <td>
-                      {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
-                      {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
-                      {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style="overflow-x:auto">
+              <table style="margin-top:16px">
+                <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>한도</th><th>상태</th></tr></thead>
+                <tbody>
+                  {billingShops.map((shop) => (
+                    <tr>
+                      <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
+                      <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
+                      <td>{shop.monthly_signups}</td>
+                      <td>{shop.plan === 'free' ? '100건/월' : '무제한'}</td>
+                      <td>
+                        {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
+                        {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
+                        {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </div>
@@ -827,7 +866,7 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
         document.querySelectorAll('.subscribe-btn').forEach(function(btn) {
           btn.addEventListener('click', async function() {
             var shopSelect = document.getElementById('billingShopSelect');
-            if (!shopSelect) { alert('등록된 쇼핑몰이 없습니다.'); return; }
+            if (!shopSelect) { showToast('warn', '등록된 쇼핑몰이 없습니다.'); return; }
             var shopId = shopSelect.value;
             var plan = this.dataset.plan;
             var btnEl = this;
@@ -872,13 +911,13 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
                 }, 1000);
               } else {
                 var err = await resp.json();
-                alert(err.message || '결제 주문 생성에 실패했습니다.');
+                showToast('error', err.message || '결제 주문 생성에 실패했습니다.');
                 if (popup && !popup.closed) popup.close();
                 btnEl.disabled = false;
                 btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
               }
             } catch(e) {
-              alert('오류: ' + e.message);
+              showToast('error', '오류: ' + e.message);
               if (popup && !popup.closed) popup.close();
               btnEl.disabled = false;
               btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
@@ -951,11 +990,12 @@ export const ProvidersPage: FC<{
           document.getElementById('providerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const checked = [...e.target.querySelectorAll('input[name=providers]:checked')].map(i => i.value);
-            if (checked.length === 0) { alert('최소 1개의 프로바이더를 선택해야 합니다.'); return; }
+            if (checked.length === 0) { showToast('warn', '최소 1개의 프로바이더를 선택해야 합니다.'); return; }
             const shopId = e.target.dataset.shopId;
-            const resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: checked });
-            if (resp.ok) { alert('프로바이더 설정이 저장되었습니다.'); location.reload(); }
-            else { const data = await resp.json(); alert(data.error || '저장 중 오류가 발생했습니다.'); }
+            var btn = e.target.querySelector('button[type=submit]');
+            const resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: checked }, btn);
+            if (resp.ok) { showToast('success', '프로바이더 설정이 저장되었습니다.'); location.reload(); }
+            else { const data = await resp.json(); showToast('error', data.error || '저장 중 오류가 발생했습니다.'); }
           });
         `}</script>
       </div>
@@ -1281,28 +1321,30 @@ export const AdminHomePage: FC<{
       {recentLogs.length === 0 ? (
         <div class="empty-state"><p>감사 로그가 없습니다.</p></div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>시간</th>
-              <th>관리자</th>
-              <th>액션</th>
-              <th>대상</th>
-              <th>상세</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentLogs.map((log) => (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
               <tr>
-                <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
-                <td style="font-size:13px">{log.actor_email || '-'}</td>
-                <td><span class="badge badge-gray">{log.action}</span></td>
-                <td style="font-size:13px">{log.target_type}{log.target_id ? ` / ${log.target_id.slice(0, 8)}…` : ''}</td>
-                <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+                <th>시간</th>
+                <th>관리자</th>
+                <th>액션</th>
+                <th>대상</th>
+                <th>상세</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {recentLogs.map((log) => (
+                <tr>
+                  <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
+                  <td style="font-size:13px">{log.actor_email || '-'}</td>
+                  <td><span class="badge badge-gray">{log.action}</span></td>
+                  <td style="font-size:13px">{log.target_type}{log.target_id ? ` / ${log.target_id.slice(0, 8)}…` : ''}</td>
+                  <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   </Layout>
@@ -1359,76 +1401,78 @@ export const AdminShopsPage: FC<{
       {shops.length === 0 ? (
         <div class="empty-state"><p>쇼핑몰이 없습니다.</p></div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>쇼핑몰명</th>
-              <th>Mall ID</th>
-              <th>소유자 이메일</th>
-              <th>플랜</th>
-              <th>상태</th>
-              <th>등록일</th>
-              <th>액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shops.map((shop) => (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
               <tr>
-                <td>{shop.shop_name || '-'}</td>
-                <td><code style="font-size:12px">{shop.mall_id}</code></td>
-                <td style="font-size:13px">{shop.owner_email}</td>
-                <td>
-                  <select
-                    class="plan-select"
-                    data-shop-id={shop.shop_id}
-                    style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
-                  >
-                    <option value="free" selected={shop.plan === 'free'}>무료</option>
-                    <option value="monthly" selected={shop.plan === 'monthly'}>월간</option>
-                    <option value="yearly" selected={shop.plan === 'yearly'}>연간</option>
-                  </select>
-                </td>
-                <td>
-                  {shop.deleted_at
-                    ? <span class="badge badge-red">정지</span>
-                    : <span class="badge badge-green">활성</span>
-                  }
-                </td>
-                <td style="font-size:12px;color:#64748b">{shop.created_at.slice(0, 10)}</td>
-                <td>
-                  <div style="display:flex;gap:6px">
-                    <button
-                      class="btn btn-outline btn-sm plan-save-btn"
-                      data-shop-id={shop.shop_id}
-                      style="font-size:11px;padding:4px 8px"
-                    >
-                      저장
-                    </button>
-                    {shop.deleted_at ? (
-                      <button
-                        class="btn btn-primary btn-sm status-btn"
-                        data-shop-id={shop.shop_id}
-                        data-action="activate"
-                        style="font-size:11px;padding:4px 8px"
-                      >
-                        활성화
-                      </button>
-                    ) : (
-                      <button
-                        class="btn btn-danger btn-sm status-btn"
-                        data-shop-id={shop.shop_id}
-                        data-action="suspend"
-                        style="font-size:11px;padding:4px 8px"
-                      >
-                        정지
-                      </button>
-                    )}
-                  </div>
-                </td>
+                <th>쇼핑몰명</th>
+                <th>Mall ID</th>
+                <th>소유자 이메일</th>
+                <th>플랜</th>
+                <th>상태</th>
+                <th>등록일</th>
+                <th>액션</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {shops.map((shop) => (
+                <tr>
+                  <td>{shop.shop_name || '-'}</td>
+                  <td><code style="font-size:12px">{shop.mall_id}</code></td>
+                  <td style="font-size:13px">{shop.owner_email}</td>
+                  <td>
+                    <select
+                      class="plan-select"
+                      data-shop-id={shop.shop_id}
+                      style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
+                    >
+                      <option value="free" selected={shop.plan === 'free'}>무료</option>
+                      <option value="monthly" selected={shop.plan === 'monthly'}>월간</option>
+                      <option value="yearly" selected={shop.plan === 'yearly'}>연간</option>
+                    </select>
+                  </td>
+                  <td>
+                    {shop.deleted_at
+                      ? <span class="badge badge-red">정지</span>
+                      : <span class="badge badge-green">활성</span>
+                    }
+                  </td>
+                  <td style="font-size:12px;color:#64748b">{shop.created_at.slice(0, 10)}</td>
+                  <td>
+                    <div style="display:flex;gap:6px">
+                      <button
+                        class="btn btn-outline btn-sm plan-save-btn"
+                        data-shop-id={shop.shop_id}
+                        style="font-size:11px;padding:4px 8px"
+                      >
+                        저장
+                      </button>
+                      {shop.deleted_at ? (
+                        <button
+                          class="btn btn-primary btn-sm status-btn"
+                          data-shop-id={shop.shop_id}
+                          data-action="activate"
+                          style="font-size:11px;padding:4px 8px"
+                        >
+                          활성화
+                        </button>
+                      ) : (
+                        <button
+                          class="btn btn-danger btn-sm status-btn"
+                          data-shop-id={shop.shop_id}
+                          data-action="suspend"
+                          style="font-size:11px;padding:4px 8px"
+                        >
+                          정지
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {pagination.pages > 1 && (
@@ -1459,13 +1503,13 @@ export const AdminShopsPage: FC<{
           var row = this.closest('tr');
           var select = row.querySelector('.plan-select');
           var plan = select.value;
-          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/plan', { plan: plan });
+          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/plan', { plan: plan }, this);
           if (resp.ok) {
             this.textContent = '저장됨!';
             setTimeout(function() { btn.textContent = '저장'; }, 1500);
           } else {
             var data = await resp.json();
-            alert(data.error || '플랜 변경 중 오류가 발생했습니다.');
+            showToast('error', data.error || '플랜 변경 중 오류가 발생했습니다.');
           }
         });
       });
@@ -1477,12 +1521,12 @@ export const AdminShopsPage: FC<{
           var action = this.dataset.action;
           var label = action === 'suspend' ? '정지' : '활성화';
           if (!confirm('이 쇼핑몰을 ' + label + '하시겠습니까?')) return;
-          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/status', { action: action });
+          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/status', { action: action }, this);
           if (resp.ok) {
             location.reload();
           } else {
             var data = await resp.json();
-            alert(data.error || '상태 변경 중 오류가 발생했습니다.');
+            showToast('error', data.error || '상태 변경 중 오류가 발생했습니다.');
           }
         });
       });
@@ -1519,45 +1563,47 @@ export const AdminSubscriptionsPage: FC<{
       {subscriptions.length === 0 ? (
         <div class="empty-state"><p>구독 내역이 없습니다.</p></div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>쇼핑몰명</th>
-              <th>Mall ID</th>
-              <th>소유자</th>
-              <th>플랜</th>
-              <th>상태</th>
-              <th>시작일</th>
-              <th>만료일</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subscriptions.map((sub) => {
-              let statusBadge: string;
-              let badgeClass: string;
-              if (sub.status === 'active') { statusBadge = '활성'; badgeClass = 'badge-green'; }
-              else if (sub.status === 'expired') { statusBadge = '만료'; badgeClass = 'badge-gray'; }
-              else if (sub.status === 'cancelled') { statusBadge = '취소'; badgeClass = 'badge-red'; }
-              else { statusBadge = sub.status; badgeClass = 'badge-gray'; }
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>쇼핑몰명</th>
+                <th>Mall ID</th>
+                <th>소유자</th>
+                <th>플랜</th>
+                <th>상태</th>
+                <th>시작일</th>
+                <th>만료일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subscriptions.map((sub) => {
+                let statusBadge: string;
+                let badgeClass: string;
+                if (sub.status === 'active') { statusBadge = '활성'; badgeClass = 'badge-green'; }
+                else if (sub.status === 'expired') { statusBadge = '만료'; badgeClass = 'badge-gray'; }
+                else if (sub.status === 'cancelled') { statusBadge = '취소'; badgeClass = 'badge-red'; }
+                else { statusBadge = sub.status; badgeClass = 'badge-gray'; }
 
-              return (
-                <tr>
-                  <td>{sub.shop_name || '-'}</td>
-                  <td><code style="font-size:12px">{sub.mall_id}</code></td>
-                  <td style="font-size:13px">{sub.owner_email}</td>
-                  <td>
-                    <span class={`badge ${sub.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
-                      {sub.plan === 'free' ? '무료' : sub.plan === 'monthly' ? '월간' : sub.plan === 'yearly' ? '연간' : sub.plan}
-                    </span>
-                  </td>
-                  <td><span class={`badge ${badgeClass}`}>{statusBadge}</span></td>
-                  <td style="font-size:12px;color:#64748b">{sub.started_at ? sub.started_at.slice(0, 10) : '-'}</td>
-                  <td style="font-size:12px;color:#64748b">{sub.expires_at ? sub.expires_at.slice(0, 10) : '-'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                return (
+                  <tr>
+                    <td>{sub.shop_name || '-'}</td>
+                    <td><code style="font-size:12px">{sub.mall_id}</code></td>
+                    <td style="font-size:13px">{sub.owner_email}</td>
+                    <td>
+                      <span class={`badge ${sub.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
+                        {sub.plan === 'free' ? '무료' : sub.plan === 'monthly' ? '월간' : sub.plan === 'yearly' ? '연간' : sub.plan}
+                      </span>
+                    </td>
+                    <td><span class={`badge ${badgeClass}`}>{statusBadge}</span></td>
+                    <td style="font-size:12px;color:#64748b">{sub.started_at ? sub.started_at.slice(0, 10) : '-'}</td>
+                    <td style="font-size:12px;color:#64748b">{sub.expires_at ? sub.expires_at.slice(0, 10) : '-'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   </Layout>
@@ -1582,30 +1628,32 @@ export const AdminAuditLogPage: FC<{
       {logs.length === 0 ? (
         <div class="empty-state"><p>감사 로그가 없습니다.</p></div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>시간</th>
-              <th>관리자</th>
-              <th>액션</th>
-              <th>대상 유형</th>
-              <th>대상 ID</th>
-              <th>상세</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) => (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
               <tr>
-                <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
-                <td style="font-size:13px">{log.actor_email || <span style="color:#94a3b8">시스템</span>}</td>
-                <td><span class="badge badge-gray">{log.action}</span></td>
-                <td style="font-size:13px">{log.target_type}</td>
-                <td style="font-size:12px;font-family:monospace;color:#64748b">{log.target_id ? log.target_id.slice(0, 12) + '…' : '-'}</td>
-                <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+                <th>시간</th>
+                <th>관리자</th>
+                <th>액션</th>
+                <th>대상 유형</th>
+                <th>대상 ID</th>
+                <th>상세</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr>
+                  <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
+                  <td style="font-size:13px">{log.actor_email || <span style="color:#94a3b8">시스템</span>}</td>
+                  <td><span class="badge badge-gray">{log.action}</span></td>
+                  <td style="font-size:13px">{log.target_type}</td>
+                  <td style="font-size:12px;font-family:monospace;color:#64748b">{log.target_id ? log.target_id.slice(0, 12) + '…' : '-'}</td>
+                  <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
@@ -1621,6 +1669,152 @@ export const AdminAuditLogPage: FC<{
   </Layout>
 );
 
+// --- Admin Owners ---
+
+type AdminOwnerRow = {
+  owner_id: string;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
+  shop_count: number;
+};
+
+type AdminOwnersPagination = {
+  page: number;
+  pages: number;
+  total: number;
+};
+
+export const AdminOwnersPage: FC<{
+  owners: AdminOwnerRow[];
+  pagination: AdminOwnersPagination;
+  search: string;
+}> = ({ owners, pagination, search }) => (
+  <Layout title="사용자 관리" loggedIn isAdmin currentPath="/admin/owners">
+    <h1>사용자(Owner) 관리</h1>
+
+    <div class="filter-bar" style="margin-bottom:16px">
+      <form id="searchForm" style="display:flex;gap:8px;flex:1">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="이메일, 이름 검색..."
+          value={search}
+          style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"
+        />
+        <button type="submit" class="btn btn-primary btn-sm" style="width:auto">검색</button>
+        {search && <a href="/admin/owners" class="btn btn-outline btn-sm">초기화</a>}
+      </form>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:13px;color:#64748b">전체 {pagination.total}명</span>
+        {pagination.pages > 1 && (
+          <span style="font-size:13px;color:#64748b">{pagination.page} / {pagination.pages} 페이지</span>
+        )}
+      </div>
+
+      {owners.length === 0 ? (
+        <div class="empty-state"><p>사용자가 없습니다.</p></div>
+      ) : (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>이메일</th>
+                <th>이름</th>
+                <th>역할</th>
+                <th>쇼핑몰 수</th>
+                <th>가입일</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {owners.map((owner) => (
+                <tr>
+                  <td style="font-size:13px">{owner.email}</td>
+                  <td style="font-size:13px">{owner.name || '-'}</td>
+                  <td>
+                    <span class={`badge ${owner.role === 'admin' ? 'badge-red' : 'badge-gray'}`}>
+                      {owner.role}
+                    </span>
+                  </td>
+                  <td style="text-align:center">{owner.shop_count}</td>
+                  <td style="font-size:12px;color:#64748b">{owner.created_at.slice(0, 10)}</td>
+                  <td>
+                    <div style="display:flex;gap:6px">
+                      {owner.shop_count > 0 ? (
+                        <button
+                          class="btn btn-danger btn-sm owner-status-btn"
+                          data-owner-id={owner.owner_id}
+                          data-action="suspend"
+                          style="font-size:11px;padding:4px 8px"
+                        >
+                          정지
+                        </button>
+                      ) : (
+                        <button
+                          class="btn btn-primary btn-sm owner-status-btn"
+                          data-owner-id={owner.owner_id}
+                          data-action="activate"
+                          style="font-size:11px;padding:4px 8px"
+                        >
+                          활성화
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {pagination.pages > 1 && (
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+          {pagination.page > 1 && (
+            <a href={`/admin/owners?page=${pagination.page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">이전</a>
+          )}
+          <span style="padding:6px 12px;font-size:13px;color:#64748b">{pagination.page} / {pagination.pages}</span>
+          {pagination.page < pagination.pages && (
+            <a href={`/admin/owners?page=${pagination.page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">다음</a>
+          )}
+        </div>
+      )}
+    </div>
+
+    <script>{`
+      // 검색 폼
+      document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var q = document.getElementById('searchInput').value.trim();
+        window.location.href = '/admin/owners' + (q ? '?search=' + encodeURIComponent(q) : '');
+      });
+
+      // 정지/활성화 버튼
+      document.querySelectorAll('.owner-status-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var ownerId = this.dataset.ownerId;
+          var action = this.dataset.action;
+          var label = action === 'suspend' ? '정지' : '활성화';
+          if (!confirm('이 사용자를 ' + label + '하시겠습니까?\\n' + (action === 'suspend' ? '해당 사용자의 모든 쇼핑몰이 비활성화됩니다.' : '해당 사용자의 모든 쇼핑몰이 복원됩니다.'))) return;
+          var resp = await apiCall('PUT', '/api/admin/owners/' + ownerId + '/status', { action: action }, this);
+          if (resp.ok) {
+            showToast('success', '사용자 상태가 변경되었습니다.');
+            setTimeout(function() { location.reload(); }, 800);
+          } else {
+            var data = await resp.json();
+            showToast('error', data.error || '상태 변경 중 오류가 발생했습니다.');
+          }
+        });
+      });
+    `}</script>
+  </Layout>
+);
+
 // ─── Settings ────────────────────────────────────────────────
 
 export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name }) => (
@@ -1629,12 +1823,35 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
 
     <div class="card">
       <h2>프로필</h2>
-      <table>
-        <tbody>
-          <tr><th style="width:120px">이름</th><td>{name || '-'}</td></tr>
-          <tr><th>이메일</th><td>{email}</td></tr>
-        </tbody>
-      </table>
+      <div style="overflow-x:auto">
+        <table>
+          <tbody>
+            <tr><th style="width:120px">이름</th><td>{name || '-'}</td></tr>
+            <tr><th>이메일</th><td>{email}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>이름 변경</h2>
+      <form id="nameForm">
+        <div class="form-group">
+          <label>이름</label>
+          <input type="text" name="newName" required placeholder="새 이름" value={name || ''} />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">이름 변경</button>
+      </form>
+      <script>{`
+        document.getElementById('nameForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          var form = e.target;
+          var btn = form.querySelector('button[type=submit]');
+          var resp = await apiCall('PUT', '/api/dashboard/settings/profile', { name: form.newName.value }, btn);
+          if (resp.ok) { showToast('success', '이름이 변경되었습니다.'); setTimeout(function(){ location.reload(); }, 1000); }
+          else { showToast('error', '이름 변경 중 오류가 발생했습니다.'); }
+        });
+      `}</script>
     </div>
 
     <div class="card">
@@ -1648,18 +1865,57 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
           <label>새 비밀번호</label>
           <input type="password" name="newpass" required minlength={8} placeholder="8자 이상" />
         </div>
+        <div class="form-group">
+          <label>새 비밀번호 확인</label>
+          <input type="password" name="newpass_confirm" required minlength={8} placeholder="새 비밀번호 재입력" />
+        </div>
         <button type="submit" class="btn btn-primary btn-sm">비밀번호 변경</button>
       </form>
       <script>{`
         document.getElementById('passwordForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const form = e.target;
+          if (form.newpass.value !== form.newpass_confirm.value) {
+            showToast('error', '새 비밀번호가 일치하지 않습니다.');
+            return;
+          }
+          var btn = form.querySelector('button[type=submit]');
           const resp = await apiCall('PUT', '/api/dashboard/settings/password', {
             current_password: form.current.value,
             new_password: form.newpass.value,
-          });
-          if (resp.ok) { alert('비밀번호가 변경되었습니다.'); form.reset(); }
-          else { const data = await resp.json(); alert(data.error === 'wrong_password' ? '현재 비밀번호가 올바르지 않습니다.' : '변경 중 오류가 발생했습니다.'); }
+          }, btn);
+          if (resp.ok) { showToast('success', '비밀번호가 변경되었습니다.'); form.reset(); }
+          else { const data = await resp.json(); showToast('error', data.error === 'wrong_password' ? '현재 비밀번호가 올바르지 않습니다.' : '변경 중 오류가 발생했습니다.'); }
+        });
+      `}</script>
+    </div>
+
+    <div class="card" style="border: 1px solid #fee2e2">
+      <h2 style="color:#991b1b">계정 탈퇴</h2>
+      <p style="font-size:13px; color:#64748b; margin-bottom:12px">
+        계정을 탈퇴하면 모든 쇼핑몰의 소셜 로그인이 비활성화됩니다. 이 작업은 되돌릴 수 없습니다.
+      </p>
+      <form id="deleteAccountForm">
+        <div class="form-group">
+          <label>비밀번호 확인</label>
+          <input type="password" name="confirmPassword" required placeholder="현재 비밀번호 입력" />
+        </div>
+        <button type="submit" class="btn btn-danger btn-sm">계정 탈퇴</button>
+      </form>
+      <script>{`
+        document.getElementById('deleteAccountForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!confirm('정말로 계정을 탈퇴하시겠습니까?\\n모든 쇼핑몰 데이터가 비활성화되며 이 작업은 되돌릴 수 없습니다.')) return;
+          var form = e.target;
+          var btn = form.querySelector('button[type=submit]');
+          var resp = await apiCall('DELETE', '/api/dashboard/settings/account', { password: form.confirmPassword.value }, btn);
+          if (resp.ok) {
+            showToast('success', '계정이 탈퇴되었습니다.');
+            setTimeout(function(){ window.location.href = '/dashboard/login'; }, 1000);
+          } else {
+            var data = await resp.json();
+            showToast('error', data.error === 'wrong_password' ? '비밀번호가 올바르지 않습니다.' : '탈퇴 중 오류가 발생했습니다.');
+          }
         });
       `}</script>
     </div>

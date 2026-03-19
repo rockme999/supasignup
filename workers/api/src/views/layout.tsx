@@ -21,6 +21,7 @@ const navItems = [
 const adminNavItems = [
   { path: '/admin', label: '관리자 홈', icon: '🔑' },
   { path: '/admin/shops', label: '전체 쇼핑몰', icon: '🏬' },
+  { path: '/admin/owners', label: '사용자 관리', icon: '👥' },
   { path: '/admin/subscriptions', label: '구독 현황', icon: '💰' },
   { path: '/admin/audit-log', label: '감사 로그', icon: '📋' },
 ];
@@ -187,6 +188,35 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           .alert-banner { flex-direction: column; align-items: flex-start; }
           .tab-nav { overflow-x: auto; }
         }
+
+        /* Toast notification */
+        .toast-container {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .toast {
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          animation: toast-in 0.3s ease;
+          max-width: 360px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .toast-success { background: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+        .toast-error { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .toast-warn { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+        .toast-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #2563eb; }
+        @keyframes toast-in { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
       `}</style>
     </head>
     <body>
@@ -306,16 +336,44 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         });
 
         // Form API helper
-        async function apiCall(method, url, body) {
-          const resp = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: body ? JSON.stringify(body) : undefined,
-          });
-          return resp;
+        async function apiCall(method, url, body, submitBtn) {
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn._originalText = submitBtn.textContent;
+            submitBtn.textContent = '처리 중...';
+          }
+          try {
+            var resp = await fetch(url, {
+              method: method,
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: body ? JSON.stringify(body) : undefined,
+            });
+            return resp;
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = submitBtn._originalText;
+            }
+          }
+        }
+
+        // Global toast notification
+        function showToast(type, message, duration) {
+          duration = duration || 3000;
+          var container = document.getElementById('toast-container');
+          if (!container) return;
+          var toast = document.createElement('div');
+          toast.className = 'toast toast-' + type;
+          toast.textContent = message;
+          container.appendChild(toast);
+          setTimeout(function() {
+            toast.style.animation = 'toast-out 0.3s ease forwards';
+            setTimeout(function() { toast.remove(); }, 300);
+          }, duration);
         }
       `}</script>
+      <div id="toast-container" class="toast-container"></div>
     </body>
   </html>
 );

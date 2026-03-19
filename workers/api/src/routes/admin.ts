@@ -168,6 +168,116 @@ admin.put('/shops/:id/status', async (c) => {
   return c.json({ ok: true });
 });
 
+// ─── GET /owners — 전체 사용자 목록 ─────────────────────────
+admin.get('/owners', async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  const search = c.req.query('search') || '';
+
+  let query =
+    `SELECT o.owner_id, o.email, o.name, o.role, o.created_at,
+      (SELECT COUNT(*) FROM shops s WHERE s.owner_id = o.owner_id AND s.deleted_at IS NULL) as shop_count
+     FROM owners o WHERE 1=1`;
+  const params: string[] = [];
+
+  if (search) {
+    const escaped = escapeLike(search);
+    query += " AND (o.email LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')";
+    params.push(`%${escaped}%`, `%${escaped}%`);
+  }
+
+  query += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+  params.push(String(limit), String(offset));
+
+  const countQuery = search
+    ? "SELECT COUNT(*) as total FROM owners o WHERE (o.email LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')"
+    : 'SELECT COUNT(*) as total FROM owners';
+  const escapedSearch = search ? escapeLike(search) : '';
+
+  const [result, countResult] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all(),
+    search
+      ? c.env.DB.prepare(countQuery).bind(`%${escapedSearch}%`, `%${escapedSearch}%`).first<{ total: number }>()
+      : c.env.DB.prepare(countQuery).first<{ total: number }>(),
+  ]);
+
+  return c.json({
+    owners: result.results,
+    pagination: {
+      page,
+      limit,
+      total: countResult?.total ?? 0,
+      pages: Math.ceil((countResult?.total ?? 0) / limit),
+    },
+  });
+});
+
+// ─── GET /owners/:id — 사용자 상세 ───────────────────────────
+admin.get('/owners/:id', async (c) => {
+  const ownerId = c.req.param('id');
+
+  const owner = await c.env.DB.prepare(
+    `SELECT owner_id, email, name, role, created_at FROM owners WHERE owner_id = ?`,
+  )
+    .bind(ownerId)
+    .first();
+
+  if (!owner) return c.json({ error: 'not_found' }, 404);
+
+  const shops = await c.env.DB.prepare(
+    `SELECT shop_id, mall_id, shop_name, platform, plan, deleted_at, created_at
+     FROM shops WHERE owner_id = ? ORDER BY created_at DESC`,
+  )
+    .bind(ownerId)
+    .all();
+
+  return c.json({ owner, shops: shops.results ?? [] });
+});
+
+// ─── PUT /owners/:id/status — 사용자 정지/활성화 ─────────────
+admin.put('/owners/:id/status', async (c) => {
+  const ownerId = c.req.param('id');
+  const { action } = await c.req.json<{ action: 'suspend' | 'activate' }>();
+
+  if (action !== 'suspend' && action !== 'activate') {
+    return c.json({ error: 'invalid_action' }, 400);
+  }
+
+  // Owner 존재 여부 확인
+  const existingOwner = await c.env.DB.prepare('SELECT owner_id FROM owners WHERE owner_id = ?')
+    .bind(ownerId)
+    .first();
+  if (!existingOwner) return c.json({ error: 'not_found' }, 404);
+
+  if (action === 'suspend') {
+    // 해당 owner의 모든 shop soft delete
+    await c.env.DB.prepare(
+      "UPDATE shops SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE owner_id = ? AND deleted_at IS NULL",
+    )
+      .bind(ownerId)
+      .run();
+  } else {
+    // 해당 owner의 모든 shop 복원
+    await c.env.DB.prepare(
+      "UPDATE shops SET deleted_at = NULL, updated_at = datetime('now') WHERE owner_id = ?",
+    )
+      .bind(ownerId)
+      .run();
+  }
+
+  await recordAuditLog(
+    c.env.DB,
+    c.get('ownerId'),
+    action === 'suspend' ? 'suspend_owner' : 'activate_owner',
+    'owner',
+    ownerId,
+    null,
+  );
+
+  return c.json({ ok: true });
+});
+
 // ─── GET /stats — 전체 통계 ──────────────────────────────────
 admin.get('/stats', async (c) => {
   const [totalShops, activeShops, totalSignups, providerDist] =

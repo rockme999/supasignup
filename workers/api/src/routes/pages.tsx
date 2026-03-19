@@ -26,6 +26,7 @@ import {
   AdminShopsPage,
   AdminSubscriptionsPage,
   AdminAuditLogPage,
+  AdminOwnersPage,
 } from '../views/pages';
 
 type PageEnv = {
@@ -358,15 +359,26 @@ pages.get('/dashboard/billing', async (c) => {
 
 pages.get('/dashboard/shops', async (c) => {
   const ownerId = c.get('ownerId');
+  const search = c.req.query('search') || '';
+
+  let query = `SELECT shop_id, shop_name, mall_id, platform, plan, enabled_providers, created_at
+               FROM shops WHERE owner_id = ? AND deleted_at IS NULL`;
+  const params: string[] = [ownerId];
+
+  if (search) {
+    const escaped = escapeLike(search);
+    query += ` AND (shop_name LIKE ? ESCAPE '\\' OR mall_id LIKE ? ESCAPE '\\')`;
+    params.push(`%${escaped}%`, `%${escaped}%`);
+  }
+
+  query += ' ORDER BY created_at DESC';
+
   const result = await c.env.DB
-    .prepare(
-      `SELECT shop_id, shop_name, mall_id, platform, plan, enabled_providers, created_at
-       FROM shops WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
-    )
-    .bind(ownerId)
+    .prepare(query)
+    .bind(...params)
     .all<{ shop_id: string; shop_name: string; mall_id: string; platform: string; plan: string; enabled_providers: string; created_at: string }>();
 
-  return c.html(<ShopsPage shops={result.results ?? []} />);
+  return c.html(<ShopsPage shops={result.results ?? []} currentSearch={search || undefined} />);
 });
 
 pages.get('/dashboard/shops/new', (c) => {
@@ -506,6 +518,79 @@ pages.put('/api/dashboard/settings/password', async (c) => {
     .run();
 
   return c.json({ ok: true });
+});
+
+// ─── Settings API (profile update) ──────────────────────────
+
+pages.put('/api/dashboard/settings/profile', async (c) => {
+  const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
+  if (!ownerId) {
+    return c.json({ error: 'unauthorized' }, 401);
+  }
+
+  const body = await c.req.json<{ name: string }>();
+
+  if (!body.name || body.name.trim().length === 0) {
+    return c.json({ error: 'invalid_input' }, 400);
+  }
+
+  const trimmedName = body.name.trim();
+  if (trimmedName.length > 100) {
+    return c.json({ error: 'name_too_long' }, 400);
+  }
+
+  await c.env.DB
+    .prepare('UPDATE owners SET name = ? WHERE owner_id = ?')
+    .bind(trimmedName, ownerId)
+    .run();
+
+  return c.json({ ok: true });
+});
+
+// ─── Settings API (account delete) ──────────────────────────
+
+pages.delete('/api/dashboard/settings/account', async (c) => {
+  const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
+  if (!ownerId) {
+    return c.json({ error: 'unauthorized' }, 401);
+  }
+
+  const body = await c.req.json<{ password: string }>();
+
+  if (!body.password) {
+    return c.json({ error: 'invalid_input' }, 400);
+  }
+
+  const owner = await c.env.DB
+    .prepare('SELECT password_hash FROM owners WHERE owner_id = ?')
+    .bind(ownerId)
+    .first<{ password_hash: string }>();
+
+  if (!owner) return c.json({ error: 'not_found' }, 404);
+
+  const valid = await verifyPassword(body.password, owner.password_hash);
+  if (!valid) return c.json({ error: 'wrong_password' }, 401);
+
+  // 해당 owner의 모든 shop soft delete
+  await c.env.DB
+    .prepare(`UPDATE shops SET deleted_at = datetime('now') WHERE owner_id = ? AND deleted_at IS NULL`)
+    .bind(ownerId)
+    .run();
+
+  // owner soft delete: email을 'deleted_날짜'로 변경하고 password_hash 초기화
+  const deletedEmail = `deleted_${new Date().toISOString().replace(/[:.]/g, '-')}_${ownerId.slice(0, 8)}`;
+  await c.env.DB
+    .prepare(`UPDATE owners SET email = ?, password_hash = '', deleted_at = datetime('now') WHERE owner_id = ?`)
+    .bind(deletedEmail, ownerId)
+    .run();
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'bg_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0',
+    },
+  });
 });
 
 // ─── Admin SSR 페이지 ─────────────────────────────────────────
@@ -650,6 +735,54 @@ pages.get('/admin/audit-log', async (c) => {
       logs={result.results ?? []}
       page={page}
       limit={limit}
+    />
+  );
+});
+
+// GET /admin/owners — 사용자(owner) 목록
+pages.get('/admin/owners', async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  const search = c.req.query('search') || '';
+
+  const escapedSearch = search ? escapeLike(search) : '';
+
+  let query =
+    `SELECT o.owner_id, o.email, o.name, o.role, o.created_at,
+      (SELECT COUNT(*) FROM shops s WHERE s.owner_id = o.owner_id AND s.deleted_at IS NULL) as shop_count
+     FROM owners o WHERE 1=1`;
+  const params: string[] = [];
+
+  if (search) {
+    query += " AND (o.email LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')";
+    params.push(`%${escapedSearch}%`, `%${escapedSearch}%`);
+  }
+
+  query += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+  params.push(String(limit), String(offset));
+
+  const countQuery = search
+    ? "SELECT COUNT(*) as total FROM owners o WHERE (o.email LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')"
+    : 'SELECT COUNT(*) as total FROM owners';
+
+  const [ownersResult, countResult] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all<{
+      owner_id: string; email: string; name: string; role: string;
+      created_at: string; shop_count: number;
+    }>(),
+    search
+      ? c.env.DB.prepare(countQuery).bind(`%${escapedSearch}%`, `%${escapedSearch}%`).first<{ total: number }>()
+      : c.env.DB.prepare(countQuery).first<{ total: number }>(),
+  ]);
+
+  const total = countResult?.total ?? 0;
+
+  return c.html(
+    <AdminOwnersPage
+      owners={ownersResult.results ?? []}
+      pagination={{ page, pages: Math.ceil(total / limit), total }}
+      search={search}
     />
   );
 });
