@@ -11,9 +11,12 @@ const providerColors: Record<string, string> = {
   kakao: '#fee500',
   naver: '#03c75a',
   apple: '#000000',
-  toss: '#0064ff',
   discord: '#5865f2',
+  facebook: '#1877f2',
+  x: '#000000',
+  line: '#06c755',
   telegram: '#26a5e4',
+  toss: '#0064ff',
   tiktok: '#000000',
 };
 
@@ -22,9 +25,12 @@ const providerDisplayNames: Record<string, string> = {
   kakao: '카카오',
   naver: '네이버',
   apple: 'Apple',
-  toss: '토스',
   discord: 'Discord',
+  facebook: 'Facebook',
+  x: 'X (Twitter)',
+  line: 'LINE',
   telegram: 'Telegram',
+  toss: '토스',
   tiktok: 'TikTok',
 };
 
@@ -892,8 +898,8 @@ export const ProvidersPage: FC<{
   baseUrl: string;
 }> = ({ shop, baseUrl }) => {
   const providers = parseProviders(shop.enabled_providers);
-  const mvpProviders = ['google', 'kakao', 'naver', 'apple'];
-  const phase2Providers = ['toss', 'discord', 'telegram', 'tiktok'];
+  const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
+  const futureProviders = ['toss', 'tiktok'];
 
   return (
     <Layout title="프로바이더 관리" loggedIn currentPath="/dashboard/shops">
@@ -909,7 +915,7 @@ export const ProvidersPage: FC<{
         <h2>소셜 프로바이더 설정</h2>
         <p style="font-size:13px; color:#64748b; margin-bottom:16px">사용할 소셜 로그인 프로바이더를 선택하세요. 최소 1개 이상 활성화해야 합니다.</p>
         <form id="providerForm" data-shop-id={shop.shop_id}>
-          {mvpProviders.map((p) => (
+          {allProviders.map((p) => (
             <div class="provider-toggle">
               <label class="toggle">
                 <input type="checkbox" name="providers" value={p} checked={providers.includes(p)} />
@@ -922,8 +928,8 @@ export const ProvidersPage: FC<{
             </div>
           ))}
 
-          <h3 style="margin-top:24px;margin-bottom:12px;font-size:14px;color:#64748b">Phase 2 (준비 중)</h3>
-          {phase2Providers.map((p) => (
+          <h3 style="margin-top:24px;margin-bottom:12px;font-size:14px;color:#64748b">향후 지원 예정</h3>
+          {futureProviders.map((p) => (
             <div class="provider-toggle" style="opacity:0.5">
               <label class="toggle">
                 <input type="checkbox" disabled />

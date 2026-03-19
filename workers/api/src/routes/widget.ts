@@ -46,7 +46,6 @@ widget.get('/config', async (c) => {
     : undefined;
 
   const config = {
-    shop_id: shop.shop_id,
     client_id: shop.client_id,
     providers,
     base_url: c.env.BASE_URL,
@@ -70,6 +69,35 @@ widget.get('/hint', async (c) => {
   if (!clientId || !provider) {
     return c.json({ error: 'missing_params' }, 400);
   }
+
+  // Validate request origin against shop's mall_id to prevent unauthorized hint injection
+  const shop = await getShopByClientId(c.env.DB, clientId);
+  if (!shop) {
+    return c.json({ error: 'invalid_client_id' }, 404);
+  }
+
+  // Check Origin or Referer header to verify request comes from shop's domain
+  const originHeader = c.req.header('Origin') ?? c.req.header('Referer') ?? '';
+  const mallId = shop.mall_id;
+
+  let isValidOrigin = mallId ? originHeader.includes(mallId) : false;
+
+  // Also allow shop_url hostname match as fallback
+  if (!isValidOrigin && shop.shop_url) {
+    try {
+      const shopHostname = new URL(
+        shop.shop_url.startsWith('http') ? shop.shop_url : `https://${shop.shop_url}`,
+      ).hostname;
+      isValidOrigin = originHeader.includes(shopHostname);
+    } catch {
+      // Ignore invalid shop_url
+    }
+  }
+
+  if (!isValidOrigin) {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+
   await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
   return c.json({ ok: true });
 });

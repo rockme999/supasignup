@@ -55,10 +55,12 @@ dashboard.post('/auth/register', rateLimitMiddleware, async (c) => {
     return c.json({ error: 'weak_password', message: 'Password must be at least 8 characters' }, 400);
   }
 
+  const normalizedEmail = body.email.toLowerCase().trim();
+
   // Check duplicate email
   const existing = await c.env.DB
     .prepare('SELECT owner_id FROM owners WHERE email = ?')
-    .bind(body.email)
+    .bind(normalizedEmail)
     .first();
 
   if (existing) {
@@ -70,7 +72,7 @@ dashboard.post('/auth/register', rateLimitMiddleware, async (c) => {
 
   await c.env.DB
     .prepare('INSERT INTO owners (owner_id, email, name, password_hash) VALUES (?, ?, ?, ?)')
-    .bind(ownerId, body.email, body.name ?? null, passwordHash)
+    .bind(ownerId, normalizedEmail, body.name ?? null, passwordHash)
     .run();
 
   const token = await createToken(ownerId, c.env.JWT_SECRET);
@@ -88,9 +90,11 @@ dashboard.post('/auth/login', rateLimitMiddleware, async (c) => {
     return c.json({ error: 'missing_fields' }, 400);
   }
 
+  const normalizedEmail = body.email.toLowerCase().trim();
+
   const owner = await c.env.DB
     .prepare('SELECT owner_id, password_hash FROM owners WHERE email = ?')
-    .bind(body.email)
+    .bind(normalizedEmail)
     .first<{ owner_id: string; password_hash: string }>();
 
   if (!owner) {

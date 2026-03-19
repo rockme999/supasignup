@@ -39,9 +39,15 @@ stats.get('/stats', async (c) => {
     dateFilter = ' AND ls.created_at >= ?';
     dateParam = today;
   } else if (period === '7d') {
-    dateFilter = " AND ls.created_at >= DATE('now', '-7 days')";
+    dateFilter = ' AND ls.created_at >= ?';
+    const d7 = new Date();
+    d7.setUTCDate(d7.getUTCDate() - 7);
+    dateParam = d7.toISOString().slice(0, 10);
   } else if (period === '30d') {
-    dateFilter = " AND ls.created_at >= DATE('now', '-30 days')";
+    dateFilter = ' AND ls.created_at >= ?';
+    const d30 = new Date();
+    d30.setUTCDate(d30.getUTCDate() - 30);
+    dateParam = d30.toISOString().slice(0, 10);
   } else if (period === 'month') {
     dateFilter = ' AND ls.created_at >= ?';
     dateParam = `${yearMonth}-01`;
@@ -140,7 +146,10 @@ stats.get('/stats/daily', async (c) => {
   }
 
   const shopFilter = shopIdFilter ? ' AND ls.shop_id = ?' : '';
-  const params: string[] = [ownerId];
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  const cutoffDate = cutoff.toISOString().slice(0, 10);
+  const params: string[] = [ownerId, cutoffDate];
   if (shopIdFilter) params.push(shopIdFilter);
 
   const dailyResult = await c.env.DB
@@ -149,7 +158,7 @@ stats.get('/stats/daily', async (c) => {
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.created_at >= DATE('now', '-${days} days')${shopFilter}
+       AND ls.created_at >= ?${shopFilter}
        GROUP BY day, ls.action
        ORDER BY day`,
     )
@@ -178,15 +187,18 @@ stats.get('/stats/:shop_id', async (c) => {
   }
 
   // Daily stats for last 30 days
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+  const thirtyDaysAgoDate = thirtyDaysAgo.toISOString().slice(0, 10);
   const dailyResult = await c.env.DB
     .prepare(
       `SELECT DATE(created_at) as day, action, COUNT(*) as cnt
        FROM login_stats
-       WHERE shop_id = ? AND created_at >= DATE('now', '-30 days')
+       WHERE shop_id = ? AND created_at >= ?
        GROUP BY day, action
        ORDER BY day`,
     )
-    .bind(shopId)
+    .bind(shopId, thirtyDaysAgoDate)
     .all<{ day: string; action: string; cnt: number }>();
 
   // Per-provider breakdown for this shop

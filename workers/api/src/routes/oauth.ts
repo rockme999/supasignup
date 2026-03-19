@@ -176,12 +176,6 @@ oauth.get('/callback/:provider', async (c) => {
     return c.json({ error: 'state_mismatch' }, 400);
   }
 
-  // Clean up KV (one-time use)
-  await Promise.all([
-    c.env.KV.delete(`oauth_session:${state}`),
-    c.env.KV.delete(`pkce:${state}`),
-  ]);
-
   // Exchange code for tokens at social provider
   const tokens = await exchangeSocialCode(provider, {
     code,
@@ -236,6 +230,12 @@ oauth.get('/callback/:provider', async (c) => {
     redirectUrl.searchParams.set('bg_provider', provider);
   }
 
+  // Clean up KV after all DB/KV writes succeed (one-time use)
+  await Promise.all([
+    c.env.KV.delete(`oauth_session:${state}`),
+    c.env.KV.delete(`pkce:${state}`),
+  ]);
+
   return c.redirect(redirectUrl.toString());
 });
 
@@ -272,12 +272,6 @@ oauth.post('/callback/apple', async (c) => {
   if (session.provider !== provider || session.social_state !== state) {
     return c.json({ error: 'state_mismatch' }, 400);
   }
-
-  // Clean up KV (one-time use)
-  await Promise.all([
-    c.env.KV.delete(`oauth_session:${state}`),
-    c.env.KV.delete(`pkce:${state}`),
-  ]);
 
   // Exchange code for tokens at Apple
   const tokens = await exchangeSocialCode(provider, {
@@ -347,6 +341,12 @@ oauth.post('/callback/apple', async (c) => {
   if (!isSsoCallback) {
     redirectUrl.searchParams.set('bg_provider', provider);
   }
+
+  // Clean up KV after all DB/KV writes succeed (one-time use)
+  await Promise.all([
+    c.env.KV.delete(`oauth_session:${state}`),
+    c.env.KV.delete(`pkce:${state}`),
+  ]);
 
   return c.redirect(redirectUrl.toString());
 });

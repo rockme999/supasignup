@@ -11,14 +11,27 @@ export async function handleScheduled(env: Env): Promise<void> {
   const results = expired.results ?? [];
   if (results.length === 0) return;
 
-  // batch로 subscription/shop 상태 일괄 업데이트
+  // 각 만료 구독에 대해 다른 active 구독 여부 확인 후 일괄 업데이트
   const statements: D1PreparedStatement[] = [];
   for (const sub of results) {
     const record = sub as { id: string; shop_id: string };
+
+    // 동일 shop의 다른 active 구독이 있는지 확인 (환불 로직과 동일 패턴)
+    const otherActive = await env.DB
+      .prepare("SELECT COUNT(*) as cnt FROM subscriptions WHERE shop_id = ? AND status = 'active' AND id != ?")
+      .bind(record.shop_id, record.id)
+      .first<{ cnt: number }>();
+
     statements.push(
       env.DB.prepare("UPDATE subscriptions SET status = 'expired' WHERE id = ?").bind(record.id),
-      env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(record.shop_id),
     );
+
+    // 다른 active 구독이 없을 때만 free로 다운그레이드
+    if (!otherActive || otherActive.cnt === 0) {
+      statements.push(
+        env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(record.shop_id),
+      );
+    }
   }
 
   await env.DB.batch(statements);

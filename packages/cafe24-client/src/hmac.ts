@@ -62,7 +62,8 @@ function timingSafeEqual(a: string, b: string): boolean {
  * Verify a Cafe24 app-launch HMAC-SHA256 signature.
  *
  * Cafe24 generates the HMAC over the query string *excluding* the `hmac`
- * parameter itself.
+ * parameter itself. Parameters are sorted alphabetically before hashing
+ * to prevent parameter-order manipulation attacks.
  *
  * @param queryString - Full query string (including the `hmac` parameter).
  * @param receivedHmac - The HMAC value sent in the request.
@@ -71,22 +72,23 @@ function timingSafeEqual(a: string, b: string): boolean {
  */
 export async function verifyAppLaunchHmac(
   queryString: string,
-  receivedHmac: string,
+  _receivedHmac: string,
   secret: string,
 ): Promise<boolean> {
-  // Extract query string up to (but not including) the &hmac= parameter
-  const idx = queryString.lastIndexOf("&hmac=");
-  if (idx === -1) {
-    // hmac might be the first parameter (unlikely)
-    if (queryString.startsWith("hmac=")) {
-      return false;
-    }
-    return false;
-  }
-  const plainQuery = queryString.slice(0, idx);
+  const params = new URLSearchParams(queryString);
+  const hmac = params.get("hmac");
+  if (!hmac) return false;
+
+  params.delete("hmac");
+
+  // Sort parameters alphabetically to prevent parameter-order manipulation
+  const sortedParams = [...params.entries()].sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
+  const plainQuery = sortedParams.map(([k, v]) => `${k}=${v}`).join("&");
 
   const expected = await hmacSha256Base64(secret, plainQuery);
-  return timingSafeEqual(expected, receivedHmac);
+  return timingSafeEqual(expected, hmac);
 }
 
 /**

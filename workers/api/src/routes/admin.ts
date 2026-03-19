@@ -97,6 +97,12 @@ admin.put('/shops/:id/plan', async (c) => {
     return c.json({ error: 'invalid_plan' }, 400);
   }
 
+  // Shop 존재 여부 확인
+  const existingShop = await c.env.DB.prepare('SELECT shop_id FROM shops WHERE shop_id = ?')
+    .bind(shopId)
+    .first();
+  if (!existingShop) return c.json({ error: 'not_found' }, 404);
+
   await c.env.DB.prepare(
     "UPDATE shops SET plan = ?, updated_at = datetime('now') WHERE shop_id = ?",
   )
@@ -130,6 +136,12 @@ admin.put('/shops/:id/status', async (c) => {
   if (action !== 'suspend' && action !== 'activate') {
     return c.json({ error: 'invalid_action' }, 400);
   }
+
+  // Shop 존재 여부 확인
+  const existingShop = await c.env.DB.prepare('SELECT shop_id FROM shops WHERE shop_id = ?')
+    .bind(shopId)
+    .first();
+  if (!existingShop) return c.json({ error: 'not_found' }, 404);
 
   if (action === 'suspend') {
     await c.env.DB.prepare(

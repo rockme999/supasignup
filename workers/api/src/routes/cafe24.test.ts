@@ -36,7 +36,11 @@ vi.mock('@supasignup/cafe24-client', async (importOriginal) => {
 function createMockKV() {
   const store = new Map<string, string>();
   return {
-    get: vi.fn(async (key: string) => store.get(key) ?? null),
+    get: vi.fn(async (key: string, type?: string) => {
+      const val = store.get(key) ?? null;
+      if (val && type === 'json') return JSON.parse(val);
+      return val;
+    }),
     put: vi.fn(async (key: string, value: string) => { store.set(key, value); }),
     delete: vi.fn(async (key: string) => { store.delete(key); }),
   };
@@ -106,7 +110,7 @@ describe('GET /api/cafe24/install', () => {
     expect(location).toContain('oauth/authorize');
     expect(location).toContain('client_id=cafe24_test_cid');
     expect(location).toContain('response_type=code');
-    expect(location).toContain('state=testmall');
+    expect(location).toMatch(/state=testmall(%3A|:)/);
   });
 });
 
@@ -128,7 +132,11 @@ describe('GET /api/cafe24/callback', () => {
   });
 
   it('redirects to dashboard on successful callback', async () => {
-    const { app, env, d1 } = createTestApp();
+    const { app, env, kv, d1 } = createTestApp();
+
+    // KV에 CSRF state 토큰 사전 등록
+    const csrfToken = 'test_csrf_token';
+    await kv.put(`cafe24_state:${csrfToken}`, JSON.stringify({ mall_id: 'testmall' }));
 
     // Mock: getShopByMallId returns null (new shop), then various queries
     let callCount = 0;
@@ -149,7 +157,7 @@ describe('GET /api/cafe24/callback', () => {
       }),
     });
 
-    const resp = await app.request('/api/cafe24/callback?code=auth_code_123&state=testmall', {}, env);
+    const resp = await app.request(`/api/cafe24/callback?code=auth_code_123&state=testmall:${csrfToken}`, {}, env);
     expect(resp.status).toBe(302);
     const location = resp.headers.get('Location')!;
     expect(location).toContain('/dashboard/shops/');

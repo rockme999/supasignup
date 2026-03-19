@@ -610,7 +610,7 @@ pages.get('/admin/shops', async (c) => {
 // GET /admin/subscriptions — 전체 구독 현황
 pages.get('/admin/subscriptions', async (c) => {
   const result = await c.env.DB.prepare(
-    `SELECT sub.subscription_id, sub.shop_id, sub.plan, sub.status, sub.started_at, sub.expires_at, sub.created_at,
+    `SELECT sub.id as subscription_id, sub.shop_id, sub.plan, sub.status, sub.started_at, sub.expires_at, sub.created_at,
             s.mall_id, s.shop_name, o.email as owner_email
      FROM subscriptions sub
      JOIN shops s ON sub.shop_id = s.shop_id

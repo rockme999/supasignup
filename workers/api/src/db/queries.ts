@@ -11,6 +11,7 @@ import {
   generateId,
   generateSecret,
   encrypt,
+  decrypt,
   sha256,
   FREE_PLAN_MONTHLY_LIMIT,
 } from '@supasignup/bg-core';
@@ -61,10 +62,19 @@ export async function createShop(
     platform_access_token?: string;
     platform_refresh_token?: string;
   },
+  encryptionKey?: string,
 ): Promise<Shop> {
   const shopId = generateId();
   const clientId = `bg_${generateSecret(16)}`;
   const clientSecret = generateSecret(32);
+
+  // 플랫폼 토큰은 AES-256-GCM으로 암호화하여 저장
+  const encryptedAccessToken = data.platform_access_token && encryptionKey
+    ? await encrypt(data.platform_access_token, encryptionKey)
+    : data.platform_access_token ?? null;
+  const encryptedRefreshToken = data.platform_refresh_token && encryptionKey
+    ? await encrypt(data.platform_refresh_token, encryptionKey)
+    : data.platform_refresh_token ?? null;
 
   await db
     .prepare(
@@ -84,12 +94,29 @@ export async function createShop(
       clientSecret,
       JSON.stringify(data.enabled_providers ?? ['google', 'kakao', 'naver', 'apple']),
       data.allowed_redirect_uris ? JSON.stringify(data.allowed_redirect_uris) : null,
-      data.platform_access_token ?? null,
-      data.platform_refresh_token ?? null,
+      encryptedAccessToken,
+      encryptedRefreshToken,
     )
     .run();
 
   return (await getShopById(db, shopId))!;
+}
+
+/**
+ * Decrypt platform tokens stored in a shop record.
+ * Returns a copy of the shop with decrypted token values.
+ */
+export async function decryptShopTokens(
+  shop: Shop,
+  encryptionKey: string,
+): Promise<{ access_token: string | null; refresh_token: string | null }> {
+  const access_token = shop.platform_access_token
+    ? await decrypt(shop.platform_access_token, encryptionKey)
+    : null;
+  const refresh_token = shop.platform_refresh_token
+    ? await decrypt(shop.platform_refresh_token, encryptionKey)
+    : null;
+  return { access_token, refresh_token };
 }
 
 const ALLOWED_UPDATE_COLUMNS = new Set<string>([
@@ -347,6 +374,8 @@ export async function getMonthlySignupCount(
 ): Promise<number> {
   const now = new Date();
   const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const nextMonthStr = nextMonth.toISOString().slice(0, 10);
 
   const result = await db
     .prepare(
@@ -354,7 +383,7 @@ export async function getMonthlySignupCount(
        WHERE shop_id = ? AND action = 'signup'
        AND created_at >= ? AND created_at < ?`,
     )
-    .bind(shopId, `${yearMonth}-01`, `${yearMonth}-32`)
+    .bind(shopId, `${yearMonth}-01`, nextMonthStr)
     .first<{ cnt: number }>();
 
   return result?.cnt ?? 0;

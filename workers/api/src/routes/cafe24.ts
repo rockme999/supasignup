@@ -8,11 +8,12 @@
 
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
-import { generateId, generateSecret } from '@supasignup/bg-core';
+import { generateId, generateSecret, timingSafeEqual } from '@supasignup/bg-core';
 import { Cafe24Client, verifyAppLaunchHmac, verifyWebhookHmac, PAYMENT_COMPLETE, REFUND_COMPLETE } from '@supasignup/cafe24-client';
 import { hashPassword } from '../services/password';
 import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
+import { encrypt } from '@supasignup/bg-core';
 
 const cafe24 = new Hono<{ Bindings: Env }>();
 
@@ -26,7 +27,7 @@ cafe24.get('/install', async (c) => {
     return c.json({ error: 'missing_parameters' }, 400);
   }
 
-  // Verify HMAC
+  // Verify HMAC (hmac 파라미터를 queryString 내부에서 추출하여 알파벳 순 정렬 후 검증)
   const queryString = c.req.url.split('?')[1] ?? '';
   const valid = await verifyAppLaunchHmac(queryString, hmac, c.env.CAFE24_CLIENT_SECRET);
   if (!valid) {
@@ -52,7 +53,12 @@ cafe24.get('/install', async (c) => {
     'mall.read_application',
     'mall.write_application',
   ].join(','));
-  oauthUrl.searchParams.set('state', mallId);
+  // CSRF 방어: state에 랜덤 토큰을 포함하고 KV에 저장 (TTL 600초)
+  const csrfToken = generateSecret(16);
+  const state = `${mallId}:${csrfToken}`;
+  await c.env.KV.put(`cafe24_state:${csrfToken}`, JSON.stringify({ mall_id: mallId }), { expirationTtl: 600 });
+
+  oauthUrl.searchParams.set('state', state);
 
   return c.redirect(oauthUrl.toString());
 });
@@ -60,16 +66,31 @@ cafe24.get('/install', async (c) => {
 // ─── GET /callback ───────────────────────────────────────────
 cafe24.get('/callback', async (c) => {
   const code = c.req.query('code');
-  const mallId = c.req.query('state');
+  const stateParam = c.req.query('state');
   const error = c.req.query('error');
 
   if (error) {
     return c.json({ error: 'cafe24_auth_error', message: c.req.query('error_description') ?? error }, 400);
   }
 
-  if (!code || !mallId) {
+  if (!code || !stateParam) {
     return c.json({ error: 'missing_parameters' }, 400);
   }
+
+  // CSRF 검증: state를 mallId:csrfToken 형태로 파싱하여 KV에서 확인
+  const colonIdx = stateParam.indexOf(':');
+  if (colonIdx === -1) {
+    return c.json({ error: 'invalid_state' }, 400);
+  }
+  const mallId = stateParam.slice(0, colonIdx);
+  const csrfToken = stateParam.slice(colonIdx + 1);
+
+  const storedState = await c.env.KV.get(`cafe24_state:${csrfToken}`, 'json') as { mall_id: string } | null;
+  if (!storedState || storedState.mall_id !== mallId) {
+    return c.json({ error: 'invalid_state' }, 400);
+  }
+  // 사용 후 즉시 삭제 (재사용 방지)
+  await c.env.KV.delete(`cafe24_state:${csrfToken}`);
 
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
 
@@ -95,12 +116,16 @@ cafe24.get('/callback', async (c) => {
   }
 
   if (shop) {
+    // 토큰을 암호화하여 업데이트
+    const encryptedAccessToken = await encrypt(tokens.access_token, c.env.ENCRYPTION_KEY);
+    const encryptedRefreshToken = await encrypt(tokens.refresh_token, c.env.ENCRYPTION_KEY);
+
     // Update existing shop tokens + restore if soft-deleted
     await updateShop(c.env.DB, shop.shop_id, {
       shop_name: storeInfo.shop_name || shop.shop_name,
       shop_url: storeInfo.shop_domain || shop.shop_url,
-      platform_access_token: tokens.access_token,
-      platform_refresh_token: tokens.refresh_token,
+      platform_access_token: encryptedAccessToken,
+      platform_refresh_token: encryptedRefreshToken,
     });
     // Restore soft-deleted shop
     if (shop.deleted_at) {
@@ -122,7 +147,7 @@ cafe24.get('/callback', async (c) => {
         `https://${mallId}.cafe24api.com/api/v2/oauth/callback`,
         `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso/`,
       ],
-    });
+    }, c.env.ENCRYPTION_KEY);
   }
 
   // Install ScriptTag (widget)
@@ -177,8 +202,9 @@ cafe24.post('/webhook', async (c) => {
       return c.json({ error: 'invalid_signature' }, 401);
     }
   } else if (apiKey) {
-    if (apiKey !== c.env.CAFE24_WEBHOOK_API_KEY) {
-      console.error(`API key mismatch: received=${apiKey}`);
+    const isValid = await timingSafeEqual(apiKey, c.env.CAFE24_WEBHOOK_API_KEY);
+    if (!isValid) {
+      console.error('API key mismatch');
       return c.json({ error: 'invalid_api_key' }, 401);
     }
   } else {
