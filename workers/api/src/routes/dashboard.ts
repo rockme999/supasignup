@@ -272,7 +272,7 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   const body = await c.req.json<Partial<WidgetStyle>>();
 
   // Validate preset
-  const VALID_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only', 'mono'];
+  const VALID_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only', 'mono', 'outline'];
   if (body.preset !== undefined && !VALID_PRESETS.includes(body.preset)) {
     return c.json({ error: 'invalid_preset', message: `preset must be one of: ${VALID_PRESETS.join(', ')}` }, 400);
   }
@@ -284,8 +284,8 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   }
 
   // Validate numeric ranges
-  if (body.buttonWidth !== undefined && (body.buttonWidth < 120 || body.buttonWidth > 400)) {
-    return c.json({ error: 'invalid_buttonWidth', message: 'buttonWidth must be between 120 and 400' }, 400);
+  if (body.buttonWidth !== undefined && (body.buttonWidth < 120 || body.buttonWidth > 500)) {
+    return c.json({ error: 'invalid_buttonWidth', message: 'buttonWidth must be between 120 and 500' }, 400);
   }
   if (body.buttonGap !== undefined && (body.buttonGap < 0 || body.buttonGap > 24)) {
     return c.json({ error: 'invalid_buttonGap', message: 'buttonGap must be between 0 and 24' }, 400);

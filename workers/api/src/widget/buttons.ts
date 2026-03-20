@@ -282,11 +282,13 @@ export const WIDGET_JS = `(function() {
     var paddingLeft = s.paddingLeft !== undefined ? s.paddingLeft : 16;
     var align = s.align || 'center';
     var isMono = preset === 'mono';
+    var isOutline = preset === 'outline';
 
     var justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
 
     var bgColor = info.bgColor;
     var textColor = info.textColor;
+    var originalColor = info.bgColor;
     var border = '';
 
     // mono preset: override colors
@@ -294,6 +296,10 @@ export const WIDGET_JS = `(function() {
       bgColor = '#ffffff';
       textColor = '#333333';
       border = '1px solid #d1d5db';
+    } else if (isOutline) {
+      textColor = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#1f1f1f' : originalColor;
+      bgColor = '#ffffff';
+      border = '2px solid ' + ((originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor);
     } else if (bgColor === '#f2f2f2' || bgColor === '#FFFFFF' || bgColor === '#ffffff') {
       border = '1px solid #dadce0';
     }
@@ -302,10 +308,10 @@ export const WIDGET_JS = `(function() {
     btn.className = 'bg-btn' + (isHighlight ? ' bg-btn-highlight' : '');
     btn.style.backgroundColor = bgColor;
     btn.style.color = textColor;
+    btn.style.transition = 'all 0.3s';
     if (border) btn.style.border = border;
 
     if (preset === 'icon-only') {
-      // icon-only: 44x44 square/circle icon button
       btn.style.width = '44px';
       btn.style.height = '44px';
       btn.style.borderRadius = Math.min(borderRadius, 22) + 'px';
@@ -313,15 +319,16 @@ export const WIDGET_JS = `(function() {
       btn.style.margin = '4px';
       btn.style.padding = '0';
 
-      // Icon only (no text)
-      // innerHTML used only for hardcoded SVG constants, not user data
       var iconOnly = document.createElement('span');
       iconOnly.className = 'bg-btn-icon';
       iconOnly.innerHTML = info.icon;
+      if (isMono || isOutline) {
+        var ipaths = iconOnly.querySelectorAll('path');
+        for (var ii = 0; ii < ipaths.length; ii++) { ipaths[ii].setAttribute('fill', textColor); }
+      }
       btn.appendChild(iconOnly);
     } else {
-      // default, compact, mono, icon-text presets
-      var w = (preset === 'compact') ? Math.min(buttonWidth, 200) : buttonWidth;
+      var w = buttonWidth;
       btn.style.width = w + 'px';
       btn.style.height = '44px';
       btn.style.borderRadius = borderRadius + 'px';
@@ -332,26 +339,40 @@ export const WIDGET_JS = `(function() {
         btn.style.gap = iconGap + 'px';
         btn.style.paddingLeft = paddingLeft + 'px';
 
-        // Icon (innerHTML only for hardcoded SVG constants, not user data)
         var iconSpan = document.createElement('span');
         iconSpan.className = 'bg-btn-icon';
         iconSpan.innerHTML = info.icon;
-        if (isMono) {
-          // mono preset: set icon fill to dark color
+        if (isMono || isOutline) {
           var paths = iconSpan.querySelectorAll('path');
-          for (var pi = 0; pi < paths.length; pi++) {
-            paths[pi].setAttribute('fill', '#333333');
-          }
+          for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', textColor); }
         }
         btn.appendChild(iconSpan);
       } else {
         btn.style.justifyContent = 'center';
       }
 
-      // Label text
       var label = document.createElement('span');
       label.textContent = buttonLabel.replace('{name}', info.name);
       btn.appendChild(label);
+    }
+
+    // outline preset: hover fill effect
+    if (isOutline) {
+      var hoverBg = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#4285F4' : originalColor;
+      btn.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = hoverBg;
+        this.style.color = '#fff';
+        this.style.borderColor = hoverBg;
+        var ps = this.querySelectorAll('path');
+        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', '#fff'); }
+      });
+      btn.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = '#ffffff';
+        this.style.color = textColor;
+        this.style.borderColor = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor;
+        var ps = this.querySelectorAll('path');
+        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', textColor); }
+      });
     }
 
     // Click handler

@@ -140,7 +140,7 @@ export interface WidgetConfig {
 }
 
 export interface WidgetStyle {
-  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono';
+  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono' | 'outline';
   buttonWidth: number;
   buttonGap: number;
   borderRadius: number;

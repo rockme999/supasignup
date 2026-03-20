@@ -1184,18 +1184,10 @@ export const ProvidersPage: FC<{
         <h2>위젯 디자인</h2>
 
         {/* Preset cards */}
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
           <button class="preset-card" data-preset="default" type="button">
-            <div class="preset-preview">풀 버튼</div>
+            <div class="preset-preview">컬러 버튼</div>
             <span>기본</span>
-          </button>
-          <button class="preset-card" data-preset="compact" type="button">
-            <div class="preset-preview">좁은 버튼</div>
-            <span>컴팩트</span>
-          </button>
-          <button class="preset-card" data-preset="icon-text" type="button">
-            <div class="preset-preview">아이콘+텍스트</div>
-            <span>아이콘 포함</span>
           </button>
           <button class="preset-card" data-preset="icon-only" type="button">
             <div class="preset-preview">아이콘만</div>
@@ -1205,6 +1197,10 @@ export const ProvidersPage: FC<{
             <div class="preset-preview">흑백</div>
             <span>모노톤</span>
           </button>
+          <button class="preset-card" data-preset="outline" type="button">
+            <div class="preset-preview">테두리</div>
+            <span>호버 채움</span>
+          </button>
         </div>
 
         {/* Detail sliders */}
@@ -1213,7 +1209,7 @@ export const ProvidersPage: FC<{
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
               버튼 너비 <span id="widthValue">{ws.buttonWidth}px</span>
             </label>
-            <input type="range" id="btnWidth" min="120" max="400" value={String(ws.buttonWidth)} style="width:100%" />
+            <input type="range" id="btnWidth" min="120" max="500" value={String(ws.buttonWidth)} style="width:100%" />
           </div>
           <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
@@ -1268,7 +1264,7 @@ export const ProvidersPage: FC<{
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
               왼쪽 여백 <span id="paddingLeftValue">{(ws as any).paddingLeft ?? 16}px</span>
             </label>
-            <input type="range" id="btnPaddingLeft" min="0" max="80" value={String((ws as any).paddingLeft ?? 16)} style="width:100%" />
+            <input type="range" id="btnPaddingLeft" min="0" max="150" value={String((ws as any).paddingLeft ?? 16)} style="width:100%" />
           </div>
         </div>
       </div>
@@ -1356,37 +1352,69 @@ export const ProvidersPage: FC<{
               var name = providerNames[p] || p;
 
               // 모노톤 프리셋: 흰 배경 + 검은 테두리 + 검은 텍스트
-              if (style.preset === 'mono') {
+              var isMono = style.preset === 'mono';
+              var isOutline = style.preset === 'outline';
+              var originalColor = color;
+
+              if (isMono) {
                 color = '#ffffff';
                 textColor = '#333333';
+              } else if (isOutline) {
+                textColor = originalColor === '#f2f2f2' ? '#1f1f1f' : originalColor;
+                color = '#ffffff';
               }
 
-              var isMono = style.preset === 'mono';
-
               if (style.preset === 'icon-only') {
-                var iconBorder = isMono ? ';border:1px solid #d1d5db' : '';
-                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:default;flex-shrink:0' + iconBorder;
+                var iconBorder = (isMono || isOutline) ? ';border:2px solid ' + (isMono ? '#d1d5db' : originalColor) : '';
+                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:pointer;flex-shrink:0;transition:all 0.3s' + iconBorder;
                 if (style.showIcon && providerIcons[p]) {
                   btn.innerHTML = providerIcons[p];
-                  if (isMono) { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
+                  if (isMono || isOutline) { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', textColor); }); }
                 } else {
                   btn.textContent = name.charAt(0);
                 }
+                if (isOutline) {
+                  btn.setAttribute('data-bg', originalColor);
+                  btn.setAttribute('data-tc', textColor);
+                }
               } else {
-                var w = style.preset === 'compact' ? Math.min(style.buttonWidth, 200) : style.buttonWidth;
-                var border = style.preset === 'mono' ? ';border:1px solid #d1d5db' : '';
-                btn.style.cssText = 'width:' + w + 'px;padding:12px ' + 16 + 'px 12px ' + style.paddingLeft + 'px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + border;
+                var w = style.buttonWidth;
+                var border = isMono ? ';border:1px solid #d1d5db' : (isOutline ? ';border:2px solid ' + (originalColor === '#f2f2f2' ? '#d1d5db' : originalColor) : '');
+                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px 12px ' + style.paddingLeft + 'px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + ';transition:all 0.3s' + border;
                 if (style.showIcon && providerIcons[p]) {
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
                   iconWrap.innerHTML = providerIcons[p];
-                  if (isMono) { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
+                  if (isMono || isOutline) { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', textColor); }); }
                   btn.appendChild(iconWrap);
                 }
                 var textSpan = document.createElement('span');
                 textSpan.style.cssText = style.showIcon ? '' : 'width:100%;text-align:center';
                 textSpan.textContent = style.buttonLabel.replace('{name}', name);
                 btn.appendChild(textSpan);
+                if (isOutline) {
+                  btn.setAttribute('data-bg', originalColor === '#f2f2f2' ? '#4285F4' : originalColor);
+                  btn.setAttribute('data-tc', textColor);
+                  btn.setAttribute('data-oc', originalColor === '#f2f2f2' ? '#d1d5db' : originalColor);
+                }
+              }
+              // outline 호버 이벤트
+              if (isOutline) {
+                btn.addEventListener('mouseenter', function() {
+                  var bg = this.getAttribute('data-bg');
+                  this.style.background = bg;
+                  this.style.color = '#fff';
+                  this.style.borderColor = bg;
+                  this.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#fff'); });
+                });
+                btn.addEventListener('mouseleave', function() {
+                  var tc = this.getAttribute('data-tc');
+                  var oc = this.getAttribute('data-oc') || tc;
+                  this.style.background = '#ffffff';
+                  this.style.color = tc;
+                  this.style.borderColor = oc;
+                  this.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', tc); });
+                });
               }
               container.appendChild(btn);
             });
