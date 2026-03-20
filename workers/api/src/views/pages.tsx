@@ -1001,6 +1001,7 @@ const DEFAULT_WIDGET_STYLE = {
   buttonGap: 8,
   borderRadius: 10,
   align: 'center',
+  buttonLabel: '{name}로 시작하기',
 };
 
 type WidgetStyle = {
@@ -1009,6 +1010,7 @@ type WidgetStyle = {
   buttonGap: number;
   borderRadius: number;
   align: string;
+  buttonLabel?: string;
 };
 
 export const ProvidersPage: FC<{
@@ -1138,6 +1140,20 @@ export const ProvidersPage: FC<{
             <input type="range" id="btnRadius" min="0" max="30" value={String(ws.borderRadius)} style="width:100%" />
           </div>
           <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:6px">버튼 문구</label>
+            <div style="display:flex; gap:8px; align-items:center">
+              <select id="labelPreset" style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; flex:1">
+                <option value="{name}로 시작하기">{'{name}'}로 시작하기</option>
+                <option value="{name}로 로그인">{'{name}'}로 로그인</option>
+                <option value="{name}로 계속하기">{'{name}'}로 계속하기</option>
+                <option value="{name} 로그인">{'{name}'} 로그인</option>
+                <option value="custom">직접 입력</option>
+              </select>
+            </div>
+            <input type="text" id="labelCustom" placeholder="예: {name}로 시작하기 ({name}=프로바이더명)" style="display:none; margin-top:8px; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; width:100%" value={ws.buttonLabel} />
+            <p style="font-size:11px; color:#94a3b8; margin-top:4px">{'{name}'} 은 프로바이더명으로 대체됩니다</p>
+          </div>
+          <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:4px">정렬</label>
             <div style="display:flex; gap:8px; margin-top:4px">
               <button class="align-btn" data-align="left" type="button">왼쪽</button>
@@ -1161,8 +1177,38 @@ export const ProvidersPage: FC<{
             buttonWidth: widgetStyle.buttonWidth,
             buttonGap: widgetStyle.buttonGap,
             borderRadius: widgetStyle.borderRadius,
-            align: widgetStyle.align
+            align: widgetStyle.align,
+            buttonLabel: widgetStyle.buttonLabel || '{name}로 시작하기'
           };
+
+          // 버튼 문구 드롭다운 초기화
+          var labelPreset = document.getElementById('labelPreset');
+          var labelCustom = document.getElementById('labelCustom');
+          var presetOptions = ['{name}로 시작하기', '{name}로 로그인', '{name}로 계속하기', '{name} 로그인'];
+          if (presetOptions.indexOf(style.buttonLabel) >= 0) {
+            labelPreset.value = style.buttonLabel;
+          } else {
+            labelPreset.value = 'custom';
+            labelCustom.style.display = 'block';
+            labelCustom.value = style.buttonLabel;
+          }
+
+          labelPreset.addEventListener('change', function() {
+            if (this.value === 'custom') {
+              labelCustom.style.display = 'block';
+              labelCustom.focus();
+            } else {
+              labelCustom.style.display = 'none';
+              style.buttonLabel = this.value;
+              renderPreview();
+              saveStyle();
+            }
+          });
+          labelCustom.addEventListener('input', function() {
+            style.buttonLabel = this.value;
+            renderPreview();
+          });
+          labelCustom.addEventListener('change', function() { saveStyle(); });
 
           function getEnabledProviders() {
             return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
@@ -1197,13 +1243,12 @@ export const ProvidersPage: FC<{
                   iconSpan.style.cssText = 'font-weight:700;flex-shrink:0';
                   iconSpan.textContent = name.charAt(0);
                   var textSpan = document.createElement('span');
-                  textSpan.textContent = name;
+                  textSpan.textContent = style.buttonLabel.replace('{name}', name);
                   btn.appendChild(iconSpan);
                   btn.appendChild(textSpan);
                 } else {
                   btn.style.textAlign = 'center';
-                  var text = style.preset === 'compact' ? name + ' 로그인' : name + '로 시작하기';
-                  btn.textContent = text;
+                  btn.textContent = style.buttonLabel.replace('{name}', name);
                 }
               }
               container.appendChild(btn);

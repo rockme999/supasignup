@@ -145,6 +145,7 @@ export interface WidgetStyle {
   buttonGap: number;
   borderRadius: number;
   align: 'left' | 'center' | 'right';
+  buttonLabel: string; // e.g. '{name}로 시작하기', '{name}로 로그인', 직접 입력 가능
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -153,6 +154,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   buttonGap: 8,
   borderRadius: 10,
   align: 'center',
+  buttonLabel: '{name}로 시작하기',
 };
 
 // Env binding types for Workers
