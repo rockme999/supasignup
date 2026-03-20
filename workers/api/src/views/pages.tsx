@@ -1431,6 +1431,9 @@ export const ProvidersPage: FC<{
               }
               // outline / outline-mono 호버 이벤트
               if (isOutline || isOutlineMono) {
+                // 원본 아이콘 SVG HTML을 저장 (mouseleave 시 복원용)
+                var iconEl = btn.querySelector('span');
+                if (iconEl) btn.setAttribute('data-icon-html', iconEl.innerHTML);
                 btn.addEventListener('mouseenter', function() {
                   var bg = this.getAttribute('data-bg');
                   this.style.background = bg;
@@ -1444,7 +1447,10 @@ export const ProvidersPage: FC<{
                   this.style.background = '#ffffff';
                   this.style.color = tc;
                   this.style.borderColor = oc;
-                  this.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', tc); });
+                  // 아이콘을 원본 SVG로 복원
+                  var savedHtml = this.getAttribute('data-icon-html');
+                  var iconSpan = this.querySelector('span');
+                  if (savedHtml && iconSpan) { iconSpan.innerHTML = savedHtml; }
                 });
               }
               container.appendChild(btn);

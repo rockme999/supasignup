@@ -364,8 +364,16 @@ export const WIDGET_JS = `(function() {
     }
 
     // outline / outline-mono preset: hover fill effect
-    if (isOutline) {
-      var hoverBg = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#4285F4' : originalColor;
+    if (isOutline || isOutlineMono) {
+      // 원본 아이콘 SVG 저장 (mouseleave 복원용)
+      var iconEl = btn.querySelector('.bg-btn-icon');
+      if (iconEl) btn.setAttribute('data-icon-html', iconEl.innerHTML);
+      var hoverBg = isOutline
+        ? ((originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#4285F4' : originalColor)
+        : '#333333';
+      var restoreBorder = isOutline
+        ? ((originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor)
+        : '#d1d5db';
       btn.addEventListener('mouseenter', function() {
         this.style.backgroundColor = hoverBg;
         this.style.color = '#fff';
@@ -376,25 +384,10 @@ export const WIDGET_JS = `(function() {
       btn.addEventListener('mouseleave', function() {
         this.style.backgroundColor = '#ffffff';
         this.style.color = '#333333';
-        this.style.borderColor = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor;
-        var ps = this.querySelectorAll('path');
-        // outline mouseleave: 아이콘은 소셜 원래 색상(각 provider icon 색)으로 복원
-        // 단, icon의 fill은 원래 SVG대로 유지되므로 별도 복원 필요 없음
-      });
-    } else if (isOutlineMono) {
-      btn.addEventListener('mouseenter', function() {
-        this.style.backgroundColor = '#333333';
-        this.style.color = '#fff';
-        this.style.borderColor = '#333333';
-        var ps = this.querySelectorAll('path');
-        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', '#fff'); }
-      });
-      btn.addEventListener('mouseleave', function() {
-        this.style.backgroundColor = '#ffffff';
-        this.style.color = '#333333';
-        this.style.borderColor = '#d1d5db';
-        var ps = this.querySelectorAll('path');
-        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', '#333333'); }
+        this.style.borderColor = restoreBorder;
+        var saved = this.getAttribute('data-icon-html');
+        var ic = this.querySelector('.bg-btn-icon');
+        if (saved && ic) { ic.innerHTML = saved; }
       });
     }
 
