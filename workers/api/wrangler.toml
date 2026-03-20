@@ -14,37 +14,15 @@ custom_domain = true
 [vars]
 BASE_URL = "https://bg.suparain.kr"
 
-# D1 Database (개발)
+# D1 Database (프로덕션)
 [[d1_databases]]
-binding = "DB"
-database_name = "bg-dev"
-database_id = "d420b951-c93b-4449-8f8c-f86c9f99a2cc"
-migrations_dir = "migrations"
-
-# KV Namespace (개발)
-[[kv_namespaces]]
-binding = "KV"
-id = "6aaca4b2e92f4361a5b31f39f96f4c5a"
-
-# 프로덕션 환경
-[env.production]
-
-[env.production.triggers]
-crons = ["0 * * * *"]
-
-[[env.production.routes]]
-pattern = "bg.suparain.kr"
-custom_domain = true
-
-[env.production.vars]
-BASE_URL = "https://bg.suparain.kr"
-
-[[env.production.d1_databases]]
 binding = "DB"
 database_name = "bg-production"
 database_id = "254438d7-b1b1-45a1-afe1-2c766aba252b"
+migrations_dir = "migrations"
 
-[[env.production.kv_namespaces]]
+# KV Namespace (프로덕션)
+[[kv_namespaces]]
 binding = "KV"
 id = "fe38c181822b4729850b53ab839339b5"
 

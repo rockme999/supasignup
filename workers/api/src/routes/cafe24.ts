@@ -27,7 +27,7 @@ cafe24.get('/install', async (c) => {
     return c.json({ error: 'missing_parameters' }, 400);
   }
 
-  // Verify HMAC (hmac 파라미터를 queryString 내부에서 추출하여 알파벳 순 정렬 후 검증)
+  // Verify HMAC
   const queryString = c.req.url.split('?')[1] ?? '';
   const valid = await verifyAppLaunchHmac(queryString, hmac, c.env.CAFE24_CLIENT_SECRET);
   if (!valid) {
