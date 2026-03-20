@@ -308,6 +308,7 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     buttonLabel: body.buttonLabel ?? currentStyle.buttonLabel ?? '{name}로 시작하기',
     showIcon: body.showIcon ?? currentStyle.showIcon ?? true,
     iconGap: body.iconGap ?? currentStyle.iconGap ?? 8,
+    paddingLeft: body.paddingLeft ?? currentStyle.paddingLeft ?? 16,
   };
 
   await updateShop(c.env.DB, shopId, {

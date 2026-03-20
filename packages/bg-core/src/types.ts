@@ -148,6 +148,7 @@ export interface WidgetStyle {
   buttonLabel: string; // e.g. '{name}로 시작하기', '{name}로 로그인', 직접 입력 가능
   showIcon: boolean; // 버튼에 프로바이더 아이콘 표시 여부
   iconGap: number; // 아이콘-텍스트 간격 (px)
+  paddingLeft: number; // 버튼 왼쪽 여백 (px)
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -159,6 +160,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   buttonLabel: '{name}로 시작하기',
   showIcon: true,
   iconGap: 8,
+  paddingLeft: 16,
 };
 
 // Env binding types for Workers

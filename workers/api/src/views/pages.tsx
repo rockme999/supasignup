@@ -1004,6 +1004,7 @@ const DEFAULT_WIDGET_STYLE = {
   buttonLabel: '{name}로 시작하기',
   showIcon: true,
   iconGap: 8,
+  paddingLeft: 16,
 };
 
 type WidgetStyle = {
@@ -1015,6 +1016,7 @@ type WidgetStyle = {
   buttonLabel?: string;
   showIcon?: boolean;
   iconGap?: number;
+  paddingLeft?: number;
 };
 
 export const ProvidersPage: FC<{
@@ -1262,6 +1264,12 @@ export const ProvidersPage: FC<{
               <button class="align-btn" data-align="right" type="button">오른쪽</button>
             </div>
           </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              왼쪽 여백 <span id="paddingLeftValue">{(ws as any).paddingLeft ?? 16}px</span>
+            </label>
+            <input type="range" id="btnPaddingLeft" min="0" max="80" value={String((ws as any).paddingLeft ?? 16)} style="width:100%" />
+          </div>
         </div>
       </div>
 
@@ -1281,7 +1289,8 @@ export const ProvidersPage: FC<{
             align: widgetStyle.align,
             buttonLabel: widgetStyle.buttonLabel || '{name}로 시작하기',
             showIcon: widgetStyle.showIcon !== false,
-            iconGap: widgetStyle.iconGap || 8
+            iconGap: widgetStyle.iconGap || 8,
+            paddingLeft: widgetStyle.paddingLeft || 16
           };
 
           var providerIcons = ${JSON.stringify(Object.fromEntries(
@@ -1366,7 +1375,7 @@ export const ProvidersPage: FC<{
               } else {
                 var w = style.preset === 'compact' ? Math.min(style.buttonWidth, 200) : style.buttonWidth;
                 var border = style.preset === 'mono' ? ';border:1px solid #d1d5db' : '';
-                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + border;
+                btn.style.cssText = 'width:' + w + 'px;padding:12px ' + 16 + 'px 12px ' + style.paddingLeft + 'px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + border;
                 if (style.showIcon && providerIcons[p]) {
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
@@ -1403,13 +1412,15 @@ export const ProvidersPage: FC<{
           });
 
           // Slider input
-          ['btnWidth', 'btnGap', 'btnRadius', 'btnIconGap'].forEach(function(id) {
+          ['btnWidth', 'btnGap', 'btnRadius', 'btnIconGap', 'btnPaddingLeft'].forEach(function(id) {
             var el = document.getElementById(id);
+            if (!el) return;
             el.addEventListener('input', function() {
               if (id === 'btnWidth') { style.buttonWidth = parseInt(this.value); document.getElementById('widthValue').textContent = this.value + 'px'; }
               if (id === 'btnGap') { style.buttonGap = parseInt(this.value); document.getElementById('gapValue').textContent = this.value + 'px'; }
               if (id === 'btnRadius') { style.borderRadius = parseInt(this.value); document.getElementById('radiusValue').textContent = this.value + 'px'; }
               if (id === 'btnIconGap') { style.iconGap = parseInt(this.value); document.getElementById('iconGapValue').textContent = this.value + 'px'; }
+              if (id === 'btnPaddingLeft') { style.paddingLeft = parseInt(this.value); document.getElementById('paddingLeftValue').textContent = this.value + 'px'; }
               renderPreview();
             });
             el.addEventListener('change', function() { saveStyle(); });
