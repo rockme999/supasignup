@@ -333,9 +333,11 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
                 </>
               )}
             </nav>
-            <div class="sidebar-footer">
-              <a href="/dashboard/logout">로그아웃</a>
-            </div>
+            {!isCafe24 && (
+              <div class="sidebar-footer">
+                <a href="/dashboard/logout">로그아웃</a>
+              </div>
+            )}
           </div>
 
           <aside class="sidebar">
@@ -364,9 +366,11 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
                 </>
               )}
             </nav>
-            <div class="sidebar-footer">
-              <a href="/dashboard/logout">로그아웃</a>
-            </div>
+            {!isCafe24 && (
+              <div class="sidebar-footer">
+                <a href="/dashboard/logout">로그아웃</a>
+              </div>
+            )}
           </aside>
           <main class="main">
             {children}

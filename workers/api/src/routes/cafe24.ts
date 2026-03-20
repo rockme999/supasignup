@@ -169,15 +169,18 @@ cafe24.get('/callback', async (c) => {
 
   // Auto-login: issue JWT cookie for the owner so they can access the dashboard
   const token = await createToken(shop.owner_id, c.env.JWT_SECRET);
-  const cookie = `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
+  const authCookie = `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
+  // 플랫폼 사용자 힌트 쿠키 (세션 만료 시 안내 페이지용, HttpOnly가 아님)
+  const platformCookie = `bg_platform=1; Path=/; Secure; SameSite=Lax; Max-Age=604800`;
 
   // Redirect to dashboard setup page
   return new Response(null, {
     status: 302,
-    headers: {
-      'Location': `${c.env.BASE_URL}/dashboard/shops/${shop.shop_id}/setup`,
-      'Set-Cookie': cookie,
-    },
+    headers: [
+      ['Location', `${c.env.BASE_URL}/dashboard/shops/${shop.shop_id}/setup`],
+      ['Set-Cookie', authCookie],
+      ['Set-Cookie', platformCookie],
+    ],
   });
 });
 

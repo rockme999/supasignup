@@ -73,12 +73,18 @@ pages.use('/dashboard/*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
 
   // Public pages
-  if (path === '/dashboard/login' || path === '/dashboard/register' || path === '/dashboard/logout') {
+  if (path === '/dashboard/login' || path === '/dashboard/register' || path === '/dashboard/logout' || path === '/dashboard/session-expired') {
     return next();
   }
 
   const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
   if (!ownerId) {
+    // 플랫폼 사용자 힌트 쿠키가 있으면 세션 만료 안내 페이지로
+    const cookie = c.req.header('Cookie') ?? '';
+    const isPlatform = cookie.includes('bg_platform=1');
+    if (isPlatform) {
+      return c.redirect('/dashboard/session-expired');
+    }
     return c.redirect('/dashboard/login');
   }
   c.set('ownerId', ownerId);
@@ -87,12 +93,47 @@ pages.use('/dashboard/*', async (c, next) => {
     .prepare('SELECT email FROM owners WHERE owner_id = ?')
     .bind(ownerId)
     .first<{ email: string }>();
-  c.set('isCafe24', owner?.email?.endsWith('@cafe24.auto') ?? false);
+  // 플랫폼 자동 생성 계정 감지 (cafe24, imweb, godomall, shopby — 스탠드얼론 제외)
+  const autoSuffixes = ['@cafe24.auto', '@imweb.auto', '@godomall.auto', '@shopby.auto'];
+  const isPlatformUser = autoSuffixes.some(s => owner?.email?.endsWith(s));
+  c.set('isCafe24', isPlatformUser);
 
   return next();
 });
 
 // ─── Public pages ────────────────────────────────────────────
+
+pages.get('/dashboard/session-expired', (c) => {
+  return c.html(
+    <html lang="ko">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>세션 만료 - 번개가입</title>
+        <style>{`
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+          .card { background: #fff; border-radius: 12px; padding: 48px 40px; width: 100%; max-width: 420px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
+          h1 { font-size: 20px; margin-bottom: 12px; color: #1e293b; }
+          p { font-size: 14px; color: #64748b; line-height: 1.7; margin-bottom: 8px; }
+          .icon { font-size: 48px; margin-bottom: 16px; }
+          .info { background: #dbeafe; color: #1e40af; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-top: 20px; text-align: left; line-height: 1.6; }
+        `}</style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="icon">⏰</div>
+          <h1>세션이 만료되었습니다</h1>
+          <p>로그인 세션이 만료되어 대시보드에 접근할 수 없습니다.</p>
+          <div class="info">
+            카페24 쇼핑몰 관리자에서 <strong>번개가입 앱</strong>을 다시 실행해주세요.<br />
+            앱 실행 시 자동으로 로그인됩니다.
+          </div>
+        </div>
+      </body>
+    </html>
+  );
+});
 
 pages.get('/dashboard/login', (c) => {
   return c.html(<LoginPage />);
