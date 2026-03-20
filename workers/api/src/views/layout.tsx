@@ -263,6 +263,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           .plan-grid { grid-template-columns: 1fr; }
           .alert-banner { flex-direction: column; align-items: flex-start; }
           .tab-nav { overflow-x: auto; }
+          .provider-layout { grid-template-columns: 1fr !important; }
         }
 
         /* Site footer */

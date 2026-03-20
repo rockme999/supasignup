@@ -1032,9 +1032,9 @@ export const ProvidersPage: FC<{
         <a href={`/dashboard/shops/${shop.shop_id}/setup`}>SSO 가이드</a>
       </div>
 
-      <div class="card">
-        <h2>소셜 프로바이더 설정</h2>
-        <p style="font-size:13px; color:#64748b; margin-bottom:16px">사용할 소셜 로그인 프로바이더를 선택하세요. 최소 1개 이상 활성화해야 합니다.</p>
+      <div class="provider-layout" style="display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start">
+      <div class="card" style="margin-bottom:0">
+        <h2 style="font-size:15px">프로바이더</h2>
         <form id="providerForm" data-shop-id={shop.shop_id}>
           {allProviders.map((p) => (
             <div class="provider-toggle">
@@ -1083,6 +1083,7 @@ export const ProvidersPage: FC<{
         `}} />
       </div>
 
+      <div>
       {/* Widget preview */}
       <div class="card">
         <h2>위젯 미리보기</h2>
@@ -1278,6 +1279,8 @@ export const ProvidersPage: FC<{
           }
         })();
       `}} />
+      </div>{/* end right column */}
+      </div>{/* end 2-column grid */}
     </Layout>
   );
 };
