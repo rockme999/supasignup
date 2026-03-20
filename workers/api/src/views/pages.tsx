@@ -148,7 +148,7 @@ export const LoginPage: FC<{ error?: string }> = ({ error }) => (
         <p style="text-align:center; margin-top:16px; font-size:13px; color:#64748b">
           계정이 없으신가요? <a href="/dashboard/register">회원가입</a>
         </p>
-        <script>{`
+        <script dangerouslySetInnerHTML={{__html: `
           document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
@@ -164,7 +164,7 @@ export const LoginPage: FC<{ error?: string }> = ({ error }) => (
               showToast('error', data.error === 'rate_limited' ? '로그인 시도 횟수 초과. 5분 후 다시 시도하세요.' : '이메일 또는 비밀번호가 올바르지 않습니다.');
             }
           });
-        `}</script>
+        `}} />
       </div>
       <div style="margin-top:32px; text-align:center; font-size:11px; color:#94a3b8; line-height:1.8">
         <div>주식회사 수파레인 | 대표이사 임호빈 | 사업자등록번호 716-88-01081</div>
@@ -205,7 +205,7 @@ export const RegisterPage: FC<{ error?: string }> = ({ error }) => (
         <p style="text-align:center; margin-top:16px; font-size:13px; color:#64748b">
           이미 계정이 있으신가요? <a href="/dashboard/login">로그인</a>
         </p>
-        <script>{`
+        <script dangerouslySetInnerHTML={{__html: `
           document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
@@ -227,7 +227,7 @@ export const RegisterPage: FC<{ error?: string }> = ({ error }) => (
               showToast('error', messages[data.error] || '회원가입 중 오류가 발생했습니다.');
             }
           });
-        `}</script>
+        `}} />
       </div>
     </div>
   </Layout>
@@ -407,12 +407,12 @@ export const ShopsPage: FC<{ shops: ShopListItem[]; currentSearch?: string }> = 
       </div>
     )}
 
-    <script>{`
+    <script dangerouslySetInnerHTML={{__html: `
       function applySearch() {
         var q = document.getElementById('shopSearch').value.trim();
         window.location.href = '/dashboard/shops' + (q ? '?search=' + encodeURIComponent(q) : '');
       }
-    `}</script>
+    `}} />
   </Layout>
 );
 
@@ -439,7 +439,7 @@ export const ShopNewPage: FC = () => (
         </div>
         <button type="submit" class="btn btn-primary">등록</button>
       </form>
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         document.getElementById('newShopForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const form = e.target;
@@ -457,7 +457,7 @@ export const ShopNewPage: FC = () => (
             showToast('error', data.error === 'duplicate_mall_id' ? '이미 등록된 Mall ID입니다.' : '등록 중 오류가 발생했습니다.');
           }
         });
-      `}</script>
+      `}} />
     </div>
   </Layout>
 );
@@ -541,7 +541,7 @@ export const ShopDetailPage: FC<{
         <h2 style="color:#991b1b">위험 영역</h2>
         <p style="font-size:13px; color:#64748b; margin-bottom:12px">쇼핑몰을 삭제하면 소셜 로그인이 비활성화됩니다.</p>
         <button id="deleteShopBtn" class="btn btn-danger btn-sm" data-shop-id={shop.shop_id}>쇼핑몰 삭제</button>
-        <script>{`
+        <script dangerouslySetInnerHTML={{__html: `
           document.getElementById('deleteShopBtn').addEventListener('click', async function() {
             if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
             var btn = this;
@@ -549,7 +549,7 @@ export const ShopDetailPage: FC<{
             if (resp.ok) { window.location.href = '/dashboard/shops'; }
             else { showToast('error', '삭제 중 오류가 발생했습니다.'); }
           });
-        `}</script>
+        `}} />
       </div>
     </Layout>
   );
@@ -723,7 +723,7 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
         <LineChart data={daily} />
       </div>
 
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         function applyFilters() {
           const shop = document.getElementById('shopFilter').value;
           const period = document.getElementById('periodFilter').value;
@@ -733,7 +733,7 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
           const qs = params.toString();
           window.location.href = '/dashboard/stats' + (qs ? '?' + qs : '');
         }
-      `}</script>
+      `}} />
     </Layout>
   );
 };
@@ -997,7 +997,7 @@ export const ProvidersPage: FC<{
             <button type="submit" class="btn btn-primary btn-sm">프로바이더 저장</button>
           </div>
         </form>
-        <script>{`
+        <script dangerouslySetInnerHTML={{__html: `
           document.getElementById('providerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const checked = [...e.target.querySelectorAll('input[name=providers]:checked')].map(i => i.value);
@@ -1008,7 +1008,7 @@ export const ProvidersPage: FC<{
             if (resp.ok) { showToast('success', '프로바이더 설정이 저장되었습니다.'); location.reload(); }
             else { const data = await resp.json(); showToast('error', data.error || '저장 중 오류가 발생했습니다.'); }
           });
-        `}</script>
+        `}} />
       </div>
 
       <div class="card">
@@ -1025,7 +1025,7 @@ export const ProvidersPage: FC<{
             ))
           )}
         </div>
-        <script>{`
+        <script dangerouslySetInnerHTML={{__html: `
           // Live preview update
           document.querySelectorAll('#providerForm input[name=providers]').forEach(cb => {
             cb.addEventListener('change', () => {
@@ -1051,7 +1051,7 @@ export const ProvidersPage: FC<{
               }
             });
           });
-        `}</script>
+        `}} />
       </div>
     </Layout>
   );
@@ -1510,7 +1510,7 @@ export const AdminShopsPage: FC<{
       )}
     </div>
 
-    <script>{`
+    <script dangerouslySetInnerHTML={{__html: `
       // 검색 폼
       document.getElementById('searchForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1552,7 +1552,7 @@ export const AdminShopsPage: FC<{
           }
         });
       });
-    `}</script>
+    `}} />
   </Layout>
 );
 
@@ -1642,7 +1642,7 @@ export const AdminSubscriptionsPage: FC<{
       )}
     </div>
 
-    <script>{`
+    <script dangerouslySetInnerHTML={{__html: `
       document.querySelectorAll('.sub-cancel-btn').forEach(function(btn) {
         btn.addEventListener('click', async function() {
           var subId = this.dataset.subscriptionId;
@@ -1657,7 +1657,7 @@ export const AdminSubscriptionsPage: FC<{
           }
         });
       });
-    `}</script>
+    `}} />
   </Layout>
 );
 
@@ -1747,7 +1747,7 @@ export const AdminAuditLogPage: FC<{
         </div>
       </div>
 
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         function applyAuditFilters() {
           var action = document.getElementById('actionFilter').value;
           var from = document.getElementById('dateFrom').value;
@@ -1759,7 +1759,7 @@ export const AdminAuditLogPage: FC<{
           var qs = params.length ? '?' + params.join('&') : '';
           window.location.href = '/admin/audit-log' + qs;
         }
-      `}</script>
+      `}} />
     </Layout>
   );
 };
@@ -1881,7 +1881,7 @@ export const AdminOwnersPage: FC<{
       )}
     </div>
 
-    <script>{`
+    <script dangerouslySetInnerHTML={{__html: `
       // 검색 폼
       document.getElementById('searchForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1906,7 +1906,7 @@ export const AdminOwnersPage: FC<{
           }
         });
       });
-    `}</script>
+    `}} />
   </Layout>
 );
 
@@ -1937,7 +1937,7 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
         </div>
         <button type="submit" class="btn btn-primary btn-sm">이름 변경</button>
       </form>
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         document.getElementById('nameForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           var form = e.target;
@@ -1946,7 +1946,7 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
           if (resp.ok) { showToast('success', '이름이 변경되었습니다.'); setTimeout(function(){ location.reload(); }, 1000); }
           else { showToast('error', '이름 변경 중 오류가 발생했습니다.'); }
         });
-      `}</script>
+      `}} />
     </div>
 
     <div class="card">
@@ -1966,7 +1966,7 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
         </div>
         <button type="submit" class="btn btn-primary btn-sm">비밀번호 변경</button>
       </form>
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         document.getElementById('passwordForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const form = e.target;
@@ -1982,7 +1982,7 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
           if (resp.ok) { showToast('success', '비밀번호가 변경되었습니다.'); form.reset(); }
           else { const data = await resp.json(); showToast('error', data.error === 'wrong_password' ? '현재 비밀번호가 올바르지 않습니다.' : '변경 중 오류가 발생했습니다.'); }
         });
-      `}</script>
+      `}} />
     </div>
 
     <div class="card" style="border: 1px solid #fee2e2">
@@ -1997,7 +1997,7 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
         </div>
         <button type="submit" class="btn btn-danger btn-sm">계정 탈퇴</button>
       </form>
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         document.getElementById('deleteAccountForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           if (!confirm('정말로 계정을 탈퇴하시겠습니까?\\n모든 쇼핑몰 데이터가 비활성화되며 이 작업은 되돌릴 수 없습니다.')) return;
@@ -2012,7 +2012,7 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
             showToast('error', data.error === 'wrong_password' ? '비밀번호가 올바르지 않습니다.' : '탈퇴 중 오류가 발생했습니다.');
           }
         });
-      `}</script>
+      `}} />
     </div>
   </Layout>
 );
