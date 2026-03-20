@@ -1046,20 +1046,22 @@ export const ProvidersPage: FC<{
             </div>
           ))}
 
-          <div style="margin-top:16px">
-            <button type="submit" class="btn btn-primary btn-sm">프로바이더 저장</button>
-          </div>
         </form>
         <script dangerouslySetInnerHTML={{__html: `
-          document.getElementById('providerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const checked = [...e.target.querySelectorAll('input[name=providers]:checked')].map(i => i.value);
-            if (checked.length === 0) { showToast('warn', '최소 1개의 프로바이더를 선택해야 합니다.'); return; }
-            const shopId = e.target.dataset.shopId;
-            var btn = e.target.querySelector('button[type=submit]');
-            const resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: checked }, btn);
-            if (resp.ok) { showToast('success', '프로바이더 설정이 저장되었습니다.'); location.reload(); }
-            else { const data = await resp.json(); showToast('error', data.error || '저장 중 오류가 발생했습니다.'); }
+          document.querySelectorAll('#providerForm input[name=providers]').forEach(function(cb) {
+            cb.addEventListener('change', async function() {
+              var form = document.getElementById('providerForm');
+              var checked = [...form.querySelectorAll('input[name=providers]:checked')].map(function(i) { return i.value; });
+              if (checked.length === 0) {
+                cb.checked = true;
+                showToast('warn', '최소 1개의 프로바이더를 활성화해야 합니다.');
+                return;
+              }
+              var shopId = form.dataset.shopId;
+              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: checked });
+              if (resp.ok) { showToast('success', '저장되었습니다.'); }
+              else { var data = await resp.json(); showToast('error', data.error || '저장 실패'); cb.checked = !cb.checked; }
+            });
           });
         `}} />
       </div>
