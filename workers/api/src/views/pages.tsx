@@ -129,7 +129,7 @@ const LineChart: FC<{ data: DailyData[]; width?: number; height?: number }> = ({
 
 export const LoginPage: FC<{ error?: string }> = ({ error }) => (
   <Layout title="로그인" loggedIn={false}>
-    <div class="auth-page">
+    <div class="auth-page" style="flex-direction:column">
       <div class="auth-card">
         <h1>⚡ 번개가입</h1>
         <p class="sub">관리자 대시보드 로그인</p>
