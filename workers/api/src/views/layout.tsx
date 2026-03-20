@@ -93,7 +93,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <title>{title} - 번개가입</title>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html: `
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; }
         a { color: #2563eb; text-decoration: none; }
@@ -290,7 +290,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .toast-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #2563eb; }
         @keyframes toast-in { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
         @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
-      `}</style>
+      `}} />
     </head>
     <body>
       {loggedIn ? (
