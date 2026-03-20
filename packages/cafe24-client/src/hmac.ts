@@ -75,17 +75,17 @@ export async function verifyAppLaunchHmac(
   _receivedHmac: string,
   secret: string,
 ): Promise<boolean> {
+  // Extract hmac value from raw query string (URL-decoded)
   const params = new URLSearchParams(queryString);
   const hmac = params.get("hmac");
   if (!hmac) return false;
 
-  params.delete("hmac");
-
-  // Sort parameters alphabetically to prevent parameter-order manipulation
-  const sortedParams = [...params.entries()].sort((a, b) =>
-    a[0].localeCompare(b[0]),
-  );
-  const plainQuery = sortedParams.map(([k, v]) => `${k}=${v}`).join("&");
+  // Remove hmac parameter from raw query string (preserve original encoding & order)
+  // Cafe24 computes HMAC over the URL-encoded query string in its original order
+  const plainQuery = queryString
+    .split("&")
+    .filter((p) => !p.startsWith("hmac="))
+    .join("&");
 
   const expected = await hmacSha256Base64(secret, plainQuery);
   return timingSafeEqual(expected, hmac);
