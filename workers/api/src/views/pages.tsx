@@ -506,7 +506,7 @@ export const ShopDetailPage: FC<{
               <tr><th>이번 달 가입</th><td>{monthlySignups}{shop.plan === 'free' && ' / 100'}</td></tr>
               <tr><th>Client ID</th><td>
                 <code>{shop.client_id}</code>
-                <button class="copy-btn" data-copy={shop.client_id} style="position:static; margin-left:8px">복사</button>
+                <button class="copy-btn" onclick={`copyText('${shop.client_id}',this)`} style="position:static; margin-left:8px">복사</button>
               </td></tr>
               <tr><th>Client Secret</th><td>
                 <code>{shop.client_secret}</code>
@@ -582,7 +582,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>연동 서비스명</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy="번개가입">복사</button>
+          <button class="copy-btn" onclick="copyText('번개가입',this)">복사</button>
           번개가입
         </div>
       </div>
@@ -590,7 +590,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Client ID</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={clientId}>복사</button>
+          <button class="copy-btn" onclick={`copyText('${clientId}',this)`}>복사</button>
           {clientId}
         </div>
       </div>
@@ -598,7 +598,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Client Secret</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={shop.client_secret}>복사</button>
+          <button class="copy-btn" onclick={`copyText('${shop.client_secret}',this)`}>복사</button>
           {shop.client_secret}
         </div>
       </div>
@@ -606,7 +606,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Authorize Redirect URL</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/authorize`}>복사</button>
+          <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/authorize',this)`}>복사</button>
           {baseUrl}/oauth/authorize
         </div>
       </div>
@@ -614,7 +614,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>Access Token Return API</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/token`}>복사</button>
+          <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/token',this)`}>복사</button>
           {baseUrl}/oauth/token
         </div>
       </div>
@@ -622,7 +622,7 @@ export const ShopSetupPage: FC<{
       <div style="margin-bottom:12px">
         <strong>User info Return API</strong>
         <div class="code-block">
-          <button class="copy-btn" data-copy={`${baseUrl}/oauth/userinfo`}>복사</button>
+          <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/userinfo',this)`}>복사</button>
           {baseUrl}/oauth/userinfo
         </div>
       </div>
