@@ -348,10 +348,17 @@ export const WIDGET_JS = `(function() {
         var iconSpan = document.createElement('span');
         iconSpan.className = 'bg-btn-icon';
         iconSpan.innerHTML = info.icon;
-        // outline: 아이콘은 소셜 원래 색상 유지 (fill 변경 안 함)
         if (isMono || isOutlineMono) {
           var paths = iconSpan.querySelectorAll('path');
           for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', '#333333'); }
+        } else if (isOutline) {
+          // outline: 흰 배경이므로 흰색 fill 아이콘을 소셜 색상으로 변경
+          var oFill = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#4285F4' : originalColor;
+          var paths = iconSpan.querySelectorAll('path');
+          for (var pi = 0; pi < paths.length; pi++) {
+            var f = paths[pi].getAttribute('fill');
+            if (f === '#fff' || f === '#FFFFFF' || f === '#ffffff') { paths[pi].setAttribute('fill', oFill); }
+          }
         }
         btn.appendChild(iconSpan);
       } else {

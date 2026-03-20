@@ -1411,8 +1411,17 @@ export const ProvidersPage: FC<{
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
                   iconWrap.innerHTML = providerIcons[p];
-                  // outline: 아이콘만 소셜 색상 유지 (icon fill은 그대로)
-                  if (isMono || isOutlineMono) { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333333'); }); }
+                  if (isMono || isOutlineMono) {
+                    iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333333'); });
+                  } else if (isOutline) {
+                    // outline: 흰 배경이므로 아이콘 fill을 소셜 배경색으로 변경 (흰색 fill 방지)
+                    var fillColor = originalColor === '#f2f2f2' ? '#4285F4' : originalColor;
+                    iconWrap.querySelectorAll('path').forEach(function(el) {
+                      if (el.getAttribute('fill') === '#fff' || el.getAttribute('fill') === '#FFFFFF' || el.getAttribute('fill') === '#ffffff') {
+                        el.setAttribute('fill', fillColor);
+                      }
+                    });
+                  }
                   btn.appendChild(iconWrap);
                 }
                 var textSpan = document.createElement('span');
