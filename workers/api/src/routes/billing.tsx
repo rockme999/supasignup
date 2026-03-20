@@ -7,9 +7,10 @@
 
 import { Hono } from 'hono';
 import type { Env, Subscription } from '@supasignup/bg-core';
-import { PLAN_PRICES, generateId } from '@supasignup/bg-core';
+import { PLAN_PRICES, generateId, encrypt } from '@supasignup/bg-core';
 import { Cafe24Client } from '@supasignup/cafe24-client';
 import { authMiddleware } from '../middleware/auth';
+import { decryptShopTokens } from '../db/queries';
 
 type BillingEnv = {
   Bindings: Env;
@@ -52,6 +53,12 @@ billing.post('/subscribe', async (c) => {
     return c.json({ error: 'no_platform_token', message: '카페24 앱 재설치가 필요합니다.' }, 400);
   }
 
+  // 암호화된 토큰 복호화
+  const tokens = await decryptShopTokens(shop as any, c.env.ENCRYPTION_KEY);
+  if (!tokens.access_token) {
+    return c.json({ error: 'no_platform_token', message: '카페24 앱 재설치가 필요합니다.' }, 400);
+  }
+
   // 기존 pending 구독이 있으면 취소하고 새로 생성
   await c.env.DB
     .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE shop_id = ? AND status = 'pending'")
@@ -87,7 +94,7 @@ billing.post('/subscribe', async (c) => {
     const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
 
     // Try with current token, refresh if needed
-    let accessToken = shop.platform_access_token;
+    let accessToken = tokens.access_token;
     let order: { order_id: string; confirmation_url: string };
 
     try {
@@ -100,15 +107,17 @@ billing.post('/subscribe', async (c) => {
       );
     } catch (err: any) {
       // Token expired → refresh and retry
-      if (err?.statusCode === 401 && shop.platform_refresh_token) {
+      if (err?.statusCode === 401 && tokens.refresh_token) {
         console.info(`Token expired for mall=${shop.mall_id}, refreshing...`);
-        const newTokens = await client.refreshToken(shop.mall_id, shop.platform_refresh_token);
+        const newTokens = await client.refreshToken(shop.mall_id, tokens.refresh_token);
         accessToken = newTokens.access_token;
 
-        // Save new tokens
+        // Save new tokens (암호화)
+        const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
+        const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
         await c.env.DB
           .prepare('UPDATE shops SET platform_access_token = ?, platform_refresh_token = ? WHERE shop_id = ?')
-          .bind(newTokens.access_token, newTokens.refresh_token, shop.shop_id)
+          .bind(encAt, encRt, shop.shop_id)
           .run();
 
         order = await client.createAppstoreOrder(
