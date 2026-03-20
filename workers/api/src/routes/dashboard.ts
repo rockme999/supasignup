@@ -272,7 +272,7 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   const body = await c.req.json<Partial<WidgetStyle>>();
 
   // Validate preset
-  const VALID_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only', 'mono', 'outline'];
+  const VALID_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only', 'mono', 'outline', 'outline-mono'];
   if (body.preset !== undefined && !VALID_PRESETS.includes(body.preset)) {
     return c.json({ error: 'invalid_preset', message: `preset must be one of: ${VALID_PRESETS.join(', ')}` }, 400);
   }
@@ -302,6 +302,7 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   const newStyle: WidgetStyle = {
     preset: body.preset ?? currentStyle.preset,
     buttonWidth: body.buttonWidth ?? currentStyle.buttonWidth,
+    buttonHeight: body.buttonHeight ?? currentStyle.buttonHeight ?? 44,
     buttonGap: body.buttonGap ?? currentStyle.buttonGap,
     borderRadius: body.borderRadius ?? currentStyle.borderRadius,
     align: body.align ?? currentStyle.align,

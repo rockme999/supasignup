@@ -140,8 +140,9 @@ export interface WidgetConfig {
 }
 
 export interface WidgetStyle {
-  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono' | 'outline';
+  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono' | 'outline' | 'outline-mono';
   buttonWidth: number;
+  buttonHeight: number; // 버튼 높이 (px)
   buttonGap: number;
   borderRadius: number;
   align: 'left' | 'center' | 'right';
@@ -154,6 +155,7 @@ export interface WidgetStyle {
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   preset: 'default',
   buttonWidth: 280,
+  buttonHeight: 44,
   buttonGap: 8,
   borderRadius: 10,
   align: 'center',

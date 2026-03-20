@@ -998,6 +998,7 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
 const DEFAULT_WIDGET_STYLE = {
   preset: 'default',
   buttonWidth: 280,
+  buttonHeight: 44,
   buttonGap: 8,
   borderRadius: 10,
   align: 'center',
@@ -1010,6 +1011,7 @@ const DEFAULT_WIDGET_STYLE = {
 type WidgetStyle = {
   preset: string;
   buttonWidth: number;
+  buttonHeight?: number;
   buttonGap: number;
   borderRadius: number;
   align: string;
@@ -1184,14 +1186,10 @@ export const ProvidersPage: FC<{
         <h2>위젯 디자인</h2>
 
         {/* Preset cards */}
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
           <button class="preset-card" data-preset="default" type="button">
             <div class="preset-preview">컬러 버튼</div>
             <span>기본</span>
-          </button>
-          <button class="preset-card" data-preset="icon-only" type="button">
-            <div class="preset-preview">아이콘만</div>
-            <span>아이콘</span>
           </button>
           <button class="preset-card" data-preset="mono" type="button">
             <div class="preset-preview">흑백</div>
@@ -1201,27 +1199,26 @@ export const ProvidersPage: FC<{
             <div class="preset-preview">테두리</div>
             <span>호버 채움</span>
           </button>
+          <button class="preset-card" data-preset="outline-mono" type="button">
+            <div class="preset-preview">테두리 흑백</div>
+            <span>호버 채움</span>
+          </button>
+          <button class="preset-card" data-preset="icon-only" type="button">
+            <div class="preset-preview">아이콘만</div>
+            <span>아이콘</span>
+          </button>
         </div>
 
         {/* Detail sliders */}
         <div style="display:grid; gap:16px">
           <div>
-            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
-              버튼 너비 <span id="widthValue">{ws.buttonWidth}px</span>
-            </label>
-            <input type="range" id="btnWidth" min="120" max="500" value={String(ws.buttonWidth)} style="width:100%" />
-          </div>
-          <div>
-            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
-              버튼 간격 <span id="gapValue">{ws.buttonGap}px</span>
-            </label>
-            <input type="range" id="btnGap" min="0" max="24" value={String(ws.buttonGap)} style="width:100%" />
-          </div>
-          <div>
-            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
-              모서리 둥글기 <span id="radiusValue">{ws.borderRadius}px</span>
-            </label>
-            <input type="range" id="btnRadius" min="0" max="30" value={String(ws.borderRadius)} style="width:100%" />
+            <div class="provider-toggle" style="border:none; padding:0">
+              <label class="toggle">
+                <input type="checkbox" id="showIconToggle" checked={ws.showIcon !== false} />
+                <span class="toggle-slider"></span>
+              </label>
+              <label style="font-size:13px; font-weight:600; color:#475569; cursor:pointer">버튼에 아이콘 표시</label>
+            </div>
           </div>
           <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:6px">버튼 문구</label>
@@ -1238,27 +1235,42 @@ export const ProvidersPage: FC<{
             <p style="font-size:11px; color:#94a3b8; margin-top:4px">{'{name}'} 은 프로바이더명으로 대체됩니다</p>
           </div>
           <div>
-            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
-              아이콘-텍스트 간격 <span id="iconGapValue">{ws.showIcon !== false ? (ws as any).iconGap ?? 8 : 8}px</span>
-            </label>
-            <input type="range" id="btnIconGap" min="0" max="100" value={String((ws as any).iconGap ?? 8)} style="width:100%" />
-          </div>
-          <div>
-            <div class="provider-toggle" style="border:none; padding:0">
-              <label class="toggle">
-                <input type="checkbox" id="showIconToggle" checked={ws.showIcon !== false} />
-                <span class="toggle-slider"></span>
-              </label>
-              <label style="font-size:13px; font-weight:600; color:#475569; cursor:pointer">버튼에 아이콘 표시</label>
-            </div>
-          </div>
-          <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:4px">정렬</label>
             <div style="display:flex; gap:8px; margin-top:4px">
               <button class="align-btn" data-align="left" type="button">왼쪽</button>
               <button class="align-btn" data-align="center" type="button">가운데</button>
               <button class="align-btn" data-align="right" type="button">오른쪽</button>
             </div>
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              버튼 너비 <span id="widthValue">{ws.buttonWidth}px</span>
+            </label>
+            <input type="range" id="btnWidth" min="120" max="500" value={String(ws.buttonWidth)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              버튼 높이 <span id="heightValue">{ws.buttonHeight ?? 44}px</span>
+            </label>
+            <input type="range" id="btnHeight" min="32" max="60" value={String(ws.buttonHeight ?? 44)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              버튼 간격 <span id="gapValue">{ws.buttonGap}px</span>
+            </label>
+            <input type="range" id="btnGap" min="0" max="24" value={String(ws.buttonGap)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              모서리 둥글기 <span id="radiusValue">{ws.borderRadius}px</span>
+            </label>
+            <input type="range" id="btnRadius" min="0" max="30" value={String(ws.borderRadius)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              아이콘-텍스트 간격 <span id="iconGapValue">{ws.showIcon !== false ? (ws as any).iconGap ?? 8 : 8}px</span>
+            </label>
+            <input type="range" id="btnIconGap" min="0" max="100" value={String((ws as any).iconGap ?? 8)} style="width:100%" />
           </div>
           <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
@@ -1280,6 +1292,7 @@ export const ProvidersPage: FC<{
           var style = {
             preset: widgetStyle.preset,
             buttonWidth: widgetStyle.buttonWidth,
+            buttonHeight: widgetStyle.buttonHeight || 44,
             buttonGap: widgetStyle.buttonGap,
             borderRadius: widgetStyle.borderRadius,
             align: widgetStyle.align,
@@ -1351,41 +1364,55 @@ export const ProvidersPage: FC<{
               var textColor = providerTextColors[p] || '#fff';
               var name = providerNames[p] || p;
 
-              // 모노톤 프리셋: 흰 배경 + 검은 테두리 + 검은 텍스트
+              // 프리셋별 색상 결정
               var isMono = style.preset === 'mono';
               var isOutline = style.preset === 'outline';
+              var isOutlineMono = style.preset === 'outline-mono';
               var originalColor = color;
+              var border = '';
 
               if (isMono) {
                 color = '#ffffff';
                 textColor = '#333333';
+                border = ';border:1px solid #d1d5db';
               } else if (isOutline) {
-                textColor = originalColor === '#f2f2f2' ? '#1f1f1f' : originalColor;
+                textColor = '#333333';
                 color = '#ffffff';
+                border = ';border:2px solid ' + (originalColor === '#f2f2f2' ? '#d1d5db' : originalColor);
+              } else if (isOutlineMono) {
+                textColor = '#333333';
+                color = '#ffffff';
+                border = ';border:2px solid #d1d5db';
               }
 
+              var btnHeight = style.buttonHeight || 44;
+
               if (style.preset === 'icon-only') {
-                var iconBorder = (isMono || isOutline) ? ';border:2px solid ' + (isMono ? '#d1d5db' : originalColor) : '';
-                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:pointer;flex-shrink:0;transition:all 0.3s' + iconBorder;
+                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:pointer;flex-shrink:0;transition:all 0.3s' + border;
                 if (style.showIcon && providerIcons[p]) {
                   btn.innerHTML = providerIcons[p];
-                  if (isMono || isOutline) { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', textColor); }); }
+                  if (isMono || isOutline || isOutlineMono) { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', textColor); }); }
                 } else {
                   btn.textContent = name.charAt(0);
                 }
                 if (isOutline) {
-                  btn.setAttribute('data-bg', originalColor);
-                  btn.setAttribute('data-tc', textColor);
+                  btn.setAttribute('data-bg', originalColor === '#f2f2f2' ? '#4285F4' : originalColor);
+                  btn.setAttribute('data-tc', '#fff');
+                  btn.setAttribute('data-oc', originalColor === '#f2f2f2' ? '#d1d5db' : originalColor);
+                } else if (isOutlineMono) {
+                  btn.setAttribute('data-bg', '#333333');
+                  btn.setAttribute('data-tc', '#fff');
+                  btn.setAttribute('data-oc', '#d1d5db');
                 }
               } else {
                 var w = style.buttonWidth;
-                var border = isMono ? ';border:1px solid #d1d5db' : (isOutline ? ';border:2px solid ' + (originalColor === '#f2f2f2' ? '#d1d5db' : originalColor) : '');
-                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px 12px ' + style.paddingLeft + 'px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + ';transition:all 0.3s' + border;
+                btn.style.cssText = 'width:' + w + 'px;height:' + btnHeight + 'px;padding:0 16px 0 ' + style.paddingLeft + 'px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + ';transition:all 0.3s' + border;
                 if (style.showIcon && providerIcons[p]) {
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
                   iconWrap.innerHTML = providerIcons[p];
-                  if (isMono || isOutline) { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', textColor); }); }
+                  // outline: 아이콘만 소셜 색상 유지 (icon fill은 그대로)
+                  if (isMono || isOutlineMono) { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333333'); }); }
                   btn.appendChild(iconWrap);
                 }
                 var textSpan = document.createElement('span');
@@ -1394,12 +1421,16 @@ export const ProvidersPage: FC<{
                 btn.appendChild(textSpan);
                 if (isOutline) {
                   btn.setAttribute('data-bg', originalColor === '#f2f2f2' ? '#4285F4' : originalColor);
-                  btn.setAttribute('data-tc', textColor);
+                  btn.setAttribute('data-tc', '#333333');
                   btn.setAttribute('data-oc', originalColor === '#f2f2f2' ? '#d1d5db' : originalColor);
+                } else if (isOutlineMono) {
+                  btn.setAttribute('data-bg', '#333333');
+                  btn.setAttribute('data-tc', '#333333');
+                  btn.setAttribute('data-oc', '#d1d5db');
                 }
               }
-              // outline 호버 이벤트
-              if (isOutline) {
+              // outline / outline-mono 호버 이벤트
+              if (isOutline || isOutlineMono) {
                 btn.addEventListener('mouseenter', function() {
                   var bg = this.getAttribute('data-bg');
                   this.style.background = bg;
@@ -1440,11 +1471,12 @@ export const ProvidersPage: FC<{
           });
 
           // Slider input
-          ['btnWidth', 'btnGap', 'btnRadius', 'btnIconGap', 'btnPaddingLeft'].forEach(function(id) {
+          ['btnWidth', 'btnHeight', 'btnGap', 'btnRadius', 'btnIconGap', 'btnPaddingLeft'].forEach(function(id) {
             var el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('input', function() {
               if (id === 'btnWidth') { style.buttonWidth = parseInt(this.value); document.getElementById('widthValue').textContent = this.value + 'px'; }
+              if (id === 'btnHeight') { style.buttonHeight = parseInt(this.value); document.getElementById('heightValue').textContent = this.value + 'px'; }
               if (id === 'btnGap') { style.buttonGap = parseInt(this.value); document.getElementById('gapValue').textContent = this.value + 'px'; }
               if (id === 'btnRadius') { style.borderRadius = parseInt(this.value); document.getElementById('radiusValue').textContent = this.value + 'px'; }
               if (id === 'btnIconGap') { style.iconGap = parseInt(this.value); document.getElementById('iconGapValue').textContent = this.value + 'px'; }

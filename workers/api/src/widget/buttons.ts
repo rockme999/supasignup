@@ -274,6 +274,7 @@ export const WIDGET_JS = `(function() {
     var s = (this.config && this.config.style) || {};
     var preset = s.preset || 'default';
     var buttonWidth = s.buttonWidth || 280;
+    var buttonHeight = s.buttonHeight !== undefined ? s.buttonHeight : 44;
     var buttonGap = s.buttonGap !== undefined ? s.buttonGap : 8;
     var borderRadius = s.borderRadius !== undefined ? s.borderRadius : 10;
     var buttonLabel = s.buttonLabel || '{name}로 시작하기';
@@ -290,6 +291,7 @@ export const WIDGET_JS = `(function() {
     var textColor = info.textColor;
     var originalColor = info.bgColor;
     var border = '';
+    var isOutlineMono = preset === 'outline-mono';
 
     // mono preset: override colors
     if (isMono) {
@@ -297,9 +299,13 @@ export const WIDGET_JS = `(function() {
       textColor = '#333333';
       border = '1px solid #d1d5db';
     } else if (isOutline) {
-      textColor = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#1f1f1f' : originalColor;
+      textColor = '#333333';
       bgColor = '#ffffff';
       border = '2px solid ' + ((originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor);
+    } else if (isOutlineMono) {
+      textColor = '#333333';
+      bgColor = '#ffffff';
+      border = '2px solid #d1d5db';
     } else if (bgColor === '#f2f2f2' || bgColor === '#FFFFFF' || bgColor === '#ffffff') {
       border = '1px solid #dadce0';
     }
@@ -322,15 +328,15 @@ export const WIDGET_JS = `(function() {
       var iconOnly = document.createElement('span');
       iconOnly.className = 'bg-btn-icon';
       iconOnly.innerHTML = info.icon;
-      if (isMono || isOutline) {
+      if (isMono || isOutlineMono) {
         var ipaths = iconOnly.querySelectorAll('path');
-        for (var ii = 0; ii < ipaths.length; ii++) { ipaths[ii].setAttribute('fill', textColor); }
+        for (var ii = 0; ii < ipaths.length; ii++) { ipaths[ii].setAttribute('fill', '#333333'); }
       }
       btn.appendChild(iconOnly);
     } else {
       var w = buttonWidth;
       btn.style.width = w + 'px';
-      btn.style.height = '44px';
+      btn.style.height = buttonHeight + 'px';
       btn.style.borderRadius = borderRadius + 'px';
       btn.style.justifyContent = justifyMap[align] || 'center';
       btn.style.marginBottom = buttonGap + 'px';
@@ -342,9 +348,10 @@ export const WIDGET_JS = `(function() {
         var iconSpan = document.createElement('span');
         iconSpan.className = 'bg-btn-icon';
         iconSpan.innerHTML = info.icon;
-        if (isMono || isOutline) {
+        // outline: 아이콘은 소셜 원래 색상 유지 (fill 변경 안 함)
+        if (isMono || isOutlineMono) {
           var paths = iconSpan.querySelectorAll('path');
-          for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', textColor); }
+          for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', '#333333'); }
         }
         btn.appendChild(iconSpan);
       } else {
@@ -356,7 +363,7 @@ export const WIDGET_JS = `(function() {
       btn.appendChild(label);
     }
 
-    // outline preset: hover fill effect
+    // outline / outline-mono preset: hover fill effect
     if (isOutline) {
       var hoverBg = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#4285F4' : originalColor;
       btn.addEventListener('mouseenter', function() {
@@ -368,10 +375,26 @@ export const WIDGET_JS = `(function() {
       });
       btn.addEventListener('mouseleave', function() {
         this.style.backgroundColor = '#ffffff';
-        this.style.color = textColor;
+        this.style.color = '#333333';
         this.style.borderColor = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor;
         var ps = this.querySelectorAll('path');
-        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', textColor); }
+        // outline mouseleave: 아이콘은 소셜 원래 색상(각 provider icon 색)으로 복원
+        // 단, icon의 fill은 원래 SVG대로 유지되므로 별도 복원 필요 없음
+      });
+    } else if (isOutlineMono) {
+      btn.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = '#333333';
+        this.style.color = '#fff';
+        this.style.borderColor = '#333333';
+        var ps = this.querySelectorAll('path');
+        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', '#fff'); }
+      });
+      btn.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = '#ffffff';
+        this.style.color = '#333333';
+        this.style.borderColor = '#d1d5db';
+        var ps = this.querySelectorAll('path');
+        for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', '#333333'); }
       });
     }
 
