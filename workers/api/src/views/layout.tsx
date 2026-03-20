@@ -8,6 +8,7 @@ type LayoutProps = PropsWithChildren<{
   loggedIn?: boolean;
   currentPath?: string;
   isAdmin?: boolean;
+  isCafe24?: boolean;
 }>;
 
 // SVG icon components (Heroicons outline style)
@@ -82,7 +83,11 @@ const adminNavItems = [
   { path: '/admin/audit-log', label: '감사 로그', icon: <IconClipboard /> },
 ];
 
-export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, children }) => (
+export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, isCafe24, children }) => {
+  const visibleNavItems = isCafe24
+    ? navItems.filter((item) => item.path !== '/dashboard/settings')
+    : navItems;
+  return (
   <html lang="ko">
     <head>
       <meta charset="utf-8" />
@@ -305,7 +310,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           <div class="mobile-nav-drawer" id="mobile-nav-drawer">
             <div class="sidebar-logo">⚡ <span>번개가입</span></div>
             <nav>
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <a
                   href={item.path}
                   class={currentPath === item.path || (item.path !== '/dashboard' && currentPath?.startsWith(item.path)) ? 'active' : ''}
@@ -336,7 +341,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           <aside class="sidebar">
             <div class="sidebar-logo">⚡ <span>번개가입</span></div>
             <nav>
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <a
                   href={item.path}
                   class={currentPath === item.path || (item.path !== '/dashboard' && currentPath?.startsWith(item.path)) ? 'active' : ''}
@@ -463,4 +468,5 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
       <div id="toast-container" class="toast-container"></div>
     </body>
   </html>
-);
+  );
+};

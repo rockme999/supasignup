@@ -253,8 +253,8 @@ type BillingShop = {
   is_over_limit: boolean;
 };
 
-export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[] }> = ({ stats, billingShops }) => (
-  <Layout title="대시보드" loggedIn currentPath="/dashboard">
+export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[]; isCafe24?: boolean }> = ({ stats, billingShops, isCafe24 }) => (
+  <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
     <h1>대시보드</h1>
 
     <div class="stat-grid">
@@ -356,8 +356,8 @@ type ShopListItem = {
   created_at: string;
 };
 
-export const ShopsPage: FC<{ shops: ShopListItem[]; currentSearch?: string }> = ({ shops, currentSearch }) => (
-  <Layout title="쇼핑몰 관리" loggedIn currentPath="/dashboard/shops">
+export const ShopsPage: FC<{ shops: ShopListItem[]; currentSearch?: string; isCafe24?: boolean }> = ({ shops, currentSearch, isCafe24 }) => (
+  <Layout title="쇼핑몰 관리" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
     <h1>쇼핑몰 관리</h1>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">+ 쇼핑몰 등록</a>
@@ -418,8 +418,8 @@ export const ShopsPage: FC<{ shops: ShopListItem[]; currentSearch?: string }> = 
 
 // ─── Shop New ────────────────────────────────────────────────
 
-export const ShopNewPage: FC = () => (
-  <Layout title="쇼핑몰 등록" loggedIn currentPath="/dashboard/shops">
+export const ShopNewPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
+  <Layout title="쇼핑몰 등록" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
     <h1>쇼핑몰 등록</h1>
     <div class="card">
       <form id="newShopForm">
@@ -481,11 +481,12 @@ export const ShopDetailPage: FC<{
   shop: ShopDetail;
   monthlySignups: number;
   baseUrl: string;
-}> = ({ shop, monthlySignups, baseUrl }) => {
+  isCafe24?: boolean;
+}> = ({ shop, monthlySignups, baseUrl, isCafe24 }) => {
   const providers = parseProviders(shop.enabled_providers);
 
   return (
-    <Layout title={shop.shop_name || shop.mall_id} loggedIn currentPath="/dashboard/shops">
+    <Layout title={shop.shop_name || shop.mall_id} loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
       <h1>{shop.shop_name || shop.mall_id}</h1>
 
       <div class="tab-nav">
@@ -561,8 +562,9 @@ export const ShopSetupPage: FC<{
   shop: ShopDetail;
   clientId: string;
   baseUrl: string;
-}> = ({ shop, clientId, baseUrl }) => (
-  <Layout title="SSO 설정" loggedIn currentPath="/dashboard/shops">
+  isCafe24?: boolean;
+}> = ({ shop, clientId, baseUrl, isCafe24 }) => (
+  <Layout title="SSO 설정" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
     <h1>{shop.shop_name || shop.mall_id}</h1>
 
     <div class="tab-nav">
@@ -699,9 +701,10 @@ type StatsPageProps = {
   shops: { shop_id: string; shop_name: string }[];
   currentShopId: string | null;
   currentPeriod: string;
+  isCafe24?: boolean;
 };
 
-export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShopId, currentPeriod }) => {
+export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShopId, currentPeriod, isCafe24 }) => {
   const periodOptions = [
     { value: '', label: '전체 기간' },
     { value: 'today', label: '오늘' },
@@ -711,7 +714,7 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
   ];
 
   return (
-    <Layout title="통합 통계" loggedIn currentPath="/dashboard/stats">
+    <Layout title="통합 통계" loggedIn currentPath="/dashboard/stats" isCafe24={isCafe24}>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <h1 style="margin-bottom:0">통합 통계</h1>
         <div style="margin-left:auto">
@@ -793,14 +796,15 @@ type BillingPageProps = {
   month: string;
   shops: { shop_id: string; shop_name: string; mall_id: string }[];
   currentPlan: string;
+  isCafe24?: boolean;
 };
 
-export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, currentPlan }) => {
+export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, currentPlan, isCafe24 }) => {
   const hasOverLimit = billingShops.some(s => s.is_over_limit);
   const hasNearLimit = billingShops.some(s => s.needs_upgrade && !s.is_over_limit);
 
   return (
-    <Layout title="플랜/과금" loggedIn currentPath="/dashboard/billing">
+    <Layout title="플랜/과금" loggedIn currentPath="/dashboard/billing" isCafe24={isCafe24}>
       <h1>플랜/과금</h1>
 
       {hasOverLimit && (
@@ -994,13 +998,14 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
 export const ProvidersPage: FC<{
   shop: ShopDetail;
   baseUrl: string;
-}> = ({ shop, baseUrl }) => {
+  isCafe24?: boolean;
+}> = ({ shop, baseUrl, isCafe24 }) => {
   const providers = parseProviders(shop.enabled_providers);
   const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
   const futureProviders = ['toss', 'tiktok'];
 
   return (
-    <Layout title="프로바이더 관리" loggedIn currentPath="/dashboard/shops">
+    <Layout title="프로바이더 관리" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
       <h1>{shop.shop_name || shop.mall_id}</h1>
 
       <div class="tab-nav">

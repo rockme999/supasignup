@@ -31,7 +31,7 @@ import {
 
 type PageEnv = {
   Bindings: Env;
-  Variables: { ownerId: string };
+  Variables: { ownerId: string; isCafe24: boolean };
 };
 
 function escapeLike(s: string): string {
@@ -82,6 +82,13 @@ pages.use('/dashboard/*', async (c, next) => {
     return c.redirect('/dashboard/login');
   }
   c.set('ownerId', ownerId);
+
+  const owner = await c.env.DB
+    .prepare('SELECT email FROM owners WHERE owner_id = ?')
+    .bind(ownerId)
+    .first<{ email: string }>();
+  c.set('isCafe24', owner?.email?.endsWith('@cafe24.auto') ?? false);
+
   return next();
 });
 
@@ -184,6 +191,7 @@ pages.get('/dashboard', async (c) => {
         by_provider: byProvider,
       }}
       billingShops={billingShops}
+      isCafe24={c.get('isCafe24')}
     />
   );
 });
@@ -309,6 +317,7 @@ pages.get('/dashboard/stats', async (c) => {
       shops={shopsResult.results ?? []}
       currentShopId={shopIdFilter}
       currentPeriod={period}
+      isCafe24={c.get('isCafe24')}
     />
   );
 });
@@ -351,7 +360,7 @@ pages.get('/dashboard/billing', async (c) => {
   const currentPlan = paidShop ? paidShop.plan : 'free';
 
   return c.html(
-    <BillingPage billingShops={billingShops} month={yearMonth} shops={shopsResult.results ?? []} currentPlan={currentPlan} />
+    <BillingPage billingShops={billingShops} month={yearMonth} shops={shopsResult.results ?? []} currentPlan={currentPlan} isCafe24={c.get('isCafe24')} />
   );
 });
 
@@ -378,11 +387,11 @@ pages.get('/dashboard/shops', async (c) => {
     .bind(...params)
     .all<{ shop_id: string; shop_name: string; mall_id: string; platform: string; plan: string; enabled_providers: string; created_at: string }>();
 
-  return c.html(<ShopsPage shops={result.results ?? []} currentSearch={search || undefined} />);
+  return c.html(<ShopsPage shops={result.results ?? []} currentSearch={search || undefined} isCafe24={c.get('isCafe24')} />);
 });
 
 pages.get('/dashboard/shops/new', (c) => {
-  return c.html(<ShopNewPage />);
+  return c.html(<ShopNewPage isCafe24={c.get('isCafe24')} />);
 });
 
 pages.get('/dashboard/shops/:id', async (c) => {
@@ -420,6 +429,7 @@ pages.get('/dashboard/shops/:id', async (c) => {
       shop={{ ...shop, client_secret: masked }}
       monthlySignups={countResult?.cnt ?? 0}
       baseUrl={c.env.BASE_URL}
+      isCafe24={c.get('isCafe24')}
     />
   );
 });
@@ -443,6 +453,7 @@ pages.get('/dashboard/shops/:id/setup', async (c) => {
       shop={shop}
       clientId={shop.client_id}
       baseUrl={c.env.BASE_URL}
+      isCafe24={c.get('isCafe24')}
     />
   );
 });
@@ -465,6 +476,7 @@ pages.get('/dashboard/shops/:id/providers', async (c) => {
     <ProvidersPage
       shop={shop}
       baseUrl={c.env.BASE_URL}
+      isCafe24={c.get('isCafe24')}
     />
   );
 });
@@ -472,6 +484,10 @@ pages.get('/dashboard/shops/:id/providers', async (c) => {
 // ─── Settings ────────────────────────────────────────────────
 
 pages.get('/dashboard/settings', async (c) => {
+  if (c.get('isCafe24')) {
+    return c.redirect('/dashboard');
+  }
+
   const ownerId = c.get('ownerId');
 
   const owner = await c.env.DB
