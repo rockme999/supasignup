@@ -1340,7 +1340,7 @@ export const ProvidersPage: FC<{
             return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
           }
 
-          window.renderProviderPreview = function renderPreview() {
+          var renderPreview = window.renderProviderPreview = function() {
             var providers = getEnabledProviders();
             var container = document.getElementById('previewButtons');
             container.innerHTML = '';
