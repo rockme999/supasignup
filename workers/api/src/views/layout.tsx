@@ -148,14 +148,14 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .alert-warn { background: #fef3c7; color: #92400e; }
         .alert-error { background: #fee2e2; color: #991b1b; }
 
-        .provider-toggle { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .provider-toggle { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
         .provider-toggle:last-child { border-bottom: none; }
-        .toggle { position: relative; width: 44px; height: 24px; }
-        .toggle input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider { position: absolute; inset: 0; background: #d1d5db; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
-        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
-        .toggle input:checked + .toggle-slider { background: #2563eb; }
-        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+        .toggle { position: relative; width: 56px; height: 30px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-slider { position: absolute; inset: 0; background: #d1d5db; border-radius: 15px; cursor: pointer; transition: background 0.3s ease; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .toggle-slider::before { content: ''; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .toggle input:checked + .toggle-slider { background: #4A90D9; }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(26px); }
 
         .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; overflow-x: auto; position: relative; }
         .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; color: #e2e8f0; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
