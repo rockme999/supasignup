@@ -245,6 +245,18 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           .tab-nav { overflow-x: auto; }
         }
 
+        /* Site footer */
+        .site-footer {
+          margin-top: 48px;
+          padding: 24px 0;
+          border-top: 1px solid #e5e7eb;
+          font-size: 12px;
+          color: #94a3b8;
+          line-height: 1.8;
+        }
+        .site-footer a { color: #94a3b8; }
+        .site-footer a:hover { color: #64748b; text-decoration: underline; }
+
         /* Toast notification */
         .toast-container {
           position: fixed;
@@ -353,6 +365,12 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           </aside>
           <main class="main">
             {children}
+            <footer class="site-footer">
+              <div>주식회사 수파레인 | 대표이사 임호빈 | 사업자등록번호 716-88-01081</div>
+              <div>경기도 김포시 태장로 789 금광하이테크시티 465호</div>
+              <div>전화 031-992-5988 | 이메일 help@suparain.com</div>
+              <div style="margin-top:4px"><a href="/privacy">개인정보처리방침</a></div>
+            </footer>
           </main>
         </div>
       ) : (

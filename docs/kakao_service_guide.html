@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>번개가입 서비스 소개 — 카카오 비즈앱 심사용</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Page Header ── */
+    .page-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: #fff;
+      text-align: center;
+      padding: 48px 24px 40px;
+    }
+    .page-header .badge {
+      display: inline-block;
+      background: #FEE500;
+      color: #191919;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 0.05em;
+    }
+    .page-header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .page-header h1 .lightning { color: #FEE500; }
+    .page-header .subtitle {
+      font-size: 16px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    /* ── Container ── */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Section ── */
+    .section {
+      padding: 48px 0 40px;
+    }
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .num {
+      background: #2563eb;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-desc {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 28px;
+    }
+    .section-divider {
+      border: none;
+      border-top: 2px solid #e5e7eb;
+    }
+
+    /* ── Feature Cards ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .feature-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+      text-align: center;
+    }
+    .feature-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    /* ── Flow Steps ── */
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      margin-top: 28px;
+    }
+    .flow-step {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .step-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .step-num {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+    .step-line {
+      width: 2px;
+      height: 100%;
+      min-height: 40px;
+      background: linear-gradient(to bottom, #2563eb, #e5e7eb);
+      margin-top: 8px;
+    }
+    .flow-step:last-child .step-line { display: none; }
+    .step-content {
+      flex: 1;
+      padding-bottom: 8px;
+    }
+    .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #2563eb;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .step-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    /* ── Mock UI ── */
+    .mock-ui {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      max-width: 480px;
+    }
+    .mock-browser-bar {
+      background: #f1f5f9;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .mock-dots { display: flex; gap: 5px; }
+    .mock-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .mock-dot.red { background: #ef4444; }
+    .mock-dot.yellow { background: #f59e0b; }
+    .mock-dot.green { background: #22c55e; }
+    .mock-url-bar {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #64748b;
+      font-family: monospace;
+    }
+    .mock-body { padding: 24px; }
+
+    /* Step 1: 쇼핑몰 로그인 */
+    .mock-shop-header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 20px;
+    }
+    .mock-shop-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+    .mock-shop-logo span { color: #2563eb; }
+    .mock-login-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 4px;
+    }
+    .mock-login-sub {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .mock-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .mock-divider::before, .mock-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+    .mock-social-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: default;
+      margin-bottom: 10px;
+      transition: opacity 0.15s;
+    }
+    .btn-kakao { background: #FEE500; color: #191919; }
+    .btn-naver { background: #03C75A; color: #fff; }
+    .btn-google { background: #fff; color: #3c4043; border: 1px solid #dadce0; }
+    .mock-social-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* Step 2: 동의 화면 */
+    .mock-consent {
+      text-align: center;
+    }
+    .mock-consent-logo {
+      width: 56px;
+      height: 56px;
+      background: #FEE500;
+      border-radius: 16px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 900;
+      color: #191919;
+      box-shadow: 0 4px 12px rgba(254,229,0,0.4);
+    }
+    .mock-consent-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .mock-consent-app {
+      font-size: 13px;
+      color: #2563eb;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .mock-consent-items {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    .mock-consent-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #334155;
+      padding: 5px 0;
+    }
+    .mock-consent-item .check {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #FEE500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .mock-consent-item .optional {
+      font-size: 11px;
+      color: #94a3b8;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .mock-agree-btn {
+      width: 100%;
+      padding: 13px;
+      background: #FEE500;
+      color: #191919;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: default;
+    }
+
+    /* Step 3: 완료 */
+    .mock-success {
+      text-align: center;
+      padding: 8px 0;
+    }
+    .mock-success-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      box-shadow: 0 8px 24px rgba(34,197,94,0.3);
+    }
+    .mock-success h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .mock-success p {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .mock-success-info {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      text-align: left;
+    }
+    .mock-success-info-row {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
+      padding: 3px 0;
+    }
+    .mock-success-info-row .label { color: #64748b; min-width: 64px; }
+    .mock-success-info-row .val { color: #1e293b; font-weight: 600; }
+    .mock-action-btn {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: default;
+    }
+
+    /* Step 4: 대시보드 */
+    .mock-dashboard {
+      display: flex;
+      min-height: 280px;
+    }
+    .mock-sidebar {
+      width: 140px;
+      background: #1e293b;
+      padding: 16px 0;
+      flex-shrink: 0;
+    }
+    .mock-sidebar-logo {
+      padding: 0 14px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 8px;
+    }
+    .mock-sidebar-logo span { color: #FEE500; }
+    .mock-sidebar-item {
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mock-sidebar-item.active {
+      background: #334155;
+      color: #f1f5f9;
+    }
+    .mock-sidebar-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #64748b;
+      flex-shrink: 0;
+    }
+    .mock-sidebar-dot.active { background: #FEE500; }
+    .mock-main {
+      flex: 1;
+      padding: 16px;
+      background: #f8fafc;
+    }
+    .mock-main-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+    .mock-stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .mock-stat {
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .mock-stat .label { font-size: 10px; color: #64748b; font-weight: 600; }
+    .mock-stat .value { font-size: 20px; font-weight: 800; color: #1e293b; margin-top: 2px; }
+    .mock-chart-area {
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .mock-chart-title { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 10px; }
+    .mock-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .mock-bar-name { font-size: 11px; color: #475569; min-width: 44px; }
+    .mock-bar-track {
+      flex: 1;
+      height: 14px;
+      background: #f1f5f9;
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .mock-bar-fill { height: 100%; border-radius: 7px; }
+    .mock-bar-val { font-size: 10px; color: #64748b; min-width: 28px; text-align: right; }
+
+    /* Step 5: 프로바이더 */
+    .mock-provider-list { padding: 4px 0; }
+    .mock-provider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .mock-provider-row:last-child { border-bottom: none; }
+    .mock-provider-info { display: flex; align-items: center; gap: 10px; }
+    .mock-provider-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .mock-provider-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .mock-provider-status { font-size: 11px; color: #64748b; margin-top: 1px; }
+    .mock-toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+    .mock-toggle-track {
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      position: relative;
+    }
+    .mock-toggle-track.on { background: #22c55e; }
+    .mock-toggle-track.off { background: #d1d5db; }
+    .mock-toggle-thumb {
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 3px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .mock-toggle-track.on .mock-toggle-thumb { right: 3px; }
+    .mock-toggle-track.off .mock-toggle-thumb { left: 3px; }
+    .mock-on-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .mock-on-badge.on { background: #dcfce7; color: #16a34a; }
+    .mock-on-badge.off { background: #f1f5f9; color: #94a3b8; }
+
+    /* ── Business Info ── */
+    .biz-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+    }
+    .biz-card table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .biz-card td {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-bottom: 1px solid #f8fafc;
+    }
+    .biz-card td:first-child {
+      font-weight: 600;
+      color: #64748b;
+      width: 140px;
+      white-space: nowrap;
+    }
+    .biz-card td:last-child { color: #1e293b; }
+    .biz-card a { color: #2563eb; text-decoration: none; }
+
+    /* ── Page Footer ── */
+    .page-footer {
+      background: #1e293b;
+      color: #94a3b8;
+      text-align: center;
+      padding: 32px 24px;
+      margin-top: 48px;
+      font-size: 12px;
+      line-height: 2;
+    }
+    .page-footer a { color: #64748b; }
+
+    @media print {
+      body { background: #fff; }
+      .mock-ui { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── 페이지 헤더 ── -->
+  <div class="page-header">
+    <div class="badge">카카오 비즈앱 심사 제출용</div>
+    <h1><span class="lightning">⚡</span> 번개가입 (BungaeGaib)</h1>
+    <p class="subtitle">쇼핑몰 소셜 로그인 솔루션 — 서비스 소개 및 이용 동선</p>
+  </div>
+
+  <!-- ── 섹션 1: 서비스 개요 ── -->
+  <div class="container">
+    <div class="section">
+      <div class="section-title">
+        <span class="num">1</span> 서비스 개요
+      </div>
+      <p class="section-desc">
+        번개가입은 카페24 쇼핑몰에 소셜 로그인(카카오, 네이버, 구글 등)을 1-클릭으로 연동하는 SaaS 서비스입니다.<br>
+        쇼핑몰 고객은 SNS 계정으로 간편하게 회원가입/로그인하고, 쇼핑몰 운영자는 관리자 대시보드에서 모든 설정을 통합 관리합니다.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔐</div>
+          <h3>소셜 로그인 연동</h3>
+          <p>카카오, 네이버, 구글, 애플, 토스, 디스코드, 텔레그램, 틱톡 등 9종 프로바이더 지원</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>관리자 대시보드</h3>
+          <p>소셜별 가입 통계, 쇼핑몰별 현황, 플랜/과금 관리를 한 곳에서 확인</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>카페24 인앱결제 연동</h3>
+          <p>카페24 앱스토어 인앱결제 기반의 구독 플랜 자동 관리 및 정기 과금</p>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ── 섹션 2: 서비스 이용 동선 ── -->
+    <div class="section">
+      <div class="section-title">
+        <span class="num">2</span> 서비스 이용 동선
+      </div>
+      <p class="section-desc">
+        쇼핑몰 고객이 카카오 로그인을 선택한 후 회원 가입 완료까지의 전체 흐름입니다.
+      </p>
+
+      <div class="flow-steps">
+
+        <!-- Step 1 -->
+        <div class="flow-step">
+          <div class="step-indicator">
+            <div class="step-num">1</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-label">Step 1</div>
+            <div class="step-title">쇼핑몰 고객이 로그인 페이지 방문</div>
+            <div class="step-desc">
+              쇼핑몰 고객은 번개가입이 연동된 카페24 쇼핑몰의 로그인/회원가입 페이지에 접속합니다.<br>
+              번개가입이 제공하는 소셜 로그인 버튼 UI가 표시되며, 고객은 원하는 SNS 계정을 선택합니다.
+            </div>
+            <div class="mock-ui">
+              <div class="mock-browser-bar">
+                <div class="mock-dots">
+                  <div class="mock-dot red"></div>
+                  <div class="mock-dot yellow"></div>
+                  <div class="mock-dot green"></div>
+                </div>
+                <div class="mock-url-bar">myshop.cafe24.com/member/login</div>
+              </div>
+              <div class="mock-body">
+                <div class="mock-shop-header">
+                  <div class="mock-shop-logo">My<span>Shop</span></div>
+                  <div class="mock-login-title">로그인 / 회원가입</div>
+                  <div class="mock-login-sub">소셜 계정으로 간편하게 시작하세요</div>
+                </div>
+                <button class="mock-social-btn btn-kakao">
+                  <span class="mock-social-icon" style="background:#191919;color:#FEE500;border-radius:50%;">K</span>
+                  카카오로 시작하기
+                </button>
+                <button class="mock-social-btn btn-naver">
+                  <span class="mock-social-icon" style="background:#fff;color:#03C75A;font-size:11px;font-weight:900;">N</span>
+                  네이버로 시작하기
+                </button>
+                <button class="mock-social-btn btn-google">
+                  <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                  Google로 시작하기
+                </button>
+                <div class="mock-divider">또는 이메일로 로그인</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;color:#94a3b8;">이메일 주소</div>
+                  <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;color:#94a3b8;">비밀번호</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flow-step">
+          <div class="step-indicator">
+            <div class="step-num">2</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-label">Step 2</div>
+            <div class="step-title">카카오 로그인 동의 화면</div>
+            <div class="step-desc">
+              고객이 "카카오로 시작하기"를 클릭하면 카카오 OAuth 인증 화면으로 이동합니다.<br>
+              카카오가 제공하는 공식 동의 화면에서 번개가입(쇼핑몰)이 요청하는 정보 제공에 동의합니다.<br>
+              수집 항목: 이메일(필수), 프로필 정보(필수), 전화번호(선택), 생일(선택), 성별(선택)
+            </div>
+            <div class="mock-ui">
+              <div class="mock-browser-bar">
+                <div class="mock-dots">
+                  <div class="mock-dot red"></div>
+                  <div class="mock-dot yellow"></div>
+                  <div class="mock-dot green"></div>
+                </div>
+                <div class="mock-url-bar">kauth.kakao.com/oauth/authorize</div>
+              </div>
+              <div class="mock-body">
+                <div class="mock-consent">
+                  <div class="mock-consent-logo">K</div>
+                  <div class="mock-consent-title">번개가입이 카카오 계정 접근을 요청합니다</div>
+                  <div class="mock-consent-app">BungaeGaib (bg.suparain.kr)</div>
+                  <div class="mock-consent-items">
+                    <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">제공 항목</div>
+                    <div class="mock-consent-item">
+                      <div class="check">✓</div>
+                      <span>이메일 주소</span>
+                    </div>
+                    <div class="mock-consent-item">
+                      <div class="check">✓</div>
+                      <span>프로필 닉네임 및 사진</span>
+                    </div>
+                    <div class="mock-consent-item">
+                      <div class="check" style="background:#f1f5f9;color:#94a3b8;">✓</div>
+                      <span>전화번호</span>
+                      <span class="optional">선택</span>
+                    </div>
+                    <div class="mock-consent-item">
+                      <div class="check" style="background:#f1f5f9;color:#94a3b8;">✓</div>
+                      <span>생년월일 / 생일</span>
+                      <span class="optional">선택</span>
+                    </div>
+                    <div class="mock-consent-item">
+                      <div class="check" style="background:#f1f5f9;color:#94a3b8;">✓</div>
+                      <span>성별</span>
+                      <span class="optional">선택</span>
+                    </div>
+                  </div>
+                  <button class="mock-agree-btn">동의하고 계속하기</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flow-step">
+          <div class="step-indicator">
+            <div class="step-num">3</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-label">Step 3</div>
+            <div class="step-title">로그인 완료 — 쇼핑몰 회원 자동 가입</div>
+            <div class="step-desc">
+              카카오 인증이 완료되면 번개가입 서버가 카카오 프로필 정보를 받아 카페24 쇼핑몰 회원으로 자동 가입 처리합니다.<br>
+              신규 고객은 회원가입과 로그인이 동시에 완료되며, 기존 회원은 카카오 계정이 연결됩니다.
+            </div>
+            <div class="mock-ui">
+              <div class="mock-browser-bar">
+                <div class="mock-dots">
+                  <div class="mock-dot red"></div>
+                  <div class="mock-dot yellow"></div>
+                  <div class="mock-dot green"></div>
+                </div>
+                <div class="mock-url-bar">myshop.cafe24.com/ (로그인 완료)</div>
+              </div>
+              <div class="mock-body">
+                <div class="mock-success">
+                  <div class="mock-success-icon">✓</div>
+                  <h3>환영합니다!</h3>
+                  <p>카카오 계정으로 가입이 완료되었습니다.</p>
+                  <div class="mock-success-info">
+                    <div class="mock-success-info-row">
+                      <span class="label">로그인 방식</span>
+                      <span class="val">카카오 (Kakao)</span>
+                    </div>
+                    <div class="mock-success-info-row">
+                      <span class="label">이름</span>
+                      <span class="val">홍길동</span>
+                    </div>
+                    <div class="mock-success-info-row">
+                      <span class="label">이메일</span>
+                      <span class="val">hong***@kakao.com</span>
+                    </div>
+                    <div class="mock-success-info-row">
+                      <span class="label">가입 일시</span>
+                      <span class="val">2025-03-20 14:32</span>
+                    </div>
+                  </div>
+                  <button class="mock-action-btn">쇼핑 계속하기</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="flow-step">
+          <div class="step-indicator">
+            <div class="step-num">4</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-label">Step 4</div>
+            <div class="step-title">쇼핑몰 운영자 — 관리자 대시보드</div>
+            <div class="step-desc">
+              쇼핑몰 운영자는 번개가입 관리자 대시보드(bg.suparain.kr)에서 소셜 로그인 현황과 통계를 확인합니다.<br>
+              사이드바 메뉴: 홈(통계), 쇼핑몰 관리, 통합 통계, 플랜/과금, 계정 설정
+            </div>
+            <div class="mock-ui" style="max-width:560px;">
+              <div class="mock-browser-bar">
+                <div class="mock-dots">
+                  <div class="mock-dot red"></div>
+                  <div class="mock-dot yellow"></div>
+                  <div class="mock-dot green"></div>
+                </div>
+                <div class="mock-url-bar">bg.suparain.kr/dashboard</div>
+              </div>
+              <div class="mock-dashboard">
+                <div class="mock-sidebar">
+                  <div class="mock-sidebar-logo">⚡ <span>번개가입</span></div>
+                  <div class="mock-sidebar-item active"><div class="mock-sidebar-dot active"></div> 홈</div>
+                  <div class="mock-sidebar-item"><div class="mock-sidebar-dot"></div> 쇼핑몰 관리</div>
+                  <div class="mock-sidebar-item"><div class="mock-sidebar-dot"></div> 통합 통계</div>
+                  <div class="mock-sidebar-item"><div class="mock-sidebar-dot"></div> 플랜/과금</div>
+                  <div class="mock-sidebar-item"><div class="mock-sidebar-dot"></div> 계정 설정</div>
+                </div>
+                <div class="mock-main">
+                  <div class="mock-main-title">대시보드 홈</div>
+                  <div class="mock-stat-row">
+                    <div class="mock-stat">
+                      <div class="label">총 가입자</div>
+                      <div class="value" style="color:#2563eb;">1,284</div>
+                    </div>
+                    <div class="mock-stat">
+                      <div class="label">이번 달</div>
+                      <div class="value" style="color:#22c55e;">+247</div>
+                    </div>
+                    <div class="mock-stat">
+                      <div class="label">연결 쇼핑몰</div>
+                      <div class="value">3개</div>
+                    </div>
+                  </div>
+                  <div class="mock-chart-area">
+                    <div class="mock-chart-title">소셜별 가입 현황</div>
+                    <div class="mock-bar-row">
+                      <div class="mock-bar-name">카카오</div>
+                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:72%;background:#FEE500;"></div></div>
+                      <div class="mock-bar-val">72%</div>
+                    </div>
+                    <div class="mock-bar-row">
+                      <div class="mock-bar-name">네이버</div>
+                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:18%;background:#03C75A;"></div></div>
+                      <div class="mock-bar-val">18%</div>
+                    </div>
+                    <div class="mock-bar-row">
+                      <div class="mock-bar-name">구글</div>
+                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:7%;background:#4285F4;"></div></div>
+                      <div class="mock-bar-val">7%</div>
+                    </div>
+                    <div class="mock-bar-row">
+                      <div class="mock-bar-name">기타</div>
+                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:3%;background:#94a3b8;"></div></div>
+                      <div class="mock-bar-val">3%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="flow-step">
+          <div class="step-indicator">
+            <div class="step-num">5</div>
+          </div>
+          <div class="step-content">
+            <div class="step-label">Step 5</div>
+            <div class="step-title">프로바이더 관리 — 소셜 로그인 ON/OFF</div>
+            <div class="step-desc">
+              쇼핑몰 운영자는 쇼핑몰 관리 페이지에서 각 소셜 로그인 프로바이더를 개별적으로 활성화/비활성화할 수 있습니다.<br>
+              카카오 로그인을 활성화하면 쇼핑몰 고객 로그인 화면에 즉시 카카오 버튼이 표시됩니다.
+            </div>
+            <div class="mock-ui">
+              <div class="mock-browser-bar">
+                <div class="mock-dots">
+                  <div class="mock-dot red"></div>
+                  <div class="mock-dot yellow"></div>
+                  <div class="mock-dot green"></div>
+                </div>
+                <div class="mock-url-bar">bg.suparain.kr/dashboard/shops/1/providers</div>
+              </div>
+              <div class="mock-body">
+                <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:16px;">프로바이더 설정</div>
+                <div class="mock-provider-list">
+                  <div class="mock-provider-row">
+                    <div class="mock-provider-info">
+                      <div class="mock-provider-icon" style="background:#FEE500;color:#191919;">K</div>
+                      <div>
+                        <div class="mock-provider-name">카카오</div>
+                        <div class="mock-provider-status">활성화됨 · 이달 926명 가입</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span class="mock-on-badge on">ON</span>
+                      <div class="mock-toggle-track on"><div class="mock-toggle-thumb"></div></div>
+                    </div>
+                  </div>
+                  <div class="mock-provider-row">
+                    <div class="mock-provider-info">
+                      <div class="mock-provider-icon" style="background:#03C75A;color:#fff;">N</div>
+                      <div>
+                        <div class="mock-provider-name">네이버</div>
+                        <div class="mock-provider-status">활성화됨 · 이달 231명 가입</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span class="mock-on-badge on">ON</span>
+                      <div class="mock-toggle-track on"><div class="mock-toggle-thumb"></div></div>
+                    </div>
+                  </div>
+                  <div class="mock-provider-row">
+                    <div class="mock-provider-info">
+                      <div class="mock-provider-icon" style="background:#4285F4;color:#fff;">G</div>
+                      <div>
+                        <div class="mock-provider-name">구글</div>
+                        <div class="mock-provider-status">활성화됨 · 이달 90명 가입</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span class="mock-on-badge on">ON</span>
+                      <div class="mock-toggle-track on"><div class="mock-toggle-thumb"></div></div>
+                    </div>
+                  </div>
+                  <div class="mock-provider-row">
+                    <div class="mock-provider-info">
+                      <div class="mock-provider-icon" style="background:#000;color:#fff;">A</div>
+                      <div>
+                        <div class="mock-provider-name">애플</div>
+                        <div class="mock-provider-status">비활성화됨</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span class="mock-on-badge off">OFF</span>
+                      <div class="mock-toggle-track off"><div class="mock-toggle-thumb"></div></div>
+                    </div>
+                  </div>
+                  <div class="mock-provider-row">
+                    <div class="mock-provider-info">
+                      <div class="mock-provider-icon" style="background:#0064ff;color:#fff;">T</div>
+                      <div>
+                        <div class="mock-provider-name">토스</div>
+                        <div class="mock-provider-status">비활성화됨</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span class="mock-on-badge off">OFF</span>
+                      <div class="mock-toggle-track off"><div class="mock-toggle-thumb"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ── 섹션 3: 사업자 정보 ── -->
+    <div class="section">
+      <div class="section-title">
+        <span class="num">3</span> 사업자 정보
+      </div>
+      <div class="biz-card">
+        <table>
+          <tr>
+            <td>상호</td>
+            <td>주식회사 수파레인</td>
+          </tr>
+          <tr>
+            <td>대표이사</td>
+            <td>임호빈</td>
+          </tr>
+          <tr>
+            <td>사업자등록번호</td>
+            <td>716-88-01081</td>
+          </tr>
+          <tr>
+            <td>주소</td>
+            <td>경기도 김포시 태장로 789 금광하이테크시티 465호</td>
+          </tr>
+          <tr>
+            <td>전화</td>
+            <td>031-992-5988</td>
+          </tr>
+          <tr>
+            <td>이메일</td>
+            <td><a href="mailto:help@suparain.com">help@suparain.com</a></td>
+          </tr>
+          <tr>
+            <td>서비스 URL</td>
+            <td><a href="https://bg.suparain.kr" target="_blank">https://bg.suparain.kr</a></td>
+          </tr>
+          <tr>
+            <td>개인정보처리방침</td>
+            <td><a href="https://bg.suparain.kr/privacy" target="_blank">https://bg.suparain.kr/privacy</a></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── 페이지 푸터 ── -->
+  <div class="page-footer">
+    <div>주식회사 수파레인 | 대표이사 임호빈 | 사업자등록번호 716-88-01081</div>
+    <div>경기도 김포시 태장로 789 금광하이테크시티 465호 | 031-992-5988 | help@suparain.com</div>
+    <div style="margin-top:8px;"><a href="https://bg.suparain.kr/privacy">개인정보처리방침</a></div>
+  </div>
+
+</body>
+</html>

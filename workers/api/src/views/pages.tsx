@@ -1244,8 +1244,10 @@ export const PrivacyPage: FC = () => (
         </div>
 
         <div class="privacy-footer">
-          <p><strong>수파레인 (suparain)</strong></p>
-          <p><a href="https://bg.suparain.kr">https://bg.suparain.kr</a></p>
+          <p><strong>주식회사 수파레인</strong> | 대표이사 임호빈 | 사업자등록번호 716-88-01081</p>
+          <p>경기도 김포시 태장로 789 금광하이테크시티 465호</p>
+          <p>전화 031-992-5988 | 이메일 help@suparain.com</p>
+          <p style="margin-top:8px"><a href="https://bg.suparain.kr">https://bg.suparain.kr</a></p>
         </div>
       </div>
     </body>
