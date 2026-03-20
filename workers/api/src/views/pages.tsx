@@ -7,7 +7,7 @@ import { Layout } from './layout';
 // ─── Helper Components ──────────────────────────────────────
 
 const providerColors: Record<string, string> = {
-  google: '#4285f4',
+  google: '#f2f2f2',
   kakao: '#fee500',
   naver: '#03c75a',
   apple: '#000000',
@@ -1003,6 +1003,7 @@ const DEFAULT_WIDGET_STYLE = {
   align: 'center',
   buttonLabel: '{name}로 시작하기',
   showIcon: true,
+  iconGap: 8,
 };
 
 type WidgetStyle = {
@@ -1013,6 +1014,7 @@ type WidgetStyle = {
   align: string;
   buttonLabel?: string;
   showIcon?: boolean;
+  iconGap?: number;
 };
 
 export const ProvidersPage: FC<{
@@ -1102,7 +1104,7 @@ export const ProvidersPage: FC<{
         <h2>위젯 디자인</h2>
 
         {/* Preset cards */}
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
           <button class="preset-card" data-preset="default" type="button">
             <div class="preset-preview">풀 버튼</div>
             <span>기본</span>
@@ -1118,6 +1120,10 @@ export const ProvidersPage: FC<{
           <button class="preset-card" data-preset="icon-only" type="button">
             <div class="preset-preview">아이콘만</div>
             <span>아이콘</span>
+          </button>
+          <button class="preset-card" data-preset="mono" type="button">
+            <div class="preset-preview">흑백</div>
+            <span>모노톤</span>
           </button>
         </div>
 
@@ -1156,6 +1162,12 @@ export const ProvidersPage: FC<{
             <p style="font-size:11px; color:#94a3b8; margin-top:4px">{'{name}'} 은 프로바이더명으로 대체됩니다</p>
           </div>
           <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              아이콘-텍스트 간격 <span id="iconGapValue">{ws.showIcon !== false ? (ws as any).iconGap ?? 8 : 8}px</span>
+            </label>
+            <input type="range" id="btnIconGap" min="0" max="20" value={String((ws as any).iconGap ?? 8)} style="width:100%" />
+          </div>
+          <div>
             <div class="provider-toggle" style="border:none; padding:0">
               <label class="toggle">
                 <input type="checkbox" id="showIconToggle" checked={ws.showIcon !== false} />
@@ -1181,7 +1193,7 @@ export const ProvidersPage: FC<{
 
           var providerColors = ${JSON.stringify(providerColors)};
           var providerNames = ${JSON.stringify(Object.fromEntries(Object.entries(providerDisplayNames).map(([k, v]) => [k, v])))};
-          var providerTextColors = { kakao:'#191919', naver:'#fff', google:'#fff', apple:'#fff', discord:'#fff', facebook:'#fff', x:'#fff', line:'#fff', telegram:'#fff' };
+          var providerTextColors = { kakao:'#191919', naver:'#fff', google:'#1f1f1f', apple:'#fff', discord:'#fff', facebook:'#fff', x:'#fff', line:'#fff', telegram:'#fff' };
 
           var style = {
             preset: widgetStyle.preset,
@@ -1190,7 +1202,8 @@ export const ProvidersPage: FC<{
             borderRadius: widgetStyle.borderRadius,
             align: widgetStyle.align,
             buttonLabel: widgetStyle.buttonLabel || '{name}로 시작하기',
-            showIcon: widgetStyle.showIcon !== false
+            showIcon: widgetStyle.showIcon !== false,
+            iconGap: widgetStyle.iconGap || 8
           };
 
           var providerIcons = ${JSON.stringify(Object.fromEntries(
@@ -1254,8 +1267,15 @@ export const ProvidersPage: FC<{
               var textColor = providerTextColors[p] || '#fff';
               var name = providerNames[p] || p;
 
+              // 모노톤 프리셋: 흰 배경 + 검은 테두리 + 검은 텍스트
+              if (style.preset === 'mono') {
+                color = '#ffffff';
+                textColor = '#333333';
+              }
+
               if (style.preset === 'icon-only') {
-                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:default;flex-shrink:0';
+                var iconBorder = style.preset === 'mono' ? ';border:1px solid #d1d5db' : '';
+                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:default;flex-shrink:0' + iconBorder;
                 if (style.showIcon && providerIcons[p]) {
                   btn.innerHTML = providerIcons[p];
                 } else {
@@ -1263,7 +1283,8 @@ export const ProvidersPage: FC<{
                 }
               } else {
                 var w = style.preset === 'compact' ? Math.min(style.buttonWidth, 200) : style.buttonWidth;
-                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:8px';
+                var border = style.preset === 'mono' ? ';border:1px solid #d1d5db' : '';
+                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px' + border;
                 if (style.showIcon && providerIcons[p]) {
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
@@ -1299,12 +1320,13 @@ export const ProvidersPage: FC<{
           });
 
           // Slider input
-          ['btnWidth', 'btnGap', 'btnRadius'].forEach(function(id) {
+          ['btnWidth', 'btnGap', 'btnRadius', 'btnIconGap'].forEach(function(id) {
             var el = document.getElementById(id);
             el.addEventListener('input', function() {
               if (id === 'btnWidth') { style.buttonWidth = parseInt(this.value); document.getElementById('widthValue').textContent = this.value + 'px'; }
               if (id === 'btnGap') { style.buttonGap = parseInt(this.value); document.getElementById('gapValue').textContent = this.value + 'px'; }
               if (id === 'btnRadius') { style.borderRadius = parseInt(this.value); document.getElementById('radiusValue').textContent = this.value + 'px'; }
+              if (id === 'btnIconGap') { style.iconGap = parseInt(this.value); document.getElementById('iconGapValue').textContent = this.value + 'px'; }
               renderPreview();
             });
             el.addEventListener('change', function() { saveStyle(); });

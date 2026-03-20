@@ -140,13 +140,14 @@ export interface WidgetConfig {
 }
 
 export interface WidgetStyle {
-  preset: 'default' | 'compact' | 'icon-text' | 'icon-only';
+  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono';
   buttonWidth: number;
   buttonGap: number;
   borderRadius: number;
   align: 'left' | 'center' | 'right';
   buttonLabel: string; // e.g. '{name}로 시작하기', '{name}로 로그인', 직접 입력 가능
   showIcon: boolean; // 버튼에 프로바이더 아이콘 표시 여부
+  iconGap: number; // 아이콘-텍스트 간격 (px)
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -157,6 +158,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   align: 'center',
   buttonLabel: '{name}로 시작하기',
   showIcon: true,
+  iconGap: 8,
 };
 
 // Env binding types for Workers
