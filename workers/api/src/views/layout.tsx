@@ -377,7 +377,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         <>{children}</>
       )}
 
-      <script>{`
+      <script dangerouslySetInnerHTML={{__html: `
         // Mobile hamburger menu handler
         (function() {
           var btn = document.getElementById('hamburger-btn');
@@ -398,7 +398,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           overlay.addEventListener('click', closeNav);
         })();
 
-        // Copy button handler (fallback for non-clipboard environments)
+        // Copy button handler
         function copyText(text, btn) {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(function() {
@@ -421,13 +421,6 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           document.body.removeChild(ta);
           setTimeout(function() { btn.textContent = '복사'; }, 1500);
         }
-        document.addEventListener('click', function(e) {
-          var btn = e.target.closest('.copy-btn');
-          if (btn && btn.dataset.copy) {
-            e.preventDefault();
-            copyText(btn.dataset.copy, btn);
-          }
-        });
 
         // Form API helper
         async function apiCall(method, url, body, submitBtn) {
@@ -466,7 +459,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
             setTimeout(function() { toast.remove(); }, 300);
           }, duration);
         }
-      `}</script>
+      `}} />
       <div id="toast-container" class="toast-container"></div>
     </body>
   </html>
