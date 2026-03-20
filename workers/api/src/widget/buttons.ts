@@ -352,12 +352,11 @@ export const WIDGET_JS = `(function() {
           var paths = iconSpan.querySelectorAll('path');
           for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', '#333333'); }
         } else if (isOutline) {
-          // outline: 흰 배경이므로 흰색 fill 아이콘을 소셜 색상으로 변경
+          // outline: 모든 아이콘 fill을 소셜 배경색으로 통일 (구글은 4색 유지)
           var oFill = (originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#4285F4' : originalColor;
-          var paths = iconSpan.querySelectorAll('path');
-          for (var pi = 0; pi < paths.length; pi++) {
-            var f = paths[pi].getAttribute('fill');
-            if (f === '#fff' || f === '#FFFFFF' || f === '#ffffff') { paths[pi].setAttribute('fill', oFill); }
+          if (provider !== 'google') {
+            var paths = iconSpan.querySelectorAll('path');
+            for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', oFill); }
           }
         }
         btn.appendChild(iconSpan);

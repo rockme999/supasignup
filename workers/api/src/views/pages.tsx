@@ -1414,13 +1414,11 @@ export const ProvidersPage: FC<{
                   if (isMono || isOutlineMono) {
                     iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333333'); });
                   } else if (isOutline) {
-                    // outline: 흰 배경이므로 아이콘 fill을 소셜 배경색으로 변경 (흰색 fill 방지)
+                    // outline: 모든 아이콘 fill을 소셜 배경색으로 통일 (구글은 4색 유지)
                     var fillColor = originalColor === '#f2f2f2' ? '#4285F4' : originalColor;
-                    iconWrap.querySelectorAll('path').forEach(function(el) {
-                      if (el.getAttribute('fill') === '#fff' || el.getAttribute('fill') === '#FFFFFF' || el.getAttribute('fill') === '#ffffff') {
-                        el.setAttribute('fill', fillColor);
-                      }
-                    });
+                    if (p !== 'google') {
+                      iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', fillColor); });
+                    }
                   }
                   btn.appendChild(iconWrap);
                 }
