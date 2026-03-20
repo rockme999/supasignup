@@ -1448,7 +1448,7 @@ export const ProvidersPage: FC<{
           }
 
           // Initial state
-          renderPreview();
+          try { renderPreview(); } catch(e) { console.error('renderPreview init error:', e); }
 
           // Activate preset card
           var activePreset = document.querySelector('.preset-card[data-preset="' + style.preset + '"]');
