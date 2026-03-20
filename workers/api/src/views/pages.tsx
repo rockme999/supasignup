@@ -166,6 +166,12 @@ export const LoginPage: FC<{ error?: string }> = ({ error }) => (
           });
         `}</script>
       </div>
+      <div style="margin-top:32px; text-align:center; font-size:11px; color:#94a3b8; line-height:1.8">
+        <div>주식회사 수파레인 | 대표이사 임호빈 | 사업자등록번호 716-88-01081</div>
+        <div>경기도 김포시 태장로 789 금광하이테크시티 465호</div>
+        <div>전화 031-992-5988 | 이메일 help@suparain.com</div>
+        <div><a href="/privacy" style="color:#94a3b8">개인정보처리방침</a></div>
+      </div>
     </div>
   </Layout>
 );
