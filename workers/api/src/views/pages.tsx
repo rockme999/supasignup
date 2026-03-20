@@ -572,12 +572,12 @@ export const ShopSetupPage: FC<{
     </div>
 
     <div class="alert alert-info">
-      카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 기본 설정 &gt; <strong>외부 로그인 설정</strong>에서 아래 정보를 등록하세요.
+      카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; <strong>SSO 로그인 연동 관리</strong>에서 아래 정보를 등록하세요.
     </div>
 
     <div class="card">
       <h2>1. SSO 로그인 연동 등록</h2>
-      <p style="font-size:13px; color:#64748b; margin-bottom:16px">외부 로그인 설정 &gt; SSO 로그인 연동 등록에서 아래 정보를 입력합니다.</p>
+      <p style="font-size:13px; color:#64748b; margin-bottom:16px">SSO 로그인 연동 관리 &gt; SSO 로그인 연동 등록에서 아래 정보를 입력합니다.</p>
 
       <div style="margin-bottom:12px">
         <strong>연동 서비스명</strong>
