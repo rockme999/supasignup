@@ -150,14 +150,12 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
 
         .provider-toggle { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
         .provider-toggle:last-child { border-bottom: none; }
-        .toggle { position: relative; display: inline-block; width: 60px; height: 34px; flex-shrink: 0; }
-        .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 34px; cursor: pointer; transition: background 0.4s; }
-        .toggle-slider::before { content: ''; position: absolute; height: 26px; width: 26px; left: 4px; bottom: 4px; background: white; border-radius: 50%; transition: transform 0.4s; }
-        .toggle-slider::after { content: 'OFF'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #666; transition: all 0.4s; }
+        .toggle { position: relative; display: inline-block; width: 52px; height: 28px; flex-shrink: 0; }
+        .toggle input { display: none; }
+        .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 28px; cursor: pointer; transition: 0.4s; }
+        .toggle-slider::before { content: ''; position: absolute; height: 22px; width: 22px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.4s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
         .toggle input:checked + .toggle-slider { background: #4caf50; }
-        .toggle input:checked + .toggle-slider::before { transform: translateX(26px); }
-        .toggle input:checked + .toggle-slider::after { content: 'ON'; color: white; left: 10px; right: auto; }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(24px); }
 
         .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; overflow-x: auto; position: relative; }
         .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; color: #e2e8f0; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
