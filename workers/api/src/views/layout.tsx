@@ -398,15 +398,35 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           overlay.addEventListener('click', closeNav);
         })();
 
-        // Copy button handler
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const text = this.dataset.copy;
-            navigator.clipboard.writeText(text).then(() => {
-              this.textContent = '복사됨!';
-              setTimeout(() => this.textContent = '복사', 1500);
-            });
-          });
+        // Copy button handler (fallback for non-clipboard environments)
+        function copyText(text, btn) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+              btn.textContent = '복사됨!';
+              setTimeout(function() { btn.textContent = '복사'; }, 1500);
+            }).catch(function() { fallbackCopy(text, btn); });
+          } else {
+            fallbackCopy(text, btn);
+          }
+        }
+        function fallbackCopy(text, btn) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); btn.textContent = '복사됨!'; }
+          catch(e) { btn.textContent = '실패'; }
+          document.body.removeChild(ta);
+          setTimeout(function() { btn.textContent = '복사'; }, 1500);
+        }
+        document.addEventListener('click', function(e) {
+          var btn = e.target.closest('.copy-btn');
+          if (btn && btn.dataset.copy) {
+            e.preventDefault();
+            copyText(btn.dataset.copy, btn);
+          }
         });
 
         // Form API helper
