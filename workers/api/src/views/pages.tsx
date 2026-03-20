@@ -572,68 +572,116 @@ export const ShopSetupPage: FC<{
     </div>
 
     <div class="alert alert-info">
-      카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; <strong>SSO 로그인 연동 관리</strong>에서 아래 정보를 등록하세요.
+      카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; <strong>SSO 로그인 연동 관리</strong> &gt; 연동 등록에서 아래 값을 입력하세요.
     </div>
 
-    <div class="card">
-      <h2>1. SSO 로그인 연동 등록</h2>
-      <p style="font-size:13px; color:#64748b; margin-bottom:16px">SSO 로그인 연동 관리 &gt; SSO 로그인 연동 등록에서 아래 정보를 입력합니다.</p>
-
-      <div style="margin-bottom:12px">
-        <strong>연동 서비스명</strong>
-        <div class="code-block">
-          <button class="copy-btn" onclick="copyText('번개가입',this)">복사</button>
-          번개가입
-        </div>
+    <div class="card" style="padding:0; overflow:hidden">
+      <div style="padding:16px 24px; background:#f8fafc; border-bottom:1px solid #e5e7eb">
+        <h2 style="margin:0; font-size:16px">기본 설정</h2>
       </div>
-
-      <div style="margin-bottom:12px">
-        <strong>Client ID</strong>
-        <div class="code-block">
-          <button class="copy-btn" onclick={`copyText('${clientId}',this)`}>복사</button>
-          {clientId}
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px">
-        <strong>Client Secret</strong>
-        <div class="code-block">
-          <button class="copy-btn" onclick={`copyText('${shop.client_secret}',this)`}>복사</button>
-          {shop.client_secret}
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px">
-        <strong>Authorize Redirect URL</strong>
-        <div class="code-block">
-          <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/authorize',this)`}>복사</button>
-          {baseUrl}/oauth/authorize
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px">
-        <strong>Access Token Return API</strong>
-        <div class="code-block">
-          <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/token',this)`}>복사</button>
-          {baseUrl}/oauth/token
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px">
-        <strong>User info Return API</strong>
-        <div class="code-block">
-          <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/userinfo',this)`}>복사</button>
-          {baseUrl}/oauth/userinfo
-        </div>
+      <div style="overflow-x:auto">
+        <table style="margin:0; border-collapse:collapse; width:100%">
+          <tbody>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="width:180px; padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                사용 여부
+              </th>
+              <td style="padding:14px 20px">
+                <label style="font-size:14px; cursor:pointer"><input type="radio" checked disabled style="margin-right:4px" /> <strong>사용함</strong></label>
+                <label style="font-size:14px; margin-left:16px; color:#94a3b8; cursor:default"><input type="radio" disabled style="margin-right:4px" /> 사용안함</label>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                연동 서비스명 <span style="color:#ef4444; font-size:11px; font-weight:700">필수</span>
+              </th>
+              <td style="padding:14px 20px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <input type="text" value="번개가입" readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:280px; background:#f9fafb; color:#374151" />
+                  <button class="copy-btn" onclick="copyText('번개가입',this)" style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                </div>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                Client ID <span style="color:#ef4444; font-size:11px; font-weight:700">필수</span>
+              </th>
+              <td style="padding:14px 20px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <input type="text" value={clientId} readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:420px; background:#f9fafb; color:#374151; font-family:monospace" />
+                  <button class="copy-btn" onclick={`copyText('${clientId}',this)`} style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                </div>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                Client Secret <span style="color:#ef4444; font-size:11px; font-weight:700">필수</span>
+              </th>
+              <td style="padding:14px 20px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <input type="text" value={shop.client_secret} readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:420px; background:#f9fafb; color:#374151; font-family:monospace" />
+                  <button class="copy-btn" onclick={`copyText('${shop.client_secret}',this)`} style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                </div>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                Authorize Redirect URL <span style="color:#ef4444; font-size:11px; font-weight:700">필수</span>
+              </th>
+              <td style="padding:14px 20px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <input type="text" value={`${baseUrl}/oauth/authorize`} readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:420px; background:#f9fafb; color:#374151; font-family:monospace" />
+                  <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/authorize',this)`} style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                </div>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                Access Token Return API <span style="color:#ef4444; font-size:11px; font-weight:700">필수</span>
+              </th>
+              <td style="padding:14px 20px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <input type="text" value={`${baseUrl}/oauth/token`} readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:420px; background:#f9fafb; color:#374151; font-family:monospace" />
+                  <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/token',this)`} style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                </div>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e7eb">
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:middle; text-align:left; border-right:1px solid #e5e7eb">
+                User info Return API <span style="color:#ef4444; font-size:11px; font-weight:700">필수</span>
+              </th>
+              <td style="padding:14px 20px">
+                <div style="display:flex; align-items:center; gap:8px">
+                  <input type="text" value={`${baseUrl}/oauth/userinfo`} readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:420px; background:#f9fafb; color:#374151; font-family:monospace" />
+                  <button class="copy-btn" onclick={`copyText('${baseUrl}/oauth/userinfo',this)`} style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <th style="padding:14px 20px; background:#f8fafc; font-size:13px; font-weight:600; color:#374151; vertical-align:top; text-align:left; border-right:1px solid #e5e7eb">
+                약관동의 사전 진행 여부
+              </th>
+              <td style="padding:14px 20px">
+                <label style="font-size:13px; color:#475569; cursor:pointer; display:flex; align-items:flex-start; gap:6px">
+                  <input type="checkbox" checked disabled style="margin-top:2px" />
+                  사전에 연동 서비스 회원 대상으로 쇼핑몰 이용약관과 개인정보 수집 및 이용 동의가 포함된 추가 정보 입력이 완료되어 추가 팝업 노출을 생략합니다.
+                </label>
+                <p style="font-size:12px; color:#22c55e; margin-top:8px">* 체크 권장 — 소셜 로그인 시 추가 팝업을 생략하여 UX가 개선됩니다.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <div class="card">
-      <h2>2. 설정 확인</h2>
-      <ol style="padding-left:20px; font-size:14px; line-height:1.8">
-        <li>사용 여부: <strong>사용함</strong> 선택</li>
-        <li>약관동의 사전 진행 여부: 체크 권장 (추가 팝업 생략)</li>
-        <li>저장 후 쇼핑몰 로그인 페이지에서 번개가입 버튼 확인</li>
+    <div class="card" style="margin-top:16px">
+      <h2>설정 방법</h2>
+      <ol style="padding-left:20px; font-size:14px; line-height:2">
+        <li>카페24 쇼핑몰 관리자에서 <strong>쇼핑몰 설정 &gt; 고객 설정 &gt; SSO 로그인 연동 관리</strong>로 이동</li>
+        <li><strong>SSO 로그인 연동 등록</strong> 버튼 클릭</li>
+        <li>위 표의 각 항목 옆 <span style="display:inline-block; background:#2563eb; color:#fff; padding:1px 8px; border-radius:4px; font-size:12px">복사</span> 버튼으로 값을 복사하여 카페24 입력란에 붙여넣기</li>
+        <li><strong>저장</strong> 클릭</li>
+        <li>쇼핑몰 로그인 페이지에서 번개가입 버튼이 나타나는지 확인</li>
       </ol>
     </div>
 
