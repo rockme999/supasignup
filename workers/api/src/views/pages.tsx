@@ -995,14 +995,32 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
 
 // ─── Provider Management Page ───────────────────────────────
 
+const DEFAULT_WIDGET_STYLE = {
+  preset: 'default',
+  buttonWidth: 280,
+  buttonGap: 8,
+  borderRadius: 10,
+  align: 'center',
+};
+
+type WidgetStyle = {
+  preset: string;
+  buttonWidth: number;
+  buttonGap: number;
+  borderRadius: number;
+  align: string;
+};
+
 export const ProvidersPage: FC<{
   shop: ShopDetail;
   baseUrl: string;
   isCafe24?: boolean;
-}> = ({ shop, baseUrl, isCafe24 }) => {
+  widgetStyle?: WidgetStyle;
+}> = ({ shop, baseUrl, isCafe24, widgetStyle }) => {
   const providers = parseProviders(shop.enabled_providers);
   const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
   const futureProviders = ['toss', 'tiktok'];
+  const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
 
   return (
     <Layout title="프로바이더 관리" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
@@ -1045,7 +1063,6 @@ export const ProvidersPage: FC<{
               </span>
             </div>
           ))}
-
         </form>
         <script dangerouslySetInnerHTML={{__html: `
           document.querySelectorAll('#providerForm input[name=providers]').forEach(function(cb) {
@@ -1066,48 +1083,201 @@ export const ProvidersPage: FC<{
         `}} />
       </div>
 
+      {/* Widget preview */}
       <div class="card">
-        <h2>미리보기</h2>
-        <p style="font-size:13px; color:#64748b; margin-bottom:16px">활성화된 프로바이더의 로그인 버튼 미리보기입니다.</p>
-        <div class="preview-area" id="previewArea">
-          {providers.length === 0 ? (
-            <p style="color:#94a3b8">프로바이더를 선택하면 미리보기가 표시됩니다.</p>
-          ) : (
-            providers.map(p => (
-              <span class={`preview-btn ${p === 'kakao' ? 'kakao-btn' : ''}`} style={`background:${providerColors[p]}`}>
-                {providerDisplayNames[p]}로 시작
-              </span>
-            ))
-          )}
+        <h2>위젯 미리보기</h2>
+        <p style="font-size:13px; color:#64748b; margin-bottom:16px">쇼핑몰에 표시될 소셜 로그인 버튼의 실제 모습입니다.</p>
+        <div id="previewFrame" style="background:#f8fafc; border:2px solid #e5e7eb; border-radius:12px; padding:32px; min-height:200px; display:flex; align-items:center; justify-content:center;">
+          <div id="previewButtons" style="display:flex; flex-direction:column; align-items:center;"></div>
         </div>
-        <script dangerouslySetInnerHTML={{__html: `
-          // Live preview update
-          document.querySelectorAll('#providerForm input[name=providers]').forEach(cb => {
-            cb.addEventListener('change', () => {
-              const checked = [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(i => i.value);
-              const colors = ${JSON.stringify(providerColors)};
-              const names = ${JSON.stringify(providerDisplayNames)};
-              const area = document.getElementById('previewArea');
-              if (checked.length === 0) {
-                area.textContent = '';
-                var msg = document.createElement('p');
-                msg.style.color = '#94a3b8';
-                msg.textContent = '프로바이더를 선택하면 미리보기가 표시됩니다.';
-                area.appendChild(msg);
+      </div>
+
+      {/* Widget design settings */}
+      <div class="card">
+        <h2>위젯 디자인</h2>
+
+        {/* Preset cards */}
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
+          <button class="preset-card" data-preset="default" type="button">
+            <div class="preset-preview">풀 버튼</div>
+            <span>기본</span>
+          </button>
+          <button class="preset-card" data-preset="compact" type="button">
+            <div class="preset-preview">좁은 버튼</div>
+            <span>컴팩트</span>
+          </button>
+          <button class="preset-card" data-preset="icon-text" type="button">
+            <div class="preset-preview">아이콘+텍스트</div>
+            <span>아이콘 포함</span>
+          </button>
+          <button class="preset-card" data-preset="icon-only" type="button">
+            <div class="preset-preview">아이콘만</div>
+            <span>아이콘</span>
+          </button>
+        </div>
+
+        {/* Detail sliders */}
+        <div style="display:grid; gap:16px">
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              버튼 너비 <span id="widthValue">{ws.buttonWidth}px</span>
+            </label>
+            <input type="range" id="btnWidth" min="120" max="400" value={String(ws.buttonWidth)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              버튼 간격 <span id="gapValue">{ws.buttonGap}px</span>
+            </label>
+            <input type="range" id="btnGap" min="0" max="24" value={String(ws.buttonGap)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
+              모서리 둥글기 <span id="radiusValue">{ws.borderRadius}px</span>
+            </label>
+            <input type="range" id="btnRadius" min="0" max="30" value={String(ws.borderRadius)} style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:4px">정렬</label>
+            <div style="display:flex; gap:8px; margin-top:4px">
+              <button class="align-btn" data-align="left" type="button">왼쪽</button>
+              <button class="align-btn" data-align="center" type="button">가운데</button>
+              <button class="align-btn" data-align="right" type="button">오른쪽</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var widgetStyle = ${JSON.stringify(ws)};
+
+          var providerColors = ${JSON.stringify(providerColors)};
+          var providerNames = ${JSON.stringify(Object.fromEntries(Object.entries(providerDisplayNames).map(([k, v]) => [k, v])))};
+          var providerTextColors = { kakao:'#191919', naver:'#fff', google:'#fff', apple:'#fff', discord:'#fff', facebook:'#fff', x:'#fff', line:'#fff', telegram:'#fff' };
+
+          var style = {
+            preset: widgetStyle.preset,
+            buttonWidth: widgetStyle.buttonWidth,
+            buttonGap: widgetStyle.buttonGap,
+            borderRadius: widgetStyle.borderRadius,
+            align: widgetStyle.align
+          };
+
+          function getEnabledProviders() {
+            return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
+          }
+
+          function renderPreview() {
+            var providers = getEnabledProviders();
+            var container = document.getElementById('previewButtons');
+            container.innerHTML = '';
+            var alignMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
+            container.style.alignItems = alignMap[style.align] || 'center';
+            container.style.gap = style.buttonGap + 'px';
+
+            providers.forEach(function(p) {
+              var btn = document.createElement('div');
+              var color = providerColors[p] || '#999';
+              var textColor = providerTextColors[p] || '#fff';
+              var name = providerNames[p] || p;
+
+              if (style.preset === 'icon-only') {
+                btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:default;flex-shrink:0';
+                btn.textContent = name.charAt(0);
               } else {
-                area.textContent = '';
-                checked.forEach(function(p) {
-                  var span = document.createElement('span');
-                  span.className = 'preview-btn' + (p === 'kakao' ? ' kakao-btn' : '');
-                  span.style.background = colors[p] || '#999';
-                  span.textContent = (names[p] || p) + '로 시작';
-                  area.appendChild(span);
-                });
+                var w = style.preset === 'compact' ? Math.min(style.buttonWidth, 200) : style.buttonWidth;
+                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box';
+                if (style.preset === 'icon-text') {
+                  btn.style.textAlign = 'left';
+                  btn.style.display = 'flex';
+                  btn.style.alignItems = 'center';
+                  btn.style.gap = '8px';
+                  var iconSpan = document.createElement('span');
+                  iconSpan.style.cssText = 'font-weight:700;flex-shrink:0';
+                  iconSpan.textContent = name.charAt(0);
+                  var textSpan = document.createElement('span');
+                  textSpan.textContent = name;
+                  btn.appendChild(iconSpan);
+                  btn.appendChild(textSpan);
+                } else {
+                  btn.style.textAlign = 'center';
+                  var text = style.preset === 'compact' ? name + ' 로그인' : name + '로 시작하기';
+                  btn.textContent = text;
+                }
               }
+              container.appendChild(btn);
+            });
+
+            if (providers.length === 0) {
+              var msg = document.createElement('p');
+              msg.style.color = '#94a3b8';
+              msg.textContent = '프로바이더를 선택하면 미리보기가 표시됩니다.';
+              container.appendChild(msg);
+            }
+          }
+
+          // Preset card click
+          document.querySelectorAll('.preset-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+              document.querySelectorAll('.preset-card').forEach(function(c) { c.classList.remove('active'); });
+              this.classList.add('active');
+              style.preset = this.dataset.preset;
+              document.getElementById('btnWidth').disabled = style.preset === 'icon-only';
+              renderPreview();
+              saveStyle();
             });
           });
-        `}} />
-      </div>
+
+          // Slider input
+          ['btnWidth', 'btnGap', 'btnRadius'].forEach(function(id) {
+            var el = document.getElementById(id);
+            el.addEventListener('input', function() {
+              if (id === 'btnWidth') { style.buttonWidth = parseInt(this.value); document.getElementById('widthValue').textContent = this.value + 'px'; }
+              if (id === 'btnGap') { style.buttonGap = parseInt(this.value); document.getElementById('gapValue').textContent = this.value + 'px'; }
+              if (id === 'btnRadius') { style.borderRadius = parseInt(this.value); document.getElementById('radiusValue').textContent = this.value + 'px'; }
+              renderPreview();
+            });
+            el.addEventListener('change', function() { saveStyle(); });
+          });
+
+          // Align buttons
+          document.querySelectorAll('.align-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              document.querySelectorAll('.align-btn').forEach(function(b) { b.classList.remove('active'); });
+              this.classList.add('active');
+              style.align = this.dataset.align;
+              renderPreview();
+              saveStyle();
+            });
+          });
+
+          // Provider toggle -> re-render preview
+          document.querySelectorAll('#providerForm input[name=providers]').forEach(function(cb) {
+            cb.addEventListener('change', function() { setTimeout(renderPreview, 100); });
+          });
+
+          async function saveStyle() {
+            var shopId = document.getElementById('providerForm').dataset.shopId;
+            await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style);
+          }
+
+          // Initial state
+          renderPreview();
+
+          // Activate preset card
+          var activePreset = document.querySelector('.preset-card[data-preset="' + style.preset + '"]');
+          if (activePreset) activePreset.classList.add('active');
+
+          // Activate align button
+          var activeAlign = document.querySelector('.align-btn[data-align="' + style.align + '"]');
+          if (activeAlign) activeAlign.classList.add('active');
+
+          // Disable width slider for icon-only
+          if (style.preset === 'icon-only') {
+            document.getElementById('btnWidth').disabled = true;
+          }
+        })();
+      `}} />
     </Layout>
   );
 };

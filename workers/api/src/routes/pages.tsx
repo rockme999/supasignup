@@ -505,19 +505,25 @@ pages.get('/dashboard/shops/:id/providers', async (c) => {
 
   const shop = await c.env.DB
     .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at
+      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at, widget_style
        FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
     )
     .bind(shopId, ownerId)
-    .first<ShopRow>();
+    .first<ShopRow & { widget_style: string | null }>();
 
   if (!shop) return c.redirect('/dashboard/shops');
+
+  let widgetStyle: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string } | undefined;
+  if (shop.widget_style) {
+    try { widgetStyle = JSON.parse(shop.widget_style); } catch { /* use default */ }
+  }
 
   return c.html(
     <ProvidersPage
       shop={shop}
       baseUrl={c.env.BASE_URL}
       isCafe24={c.get('isCafe24')}
+      widgetStyle={widgetStyle}
     />
   );
 });

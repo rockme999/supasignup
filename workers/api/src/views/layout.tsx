@@ -222,6 +222,21 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .preview-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; border: none; cursor: default; }
         .preview-btn.kakao-btn { color: #191919; }
 
+        /* Widget customization */
+        .preset-card { border:2px solid #e5e7eb; border-radius:8px; padding:12px 8px; text-align:center; cursor:pointer; background:#fff; transition:all 0.2s; font-size:12px; }
+        .preset-card:hover { border-color:#93c5fd; }
+        .preset-card.active { border-color:#2563eb; background:#eff6ff; }
+        .preset-card .preset-preview { font-size:11px; color:#64748b; margin-bottom:4px; }
+        .align-btn { padding:6px 16px; border:1px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:13px; transition:all 0.2s; }
+        .align-btn:hover { border-color:#93c5fd; }
+        .align-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+        input[type=range] { -webkit-appearance:none; height:6px; background:#e5e7eb; border-radius:3px; outline:none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#2563eb; cursor:pointer; }
+        input[type=range]:disabled { opacity:0.4; cursor:not-allowed; }
+        @media (max-width: 600px) {
+          .preset-grid-2x2 { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
         /* Mobile hamburger menu */
         .mobile-header { display: none; align-items: center; justify-content: space-between; padding: 12px 16px; background: #1e293b; color: #e2e8f0; }
         .mobile-logo { font-size: 16px; font-weight: 700; }

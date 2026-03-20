@@ -84,6 +84,7 @@ const TEST_SHOP: Shop = {
   allowed_redirect_uris: '["https://testmall.cafe24api.com/api/v2/oauth/callback"]',
   plan: 'free',
   sso_configured: 1,
+  widget_style: null,
   deleted_at: null,
   created_at: '2026-03-12',
   updated_at: '2026-03-12',

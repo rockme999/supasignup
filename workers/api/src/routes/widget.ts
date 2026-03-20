@@ -6,7 +6,8 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, ProviderName } from '@supasignup/bg-core';
+import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
+import { DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
 import { getShopByClientId, isOverFreeLimit } from '../db/queries';
 
 const WIDGET_CONFIG_TTL = 300; // 5 minutes KV cache
@@ -45,11 +46,17 @@ widget.get('/config', async (c) => {
     ? `https://${shop.mall_id}.cafe24.com/Api/Member/OAuth2ClientCallback/sso/`
     : undefined;
 
+  // Parse widget style (fall back to defaults)
+  const style: WidgetStyle = shop.widget_style
+    ? JSON.parse(shop.widget_style)
+    : { ...DEFAULT_WIDGET_STYLE };
+
   const config = {
     client_id: shop.client_id,
     providers,
     base_url: c.env.BASE_URL,
     sso_callback_uri: ssoCallbackUri,
+    style,
   };
 
   // Cache in KV

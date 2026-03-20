@@ -16,8 +16,8 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, ProviderName } from '@supasignup/bg-core';
-import { generateId } from '@supasignup/bg-core';
+import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
+import { generateId, DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
 import { hashPassword, verifyPassword } from '../services/password';
 import { createToken } from '../services/jwt';
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth';
@@ -257,6 +257,64 @@ dashboard.put('/shops/:id/providers', async (c) => {
   await c.env.KV.delete(`widget_config:${shop.client_id}`);
 
   return c.json({ ok: true, providers });
+});
+
+// ─── PUT /shops/:id/widget-style ─────────────────────────────
+dashboard.put('/shops/:id/widget-style', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  const body = await c.req.json<Partial<WidgetStyle>>();
+
+  // Validate preset
+  const VALID_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only'];
+  if (body.preset !== undefined && !VALID_PRESETS.includes(body.preset)) {
+    return c.json({ error: 'invalid_preset', message: `preset must be one of: ${VALID_PRESETS.join(', ')}` }, 400);
+  }
+
+  // Validate align
+  const VALID_ALIGNS: WidgetStyle['align'][] = ['left', 'center', 'right'];
+  if (body.align !== undefined && !VALID_ALIGNS.includes(body.align)) {
+    return c.json({ error: 'invalid_align', message: `align must be one of: ${VALID_ALIGNS.join(', ')}` }, 400);
+  }
+
+  // Validate numeric ranges
+  if (body.buttonWidth !== undefined && (body.buttonWidth < 120 || body.buttonWidth > 400)) {
+    return c.json({ error: 'invalid_buttonWidth', message: 'buttonWidth must be between 120 and 400' }, 400);
+  }
+  if (body.buttonGap !== undefined && (body.buttonGap < 0 || body.buttonGap > 24)) {
+    return c.json({ error: 'invalid_buttonGap', message: 'buttonGap must be between 0 and 24' }, 400);
+  }
+  if (body.borderRadius !== undefined && (body.borderRadius < 0 || body.borderRadius > 30)) {
+    return c.json({ error: 'invalid_borderRadius', message: 'borderRadius must be between 0 and 30' }, 400);
+  }
+
+  // Merge with current style (or defaults)
+  const currentStyle: WidgetStyle = shop.widget_style
+    ? JSON.parse(shop.widget_style)
+    : { ...DEFAULT_WIDGET_STYLE };
+
+  const newStyle: WidgetStyle = {
+    preset: body.preset ?? currentStyle.preset,
+    buttonWidth: body.buttonWidth ?? currentStyle.buttonWidth,
+    buttonGap: body.buttonGap ?? currentStyle.buttonGap,
+    borderRadius: body.borderRadius ?? currentStyle.borderRadius,
+    align: body.align ?? currentStyle.align,
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    widget_style: JSON.stringify(newStyle),
+  });
+
+  // Invalidate widget config cache
+  await c.env.KV.delete(`widget_config:${shop.client_id}`);
+
+  return c.json({ ok: true, style: newStyle });
 });
 
 // ─── GET /shops/:id/setup ────────────────────────────────────

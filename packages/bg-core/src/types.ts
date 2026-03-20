@@ -14,6 +14,7 @@ export interface Shop {
   allowed_redirect_uris: string | null; // JSON array string
   plan: 'free' | 'monthly' | 'yearly';
   sso_configured: number; // 0 or 1
+  widget_style: string | null; // JSON string
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -137,6 +138,22 @@ export interface WidgetConfig {
   providers: ProviderName[];
   theme: string;
 }
+
+export interface WidgetStyle {
+  preset: 'default' | 'compact' | 'icon-text' | 'icon-only';
+  buttonWidth: number;
+  buttonGap: number;
+  borderRadius: number;
+  align: 'left' | 'center' | 'right';
+}
+
+export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
+  preset: 'default',
+  buttonWidth: 280,
+  buttonGap: 8,
+  borderRadius: 10,
+  align: 'center',
+};
 
 // Env binding types for Workers
 export interface Env {
