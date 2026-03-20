@@ -182,9 +182,9 @@ describe('GET /widget/buttons.js', () => {
     const dynamicInnerHTML = WIDGET_JS.match(/\.innerHTML\s*=\s*[^'"`]/g);
     // The only innerHTML usage should be for hardcoded SVG icons
     expect(WIDGET_JS).toContain('.innerHTML = info.icon');
-    // No other innerHTML usage
+    // innerHTML usage should only be for hardcoded SVG icons (icon insertion + mono icon recolor)
     const allInnerHTML = WIDGET_JS.match(/\.innerHTML/g) || [];
-    expect(allInnerHTML.length).toBe(1);
+    expect(allInnerHTML.length).toBeLessThanOrEqual(2);
   });
 
   it('contains all 4 provider definitions', () => {
