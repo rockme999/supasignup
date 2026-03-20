@@ -1273,11 +1273,14 @@ export const ProvidersPage: FC<{
                 textColor = '#333333';
               }
 
+              var isMono = style.preset === 'mono';
+
               if (style.preset === 'icon-only') {
-                var iconBorder = style.preset === 'mono' ? ';border:1px solid #d1d5db' : '';
+                var iconBorder = isMono ? ';border:1px solid #d1d5db' : '';
                 btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:default;flex-shrink:0' + iconBorder;
                 if (style.showIcon && providerIcons[p]) {
                   btn.innerHTML = providerIcons[p];
+                  if (isMono && p !== 'google') { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
                 } else {
                   btn.textContent = name.charAt(0);
                 }
@@ -1289,6 +1292,7 @@ export const ProvidersPage: FC<{
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
                   iconWrap.innerHTML = providerIcons[p];
+                  if (isMono && p !== 'google') { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
                   btn.appendChild(iconWrap);
                 }
                 var textSpan = document.createElement('span');
