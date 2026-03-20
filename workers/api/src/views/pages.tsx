@@ -1368,7 +1368,7 @@ export const ProvidersPage: FC<{
                 btn.style.cssText = 'width:44px;height:44px;border-radius:' + Math.min(style.borderRadius, 22) + 'px;background:' + color + ';display:flex;align-items:center;justify-content:center;color:' + textColor + ';font-weight:700;font-size:16px;cursor:default;flex-shrink:0' + iconBorder;
                 if (style.showIcon && providerIcons[p]) {
                   btn.innerHTML = providerIcons[p];
-                  if (isMono && p !== 'google') { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
+                  if (isMono) { btn.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
                 } else {
                   btn.textContent = name.charAt(0);
                 }
@@ -1380,7 +1380,7 @@ export const ProvidersPage: FC<{
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
                   iconWrap.innerHTML = providerIcons[p];
-                  if (isMono && p !== 'google') { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
+                  if (isMono) { iconWrap.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#333'); }); }
                   btn.appendChild(iconWrap);
                 }
                 var textSpan = document.createElement('span');
