@@ -1043,7 +1043,7 @@ export const ProvidersPage: FC<{
         <h2 style="font-size:15px">프로바이더</h2>
         <form id="providerForm" data-shop-id={shop.shop_id}>
           {allProviders.map((p) => (
-            <div class="provider-toggle">
+            <div class="provider-toggle" data-provider={p}>
               <label class="toggle">
                 <input type="checkbox" name="providers" value={p} checked={providers.includes(p)} />
                 <span class="toggle-slider"></span>
@@ -1052,6 +1052,10 @@ export const ProvidersPage: FC<{
                 <span style={`display:inline-block;width:12px;height:12px;border-radius:50%;background:${providerColors[p]}`}></span>
                 {providerDisplayNames[p]}
               </span>
+              <div style="margin-left:auto; display:flex; gap:2px">
+                <button class="order-btn" data-provider={p} data-dir="up" type="button">▲</button>
+                <button class="order-btn" data-provider={p} data-dir="down" type="button">▼</button>
+              </div>
             </div>
           ))}
 
@@ -1071,21 +1075,95 @@ export const ProvidersPage: FC<{
           ))}
         </form>
         <script dangerouslySetInnerHTML={{__html: `
-          document.querySelectorAll('#providerForm input[name=providers]').forEach(function(cb) {
-            cb.addEventListener('change', async function() {
-              var form = document.getElementById('providerForm');
-              var checked = [...form.querySelectorAll('input[name=providers]:checked')].map(function(i) { return i.value; });
-              if (checked.length === 0) {
-                cb.checked = true;
-                showToast('warn', '최소 1개의 프로바이더를 활성화해야 합니다.');
+          (function() {
+            var form = document.getElementById('providerForm');
+
+            // 현재 활성 프로바이더 순서를 DOM에서 읽어 반환
+            function getOrderedActiveProviders() {
+              return [...form.querySelectorAll('.provider-toggle')].filter(function(row) {
+                var cb = row.querySelector('input[name=providers]');
+                return cb && cb.checked;
+              }).map(function(row) { return row.dataset.provider; });
+            }
+
+            // 순서 버튼 활성화 상태 업데이트
+            function updateOrderButtons() {
+              var activeRows = [...form.querySelectorAll('.provider-toggle')].filter(function(row) {
+                var cb = row.querySelector('input[name=providers]');
+                return cb && cb.checked;
+              });
+              form.querySelectorAll('.order-btn').forEach(function(btn) {
+                btn.disabled = true;
+              });
+              activeRows.forEach(function(row, idx) {
+                var upBtn = row.querySelector('.order-btn[data-dir="up"]');
+                var downBtn = row.querySelector('.order-btn[data-dir="down"]');
+                if (upBtn) upBtn.disabled = idx === 0;
+                if (downBtn) downBtn.disabled = idx === activeRows.length - 1;
+              });
+            }
+
+            // 프로바이더 저장 (순서 포함)
+            async function saveProviders() {
+              var ordered = getOrderedActiveProviders();
+              var shopId = form.dataset.shopId;
+              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: ordered });
+              if (resp.ok) { showToast('success', '저장되었습니다.'); }
+              else { var data = await resp.json(); showToast('error', data.error || '저장 실패'); }
+              return resp.ok;
+            }
+
+            // 토글 change 핸들러
+            form.querySelectorAll('input[name=providers]').forEach(function(cb) {
+              cb.addEventListener('change', async function() {
+                var checked = getOrderedActiveProviders();
+                if (checked.length === 0) {
+                  cb.checked = true;
+                  showToast('warn', '최소 1개의 프로바이더를 활성화해야 합니다.');
+                  updateOrderButtons();
+                  return;
+                }
+                var ok = await saveProviders();
+                if (!ok) { cb.checked = !cb.checked; }
+                updateOrderButtons();
+                if (window.renderProviderPreview) { setTimeout(window.renderProviderPreview, 50); }
+              });
+            });
+
+            // ▲/▼ 버튼 클릭 핸들러
+            form.addEventListener('click', async function(e) {
+              var btn = e.target.closest('.order-btn');
+              if (!btn) return;
+              var dir = btn.dataset.dir;
+              var providerName = btn.dataset.provider;
+
+              var allRows = [...form.querySelectorAll('.provider-toggle')];
+              var activeRows = allRows.filter(function(row) {
+                var cb = row.querySelector('input[name=providers]');
+                return cb && cb.checked;
+              });
+              var currentRow = form.querySelector('.provider-toggle[data-provider="' + providerName + '"]');
+              var idx = activeRows.indexOf(currentRow);
+              if (idx === -1) return;
+
+              if (dir === 'up' && idx > 0) {
+                var prevRow = activeRows[idx - 1];
+                prevRow.parentNode.insertBefore(currentRow, prevRow);
+              } else if (dir === 'down' && idx < activeRows.length - 1) {
+                var nextRow = activeRows[idx + 1];
+                nextRow.parentNode.insertBefore(nextRow, currentRow);
+              } else {
                 return;
               }
-              var shopId = form.dataset.shopId;
-              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: checked });
-              if (resp.ok) { showToast('success', '저장되었습니다.'); }
-              else { var data = await resp.json(); showToast('error', data.error || '저장 실패'); cb.checked = !cb.checked; }
+
+              updateOrderButtons();
+              if (window.renderProviderPreview) { window.renderProviderPreview(); }
+              await saveProviders();
             });
-          });
+
+            // 초기 버튼 상태 설정
+            updateOrderButtons();
+          })();
         `}} />
       </div>
 
@@ -1165,7 +1243,7 @@ export const ProvidersPage: FC<{
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
               아이콘-텍스트 간격 <span id="iconGapValue">{ws.showIcon !== false ? (ws as any).iconGap ?? 8 : 8}px</span>
             </label>
-            <input type="range" id="btnIconGap" min="0" max="20" value={String((ws as any).iconGap ?? 8)} style="width:100%" />
+            <input type="range" id="btnIconGap" min="0" max="100" value={String((ws as any).iconGap ?? 8)} style="width:100%" />
           </div>
           <div>
             <div class="provider-toggle" style="border:none; padding:0">
@@ -1253,13 +1331,14 @@ export const ProvidersPage: FC<{
             return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
           }
 
-          function renderPreview() {
+          window.renderProviderPreview = function renderPreview() {
             var providers = getEnabledProviders();
             var container = document.getElementById('previewButtons');
             container.innerHTML = '';
-            var alignMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
-            container.style.alignItems = alignMap[style.align] || 'center';
+            var justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
+            container.style.alignItems = 'center';
             container.style.gap = style.buttonGap + 'px';
+            var justifyContent = justifyMap[style.align] || 'center';
 
             providers.forEach(function(p) {
               var btn = document.createElement('div');
@@ -1287,7 +1366,7 @@ export const ProvidersPage: FC<{
               } else {
                 var w = style.preset === 'compact' ? Math.min(style.buttonWidth, 200) : style.buttonWidth;
                 var border = style.preset === 'mono' ? ';border:1px solid #d1d5db' : '';
-                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px' + border;
+                btn.style.cssText = 'width:' + w + 'px;padding:12px 16px;border-radius:' + style.borderRadius + 'px;background:' + color + ';color:' + textColor + ';font-weight:600;font-size:14px;cursor:default;box-sizing:border-box;display:flex;align-items:center;gap:' + style.iconGap + 'px;justify-content:' + justifyContent + border;
                 if (style.showIcon && providerIcons[p]) {
                   var iconWrap = document.createElement('span');
                   iconWrap.style.cssText = 'flex-shrink:0;display:flex;align-items:center';

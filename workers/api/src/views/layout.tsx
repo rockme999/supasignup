@@ -233,6 +233,9 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         input[type=range] { -webkit-appearance:none; height:6px; background:#e5e7eb; border-radius:3px; outline:none; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#2563eb; cursor:pointer; }
         input[type=range]:disabled { opacity:0.4; cursor:not-allowed; }
+        .order-btn { background:none; border:1px solid #d1d5db; border-radius:4px; width:24px; height:24px; cursor:pointer; font-size:11px; color:#64748b; display:flex; align-items:center; justify-content:center; transition:all 0.15s; padding:0; }
+        .order-btn:hover:not(:disabled) { background:#f1f5f9; border-color:#93c5fd; color:#2563eb; }
+        .order-btn:disabled { opacity:0.3; cursor:not-allowed; }
         @media (max-width: 600px) {
           .preset-grid-2x2 { grid-template-columns: repeat(2, 1fr) !important; }
         }
