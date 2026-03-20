@@ -658,7 +658,12 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
 
   return (
     <Layout title="통합 통계" loggedIn currentPath="/dashboard/stats">
-      <h1>통합 통계</h1>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <h1 style="margin-bottom:0">통합 통계</h1>
+        <div style="margin-left:auto">
+          <a href="/api/dashboard/stats/export" class="btn btn-outline btn-sm" download>CSV 내보내기</a>
+        </div>
+      </div>
 
       <div class="filter-bar">
         <select id="shopFilter" onchange="applyFilters()">
@@ -1276,6 +1281,10 @@ export const AdminHomePage: FC<{
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
       <h1 style="margin-bottom:0">관리자 대시보드</h1>
       <span class="badge badge-red" style="font-size:13px">ADMIN</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <a href="/api/admin/export/shops" class="btn btn-outline btn-sm" download>쇼핑몰 CSV</a>
+        <a href="/api/admin/export/stats" class="btn btn-outline btn-sm" download>통계 CSV</a>
+      </div>
     </div>
 
     <div class="stat-grid">
@@ -1374,7 +1383,12 @@ export const AdminShopsPage: FC<{
   search: string;
 }> = ({ shops, pagination, search }) => (
   <Layout title="전체 쇼핑몰" loggedIn isAdmin currentPath="/admin/shops">
-    <h1>전체 쇼핑몰 관리</h1>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h1 style="margin-bottom:0">전체 쇼핑몰 관리</h1>
+      <div style="margin-left:auto">
+        <a href="/api/admin/export/shops" class="btn btn-outline btn-sm" download>CSV 내보내기</a>
+      </div>
+    </div>
 
     <div class="filter-bar" style="margin-bottom:16px">
       <form id="searchForm" style="display:flex;gap:8px;flex:1">
@@ -1574,6 +1588,7 @@ export const AdminSubscriptionsPage: FC<{
                 <th>상태</th>
                 <th>시작일</th>
                 <th>만료일</th>
+                <th>액션</th>
               </tr>
             </thead>
             <tbody>
@@ -1581,8 +1596,9 @@ export const AdminSubscriptionsPage: FC<{
                 let statusBadge: string;
                 let badgeClass: string;
                 if (sub.status === 'active') { statusBadge = '활성'; badgeClass = 'badge-green'; }
-                else if (sub.status === 'expired') { statusBadge = '만료'; badgeClass = 'badge-gray'; }
-                else if (sub.status === 'cancelled') { statusBadge = '취소'; badgeClass = 'badge-red'; }
+                else if (sub.status === 'pending') { statusBadge = '대기중'; badgeClass = 'badge-yellow'; }
+                else if (sub.status === 'cancelled') { statusBadge = '취소'; badgeClass = 'badge-gray'; }
+                else if (sub.status === 'expired') { statusBadge = '만료'; badgeClass = 'badge-red'; }
                 else { statusBadge = sub.status; badgeClass = 'badge-gray'; }
 
                 return (
@@ -1598,6 +1614,17 @@ export const AdminSubscriptionsPage: FC<{
                     <td><span class={`badge ${badgeClass}`}>{statusBadge}</span></td>
                     <td style="font-size:12px;color:#64748b">{sub.started_at ? sub.started_at.slice(0, 10) : '-'}</td>
                     <td style="font-size:12px;color:#64748b">{sub.expires_at ? sub.expires_at.slice(0, 10) : '-'}</td>
+                    <td>
+                      {sub.status === 'active' && (
+                        <button
+                          class="btn btn-danger btn-sm sub-cancel-btn"
+                          data-subscription-id={sub.subscription_id}
+                          style="font-size:11px;padding:4px 8px"
+                        >
+                          취소
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -1606,6 +1633,23 @@ export const AdminSubscriptionsPage: FC<{
         </div>
       )}
     </div>
+
+    <script>{`
+      document.querySelectorAll('.sub-cancel-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var subId = this.dataset.subscriptionId;
+          if (!confirm('이 구독을 취소하시겠습니까? 해당 쇼핑몰에 다른 활성 구독이 없으면 플랜이 무료로 다운그레이드됩니다.')) return;
+          var resp = await apiCall('PUT', '/api/admin/subscriptions/' + subId + '/cancel', {}, this);
+          if (resp.ok) {
+            showToast('success', '구독이 취소되었습니다.');
+            setTimeout(function() { location.reload(); }, 800);
+          } else {
+            var data = await resp.json();
+            showToast('error', data.error || '구독 취소 중 오류가 발생했습니다.');
+          }
+        });
+      });
+    `}</script>
   </Layout>
 );
 
@@ -1615,59 +1659,102 @@ export const AdminAuditLogPage: FC<{
   logs: AdminAuditLogEntry[];
   page: number;
   limit: number;
-}> = ({ logs, page, limit }) => (
-  <Layout title="감사 로그" loggedIn isAdmin currentPath="/admin/audit-log">
-    <h1>감사 로그</h1>
+  currentAction?: string;
+  currentFrom?: string;
+  currentTo?: string;
+}> = ({ logs, page, limit, currentAction, currentFrom, currentTo }) => {
+  // Build base query string for pagination links (preserve filters)
+  const filterParams = [
+    currentAction ? `action=${encodeURIComponent(currentAction)}` : '',
+    currentFrom ? `from=${encodeURIComponent(currentFrom)}` : '',
+    currentTo ? `to=${encodeURIComponent(currentTo)}` : '',
+  ].filter(Boolean).join('&');
+  const filterSuffix = filterParams ? `&${filterParams}` : '';
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <span style="font-size:13px;color:#64748b">{(page - 1) * limit + 1}–{(page - 1) * limit + logs.length}번째 항목</span>
-        <span style="font-size:13px;color:#64748b">페이지 {page}</span>
+  return (
+    <Layout title="감사 로그" loggedIn isAdmin currentPath="/admin/audit-log">
+      <h1>감사 로그</h1>
+
+      <div class="filter-bar">
+        <select id="actionFilter" onchange="applyAuditFilters()">
+          <option value="" selected={!currentAction}>전체 액션</option>
+          <option value="change_plan" selected={currentAction === 'change_plan'}>플랜 변경</option>
+          <option value="suspend" selected={currentAction === 'suspend'}>정지</option>
+          <option value="activate" selected={currentAction === 'activate'}>활성화</option>
+          <option value="suspend_owner" selected={currentAction === 'suspend_owner'}>사용자 정지</option>
+          <option value="activate_owner" selected={currentAction === 'activate_owner'}>사용자 활성화</option>
+        </select>
+        <input type="date" id="dateFrom" value={currentFrom || ''} onchange="applyAuditFilters()" />
+        <input type="date" id="dateTo" value={currentTo || ''} onchange="applyAuditFilters()" />
+        {(currentAction || currentFrom || currentTo) && (
+          <a href="/admin/audit-log" class="btn btn-outline btn-sm">초기화</a>
+        )}
       </div>
 
-      {logs.length === 0 ? (
-        <div class="empty-state"><p>감사 로그가 없습니다.</p></div>
-      ) : (
-        <div style="overflow-x:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>시간</th>
-                <th>관리자</th>
-                <th>액션</th>
-                <th>대상 유형</th>
-                <th>대상 ID</th>
-                <th>상세</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr>
-                  <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
-                  <td style="font-size:13px">{log.actor_email || <span style="color:#94a3b8">시스템</span>}</td>
-                  <td><span class="badge badge-gray">{log.action}</span></td>
-                  <td style="font-size:13px">{log.target_type}</td>
-                  <td style="font-size:12px;font-family:monospace;color:#64748b">{log.target_id ? log.target_id.slice(0, 12) + '…' : '-'}</td>
-                  <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-size:13px;color:#64748b">{(page - 1) * limit + 1}–{(page - 1) * limit + logs.length}번째 항목</span>
+          <span style="font-size:13px;color:#64748b">페이지 {page}</span>
         </div>
-      )}
 
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
-        {page > 1 && (
-          <a href={`/admin/audit-log?page=${page - 1}`} class="btn btn-outline btn-sm">이전</a>
+        {logs.length === 0 ? (
+          <div class="empty-state"><p>조건에 맞는 감사 로그가 없습니다.</p></div>
+        ) : (
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>시간</th>
+                  <th>관리자</th>
+                  <th>액션</th>
+                  <th>대상 유형</th>
+                  <th>대상 ID</th>
+                  <th>상세</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr>
+                    <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
+                    <td style="font-size:13px">{log.actor_email || <span style="color:#94a3b8">시스템</span>}</td>
+                    <td><span class="badge badge-gray">{log.action}</span></td>
+                    <td style="font-size:13px">{log.target_type}</td>
+                    <td style="font-size:12px;font-family:monospace;color:#64748b">{log.target_id ? log.target_id.slice(0, 12) + '…' : '-'}</td>
+                    <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-        <span style="padding:6px 12px;font-size:13px;color:#64748b">페이지 {page}</span>
-        {logs.length === limit && (
-          <a href={`/admin/audit-log?page=${page + 1}`} class="btn btn-outline btn-sm">다음</a>
-        )}
+
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+          {page > 1 && (
+            <a href={`/admin/audit-log?page=${page - 1}${filterSuffix}`} class="btn btn-outline btn-sm">이전</a>
+          )}
+          <span style="padding:6px 12px;font-size:13px;color:#64748b">페이지 {page}</span>
+          {logs.length === limit && (
+            <a href={`/admin/audit-log?page=${page + 1}${filterSuffix}`} class="btn btn-outline btn-sm">다음</a>
+          )}
+        </div>
       </div>
-    </div>
-  </Layout>
-);
+
+      <script>{`
+        function applyAuditFilters() {
+          var action = document.getElementById('actionFilter').value;
+          var from = document.getElementById('dateFrom').value;
+          var to = document.getElementById('dateTo').value;
+          var params = [];
+          if (action) params.push('action=' + encodeURIComponent(action));
+          if (from) params.push('from=' + encodeURIComponent(from));
+          if (to) params.push('to=' + encodeURIComponent(to));
+          var qs = params.length ? '?' + params.join('&') : '';
+          window.location.href = '/admin/audit-log' + qs;
+        }
+      `}</script>
+    </Layout>
+  );
+};
 
 // --- Admin Owners ---
 

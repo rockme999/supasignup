@@ -171,6 +171,44 @@ stats.get('/stats/daily', async (c) => {
   });
 });
 
+// ─── GET /stats/export — 내 쇼핑몰 통계 CSV ─────────────────
+stats.get('/stats/export', async (c) => {
+  const ownerId = c.get('ownerId');
+
+  const result = await c.env.DB.prepare(
+    `SELECT DATE(ls.created_at) as date, s.shop_name, ls.provider, ls.action, COUNT(*) as cnt
+     FROM login_stats ls
+     JOIN shops s ON ls.shop_id = s.shop_id
+     WHERE s.owner_id = ? AND s.deleted_at IS NULL
+     GROUP BY DATE(ls.created_at), ls.shop_id, ls.provider, ls.action
+     ORDER BY DATE(ls.created_at) DESC, s.shop_name`,
+  )
+    .bind(ownerId)
+    .all<{
+      date: string;
+      shop_name: string | null;
+      provider: string;
+      action: string;
+      cnt: number;
+    }>();
+
+  const header = '날짜,쇼핑몰명,프로바이더,액션,건수\n';
+  const rows = (result.results ?? []).map((r) =>
+    `"${r.date}","${(r.shop_name || '').replace(/"/g, '""')}","${r.provider}","${r.action}","${r.cnt}"`,
+  ).join('\n');
+
+  const bom = '\uFEFF';
+  const csv = bom + header + rows;
+  const today = new Date().toISOString().slice(0, 10);
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="my_stats_${today}.csv"`,
+    },
+  });
+});
+
 // ─── GET /stats/:shop_id ────────────────────────────────────
 stats.get('/stats/:shop_id', async (c) => {
   const ownerId = c.get('ownerId');

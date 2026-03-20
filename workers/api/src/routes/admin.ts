@@ -317,6 +317,129 @@ admin.get('/subscriptions', async (c) => {
   return c.json({ subscriptions: result.results ?? [] });
 });
 
+// ─── PUT /subscriptions/:id/cancel — 구독 취소 ──────────────
+admin.put('/subscriptions/:id/cancel', async (c) => {
+  const subscriptionId = c.req.param('id');
+
+  // 구독 존재 여부 및 현재 상태 확인
+  const sub = await c.env.DB.prepare(
+    'SELECT id, shop_id, owner_id, status FROM subscriptions WHERE id = ?',
+  )
+    .bind(subscriptionId)
+    .first<{ id: string; shop_id: string; owner_id: string; status: string }>();
+
+  if (!sub) return c.json({ error: 'not_found' }, 404);
+  if (sub.status === 'cancelled') return c.json({ error: 'already_cancelled' }, 400);
+
+  // 구독 상태를 cancelled로 변경
+  await c.env.DB.prepare(
+    "UPDATE subscriptions SET status = 'cancelled', updated_at = datetime('now') WHERE id = ?",
+  )
+    .bind(subscriptionId)
+    .run();
+
+  // 해당 shop의 다른 active 구독이 없으면 plan을 'free'로 다운그레이드
+  const activeSubCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as cnt FROM subscriptions WHERE shop_id = ? AND status = 'active' AND id != ?",
+  )
+    .bind(sub.shop_id, subscriptionId)
+    .first<{ cnt: number }>();
+
+  if ((activeSubCount?.cnt ?? 0) === 0) {
+    await c.env.DB.prepare(
+      "UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?",
+    )
+      .bind(sub.shop_id)
+      .run();
+
+    // KV 캐시 무효화
+    const shop = await c.env.DB.prepare(
+      'SELECT client_id FROM shops WHERE shop_id = ?',
+    ).bind(sub.shop_id).first<{ client_id: string }>();
+    if (shop) await c.env.KV.delete(`widget_config:${shop.client_id}`);
+  }
+
+  // 감사 로그
+  await recordAuditLog(
+    c.env.DB,
+    c.get('ownerId'),
+    'cancel_subscription',
+    'subscription',
+    subscriptionId,
+    `shop_id:${sub.shop_id}`,
+  );
+
+  return c.json({ ok: true });
+});
+
+// ─── GET /export/shops — 쇼핑몰 목록 CSV ────────────────────
+admin.get('/export/shops', async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT s.shop_name, s.mall_id, s.platform, s.plan, o.email as owner_email,
+      CASE WHEN s.deleted_at IS NULL THEN 'active' ELSE 'suspended' END as status,
+      s.created_at
+     FROM shops s JOIN owners o ON s.owner_id = o.owner_id
+     ORDER BY s.created_at DESC`,
+  ).all<{
+    shop_name: string | null;
+    mall_id: string;
+    platform: string;
+    plan: string;
+    owner_email: string;
+    status: string;
+    created_at: string;
+  }>();
+
+  const header = '쇼핑몰명,Mall ID,플랫폼,플랜,소유자 이메일,상태,가입일\n';
+  const rows = (result.results ?? []).map((r) =>
+    `"${(r.shop_name || '').replace(/"/g, '""')}","${r.mall_id}","${r.platform}","${r.plan}","${r.owner_email}","${r.status}","${r.created_at}"`,
+  ).join('\n');
+
+  const bom = '\uFEFF';
+  const csv = bom + header + rows;
+  const today = new Date().toISOString().slice(0, 10);
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="shops_${today}.csv"`,
+    },
+  });
+});
+
+// ─── GET /export/stats — 통계 CSV ───────────────────────────
+admin.get('/export/stats', async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT DATE(ls.created_at) as date, s.shop_name, ls.provider, ls.action, COUNT(*) as cnt
+     FROM login_stats ls
+     JOIN shops s ON ls.shop_id = s.shop_id
+     GROUP BY DATE(ls.created_at), ls.shop_id, ls.provider, ls.action
+     ORDER BY DATE(ls.created_at) DESC, s.shop_name`,
+  ).all<{
+    date: string;
+    shop_name: string | null;
+    provider: string;
+    action: string;
+    cnt: number;
+  }>();
+
+  const header = '날짜,쇼핑몰명,프로바이더,액션,건수\n';
+  const rows = (result.results ?? []).map((r) =>
+    `"${r.date}","${(r.shop_name || '').replace(/"/g, '""')}","${r.provider}","${r.action}","${r.cnt}"`,
+  ).join('\n');
+
+  const bom = '\uFEFF';
+  const csv = bom + header + rows;
+  const today = new Date().toISOString().slice(0, 10);
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="stats_${today}.csv"`,
+    },
+  });
+});
+
 // ─── GET /audit-log — 감사 로그 ─────────────────────────────
 admin.get('/audit-log', async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);

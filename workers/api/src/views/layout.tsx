@@ -10,20 +10,76 @@ type LayoutProps = PropsWithChildren<{
   isAdmin?: boolean;
 }>;
 
+// SVG icon components (Heroicons outline style)
+const IconGrid = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+  </svg>
+);
+const IconStorefront = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4"/>
+  </svg>
+);
+const IconChartBar = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8" rx="1"/><rect x="14" y="6" width="3" height="12" rx="1"/>
+  </svg>
+);
+const IconCreditCard = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+  </svg>
+);
+const IconCog = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+);
+const IconKey = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+  </svg>
+);
+const IconBuilding = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+  </svg>
+);
+const IconUsers = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+const IconCurrencyDollar = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+  </svg>
+);
+const IconClipboard = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+    <rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14h6M9 18h6"/>
+  </svg>
+);
+
 const navItems = [
-  { path: '/dashboard', label: '홈', icon: '📊' },
-  { path: '/dashboard/shops', label: '쇼핑몰 관리', icon: '🏪' },
-  { path: '/dashboard/stats', label: '통합 통계', icon: '📈' },
-  { path: '/dashboard/billing', label: '플랜/과금', icon: '💳' },
-  { path: '/dashboard/settings', label: '계정 설정', icon: '⚙️' },
+  { path: '/dashboard', label: '홈', icon: <IconGrid /> },
+  { path: '/dashboard/shops', label: '쇼핑몰 관리', icon: <IconStorefront /> },
+  { path: '/dashboard/stats', label: '통합 통계', icon: <IconChartBar /> },
+  { path: '/dashboard/billing', label: '플랜/과금', icon: <IconCreditCard /> },
+  { path: '/dashboard/settings', label: '계정 설정', icon: <IconCog /> },
 ];
 
 const adminNavItems = [
-  { path: '/admin', label: '관리자 홈', icon: '🔑' },
-  { path: '/admin/shops', label: '전체 쇼핑몰', icon: '🏬' },
-  { path: '/admin/owners', label: '사용자 관리', icon: '👥' },
-  { path: '/admin/subscriptions', label: '구독 현황', icon: '💰' },
-  { path: '/admin/audit-log', label: '감사 로그', icon: '📋' },
+  { path: '/admin', label: '관리자 홈', icon: <IconKey /> },
+  { path: '/admin/shops', label: '전체 쇼핑몰', icon: <IconBuilding /> },
+  { path: '/admin/owners', label: '사용자 관리', icon: <IconUsers /> },
+  { path: '/admin/subscriptions', label: '구독 현황', icon: <IconCurrencyDollar /> },
+  { path: '/admin/audit-log', label: '감사 로그', icon: <IconClipboard /> },
 ];
 
 export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, children }) => (
@@ -122,8 +178,8 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
 
         /* Filter controls */
         .filter-bar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
-        .filter-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; }
-        .filter-bar select:focus { outline: none; border-color: #2563eb; }
+        .filter-bar select, .filter-bar input[type="date"] { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; }
+        .filter-bar select:focus, .filter-bar input[type="date"]:focus { outline: none; border-color: #2563eb; }
 
         /* Tab navigation */
         .tab-nav { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; gap: 0; }

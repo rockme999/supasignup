@@ -718,13 +718,39 @@ pages.get('/admin/audit-log', async (c) => {
   const limit = 50;
   const offset = (page - 1) * limit;
 
+  const actionFilter = c.req.query('action') || '';
+  const fromFilter = c.req.query('from') || '';
+  const toFilter = c.req.query('to') || '';
+
+  let where = '';
+  const params: (string | number)[] = [];
+
+  if (actionFilter) {
+    where += ' AND a.action = ?';
+    params.push(actionFilter);
+  }
+  if (fromFilter) {
+    where += ' AND a.created_at >= ?';
+    params.push(fromFilter);
+  }
+  if (toFilter) {
+    // to 날짜는 해당 일의 끝까지 포함하기 위해 다음 날 00:00 미만으로 처리
+    const toNext = new Date(toFilter);
+    toNext.setUTCDate(toNext.getUTCDate() + 1);
+    where += ' AND a.created_at < ?';
+    params.push(toNext.toISOString().slice(0, 10));
+  }
+
+  params.push(limit, offset);
+
   const result = await c.env.DB.prepare(
     `SELECT a.id, a.action, a.target_type, a.target_id, a.detail, a.created_at, o.email as actor_email
      FROM audit_logs a
      LEFT JOIN owners o ON a.actor_id = o.owner_id
+     WHERE 1=1${where}
      ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
   )
-    .bind(limit, offset)
+    .bind(...params)
     .all<{
       id: string; action: string; target_type: string; target_id: string | null;
       detail: string | null; created_at: string; actor_email: string | null;
@@ -735,6 +761,9 @@ pages.get('/admin/audit-log', async (c) => {
       logs={result.results ?? []}
       page={page}
       limit={limit}
+      currentAction={actionFilter || undefined}
+      currentFrom={fromFilter || undefined}
+      currentTo={toFilter || undefined}
     />
   );
 });
