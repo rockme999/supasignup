@@ -583,10 +583,20 @@ async function handleUserInfo(c: { env: Env; req: { header: (k: string) => strin
     user.birthday ? decrypt(user.birthday, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
   ]);
 
+  // 이메일이 없는 프로바이더(Telegram, X 등)는 대체 이메일 생성
+  // 카페24 SSO는 이메일 필수이므로 빈 값 전달 불가
+  let finalEmail = email;
+  if (!finalEmail) {
+    const shop = await getShopById(c.env.DB, tokenData.shop_id);
+    const shopHost = shop?.shop_url ? new URL(shop.shop_url).host : 'shop.local';
+    const nameSlug = (name ?? user.provider).replace(/\s+/g, '_');
+    finalEmail = `${nameSlug}@${shopHost}`;
+  }
+
   // Return in Cafe24 SSO standard format
   return c.json({
     id: user.user_id,
-    email: email ?? '',
+    email: finalEmail,
     name: name ?? '',
     phone: phone ?? '',
     birthday: birthday ?? '',

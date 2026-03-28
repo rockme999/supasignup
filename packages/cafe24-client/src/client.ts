@@ -561,18 +561,19 @@ export class Cafe24Client {
     mallId: string,
     accessToken: string,
     src: string,
-    displayLocation: string[] = [
-      "member_login",
-      "member_join",
-    ],
+    displayLocation?: string[],
   ): Promise<ScriptTag> {
+    const request: Record<string, unknown> = {
+      src,
+      display_location: (displayLocation && displayLocation.length > 0)
+        ? displayLocation
+        : ["all"],
+    };
     const result = await this.apiPost<{ scripttag: ScriptTag }>(
       mallId,
       accessToken,
       "/admin/scripttags",
-      {
-        request: { src, display_location: displayLocation },
-      },
+      { request },
     );
     return result.scripttag;
   }

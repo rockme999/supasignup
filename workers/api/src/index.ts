@@ -53,9 +53,29 @@ app.get('/health', (c) => {
 app.get('/widget/buttons.js', (c) => {
   return c.body(WIDGET_JS, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
-    'Cache-Control': 'public, max-age=300',
+    'Cache-Control': 'no-cache, no-store',
     'Access-Control-Allow-Origin': '*',
   });
+});
+
+// ── 소셜 연동 완료 페이지 (팝업에서 표시) ──────────────────
+app.get('/link/complete', (c) => {
+  return c.html(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>연동 완료</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8fafc}
+  .done{text-align:center;padding:40px}
+  .icon{font-size:48px;margin-bottom:16px}
+  h2{color:#333;margin-bottom:8px}
+  p{color:#666;font-size:14px}
+</style></head>
+<body><div class="done">
+  <div class="icon">\\u2705</div>
+  <h2>소셜 계정 연동 완료</h2>
+  <p>이 창은 자동으로 닫힙니다.</p>
+</div>
+<script>setTimeout(function(){window.close()},1500)</script>
+</body></html>`);
 });
 
 // ── Mount routes ─────────────────────────────────────────────

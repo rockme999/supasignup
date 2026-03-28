@@ -15,6 +15,34 @@ import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
 import { encrypt } from '@supasignup/bg-core';
 
+/**
+ * 쇼핑몰의 allowed_redirect_uris 목록을 생성.
+ * 기본 cafe24 도메인 + 커스텀 도메인(있으면)의 SSO 콜백 URI 포함.
+ */
+function buildAllowedRedirectUris(mallId: string, shopDomain?: string, baseUrl?: string): string[] {
+  const uris = [
+    `https://${mallId}.cafe24api.com/api/v2/oauth/callback`,
+    `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso/`,
+  ];
+
+  // 소셜 연동 완료 페이지 (마이페이지 팝업용)
+  if (baseUrl) {
+    uris.push(`${baseUrl}/link/complete`);
+  }
+
+  // 커스텀 도메인이 있고, 기본 cafe24.com 도메인과 다르면 추가
+  if (shopDomain) {
+    try {
+      const host = new URL(shopDomain).host;
+      if (!host.endsWith('.cafe24.com')) {
+        uris.push(`https://${host}/Api/Member/Oauth2ClientCallback/sso/`);
+      }
+    } catch { /* invalid URL, skip */ }
+  }
+
+  return uris;
+}
+
 const cafe24 = new Hono<{ Bindings: Env }>();
 
 // ─── GET /install ────────────────────────────────────────────
@@ -120,12 +148,13 @@ cafe24.get('/callback', async (c) => {
     const encryptedAccessToken = await encrypt(tokens.access_token, c.env.ENCRYPTION_KEY);
     const encryptedRefreshToken = await encrypt(tokens.refresh_token, c.env.ENCRYPTION_KEY);
 
-    // Update existing shop tokens + restore if soft-deleted
+    // Update existing shop tokens + redirect URIs + restore if soft-deleted
     await updateShop(c.env.DB, shop.shop_id, {
       shop_name: storeInfo.shop_name || shop.shop_name,
       shop_url: storeInfo.shop_domain || shop.shop_url,
       platform_access_token: encryptedAccessToken,
       platform_refresh_token: encryptedRefreshToken,
+      allowed_redirect_uris: JSON.stringify(buildAllowedRedirectUris(mallId, storeInfo.shop_domain, c.env.BASE_URL)),
     });
     // Restore soft-deleted shop
     if (shop.deleted_at) {
@@ -143,22 +172,21 @@ cafe24.get('/callback', async (c) => {
       owner_id: await getOrCreateDefaultOwner(c.env.DB, mallId),
       platform_access_token: tokens.access_token,
       platform_refresh_token: tokens.refresh_token,
-      allowed_redirect_uris: [
-        `https://${mallId}.cafe24api.com/api/v2/oauth/callback`,
-        `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso/`,
-      ],
+      allowed_redirect_uris: buildAllowedRedirectUris(mallId, storeInfo.shop_domain, c.env.BASE_URL),
     }, c.env.ENCRYPTION_KEY);
   }
 
-  // Install ScriptTag (widget)
+  // Install/Update ScriptTag (widget)
   try {
     const existingTags = await client.listScriptTags(mallId, tokens.access_token);
     const widgetSrc = `${c.env.BASE_URL}/widget/buttons.js?shop=${shop.client_id}`;
 
-    const alreadyInstalled = existingTags.some((tag) => tag.src.includes('/widget/buttons.js'));
-    if (!alreadyInstalled) {
-      await client.createScriptTag(mallId, tokens.access_token, widgetSrc);
+    const existingTag = existingTags.find((tag) => tag.src.includes('/widget/buttons.js'));
+    if (existingTag) {
+      // 기존 태그 삭제 후 재생성 (display_location 업데이트를 위해)
+      await client.deleteScriptTag(mallId, tokens.access_token, existingTag.script_no);
     }
+    await client.createScriptTag(mallId, tokens.access_token, widgetSrc);
   } catch (err) {
     console.error('ScriptTag installation failed:', err);
     // Non-fatal: continue even if ScriptTag fails

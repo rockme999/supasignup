@@ -8,6 +8,17 @@
 
 import type { Env, OAuthTokenResponse, OAuthUserInfo, ProviderName } from '@supasignup/bg-core';
 
+/** 이름이 유효하지 않으면(마스킹, 빈값 등) 이메일 앞부분으로 대체 */
+function fallbackName(name: string | undefined, email: string | undefined): string | undefined {
+  if (name && name !== '…' && name !== '...' && name.trim().length > 0) {
+    return name;
+  }
+  if (email) {
+    return email.split('@')[0];
+  }
+  return name;
+}
+
 export interface SocialAuthUrlParams {
   clientId: string;
   redirectUri: string;
@@ -186,7 +197,7 @@ function buildKakaoAuthUrl(p: SocialAuthUrlParams): string {
   url.searchParams.set('client_id', p.clientId);
   url.searchParams.set('redirect_uri', p.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'profile_nickname profile_image account_email phone_number birthyear birthday gender');
+  url.searchParams.set('scope', 'profile_nickname profile_image account_email');
   url.searchParams.set('state', p.state);
   // Kakao doesn't support PKCE natively, but we still track it server-side
   return url.toString();
@@ -226,11 +237,12 @@ async function getKakaoUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserIn
   const account = (data.kakao_account ?? {}) as Record<string, unknown>;
   const profile = (account.profile ?? {}) as Record<string, unknown>;
 
+  const email = account.email as string | undefined;
   return {
     provider: 'kakao',
     providerUid: String(data.id),
-    email: account.email as string | undefined,
-    name: profile.nickname as string | undefined,
+    email,
+    name: fallbackName(profile.nickname as string | undefined, email),
     profileImage: profile.profile_image_url as string | undefined,
     rawData: data,
     phone: account.phone_number as string | undefined,
@@ -577,14 +589,16 @@ function buildXAuthUrl(p: SocialAuthUrlParams): string {
 }
 
 async function exchangeXCode(p: SocialExchangeParams): Promise<OAuthTokenResponse> {
+  const basicAuth = btoa(`${p.clientId}:${p.clientSecret}`);
   const resp = await fetch('https://api.x.com/2/oauth2/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${basicAuth}`,
+    },
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code: p.code,
-      client_id: p.clientId,
-      client_secret: p.clientSecret,
       redirect_uri: p.redirectUri,
       code_verifier: p.codeVerifier,
     }),

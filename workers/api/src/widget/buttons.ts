@@ -87,7 +87,20 @@ export const WIDGET_JS = `(function() {
     '.bg-btn-highlight::after{content:"이전에 사용";position:absolute;top:-9px;right:8px;background:#3B82F6;color:#fff;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:500}',
     '.bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
     '.bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
-    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}'
+    '.bg-link-widget{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:20px auto;padding:20px;max-width:480px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}',
+    '.bg-link-title{font-size:15px;font-weight:600;color:#333;margin-bottom:16px;display:flex;align-items:center;gap:6px}',
+    '.bg-link-row{display:flex;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px}',
+    '.bg-link-row .bg-btn-icon{margin-right:10px}',
+    '.bg-link-name{flex:1;font-size:14px;font-weight:500;color:#333}',
+    '.bg-link-badge{font-size:12px;padding:2px 10px;border-radius:12px;font-weight:500}',
+    '.bg-link-badge.linked{background:#dcfce7;color:#16a34a}',
+    '.bg-link-badge.unlinked{background:#f1f5f9;color:#64748b;cursor:pointer;transition:all .15s}',
+    '.bg-link-badge.unlinked:hover{background:#3b82f6;color:#fff}',
+    '.bg-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center}',
+    '.bg-modal{background:#fff;border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}',
+    '.bg-modal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:4px 8px}',
+    '.bg-modal-close:hover{color:#333}',
+    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}.bg-modal{padding:16px;margin:8px}}'
   ].join('\\n');
 
   // ─── BGWidget Class ──────────────────────────────────────────
@@ -138,8 +151,21 @@ export const WIDGET_JS = `(function() {
       // Private browsing mode - graceful fallback
     }
 
-    // Load config from API
-    this.loadConfig(clientId);
+    // Detect page type
+    this.pageType = this.detectPageType();
+
+    // 로그인/가입 페이지 또는 마이페이지에서만 위젯 표시
+    // 그 외 페이지에서는 아무것도 렌더링하지 않음
+    if (this.pageType === 'login' || this.pageType === 'myshop') {
+      this.loadConfig(clientId);
+    }
+  };
+
+  BGWidget.prototype.detectPageType = function() {
+    var path = window.location.pathname.toLowerCase();
+    if (path.indexOf('/myshop') === 0) return 'myshop';
+    if (path.indexOf('/member/login') >= 0 || path.indexOf('/member/join') >= 0) return 'login';
+    return 'other';
   };
 
   BGWidget.prototype.saveLastProvider = function() {
@@ -174,7 +200,11 @@ export const WIDGET_JS = `(function() {
         self.config = config;
         self.baseUrl = config.base_url || self.getApiBase();
         if (config.providers && config.providers.length > 0) {
-          self.render();
+          if (self.pageType === 'myshop') {
+            self.renderLinkWidget();
+          } else {
+            self.render();
+          }
         }
       })
       .catch(function(err) {
@@ -203,8 +233,8 @@ export const WIDGET_JS = `(function() {
       if (target) {
         target.parentNode.insertBefore(this.container, target);
       } else {
-        // Fallback: append to body
-        document.body.appendChild(this.container);
+        // 로그인/가입 페이지 영역을 찾지 못하면 렌더링하지 않음
+        return;
       }
     }
 
@@ -441,6 +471,173 @@ export const WIDGET_JS = `(function() {
     var arr = new Uint8Array(16);
     crypto.getRandomValues(arr);
     return Array.from(arr, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  };
+
+  // ─── 마이페이지: 소셜 연동 메뉴 + 팝업 ─────────────────
+  BGWidget.prototype.renderLinkWidget = function() {
+    var self = this;
+    if (document.querySelector('#bg-link-menu')) return;
+
+    // "회원 정보 수정" 링크를 찾아서 그 뒤에 메뉴 삽입
+    var menuLinks = document.querySelectorAll('#myshopMain a, .xans-myshop-main a');
+    var modifyItem = null;
+    for (var i = 0; i < menuLinks.length; i++) {
+      if (menuLinks[i].getAttribute('href') === '/member/modify.html') {
+        modifyItem = menuLinks[i].closest('li');
+        break;
+      }
+    }
+    if (!modifyItem) return;
+
+    // 메뉴 아이템 생성
+    var menuItem = document.createElement('li');
+    menuItem.id = 'bg-link-menu';
+    var menuLink = document.createElement('a');
+    menuLink.href = '#none';
+    menuLink.textContent = '소셜 계정 연동 ⚡';
+    menuLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      self.openLinkPopup();
+    });
+    menuItem.appendChild(menuLink);
+
+    // "회원 정보 수정" 다음에 삽입
+    modifyItem.parentNode.insertBefore(menuItem, modifyItem.nextSibling);
+  };
+
+  BGWidget.prototype.openLinkPopup = function() {
+    var self = this;
+    var config = this.config;
+    if (!config) return;
+
+    // 이미 열려있으면 무시
+    if (document.querySelector('.bg-modal-overlay')) return;
+
+    // 오버레이
+    var overlay = document.createElement('div');
+    overlay.className = 'bg-modal-overlay';
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    // 모달
+    var modal = document.createElement('div');
+    modal.className = 'bg-modal';
+
+    // 닫기 버튼
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'bg-modal-close';
+    closeBtn.textContent = '\\u2715';
+    closeBtn.addEventListener('click', function() { overlay.remove(); });
+    modal.appendChild(closeBtn);
+
+    // 제목
+    var title = document.createElement('div');
+    title.className = 'bg-link-title';
+    title.textContent = '\\u26A1 소셜 계정 연동';
+    modal.appendChild(title);
+
+    // 연동 상태
+    var linkedProviders = [];
+    try {
+      var stored = localStorage.getItem('bg_linked_providers');
+      if (stored) linkedProviders = JSON.parse(stored);
+    } catch (e) {}
+    var lastProvider = null;
+    try { lastProvider = localStorage.getItem('bg_last_provider'); } catch (e) {}
+    if (lastProvider && linkedProviders.indexOf(lastProvider) === -1) {
+      linkedProviders.push(lastProvider);
+      try { localStorage.setItem('bg_linked_providers', JSON.stringify(linkedProviders)); } catch (e) {}
+    }
+
+    // 프로바이더 목록
+    var providers = config.providers;
+    for (var i = 0; i < providers.length; i++) {
+      var p = providers[i];
+      var info = PROVIDERS[p];
+      if (!info) continue;
+
+      var row = document.createElement('div');
+      row.className = 'bg-link-row';
+
+      var icon = document.createElement('span');
+      icon.className = 'bg-btn-icon';
+      icon.innerHTML = info.icon;
+      var paths = icon.querySelectorAll('path');
+      var iconFill = (info.bgColor === '#f2f2f2' || info.bgColor === '#FFFFFF' || info.bgColor === '#ffffff') ? '#4285F4' : info.color;
+      for (var pi = 0; pi < paths.length; pi++) {
+        var currentFill = paths[pi].getAttribute('fill');
+        if (currentFill === '#fff' || currentFill === '#FFFFFF' || currentFill === '#ffffff') {
+          paths[pi].setAttribute('fill', iconFill);
+        }
+      }
+      row.appendChild(icon);
+
+      var name = document.createElement('span');
+      name.className = 'bg-link-name';
+      name.textContent = info.name;
+      row.appendChild(name);
+
+      var badge = document.createElement('span');
+      badge.className = 'bg-link-badge';
+      if (linkedProviders.indexOf(p) >= 0) {
+        badge.classList.add('linked');
+        badge.textContent = '연동됨';
+      } else {
+        badge.classList.add('unlinked');
+        badge.textContent = '연동하기';
+        badge.setAttribute('data-provider', p);
+        badge.addEventListener('click', function() {
+          var prov = this.getAttribute('data-provider');
+          overlay.remove();
+          self.startLinkAuth(prov);
+        });
+      }
+      row.appendChild(badge);
+      modal.appendChild(row);
+    }
+
+    // powered by
+    var powered = document.createElement('div');
+    powered.style.cssText = 'text-align:center;margin-top:16px;font-size:11px;color:#aaa';
+    powered.textContent = 'powered by 번개가입';
+    modal.appendChild(powered);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  };
+
+  BGWidget.prototype.startLinkAuth = function(provider) {
+    var config = this.config;
+    if (!config) return;
+
+    // 팝업 윈도우로 OAuth 플로우 실행
+    var authUrl = this.baseUrl + '/oauth/authorize'
+      + '?client_id=' + encodeURIComponent(config.client_id)
+      + '&redirect_uri=' + encodeURIComponent(this.baseUrl + '/link/complete')
+      + '&provider=' + encodeURIComponent(provider)
+      + '&response_type=code'
+      + '&state=' + encodeURIComponent(this.generateState());
+
+    var popup = window.open(authUrl, 'bg_link', 'width=500,height=600,scrollbars=yes');
+
+    // 팝업 닫힘 감지 → 연동 상태 갱신
+    var checkInterval = setInterval(function() {
+      if (!popup || popup.closed) {
+        clearInterval(checkInterval);
+        // 연동 프로바이더 목록 업데이트
+        try {
+          localStorage.setItem('bg_last_provider', provider);
+          var linked = JSON.parse(localStorage.getItem('bg_linked_providers') || '[]');
+          if (linked.indexOf(provider) === -1) {
+            linked.push(provider);
+            localStorage.setItem('bg_linked_providers', JSON.stringify(linked));
+          }
+        } catch (e) {}
+        // 페이지 새로고침하여 연동 상태 반영
+        window.location.reload();
+      }
+    }, 500);
   };
 
   BGWidget.prototype.findLoginPage = function() {

@@ -1028,8 +1028,8 @@ export const ProvidersPage: FC<{
   widgetStyle?: WidgetStyle;
 }> = ({ shop, baseUrl, isCafe24, widgetStyle }) => {
   const providers = parseProviders(shop.enabled_providers);
-  const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
-  const futureProviders = ['toss', 'tiktok'];
+  const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'telegram'];
+  const futureProviders = ['facebook', 'x', 'line', 'toss', 'tiktok'];
   const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
 
   return (
