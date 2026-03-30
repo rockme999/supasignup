@@ -150,19 +150,23 @@ export interface WidgetStyle {
   showIcon: boolean; // 버튼에 프로바이더 아이콘 표시 여부
   iconGap: number; // 아이콘-텍스트 간격 (px)
   paddingLeft: number; // 버튼 왼쪽 여백 (px)
+  showTitle: boolean; // 상단 "⚡ 간편 로그인" 타이틀 표시 여부
+  showPoweredBy: boolean; // 하단 "powered by 번개가입" 표시 여부 (무료 플랜은 항상 true)
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
-  preset: 'default',
-  buttonWidth: 280,
-  buttonHeight: 44,
-  buttonGap: 8,
-  borderRadius: 10,
-  align: 'center',
+  preset: 'outline-mono',
+  buttonWidth: 370,
+  buttonHeight: 45,
+  buttonGap: 6,
+  borderRadius: 5,
+  align: 'left',
   buttonLabel: '{name}로 시작하기',
   showIcon: true,
-  iconGap: 8,
-  paddingLeft: 16,
+  iconGap: 30,
+  paddingLeft: 100,
+  showTitle: true,
+  showPoweredBy: true,
 };
 
 // Env binding types for Workers

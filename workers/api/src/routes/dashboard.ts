@@ -299,6 +299,9 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     ? JSON.parse(shop.widget_style)
     : { ...DEFAULT_WIDGET_STYLE };
 
+  // 무료 플랜은 showPoweredBy 끄기 불가
+  const showPoweredBy = shop.plan === 'free' ? true : (body.showPoweredBy ?? currentStyle.showPoweredBy ?? true);
+
   const newStyle: WidgetStyle = {
     preset: body.preset ?? currentStyle.preset,
     buttonWidth: body.buttonWidth ?? currentStyle.buttonWidth,
@@ -310,6 +313,8 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     showIcon: body.showIcon ?? currentStyle.showIcon ?? true,
     iconGap: body.iconGap ?? currentStyle.iconGap ?? 8,
     paddingLeft: body.paddingLeft ?? currentStyle.paddingLeft ?? 16,
+    showTitle: body.showTitle ?? currentStyle.showTitle ?? true,
+    showPoweredBy,
   };
 
   await updateShop(c.env.DB, shopId, {

@@ -1214,6 +1214,27 @@ export const ProvidersPage: FC<{
           <div>
             <div class="provider-toggle" style="border:none; padding:0">
               <label class="toggle">
+                <input type="checkbox" id="showTitleToggle" checked={ws.showTitle !== false} />
+                <span class="toggle-slider"></span>
+              </label>
+              <label style="font-size:13px; font-weight:600; color:#475569; cursor:pointer">상단 타이틀 표시</label>
+              <span style="font-size:11px; color:#94a3b8; margin-left:4px">간편 로그인</span>
+            </div>
+          </div>
+          <div>
+            <div class="provider-toggle" style="border:none; padding:0">
+              <label class="toggle">
+                <input type="checkbox" id="showPoweredByToggle" checked={ws.showPoweredBy !== false} />
+                <span class="toggle-slider"></span>
+              </label>
+              <label style="font-size:13px; font-weight:600; color:#475569; cursor:pointer">하단 브랜딩 표시</label>
+              <span style="font-size:11px; color:#94a3b8; margin-left:4px">powered by 번개가입</span>
+              {shop.plan === 'free' && <span class="badge badge-gray" style="margin-left:4px">무료 플랜 필수</span>}
+            </div>
+          </div>
+          <div>
+            <div class="provider-toggle" style="border:none; padding:0">
+              <label class="toggle">
                 <input type="checkbox" id="showIconToggle" checked={ws.showIcon !== false} />
                 <span class="toggle-slider"></span>
               </label>
@@ -1279,6 +1300,10 @@ export const ProvidersPage: FC<{
             <input type="range" id="btnPaddingLeft" min="0" max="150" value={String((ws as any).paddingLeft ?? 16)} style="width:100%" />
           </div>
         </div>
+        <div style="display:flex; justify-content:space-between; margin-top:12px">
+          <button id="resetStyleBtn" type="button" style="padding:8px 16px; font-size:13px; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer">기본값으로 되돌리기</button>
+          <button id="saveStyleBtn" type="button" disabled style="padding:8px 24px; font-size:13px; color:#fff; background:#2563eb; border:none; border-radius:6px; cursor:pointer; font-weight:600; opacity:0.5">디자인 저장</button>
+        </div>
       </div>
 
       <script dangerouslySetInnerHTML={{__html: `
@@ -1299,8 +1324,11 @@ export const ProvidersPage: FC<{
             buttonLabel: widgetStyle.buttonLabel || '{name}로 시작하기',
             showIcon: widgetStyle.showIcon !== false,
             iconGap: widgetStyle.iconGap || 8,
-            paddingLeft: widgetStyle.paddingLeft || 16
+            paddingLeft: widgetStyle.paddingLeft || 16,
+            showTitle: widgetStyle.showTitle !== false,
+            showPoweredBy: widgetStyle.showPoweredBy !== false
           };
+          var shopPlan = '${shop.plan}';
 
           var providerIcons = ${JSON.stringify(Object.fromEntries(
             ['google','kakao','naver','apple','discord','facebook','x','line','telegram'].map(p => {
@@ -1309,11 +1337,38 @@ export const ProvidersPage: FC<{
             })
           ))};
 
+          // 변경 추적 — 저장 버튼 활성화
+          var styleChanged = false;
+          function markChanged() {
+            styleChanged = true;
+            var saveBtn = document.getElementById('saveStyleBtn');
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+          }
+
+          // 상단 타이틀 토글
+          document.getElementById('showTitleToggle').addEventListener('change', function() {
+            style.showTitle = this.checked;
+            renderPreview();
+            markChanged();
+          });
+
+          // 하단 브랜딩 토글
+          document.getElementById('showPoweredByToggle').addEventListener('change', function() {
+            if (shopPlan === 'free') {
+              this.checked = true;
+              showToast('warn', '무료 플랜에서는 브랜딩을 숨길 수 없습니다.');
+              return;
+            }
+            style.showPoweredBy = this.checked;
+            renderPreview();
+            markChanged();
+          });
+
           // 아이콘 토글 이벤트
           document.getElementById('showIconToggle').addEventListener('change', function() {
             style.showIcon = this.checked;
             renderPreview();
-            saveStyle();
+            markChanged();
           });
 
           // 버튼 문구 드롭다운 초기화
@@ -1336,14 +1391,14 @@ export const ProvidersPage: FC<{
               labelCustom.style.display = 'none';
               style.buttonLabel = this.value;
               renderPreview();
-              saveStyle();
+              markChanged();
             }
           });
           labelCustom.addEventListener('input', function() {
             style.buttonLabel = this.value;
             renderPreview();
+            markChanged();
           });
-          labelCustom.addEventListener('change', function() { saveStyle(); });
 
           function getEnabledProviders() {
             return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
@@ -1354,9 +1409,27 @@ export const ProvidersPage: FC<{
             var container = document.getElementById('previewButtons');
             container.innerHTML = '';
             var justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
-            container.style.alignItems = 'center';
             container.style.gap = style.buttonGap + 'px';
             var justifyContent = justifyMap[style.align] || 'center';
+            if (style.preset === 'icon-only') {
+              container.style.flexDirection = 'row';
+              container.style.flexWrap = 'wrap';
+              container.style.justifyContent = 'center';
+              container.style.alignItems = 'center';
+            } else {
+              container.style.flexDirection = 'column';
+              container.style.flexWrap = 'nowrap';
+              container.style.justifyContent = '';
+              container.style.alignItems = 'center';
+            }
+
+            // 상단 타이틀
+            if (style.showTitle) {
+              var titleDiv = document.createElement('div');
+              titleDiv.style.cssText = 'font-size:13px;color:#666;text-align:center;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;width:100%';
+              titleDiv.innerHTML = '<span style="font-size:16px">\\u26A1</span><span>간편 로그인</span>';
+              container.appendChild(titleDiv);
+            }
 
             providers.forEach(function(p) {
               var btn = document.createElement('div');
@@ -1469,6 +1542,14 @@ export const ProvidersPage: FC<{
               msg.textContent = '프로바이더를 선택하면 미리보기가 표시됩니다.';
               container.appendChild(msg);
             }
+
+            // 하단 powered by
+            if (style.showPoweredBy) {
+              var poweredDiv = document.createElement('div');
+              poweredDiv.style.cssText = 'text-align:center;margin-top:4px;font-size:11px;color:#aaa;width:100%';
+              poweredDiv.textContent = 'powered by 번개가입';
+              container.appendChild(poweredDiv);
+            }
           }
 
           // Preset card click
@@ -1479,7 +1560,7 @@ export const ProvidersPage: FC<{
               style.preset = this.dataset.preset;
               document.getElementById('btnWidth').disabled = style.preset === 'icon-only';
               renderPreview();
-              saveStyle();
+              markChanged();
             });
           });
 
@@ -1495,8 +1576,8 @@ export const ProvidersPage: FC<{
               if (id === 'btnIconGap') { style.iconGap = parseInt(this.value); document.getElementById('iconGapValue').textContent = this.value + 'px'; }
               if (id === 'btnPaddingLeft') { style.paddingLeft = parseInt(this.value); document.getElementById('paddingLeftValue').textContent = this.value + 'px'; }
               renderPreview();
+              markChanged();
             });
-            el.addEventListener('change', function() { saveStyle(); });
           });
 
           // Align buttons
@@ -1506,7 +1587,7 @@ export const ProvidersPage: FC<{
               this.classList.add('active');
               style.align = this.dataset.align;
               renderPreview();
-              saveStyle();
+              markChanged();
             });
           });
 
@@ -1517,7 +1598,53 @@ export const ProvidersPage: FC<{
 
           async function saveStyle() {
             var shopId = document.getElementById('providerForm').dataset.shopId;
-            await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style);
+            var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style);
+            if (resp.ok) {
+              styleChanged = false;
+              var saveBtn = document.getElementById('saveStyleBtn');
+              if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.5'; }
+              showToast('success', '디자인이 저장되었습니다.');
+            } else {
+              showToast('error', '저장에 실패했습니다.');
+            }
+          }
+
+          // 저장 버튼
+          var saveBtn = document.getElementById('saveStyleBtn');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', function() { saveStyle(); });
+          }
+
+          // 기본값으로 되돌리기
+          var resetBtn = document.getElementById('resetStyleBtn');
+          if (resetBtn) {
+            resetBtn.addEventListener('click', async function() {
+              if (!confirm('위젯 디자인을 기본값으로 되돌리시겠습니까?')) return;
+              var defaults = {preset:'outline-mono',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true};
+              Object.assign(style, defaults);
+              // UI 컨트롤 동기화
+              document.getElementById('btnWidth').value = defaults.buttonWidth; document.getElementById('widthValue').textContent = defaults.buttonWidth + 'px';
+              document.getElementById('btnHeight').value = defaults.buttonHeight; document.getElementById('heightValue').textContent = defaults.buttonHeight + 'px';
+              document.getElementById('btnGap').value = defaults.buttonGap; document.getElementById('gapValue').textContent = defaults.buttonGap + 'px';
+              document.getElementById('btnRadius').value = defaults.borderRadius; document.getElementById('radiusValue').textContent = defaults.borderRadius + 'px';
+              document.getElementById('btnIconGap').value = defaults.iconGap; document.getElementById('iconGapValue').textContent = defaults.iconGap + 'px';
+              document.getElementById('btnPaddingLeft').value = defaults.paddingLeft; document.getElementById('paddingLeftValue').textContent = defaults.paddingLeft + 'px';
+              document.getElementById('showIconToggle').checked = true;
+              document.getElementById('showTitleToggle').checked = true;
+              document.getElementById('showPoweredByToggle').checked = true;
+              document.getElementById('labelPreset').value = defaults.buttonLabel;
+              document.getElementById('labelCustom').style.display = 'none';
+              document.getElementById('btnWidth').disabled = false;
+              document.querySelectorAll('.preset-card').forEach(function(c) { c.classList.remove('active'); });
+              var defCard = document.querySelector('.preset-card[data-preset="outline-mono"]');
+              if (defCard) defCard.classList.add('active');
+              document.querySelectorAll('.align-btn').forEach(function(b) { b.classList.remove('active'); });
+              var defAlign = document.querySelector('.align-btn[data-align="left"]');
+              if (defAlign) defAlign.classList.add('active');
+              renderPreview();
+              markChanged();
+              showToast('info', '기본값으로 되돌렸습니다. 저장 버튼을 눌러 적용하세요.');
+            });
           }
 
           // Initial state

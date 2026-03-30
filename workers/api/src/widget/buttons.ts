@@ -85,6 +85,7 @@ export const WIDGET_JS = `(function() {
     '.bg-btn:hover{opacity:.85}',
     '.bg-btn-highlight{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6;font-weight:700;position:relative}',
     '.bg-btn-highlight::after{content:"이전에 사용";position:absolute;top:-9px;right:8px;background:#3B82F6;color:#fff;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:500}',
+    '.bg-btn-highlight-icon{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6}',
     '.bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
     '.bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
     '.bg-link-widget{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:20px auto;padding:20px;max-width:480px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}',
@@ -251,7 +252,8 @@ export const WIDGET_JS = `(function() {
       this.container.style.flexDirection = 'row';
       this.container.style.flexWrap = 'wrap';
       this.container.style.alignItems = 'center';
-      this.container.style.maxWidth = (buttonWidth + 32) + 'px';
+      this.container.style.justifyContent = 'center';
+      this.container.style.maxWidth = 'none';
     } else {
       this.container.style.display = 'flex';
       this.container.style.flexDirection = 'column';
@@ -259,17 +261,20 @@ export const WIDGET_JS = `(function() {
       this.container.style.maxWidth = (buttonWidth + 32) + 'px';
     }
 
-    // Title
-    var title = document.createElement('div');
-    title.className = 'bg-widget-title';
-    var flash = document.createElement('span');
-    flash.className = 'bg-flash';
-    flash.textContent = '\\u26A1';
-    title.appendChild(flash);
-    var titleText = document.createElement('span');
-    titleText.textContent = ' 간편 로그인';
-    title.appendChild(titleText);
-    this.container.appendChild(title);
+    // Title (showTitle: default true)
+    if (s.showTitle !== false) {
+      var title = document.createElement('div');
+      title.className = 'bg-widget-title';
+      if (preset === 'icon-only') title.style.width = '100%';
+      var flash = document.createElement('span');
+      flash.className = 'bg-flash';
+      flash.textContent = '\\u26A1';
+      title.appendChild(flash);
+      var titleText = document.createElement('span');
+      titleText.textContent = ' 간편 로그인';
+      title.appendChild(titleText);
+      this.container.appendChild(title);
+    }
 
     // Sort providers (last used first)
     var providers = this.sortProviders(this.config.providers);
@@ -280,11 +285,14 @@ export const WIDGET_JS = `(function() {
       this.container.appendChild(btn);
     }
 
-    // Powered by
-    var powered = document.createElement('div');
-    powered.className = 'bg-powered';
-    powered.textContent = 'powered by 번개가입';
-    this.container.appendChild(powered);
+    // Powered by (showPoweredBy: default true)
+    if (s.showPoweredBy !== false) {
+      var powered = document.createElement('div');
+      powered.className = 'bg-powered';
+      if (preset === 'icon-only') powered.style.width = '100%';
+      powered.textContent = 'powered by 번개가입';
+      this.container.appendChild(powered);
+    }
   };
 
   BGWidget.prototype.sortProviders = function(providers) {
@@ -341,7 +349,8 @@ export const WIDGET_JS = `(function() {
     }
 
     var btn = document.createElement('a');
-    btn.className = 'bg-btn' + (isHighlight ? ' bg-btn-highlight' : '');
+    var highlightClass = isHighlight ? (preset === 'icon-only' ? ' bg-btn-highlight-icon' : ' bg-btn-highlight') : '';
+    btn.className = 'bg-btn' + highlightClass;
     btn.style.backgroundColor = bgColor;
     btn.style.color = textColor;
     btn.style.transition = 'all 0.3s';
