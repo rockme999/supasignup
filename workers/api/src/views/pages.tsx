@@ -1746,6 +1746,196 @@ export const PrivacyPage: FC = () => (
   </html>
 );
 
+// ─── Terms of Service Page ───────────────────────────────────
+
+export const TermsPage: FC = () => (
+  <html lang="ko">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>서비스 이용약관 - 번개가입</title>
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #333; line-height: 1.7; }
+        .terms-wrap { max-width: 800px; margin: 0 auto; padding: 40px 24px 80px; }
+        .terms-header { text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+        .terms-header h1 { font-size: 28px; margin-bottom: 8px; }
+        .terms-header .service { color: #2563eb; font-weight: 600; font-size: 15px; }
+        .terms-header .date { color: #64748b; font-size: 14px; margin-top: 8px; }
+        .terms-intro { font-size: 15px; color: #475569; margin-bottom: 32px; }
+        .terms-section { margin-bottom: 32px; }
+        .terms-section h2 { font-size: 18px; color: #1e293b; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+        .terms-section h3 { font-size: 15px; color: #334155; margin: 16px 0 8px; }
+        .terms-section p, .terms-section li { font-size: 14px; color: #475569; }
+        .terms-section ul, .terms-section ol { padding-left: 20px; margin: 8px 0; }
+        .terms-section li { margin-bottom: 6px; }
+        .terms-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+        .terms-table th, .terms-table td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
+        .terms-table th { background: #f8fafc; color: #334155; font-weight: 600; }
+        .terms-table td { color: #475569; }
+        .terms-footer { margin-top: 40px; padding-top: 24px; border-top: 2px solid #e5e7eb; text-align: center; font-size: 14px; color: #64748b; }
+        .terms-footer a { color: #2563eb; text-decoration: none; }
+        .terms-footer a:hover { text-decoration: underline; }
+        @media (max-width: 600px) {
+          .terms-wrap { padding: 24px 16px 60px; }
+          .terms-header h1 { font-size: 22px; }
+          .terms-table { font-size: 12px; }
+          .terms-table th, .terms-table td { padding: 8px 6px; }
+        }
+      `}</style>
+    </head>
+    <body>
+      <div class="terms-wrap">
+        <div class="terms-header">
+          <h1>서비스 이용약관</h1>
+          <div class="service">번개가입 (BungaeGaib)</div>
+          <div class="date">시행일: 2026년 3월 30일</div>
+        </div>
+
+        <p class="terms-intro">
+          본 약관은 주식회사 수파레인(이하 "회사")이 제공하는 번개가입 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항 등을 규정함을 목적으로 합니다.
+        </p>
+
+        <div class="terms-section">
+          <h2>제1조 (목적)</h2>
+          <p>본 약관은 회사가 제공하는 번개가입 서비스의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.</p>
+        </div>
+
+        <div class="terms-section">
+          <h2>제2조 (정의)</h2>
+          <ol>
+            <li><strong>"서비스"</strong>란 회사가 제공하는 소셜 로그인 기반 쇼핑몰 회원가입 솔루션으로, 쇼핑몰 고객이 소셜 계정(Google, Kakao, Naver, Apple 등)을 통해 1-클릭으로 회원가입 및 로그인을 완료할 수 있도록 하는 서비스를 말합니다.</li>
+            <li><strong>"이용자"</strong>란 본 약관에 따라 서비스를 이용하는 자를 말하며, 다음과 같이 구분합니다.
+              <ul>
+                <li><strong>운영자</strong>: 서비스에 가입하여 자신의 쇼핑몰에 번개가입을 설치·운영하는 쇼핑몰 사업자</li>
+                <li><strong>고객</strong>: 번개가입이 설치된 쇼핑몰에서 소셜 로그인을 이용하는 쇼핑몰 방문자</li>
+              </ul>
+            </li>
+            <li><strong>"쇼핑몰 플랫폼"</strong>이란 카페24, 아임웹, 고도몰, 샵바이 등 서비스가 연동되는 전자상거래 플랫폼을 말합니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제3조 (약관의 효력 및 변경)</h2>
+          <ol>
+            <li>본 약관은 서비스 화면에 게시하거나 기타의 방법으로 이용자에게 공지함으로써 효력이 발생합니다.</li>
+            <li>회사는 관련 법령을 위반하지 않는 범위에서 본 약관을 개정할 수 있으며, 개정 약관은 적용일 7일 전부터 서비스 내 공지합니다.</li>
+            <li>이용자가 개정 약관의 적용에 동의하지 않는 경우 서비스 이용을 중단하고 이용 계약을 해지할 수 있습니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제4조 (서비스의 내용)</h2>
+          <p>회사가 제공하는 서비스는 다음과 같습니다.</p>
+          <ol>
+            <li><strong>소셜 로그인 위젯</strong>: 쇼핑몰 회원가입 페이지에 설치되는 소셜 로그인 버튼 위젯</li>
+            <li><strong>SSO 연동</strong>: 쇼핑몰 플랫폼과 소셜 로그인 프로바이더 간 인증 중개</li>
+            <li><strong>관리자 대시보드</strong>: 운영자를 위한 가입 통계 조회, 프로바이더 설정, 위젯 커스터마이징 기능</li>
+            <li><strong>마이페이지 소셜 연동</strong>: 고객이 여러 소셜 계정을 하나의 쇼핑몰 계정에 연결할 수 있는 기능</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제5조 (이용 계약의 성립)</h2>
+          <ol>
+            <li>운영자의 이용 계약은 운영자가 대시보드에서 회원가입을 완료하고 쇼핑몰을 등록한 시점에 성립합니다.</li>
+            <li>고객의 이용은 번개가입이 설치된 쇼핑몰에서 소셜 로그인 버튼을 클릭하여 인증을 완료한 시점에 개시됩니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제6조 (요금 및 결제)</h2>
+          <table class="terms-table">
+            <thead><tr><th>요금제</th><th>월 가입 한도</th><th>가격</th></tr></thead>
+            <tbody>
+              <tr><td>무료</td><td>100명</td><td>무료</td></tr>
+              <tr><td>월간 구독</td><td>무제한</td><td>월 29,900원 (부가세 별도)</td></tr>
+              <tr><td>연간 구독</td><td>무제한</td><td>연 329,900원 (부가세 별도)</td></tr>
+            </tbody>
+          </table>
+          <ol>
+            <li>유료 요금제의 결제는 카페24 결제 시스템을 통해 처리됩니다.</li>
+            <li>월간 구독은 매월 자동 갱신되며, 연간 구독은 만료일 전에 갱신 안내를 드립니다.</li>
+            <li>환불은 관련 법령 및 회사의 환불 정책에 따릅니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제7조 (이용자의 의무)</h2>
+          <ol>
+            <li>이용자는 관계 법령, 본 약관의 규정, 이용 안내 및 서비스와 관련하여 공지한 주의사항을 준수하여야 합니다.</li>
+            <li>운영자는 자신의 쇼핑몰에서 번개가입 서비스를 이용함에 있어 관련 법령(전자상거래법, 개인정보 보호법 등)을 준수할 의무가 있습니다.</li>
+            <li>이용자는 다음 행위를 하여서는 안 됩니다.
+              <ul>
+                <li>타인의 정보를 도용하여 서비스를 이용하는 행위</li>
+                <li>서비스의 안정적 운영을 방해하는 행위</li>
+                <li>서비스를 이용하여 불법적인 목적으로 개인정보를 수집하는 행위</li>
+                <li>회사의 지식재산권을 침해하는 행위</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제8조 (회사의 의무)</h2>
+          <ol>
+            <li>회사는 안정적인 서비스 제공을 위해 최선을 다합니다.</li>
+            <li>회사는 이용자의 개인정보를 「개인정보 보호법」 등 관련 법령에 따라 보호합니다.</li>
+            <li>회사는 서비스 장애 발생 시 신속하게 복구하기 위해 노력합니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제9조 (서비스의 중단)</h2>
+          <ol>
+            <li>회사는 시스템 점검, 교체 및 고장, 통신 두절 등의 사유가 발생한 경우에는 서비스의 제공을 일시적으로 중단할 수 있습니다.</li>
+            <li>제1항에 의한 서비스 중단의 경우 회사는 사전에 서비스 화면 또는 이메일로 이용자에게 통지합니다. 다만, 불가피한 사유로 사전 통지가 불가능한 경우 사후에 통지할 수 있습니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제10조 (이용 계약의 해지)</h2>
+          <ol>
+            <li>운영자는 대시보드의 설정 메뉴에서 언제든지 서비스 이용 계약을 해지할 수 있습니다.</li>
+            <li>회사는 이용자가 본 약관을 위반한 경우, 시정을 요구하고 시정되지 않을 경우 이용 계약을 해지할 수 있습니다.</li>
+            <li>이용 계약이 해지되면 운영자의 쇼핑몰에 설치된 번개가입 위젯은 비활성화되며, 관련 데이터는 개인정보 처리방침에 따라 처리됩니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제11조 (면책조항)</h2>
+          <ol>
+            <li>회사는 천재지변 또는 이에 준하는 불가항력으로 인하여 서비스를 제공할 수 없는 경우에는 서비스 제공에 관한 책임이 면제됩니다.</li>
+            <li>회사는 쇼핑몰 플랫폼(카페24 등)의 장애, 정책 변경 등으로 인한 서비스 제한에 대해 책임을 지지 않습니다.</li>
+            <li>회사는 소셜 로그인 프로바이더(Google, Kakao 등)의 서비스 장애 또는 정책 변경으로 인한 서비스 제한에 대해 책임을 지지 않습니다.</li>
+            <li>회사는 이용자의 귀책사유로 인한 서비스 이용의 장애에 대해 책임을 지지 않습니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>제12조 (분쟁 해결)</h2>
+          <ol>
+            <li>본 약관에 명시되지 않은 사항은 관련 법령 및 상관례에 따릅니다.</li>
+            <li>서비스 이용으로 발생한 분쟁에 대해 소송이 제기되는 경우 회사의 본사 소재지를 관할하는 법원을 관할 법원으로 합니다.</li>
+          </ol>
+        </div>
+
+        <div class="terms-section">
+          <h2>부칙</h2>
+          <p>본 약관은 2026년 3월 30일부터 시행합니다.</p>
+        </div>
+
+        <div class="terms-footer">
+          <p><strong>주식회사 수파레인</strong> | 대표이사 임호빈 | 사업자등록번호 716-88-01081</p>
+          <p>경기도 김포시 태장로 789 금광하이테크시티 465호</p>
+          <p>전화 031-992-5988 | 이메일 help@suparain.com</p>
+          <p style="margin-top:8px"><a href="https://bg.suparain.kr">https://bg.suparain.kr</a></p>
+        </div>
+      </div>
+    </body>
+  </html>
+);
+
 // ─── Admin Pages ─────────────────────────────────────────────
 
 // --- Admin Home ---
@@ -2501,4 +2691,307 @@ export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name 
       `}} />
     </div>
   </Layout>
+);
+
+// ─── Landing Page ─────────────────────────────────────────────
+
+export const LandingPage: FC = () => (
+  <html lang="ko">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>번개가입 - 소셜 로그인 1-클릭 쇼핑몰 회원가입</title>
+      <meta name="description" content="쇼핑몰 고객이 소셜 계정으로 복잡한 회원가입 폼 없이 1-클릭으로 가입하는 서비스. 카페24 등 쇼핑몰 플랫폼에 위젯 설치만으로 바로 사용하세요." />
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; background: #fff; color: #1e293b; line-height: 1.6; }
+        a { text-decoration: none; color: inherit; }
+
+        /* Header */
+        .lp-header { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-bottom: 1px solid #e5e7eb; }
+        .lp-header-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+        .lp-logo { font-size: 20px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+        .lp-header-nav { display: flex; align-items: center; gap: 16px; }
+        .lp-header-nav a { font-size: 14px; color: #64748b; }
+        .lp-header-nav a:hover { color: #2563eb; }
+        .btn-header { background: #2563eb; color: #fff !important; padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background 0.15s; }
+        .btn-header:hover { background: #1d4ed8 !important; }
+
+        /* Hero */
+        .lp-hero { background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 60%, #f0fdf4 100%); padding: 100px 24px 80px; text-align: center; }
+        .lp-hero-badge { display: inline-block; background: #dbeafe; color: #2563eb; font-size: 13px; font-weight: 600; padding: 4px 14px; border-radius: 100px; margin-bottom: 24px; }
+        .lp-hero h1 { font-size: 52px; font-weight: 900; letter-spacing: -1.5px; color: #0f172a; margin-bottom: 20px; line-height: 1.15; }
+        .lp-hero h1 span { color: #2563eb; }
+        .lp-hero p { font-size: 20px; color: #475569; max-width: 560px; margin: 0 auto 40px; line-height: 1.65; }
+        .lp-hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn-primary { background: #2563eb; color: #fff; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; transition: background 0.15s, transform 0.1s; display: inline-block; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .btn-secondary { background: #fff; color: #2563eb; border: 2px solid #2563eb; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; transition: background 0.15s; display: inline-block; }
+        .btn-secondary:hover { background: #eff6ff; }
+
+        /* Section common */
+        .lp-section { padding: 80px 24px; }
+        .lp-section-inner { max-width: 1100px; margin: 0 auto; }
+        .lp-section-label { font-size: 13px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .lp-section-title { font-size: 36px; font-weight: 800; color: #0f172a; margin-bottom: 16px; letter-spacing: -0.8px; line-height: 1.25; }
+        .lp-section-desc { font-size: 17px; color: #64748b; max-width: 600px; line-height: 1.7; }
+        .section-bg-gray { background: #f8fafc; }
+
+        /* About */
+        .lp-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; margin-top: 48px; }
+        .lp-about-text p { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 16px; }
+        .lp-about-text p:last-child { margin-bottom: 0; }
+        .lp-about-visual { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+        .lp-about-step { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+        .lp-about-step:last-child { margin-bottom: 0; }
+        .lp-step-num { width: 32px; height: 32px; min-width: 32px; background: #2563eb; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+        .lp-step-content strong { display: block; font-size: 15px; color: #1e293b; margin-bottom: 4px; }
+        .lp-step-content span { font-size: 14px; color: #64748b; }
+
+        /* Providers */
+        .lp-providers-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
+        .lp-provider-badge { padding: 8px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; border: 1.5px solid #e5e7eb; background: #fff; color: #334155; }
+
+        /* Features */
+        .lp-features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 48px; }
+        .lp-feature-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 28px; transition: box-shadow 0.2s, transform 0.2s; }
+        .lp-feature-card:hover { box-shadow: 0 8px 32px rgba(37,99,235,0.1); transform: translateY(-2px); }
+        .lp-feature-icon { width: 44px; height: 44px; background: #eff6ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .lp-feature-icon svg { width: 22px; height: 22px; stroke: #2563eb; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .lp-feature-card h3 { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .lp-feature-card p { font-size: 14px; color: #64748b; line-height: 1.7; }
+
+        /* Pricing */
+        .lp-pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+        .lp-plan-card { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 16px; padding: 32px 28px; position: relative; transition: box-shadow 0.2s; }
+        .lp-plan-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+        .lp-plan-card.featured { border-color: #2563eb; box-shadow: 0 4px 24px rgba(37,99,235,0.15); }
+        .lp-plan-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #2563eb; color: #fff; font-size: 12px; font-weight: 700; padding: 3px 14px; border-radius: 100px; white-space: nowrap; }
+        .lp-plan-name { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+        .lp-plan-price { font-size: 36px; font-weight: 900; color: #0f172a; letter-spacing: -1px; margin-bottom: 4px; }
+        .lp-plan-price span { font-size: 16px; font-weight: 500; color: #64748b; }
+        .lp-plan-limit { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+        .lp-plan-divider { border: none; border-top: 1px solid #f1f5f9; margin-bottom: 20px; }
+        .lp-plan-features { list-style: none; }
+        .lp-plan-features li { font-size: 14px; color: #475569; padding: 6px 0; display: flex; align-items: center; gap: 8px; }
+        .lp-plan-features li::before { content: ''; display: inline-block; width: 16px; height: 16px; min-width: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%232563eb' d='M13.5 2.5L6 10l-3.5-3.5L1 8l5 5 9-9z'/%3E%3C/svg%3E") center/contain no-repeat; }
+
+        /* Footer */
+        .lp-footer { background: #f8fafc; border-top: 1px solid #e5e7eb; padding: 40px 24px; }
+        .lp-footer-inner { max-width: 1100px; margin: 0 auto; }
+        .lp-footer-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 32px; flex-wrap: wrap; }
+        .lp-footer-brand { font-size: 20px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
+        .lp-footer-tagline { font-size: 13px; color: #94a3b8; }
+        .lp-footer-links { display: flex; gap: 20px; }
+        .lp-footer-links a { font-size: 14px; color: #64748b; }
+        .lp-footer-links a:hover { color: #2563eb; }
+        .lp-footer-divider { border: none; border-top: 1px solid #e5e7eb; margin-bottom: 20px; }
+        .lp-footer-biz { font-size: 13px; color: #94a3b8; line-height: 1.9; }
+        .lp-footer-biz strong { color: #64748b; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .lp-hero h1 { font-size: 36px; }
+          .lp-hero p { font-size: 17px; }
+          .lp-section-title { font-size: 28px; }
+          .lp-about-grid { grid-template-columns: 1fr; }
+          .lp-features-grid { grid-template-columns: 1fr; }
+          .lp-pricing-grid { grid-template-columns: 1fr; }
+          .lp-header-nav .nav-hide { display: none; }
+          .lp-footer-top { flex-direction: column; }
+        }
+        @media (max-width: 480px) {
+          .lp-hero { padding: 72px 20px 60px; }
+          .lp-hero h1 { font-size: 30px; }
+          .lp-section { padding: 60px 20px; }
+        }
+      `}</style>
+    </head>
+    <body>
+
+      <header class="lp-header">
+        <div class="lp-header-inner">
+          <div class="lp-logo">번개가입</div>
+          <nav class="lp-header-nav">
+            <a href="#features" class="nav-hide">기능</a>
+            <a href="#pricing" class="nav-hide">요금제</a>
+            <a href="/dashboard" class="btn-header">대시보드</a>
+          </nav>
+        </div>
+      </header>
+
+      <section class="lp-hero">
+        <div class="lp-hero-badge">카페24 쇼핑몰 소셜 로그인 솔루션</div>
+        <h1>소셜 로그인 1-클릭으로<br /><span>쇼핑몰 회원가입 완료</span></h1>
+        <p>복잡한 회원가입 폼은 그만. 쇼핑몰 고객이 소셜 계정 하나로 바로 가입하고, 운영자는 위젯 설치만으로 바로 시작합니다.</p>
+        <div class="lp-hero-cta">
+          <a href="/dashboard" class="btn-primary">지금 시작하기</a>
+          <a href="#about" class="btn-secondary">서비스 소개</a>
+        </div>
+      </section>
+
+      <section class="lp-section" id="about">
+        <div class="lp-section-inner">
+          <div class="lp-section-label">서비스 소개</div>
+          <h2 class="lp-section-title">번개가입이란?</h2>
+          <p class="lp-section-desc">쇼핑몰 고객의 이탈을 막는 가장 빠른 방법. 소셜 계정으로 단 한 번의 클릭으로 회원가입을 완료하는 SaaS 솔루션입니다.</p>
+          <div class="lp-about-grid">
+            <div class="lp-about-text">
+              <p>온라인 쇼핑몰에서 회원가입 과정의 복잡함은 고객 이탈의 주요 원인입니다. 번개가입은 Google, Kakao, Naver, Apple 등 고객이 이미 사용 중인 소셜 계정으로 별도의 폼 입력 없이 즉시 가입을 완료할 수 있도록 합니다.</p>
+              <p>쇼핑몰 운영자는 간단한 위젯 코드를 쇼핑몰에 삽입하는 것만으로 모든 소셜 로그인 인증을 번개가입이 처리합니다. 직접 OAuth 개발 없이 검증된 소셜 로그인 서비스를 즉시 제공하세요.</p>
+            </div>
+            <div class="lp-about-visual">
+              <div class="lp-about-step">
+                <div class="lp-step-num">1</div>
+                <div class="lp-step-content">
+                  <strong>대시보드에서 쇼핑몰 등록</strong>
+                  <span>쇼핑몰 URL과 기본 정보를 입력하고 원하는 소셜 프로바이더를 선택합니다.</span>
+                </div>
+              </div>
+              <div class="lp-about-step">
+                <div class="lp-step-num">2</div>
+                <div class="lp-step-content">
+                  <strong>위젯 코드 설치</strong>
+                  <span>발급된 위젯 코드를 쇼핑몰 회원가입 페이지에 붙여넣기합니다.</span>
+                </div>
+              </div>
+              <div class="lp-about-step">
+                <div class="lp-step-num">3</div>
+                <div class="lp-step-content">
+                  <strong>고객이 1-클릭으로 가입 완료</strong>
+                  <span>쇼핑몰 고객은 소셜 버튼 클릭 한 번으로 회원가입을 마칩니다.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lp-section section-bg-gray">
+        <div class="lp-section-inner">
+          <div class="lp-section-label">지원 프로바이더</div>
+          <h2 class="lp-section-title">고객이 선호하는 모든 소셜 계정 지원</h2>
+          <p class="lp-section-desc">국내외 주요 소셜 로그인 프로바이더를 모두 지원합니다. 새로운 프로바이더도 지속적으로 추가됩니다.</p>
+          <div class="lp-providers-grid">
+            <span class="lp-provider-badge">Google</span>
+            <span class="lp-provider-badge">카카오</span>
+            <span class="lp-provider-badge">네이버</span>
+            <span class="lp-provider-badge">Apple</span>
+            <span class="lp-provider-badge">Discord</span>
+            <span class="lp-provider-badge">Facebook</span>
+            <span class="lp-provider-badge">X (Twitter)</span>
+            <span class="lp-provider-badge">LINE</span>
+            <span class="lp-provider-badge">Telegram</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="lp-section" id="features">
+        <div class="lp-section-inner">
+          <div class="lp-section-label">주요 기능</div>
+          <h2 class="lp-section-title">필요한 모든 기능을 갖춘 솔루션</h2>
+          <p class="lp-section-desc">설치부터 운영까지 번개가입 하나로 해결합니다.</p>
+          <div class="lp-features-grid">
+            <div class="lp-feature-card">
+              <div class="lp-feature-icon">
+                <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              </div>
+              <h3>1-클릭 소셜 회원가입</h3>
+              <p>고객이 이미 사용 중인 소셜 계정으로 별도의 정보 입력 없이 즉시 쇼핑몰 회원가입을 완료합니다. 가입 전환율을 극적으로 높입니다.</p>
+            </div>
+            <div class="lp-feature-card">
+              <div class="lp-feature-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
+              </div>
+              <h3>커스터마이징 가능한 위젯</h3>
+              <p>버튼 스타일, 색상, 표시할 프로바이더를 대시보드에서 자유롭게 설정합니다. 쇼핑몰 디자인에 맞게 위젯을 최적화하세요.</p>
+            </div>
+            <div class="lp-feature-card">
+              <div class="lp-feature-icon">
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+              </div>
+              <h3>실시간 가입 통계 대시보드</h3>
+              <p>소셜 로그인 유형별, 일자별 가입 및 로그인 현황을 실시간으로 확인합니다. CSV 내보내기로 외부 분석 도구와 연동하세요.</p>
+            </div>
+            <div class="lp-feature-card">
+              <div class="lp-feature-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
+              </div>
+              <h3>카페24 쇼핑몰 플랫폼 연동</h3>
+              <p>카페24 쇼핑몰과 SSO(Single Sign-On)로 완벽하게 연동됩니다. 소셜 로그인 후 자동으로 쇼핑몰 회원가입 및 로그인이 처리됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lp-section section-bg-gray" id="pricing">
+        <div class="lp-section-inner">
+          <div class="lp-section-label">요금제</div>
+          <h2 class="lp-section-title">합리적인 가격으로 시작하세요</h2>
+          <p class="lp-section-desc">규모에 맞는 요금제를 선택하고, 언제든 변경할 수 있습니다.</p>
+          <div class="lp-pricing-grid">
+            <div class="lp-plan-card">
+              <div class="lp-plan-name">무료</div>
+              <div class="lp-plan-price">0<span>원</span></div>
+              <div class="lp-plan-limit">월 100명까지</div>
+              <hr class="lp-plan-divider" />
+              <ul class="lp-plan-features">
+                <li>소셜 로그인 월 100건</li>
+                <li>쇼핑몰 1개</li>
+                <li>모든 소셜 프로바이더</li>
+                <li>기본 통계</li>
+              </ul>
+            </div>
+            <div class="lp-plan-card featured">
+              <div class="lp-plan-badge">인기</div>
+              <div class="lp-plan-name">월간 구독</div>
+              <div class="lp-plan-price">29,900<span>원/월</span></div>
+              <div class="lp-plan-limit">월 무제한</div>
+              <hr class="lp-plan-divider" />
+              <ul class="lp-plan-features">
+                <li>소셜 로그인 무제한</li>
+                <li>쇼핑몰 무제한</li>
+                <li>모든 소셜 프로바이더</li>
+                <li>상세 통계 및 CSV 내보내기</li>
+              </ul>
+            </div>
+            <div class="lp-plan-card">
+              <div class="lp-plan-name">연간 구독</div>
+              <div class="lp-plan-price">329,900<span>원/년</span></div>
+              <div class="lp-plan-limit">월 환산 27,492원 · 약 8% 할인</div>
+              <hr class="lp-plan-divider" />
+              <ul class="lp-plan-features">
+                <li>소셜 로그인 무제한</li>
+                <li>쇼핑몰 무제한</li>
+                <li>모든 소셜 프로바이더</li>
+                <li>상세 통계 및 CSV 내보내기</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="lp-footer">
+        <div class="lp-footer-inner">
+          <div class="lp-footer-top">
+            <div>
+              <div class="lp-footer-brand">번개가입</div>
+              <div class="lp-footer-tagline">소셜 로그인 1-클릭 쇼핑몰 회원가입 솔루션</div>
+            </div>
+            <div class="lp-footer-links">
+              <a href="/privacy">개인정보처리방침</a>
+              <a href="/terms">이용약관</a>
+              <a href="/dashboard">대시보드</a>
+            </div>
+          </div>
+          <hr class="lp-footer-divider" />
+          <div class="lp-footer-biz">
+            <strong>주식회사 수파레인</strong> &nbsp;|&nbsp; 대표이사 임호빈 &nbsp;|&nbsp; 사업자등록번호 716-88-01081<br />
+            경기도 김포시 태장로 789 금광하이테크시티 465호 &nbsp;|&nbsp; 전화 031-992-5988 &nbsp;|&nbsp; 이메일 help@suparain.com
+          </div>
+        </div>
+      </footer>
+
+    </body>
+  </html>
 );

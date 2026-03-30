@@ -44,6 +44,7 @@ const oauth = new Hono<{ Bindings: Env }>();
 
 // ─── GET /authorize ──────────────────────────────────────────
 oauth.get('/authorize', async (c) => {
+  const t0 = performance.now();
   const clientId = c.req.query('client_id');
   const redirectUri = c.req.query('redirect_uri');
   let provider = c.req.query('provider') as ProviderName | undefined;
@@ -55,6 +56,8 @@ oauth.get('/authorize', async (c) => {
 
   // Look up shop
   const shop = await getShopByClientId(c.env.DB, clientId);
+  const tShop = performance.now();
+
   if (!shop) {
     return c.json({ error: 'invalid_client', message: 'Unknown client_id' }, 400);
   }
@@ -75,6 +78,8 @@ oauth.get('/authorize', async (c) => {
   if (!provider) {
     // Check KV for provider hint (cross-domain safe, set via /api/widget/hint)
     const hintProvider = await c.env.KV.get(`provider_hint:${clientId}`) as ProviderName | null;
+    const tHint = performance.now();
+    console.log(`[Phase A] KV hint: ${(tHint - tShop).toFixed(1)}ms`);
     if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
       // Don't delete hint — Cafe24 may call authorize multiple times; let TTL (60s) handle cleanup
       provider = hintProvider;
@@ -96,9 +101,7 @@ oauth.get('/authorize', async (c) => {
 
   // Check billing limit
   const overLimit = await isOverFreeLimit(c.env.DB, shop);
-  if (overLimit) {
-    return c.json({ error: 'limit_exceeded', message: 'Monthly signup limit reached' }, 403);
-  }
+  const tLimit = performance.now();
 
   // Generate PKCE
   const codeVerifier = generateCodeVerifier();
@@ -116,6 +119,10 @@ oauth.get('/authorize', async (c) => {
     social_state: socialState,
   };
 
+  if (overLimit) {
+    return c.json({ error: 'limit_exceeded', message: 'Monthly signup limit reached' }, 403);
+  }
+
   // Telegram uses Login Widget — skip oauth_session/pkce, use dedicated telegram_session only
   if (provider === 'telegram') {
     const telegramSessionId = generateSecret(16);
@@ -127,6 +134,7 @@ oauth.get('/authorize', async (c) => {
     c.env.KV.put(`oauth_session:${socialState}`, JSON.stringify(session), { expirationTtl: SESSION_TTL }),
     c.env.KV.put(`pkce:${socialState}`, codeVerifier, { expirationTtl: SESSION_TTL }),
   ]);
+  const tKv = performance.now();
 
   // Build social OAuth URL and redirect
   const authUrl = buildSocialAuthUrl(provider, {
@@ -136,12 +144,15 @@ oauth.get('/authorize', async (c) => {
     codeChallenge,
   });
 
+  console.log(`[Phase A] authorize | provider=${provider} | getShop=${(tShop - t0).toFixed(1)}ms | freeLimit=${(tLimit - tShop).toFixed(1)}ms | KV write=${(tKv - tLimit).toFixed(1)}ms | total=${(tKv - t0).toFixed(1)}ms`);
+
   // Use JS redirect to reset Referer (required for Naver which checks Referer against service URL)
   return c.html(`<html><head><meta name="referrer" content="no-referrer"></head><body><script>window.location.href=${JSON.stringify(authUrl)};</script></body></html>`);
 });
 
 // ─── GET /callback/:provider ─────────────────────────────────
 oauth.get('/callback/:provider', async (c) => {
+  const t0 = performance.now();
   const provider = c.req.param('provider') as ProviderName;
   const code = c.req.query('code');
   const state = c.req.query('state');
@@ -164,9 +175,9 @@ oauth.get('/callback/:provider', async (c) => {
     c.env.KV.get(`oauth_session:${state}`),
     c.env.KV.get(`pkce:${state}`),
   ]);
+  const tSession = performance.now();
 
   if (!sessionJson || !codeVerifier) {
-    // Session already consumed (duplicate callback) — close popup gracefully
     return c.html('<html><body><script>window.close();if(!window.closed)window.location.href="/";</script></body></html>');
   }
 
@@ -184,18 +195,21 @@ oauth.get('/callback/:provider', async (c) => {
     redirectUri: `${c.env.BASE_URL}/oauth/callback/${provider}`,
     codeVerifier,
     state,
-    // Apple-specific fields for JWT client_secret generation
     ...(provider === 'apple' ? { teamId: c.env.APPLE_TEAM_ID, keyId: c.env.APPLE_KEY_ID } : {}),
   });
+  const tTokenExchange = performance.now();
 
   // Get user info from social provider
   const userInfo = await getSocialUserInfo(provider, tokens, c.env);
+  const tUserInfo = performance.now();
 
   // Upsert user in D1 (PII encrypted)
   const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);
+  const tUpsert = performance.now();
 
   // Check if this is a new signup or returning login
   const existingShopUser = await getShopUser(c.env.DB, session.shop_id, user.user_id);
+  const tShopUser = performance.now();
   let action: 'signup' | 'login';
 
   if (existingShopUser) {
@@ -204,11 +218,9 @@ oauth.get('/callback/:provider', async (c) => {
     await createShopUser(c.env.DB, session.shop_id, user.user_id);
     action = 'signup';
   }
+  const tCreateShopUser = performance.now();
 
-  // Record stat
-  await recordStat(c.env.DB, session.shop_id, user.user_id, provider, action);
-
-  // Generate authorization code for Cafe24
+  // Generate authorization code for Cafe24 — must complete before redirect
   const authCode = generateSecret(16);
   const authCodeData: AuthCodeData = {
     user_id: user.user_id,
@@ -218,10 +230,9 @@ oauth.get('/callback/:provider', async (c) => {
   await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), {
     expirationTtl: AUTH_CODE_TTL,
   });
+  const tAuthCode = performance.now();
 
   // Redirect back with auth code and original state
-  // For SSO callback URIs, only send code + state (Cafe24 SSO expects standard OAuth params only)
-  // For login page URIs, also include bg_provider hint for smart button
   const redirectUrl = new URL(session.redirect_uri);
   redirectUrl.searchParams.set('code', authCode);
   redirectUrl.searchParams.set('state', session.cafe24_state);
@@ -230,11 +241,20 @@ oauth.get('/callback/:provider', async (c) => {
     redirectUrl.searchParams.set('bg_provider', provider);
   }
 
-  // Clean up KV after all DB/KV writes succeed (one-time use)
-  await Promise.all([
-    c.env.KV.delete(`oauth_session:${state}`),
-    c.env.KV.delete(`pkce:${state}`),
-  ]);
+  // Defer non-critical work to after response (recordStat + KV cleanup)
+  c.executionCtx.waitUntil(
+    Promise.all([
+      recordStat(c.env.DB, session.shop_id, user.user_id, provider, action).catch(() => {}),
+      c.env.KV.delete(`oauth_session:${state}`).catch(() => {}),
+      c.env.KV.delete(`pkce:${state}`).catch(() => {}),
+    ]).then(() => {
+      const tDone = performance.now();
+      console.log(`[Phase B][waitUntil] recordStat+kvCleanup=${(tDone - tAuthCode).toFixed(1)}ms`);
+    })
+  );
+
+  const tTotal = performance.now();
+  console.log(`[Phase B] callback/${provider} | action=${action} | kvSession=${(tSession - t0).toFixed(1)}ms | tokenExchange=${(tTokenExchange - tSession).toFixed(1)}ms | userInfo=${(tUserInfo - tTokenExchange).toFixed(1)}ms | upsertUser=${(tUpsert - tUserInfo).toFixed(1)}ms | getShopUser=${(tShopUser - tUpsert).toFixed(1)}ms | createShopUser=${(tCreateShopUser - tShopUser).toFixed(1)}ms | kvAuthCode=${(tAuthCode - tCreateShopUser).toFixed(1)}ms | total=${(tTotal - t0).toFixed(1)}ms`);
 
   return c.redirect(redirectUrl.toString());
 });
@@ -319,10 +339,7 @@ oauth.post('/callback/apple', async (c) => {
     action = 'signup';
   }
 
-  // Record stat
-  await recordStat(c.env.DB, session.shop_id, user.user_id, provider, action);
-
-  // Generate authorization code for Cafe24
+  // Generate authorization code for Cafe24 — must complete before redirect
   const authCode = generateSecret(16);
   const authCodeData: AuthCodeData = {
     user_id: user.user_id,
@@ -342,11 +359,14 @@ oauth.post('/callback/apple', async (c) => {
     redirectUrl.searchParams.set('bg_provider', provider);
   }
 
-  // Clean up KV after all DB/KV writes succeed (one-time use)
-  await Promise.all([
-    c.env.KV.delete(`oauth_session:${state}`),
-    c.env.KV.delete(`pkce:${state}`),
-  ]);
+  // Defer non-critical work to after response
+  c.executionCtx.waitUntil(
+    Promise.all([
+      recordStat(c.env.DB, session.shop_id, user.user_id, provider, action).catch(() => {}),
+      c.env.KV.delete(`oauth_session:${state}`).catch(() => {}),
+      c.env.KV.delete(`pkce:${state}`).catch(() => {}),
+    ])
+  );
 
   return c.redirect(redirectUrl.toString());
 });
@@ -490,10 +510,7 @@ oauth.post('/callback/telegram', async (c) => {
     action = 'signup';
   }
 
-  // Record stat
-  await recordStat(c.env.DB, shop.shop_id, user.user_id, 'telegram', action);
-
-  // Generate auth code
+  // Generate auth code — must complete before response
   const authCode = generateSecret(16);
   const authCodeData: AuthCodeData = { user_id: user.user_id, shop_id: shop.shop_id };
   await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), { expirationTtl: AUTH_CODE_TTL });
@@ -507,11 +524,17 @@ oauth.post('/callback/telegram', async (c) => {
     redirectUrl.searchParams.set('bg_provider', 'telegram');
   }
 
+  // Defer non-critical work to after response
+  c.executionCtx.waitUntil(
+    recordStat(c.env.DB, shop.shop_id, user.user_id, 'telegram', action).catch(() => {})
+  );
+
   return c.json({ redirect_url: redirectUrl.toString() });
 });
 
 // ─── POST /token ─────────────────────────────────────────────
 oauth.post('/token', async (c) => {
+  const t0 = performance.now();
   const body = await c.req.parseBody();
   const grantType = body['grant_type'];
   const code = body['code'] as string | undefined;
@@ -524,16 +547,18 @@ oauth.post('/token', async (c) => {
 
   // Verify client credentials
   const shop = await getShopByClientId(c.env.DB, clientId);
+  const tShop = performance.now();
   if (!shop || !(await timingSafeEqual(shop.client_secret, clientSecret))) {
     return c.json({ error: 'invalid_client' }, 401);
   }
+  const tVerify = performance.now();
 
-  // Look up and delete auth code (one-time use)
+  // Look up auth code (one-time use)
   const authCodeJson = await c.env.KV.get(`auth_code:${code}`);
+  const tGetCode = performance.now();
   if (!authCodeJson) {
     return c.json({ error: 'invalid_grant', message: 'Authorization code expired or already used' }, 400);
   }
-  await c.env.KV.delete(`auth_code:${code}`);
 
   const authCodeData: AuthCodeData = JSON.parse(authCodeJson);
 
@@ -542,16 +567,22 @@ oauth.post('/token', async (c) => {
     return c.json({ error: 'invalid_grant', message: 'Authorization code was not issued for this client' }, 400);
   }
 
-  // Generate access token
+  // Generate access token + delete auth code in parallel
   const accessToken = generateSecret(32);
   const tokenData: AccessTokenData = {
     user_id: authCodeData.user_id,
     shop_id: authCodeData.shop_id,
   };
 
-  await c.env.KV.put(`access_token:${accessToken}`, JSON.stringify(tokenData), {
-    expirationTtl: ACCESS_TOKEN_TTL,
-  });
+  await Promise.all([
+    c.env.KV.delete(`auth_code:${code}`),
+    c.env.KV.put(`access_token:${accessToken}`, JSON.stringify(tokenData), {
+      expirationTtl: ACCESS_TOKEN_TTL,
+    }),
+  ]);
+  const tKvOps = performance.now();
+
+  console.log(`[Phase C] token | getShop=${(tShop - t0).toFixed(1)}ms | verify=${(tVerify - tShop).toFixed(1)}ms | kvGetCode=${(tGetCode - tVerify).toFixed(1)}ms | kvDelete+Put=${(tKvOps - tGetCode).toFixed(1)}ms | total=${(tKvOps - t0).toFixed(1)}ms`);
 
   return c.json({
     access_token: accessToken,
@@ -564,13 +595,16 @@ oauth.post('/token', async (c) => {
 // Cafe24 SSO sends access_token as POST body parameter.
 
 async function handleUserInfo(c: { env: Env; req: { header: (k: string) => string | undefined }; json: (body: unknown, status?: number) => Response }, accessToken: string) {
+  const t0 = performance.now();
   const tokenJson = await c.env.KV.get(`access_token:${accessToken}`);
+  const tGetToken = performance.now();
   if (!tokenJson) {
     return c.json({ error: 'invalid_token', message: 'Token expired or invalid' }, 401);
   }
 
   const tokenData: AccessTokenData = JSON.parse(tokenJson);
   const user = await getUserById(c.env.DB, tokenData.user_id);
+  const tGetUser = performance.now();
   if (!user) {
     return c.json({ error: 'user_not_found' }, 404);
   }
@@ -582,6 +616,7 @@ async function handleUserInfo(c: { env: Env; req: { header: (k: string) => strin
     user.phone ? decrypt(user.phone, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
     user.birthday ? decrypt(user.birthday, c.env.ENCRYPTION_KEY) : Promise.resolve(null),
   ]);
+  const tDecrypt = performance.now();
 
   // 이메일이 없는 프로바이더(Telegram, X 등)는 대체 이메일 생성
   // 카페24 SSO는 이메일 필수이므로 빈 값 전달 불가
@@ -592,6 +627,9 @@ async function handleUserInfo(c: { env: Env; req: { header: (k: string) => strin
     const nameSlug = (name ?? user.provider).replace(/\s+/g, '_');
     finalEmail = `${nameSlug}@${shopHost}`;
   }
+  const tDone = performance.now();
+
+  console.log(`[Phase D] userinfo | provider=${user.provider} | kvGetToken=${(tGetToken - t0).toFixed(1)}ms | dbGetUser=${(tGetUser - tGetToken).toFixed(1)}ms | decrypt=${(tDecrypt - tGetUser).toFixed(1)}ms | total=${(tDone - t0).toFixed(1)}ms`);
 
   // Return in Cafe24 SSO standard format
   return c.json({

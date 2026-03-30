@@ -22,6 +22,8 @@ import {
   ProvidersPage,
   SettingsPage,
   PrivacyPage,
+  TermsPage,
+  LandingPage,
   AdminHomePage,
   AdminShopsPage,
   AdminSubscriptionsPage,
@@ -55,8 +57,16 @@ const pages = new Hono<PageEnv>();
 
 // ─── Public standalone pages ─────────────────────────────────
 
+pages.get('/', (c) => {
+  return c.html(<LandingPage />);
+});
+
 pages.get('/privacy', (c) => {
   return c.html(<PrivacyPage />);
+});
+
+pages.get('/terms', (c) => {
+  return c.html(<TermsPage />);
 });
 
 // ─── Auth check middleware (cookie-based, redirect to login) ─

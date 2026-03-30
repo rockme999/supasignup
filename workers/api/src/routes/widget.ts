@@ -106,6 +106,15 @@ widget.get('/hint', async (c) => {
   }
 
   await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
+
+  // Verify KV write is readable (eventual consistency safeguard)
+  const verified = await c.env.KV.get(`provider_hint:${clientId}`);
+  if (verified !== provider) {
+    // Retry once if not yet consistent
+    await new Promise((r) => setTimeout(r, 50));
+    await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
+  }
+
   return c.json({ ok: true });
 });
 

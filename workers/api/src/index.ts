@@ -42,18 +42,33 @@ app.onError((err, c) => {
   return c.json({ error: 'internal_server_error', message: 'An unexpected error occurred' }, 500);
 });
 
-// ── Root / Health check ──────────────────────────────────────
-app.get('/', (c) => c.redirect('/dashboard'));
-
+// ── Health check ─────────────────────────────────────────────
 app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'bg-api' });
 });
 
-// ── Widget JS serving ────────────────────────────────────────
+// ── Widget JS serving (ETag-based caching) ──────────────────
+// WIDGET_JS는 배포 시 고정되므로 빌드 타임에 해시를 생성하여 ETag로 사용.
+// 코드가 바뀌면 새 배포 → 새 ETag → 브라우저 캐시 자동 무효화.
+const WIDGET_ETAG = `"bg-${Array.from(new TextEncoder().encode(WIDGET_JS)).reduce((h, b) => ((h << 5) - h + b) | 0, 0).toString(36)}"`;
+
 app.get('/widget/buttons.js', (c) => {
+  // 304 Not Modified: 브라우저가 동일 ETag를 가지고 있으면 본문 전송 생략
+  if (c.req.header('If-None-Match') === WIDGET_ETAG) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        'ETag': WIDGET_ETAG,
+        'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
   return c.body(WIDGET_JS, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
-    'Cache-Control': 'no-cache, no-store',
+    'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+    'ETag': WIDGET_ETAG,
     'Access-Control-Allow-Origin': '*',
   });
 });
