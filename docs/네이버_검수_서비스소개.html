@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>번개가입 서비스 소개 — 네이버 로그인 검수용</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Page Header ── */
+    .page-header {
+      background: linear-gradient(135deg, #1a2e1a 0%, #1f5c1f 60%, #03c75a 100%);
+      color: #fff;
+      text-align: center;
+      padding: 52px 24px 44px;
+    }
+    .page-header .badge {
+      display: inline-block;
+      background: #03c75a;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 18px;
+      letter-spacing: 0.06em;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .page-header h1 {
+      font-size: 34px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      letter-spacing: -0.5px;
+    }
+    .page-header h1 .accent { color: #03c75a; }
+    .page-header .subtitle {
+      font-size: 16px;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 6px;
+    }
+    .page-header .meta {
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      margin-top: 18px;
+    }
+
+    /* ── Container ── */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ── Section ── */
+    .section {
+      padding: 52px 0 44px;
+    }
+    .section + .section {
+      border-top: 2px solid #e5e7eb;
+    }
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .num {
+      background: #03c75a;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-desc {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+
+    /* ── Overview Cards ── */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .overview-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+    }
+    .overview-card.full {
+      grid-column: 1 / -1;
+    }
+    .overview-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    .overview-card h3 .tag {
+      display: inline-block;
+      background: #f0fdf4;
+      color: #16a34a;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .overview-card p {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.75;
+    }
+    .key-value-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .key-value-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .key-value-list .key {
+      flex-shrink: 0;
+      width: 90px;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .key-value-list .val {
+      color: #1e293b;
+      flex: 1;
+    }
+    .key-value-list .val a {
+      color: #03c75a;
+      text-decoration: none;
+    }
+
+    /* ── Flow Diagram ── */
+    .flow-diagram {
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+      margin-top: 28px;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .flow-actor {
+      flex: 1;
+      text-align: center;
+    }
+    .flow-actor-box {
+      display: inline-block;
+      background: #f8fafc;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px 18px;
+      min-width: 130px;
+    }
+    .flow-actor-box.naver {
+      background: #f0fdf4;
+      border-color: #03c75a;
+    }
+    .flow-actor-box.bungae {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+    .flow-actor-box.cafe24 {
+      background: #fff7ed;
+      border-color: #f97316;
+    }
+    .flow-actor-box.user {
+      background: #faf5ff;
+      border-color: #a855f7;
+    }
+    .flow-actor-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .flow-actor-sub {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .flow-arrow {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 0 4px;
+    }
+    .flow-arrow-line {
+      width: 48px;
+      height: 2px;
+      background: #d1d5db;
+      position: relative;
+    }
+    .flow-arrow-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border-left: 8px solid #d1d5db;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    .flow-arrow-label {
+      font-size: 10px;
+      color: #94a3b8;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .flow-steps-list {
+      margin-top: 28px;
+      counter-reset: flow-counter;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .flow-step-item {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 18px 0;
+      border-bottom: 1px dashed #e5e7eb;
+      counter-increment: flow-counter;
+    }
+    .flow-step-item:last-child {
+      border-bottom: none;
+    }
+    .flow-step-item::before {
+      content: counter(flow-counter);
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #03c75a;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+    .flow-step-item .step-body h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .flow-step-item .step-body p {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.65;
+    }
+    .flow-step-item .step-body .actors {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .actor-chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .actor-chip.user { background: #faf5ff; color: #a855f7; border: 1px solid #e9d5ff; }
+    .actor-chip.naver { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .actor-chip.bungae { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .actor-chip.cafe24 { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+    /* ── Feature Section ── */
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .feature-item {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 28px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .feature-item-label {
+      flex-shrink: 0;
+    }
+    .feature-item-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 1px solid #bbf7d0;
+      margin-bottom: 8px;
+    }
+    .feature-item-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+    .feature-item-sub {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .feature-item-body p {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.75;
+      margin-bottom: 14px;
+    }
+    .feature-item-body p:last-child {
+      margin-bottom: 0;
+    }
+    .detail-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .detail-list li {
+      font-size: 13px;
+      color: #475569;
+      padding-left: 16px;
+      position: relative;
+      line-height: 1.65;
+    }
+    .detail-list li::before {
+      content: '-';
+      position: absolute;
+      left: 0;
+      color: #03c75a;
+      font-weight: 700;
+    }
+
+    /* ── Naver Usage Section ── */
+    .naver-usage-box {
+      background: #f0fdf4;
+      border: 2px solid #bbf7d0;
+      border-radius: 16px;
+      padding: 32px 30px;
+      margin-top: 28px;
+    }
+    .naver-usage-box h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #15803d;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #bbf7d0;
+    }
+    .naver-usage-box p {
+      font-size: 13px;
+      color: #166534;
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+    .naver-usage-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ── Data Table ── */
+    .data-table-wrap {
+      margin-top: 28px;
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table thead {
+      background: #1e293b;
+      color: #fff;
+    }
+    .data-table thead th {
+      padding: 14px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-align: left;
+    }
+    .data-table tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .data-table tbody tr:last-child {
+      border-bottom: none;
+    }
+    .data-table tbody tr:hover {
+      background: #f8fafc;
+    }
+    .data-table td {
+      padding: 16px 20px;
+      font-size: 13px;
+      color: #475569;
+      vertical-align: top;
+    }
+    .data-table td:first-child {
+      font-weight: 700;
+      color: #1e293b;
+      width: 120px;
+    }
+    .data-table td:nth-child(2) {
+      width: 80px;
+    }
+    .badge-required {
+      display: inline-block;
+      background: #fee2e2;
+      color: #dc2626;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .badge-optional {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ── Privacy Section ── */
+    .privacy-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 28px;
+    }
+    .privacy-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+    }
+    .privacy-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 10px;
+    }
+    .privacy-card p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.7;
+    }
+    .privacy-card .highlight {
+      display: inline-block;
+      background: #f0fdf4;
+      color: #16a34a;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+    .privacy-url-box {
+      margin-top: 20px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .privacy-url-box .label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      white-space: nowrap;
+    }
+    .privacy-url-box a {
+      font-size: 13px;
+      color: #2563eb;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    /* ── Company Info ── */
+    .company-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border: 1px solid #f1f5f9;
+      margin-top: 28px;
+    }
+    .company-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .company-name-en {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    .company-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 40px;
+    }
+    .company-info-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 13px;
+    }
+    .company-info-row .ci-key {
+      flex-shrink: 0;
+      width: 80px;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .company-info-row .ci-val {
+      color: #1e293b;
+      flex: 1;
+    }
+    .company-info-row .ci-val a {
+      color: #03c75a;
+      text-decoration: none;
+    }
+
+    /* ── Footer ── */
+    .page-footer {
+      background: #1e293b;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      padding: 28px 24px;
+      font-size: 12px;
+      line-height: 1.8;
+      margin-top: 60px;
+    }
+    .page-footer strong {
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* ── Print ── */
+    @media print {
+      body { background: #fff; }
+      .page-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .section { page-break-inside: avoid; }
+      .page-footer { margin-top: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================
+     HEADER
+============================= -->
+<div class="page-header">
+  <div class="badge">NAVER LOGIN — 검수 제출용 서비스 소개자료</div>
+  <h1><span class="accent">번개가입</span> (BungaeGaib)</h1>
+  <div class="subtitle">카페24 쇼핑몰 소셜 로그인 기반 회원가입 솔루션</div>
+  <div class="meta">
+    서비스 URL: https://bg.suparain.kr &nbsp;|&nbsp; 운영사: 주식회사 수파레인 &nbsp;|&nbsp; 작성일: 2026-03-30
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============================
+       1. 서비스 개요
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">1</span>
+      서비스 개요
+    </div>
+    <div class="section-desc">
+      번개가입이 무엇인지, 누구를 위한 서비스인지 설명합니다.
+    </div>
+
+    <div class="overview-grid">
+      <div class="overview-card full">
+        <h3>서비스 한 줄 정의</h3>
+        <p>
+          번개가입은 <strong>카페24 쇼핑몰에 설치하는 소셜 로그인 기반 회원가입 솔루션</strong>입니다.<br>
+          쇼핑몰 방문 고객이 네이버·카카오·구글·애플 계정을 이용해 <strong>1-클릭으로 쇼핑몰 회원가입 및 로그인</strong>을 완료할 수 있도록 합니다.<br>
+          복잡한 가입 양식 입력 없이 소셜 계정 인증만으로 즉시 쇼핑몰 회원이 됩니다.
+        </p>
+      </div>
+
+      <div class="overview-card">
+        <h3>대상 사용자 <span class="tag">B2B2C</span></h3>
+        <ul class="key-value-list">
+          <li>
+            <span class="key">쇼핑몰 운영자</span>
+            <span class="val">번개가입 대시보드를 통해 서비스를 설치·설정하는 카페24 쇼핑몰 운영 사업자</span>
+          </li>
+          <li>
+            <span class="key">쇼핑몰 고객</span>
+            <span class="val">해당 쇼핑몰을 방문하여 소셜 계정으로 회원가입하는 일반 소비자</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="overview-card">
+        <h3>핵심 가치</h3>
+        <ul class="key-value-list">
+          <li>
+            <span class="key">가입 간소화</span>
+            <span class="val">소셜 계정 1회 인증으로 쇼핑몰 회원가입 즉시 완료</span>
+          </li>
+          <li>
+            <span class="key">플랫폼 연동</span>
+            <span class="val">카페24 SSO를 통해 소셜 인증 결과를 쇼핑몰 계정으로 자동 변환</span>
+          </li>
+          <li>
+            <span class="key">운영 편의</span>
+            <span class="val">관리자 대시보드에서 가입 통계·위젯 디자인·프로바이더 설정 관리</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="overview-card full">
+        <h3>서비스 URL</h3>
+        <ul class="key-value-list">
+          <li>
+            <span class="key">서비스 메인</span>
+            <span class="val"><a href="https://bg.suparain.kr" target="_blank">https://bg.suparain.kr</a></span>
+          </li>
+          <li>
+            <span class="key">개인정보처리방침</span>
+            <span class="val"><a href="https://bg.suparain.kr/privacy" target="_blank">https://bg.suparain.kr/privacy</a></span>
+          </li>
+          <li>
+            <span class="key">이용약관</span>
+            <span class="val"><a href="https://bg.suparain.kr/terms" target="_blank">https://bg.suparain.kr/terms</a></span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================
+       2. 서비스 구조도
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">2</span>
+      서비스 구조도
+    </div>
+    <div class="section-desc">
+      쇼핑몰 고객이 네이버 로그인 버튼을 누른 순간부터 카페24 쇼핑몰 회원가입이 완료되기까지의 전체 흐름입니다.
+    </div>
+
+    <div class="flow-diagram">
+
+      <!-- 참여 주체 -->
+      <div class="flow-row">
+        <div class="flow-actor">
+          <div class="flow-actor-box user">
+            <div class="flow-actor-title">쇼핑몰 방문 고객</div>
+            <div class="flow-actor-sub">소셜 계정 보유자<br>(최종 소비자)</div>
+          </div>
+        </div>
+        <div class="flow-arrow">
+          <div class="flow-arrow-line"></div>
+          <div class="flow-arrow-label">버튼 클릭</div>
+        </div>
+        <div class="flow-actor">
+          <div class="flow-actor-box bungae">
+            <div class="flow-actor-title">번개가입 위젯</div>
+            <div class="flow-actor-sub">카페24 쇼핑몰에<br>설치된 버튼 UI</div>
+          </div>
+        </div>
+        <div class="flow-arrow">
+          <div class="flow-arrow-line"></div>
+          <div class="flow-arrow-label">OAuth 인증 요청</div>
+        </div>
+        <div class="flow-actor">
+          <div class="flow-actor-box naver">
+            <div class="flow-actor-title">네이버 로그인</div>
+            <div class="flow-actor-sub">OAuth 2.0<br>인증 서버</div>
+          </div>
+        </div>
+        <div class="flow-arrow">
+          <div class="flow-arrow-line"></div>
+          <div class="flow-arrow-label">인증 완료 콜백</div>
+        </div>
+        <div class="flow-actor">
+          <div class="flow-actor-box bungae">
+            <div class="flow-actor-title">번개가입 서버</div>
+            <div class="flow-actor-sub">OAuth 처리 &amp;<br>SSO 중개 서버</div>
+          </div>
+        </div>
+        <div class="flow-arrow">
+          <div class="flow-arrow-line"></div>
+          <div class="flow-arrow-label">SSO 회원생성</div>
+        </div>
+        <div class="flow-actor">
+          <div class="flow-actor-box cafe24">
+            <div class="flow-actor-title">카페24 SSO</div>
+            <div class="flow-actor-sub">쇼핑몰 회원 생성<br>&amp; 로그인 처리</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 단계별 상세 -->
+      <div class="flow-steps-list">
+        <div class="flow-step-item">
+          <div class="step-body">
+            <h4>위젯 로드 — 쇼핑몰 회원가입 페이지에 번개가입 위젯이 표시됨</h4>
+            <p>카페24 쇼핑몰 운영자가 번개가입 스크립트를 설치하면, 회원가입/로그인 페이지에 소셜 로그인 버튼 위젯이 자동으로 삽입됩니다. 고객은 "네이버로 시작하기" 버튼을 확인합니다.</p>
+            <div class="actors">
+              <span class="actor-chip user">쇼핑몰 고객</span>
+              <span class="actor-chip bungae">번개가입 위젯</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-step-item">
+          <div class="step-body">
+            <h4>네이버 로그인 버튼 클릭 — OAuth 2.0 인증 플로우 시작</h4>
+            <p>고객이 "네이버로 시작하기" 버튼을 클릭하면, 번개가입 서버가 생성한 네이버 OAuth 인증 URL로 리다이렉트됩니다. 네이버 로그인 화면이 표시됩니다.</p>
+            <div class="actors">
+              <span class="actor-chip user">쇼핑몰 고객</span>
+              <span class="actor-chip naver">네이버 로그인</span>
+              <span class="actor-chip bungae">번개가입 서버</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-step-item">
+          <div class="step-body">
+            <h4>네이버 계정 인증 — 동의 및 인증 완료</h4>
+            <p>고객이 네이버 계정으로 로그인하고 정보 제공에 동의합니다. 네이버 인증 서버는 authorization code를 번개가입 서버의 콜백 URL로 전달합니다.</p>
+            <div class="actors">
+              <span class="actor-chip user">쇼핑몰 고객</span>
+              <span class="actor-chip naver">네이버 로그인</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-step-item">
+          <div class="step-body">
+            <h4>사용자 정보 수신 — 번개가입 서버에서 토큰 교환 및 프로필 조회</h4>
+            <p>번개가입 서버는 authorization code를 access token으로 교환하고, 네이버 프로필 API를 호출하여 이메일과 이름을 수신합니다. 수신된 정보는 카페24 회원 생성에만 사용됩니다.</p>
+            <div class="actors">
+              <span class="actor-chip bungae">번개가입 서버</span>
+              <span class="actor-chip naver">네이버 로그인</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-step-item">
+          <div class="step-body">
+            <h4>카페24 SSO 회원가입 — 소셜 정보로 쇼핑몰 회원 자동 생성</h4>
+            <p>번개가입 서버는 카페24 SSO API를 통해 수신된 이메일·이름으로 쇼핑몰 회원 계정을 자동 생성합니다. 기존 회원이면 로그인 처리됩니다.</p>
+            <div class="actors">
+              <span class="actor-chip bungae">번개가입 서버</span>
+              <span class="actor-chip cafe24">카페24 SSO</span>
+            </div>
+          </div>
+        </div>
+        <div class="flow-step-item">
+          <div class="step-body">
+            <h4>회원가입 완료 — 고객이 쇼핑몰에 로그인된 상태로 진입</h4>
+            <p>카페24가 발급한 로그인 세션과 함께 고객은 쇼핑몰 메인으로 리다이렉트됩니다. 별도의 추가 입력 없이 회원가입과 로그인이 동시에 완료됩니다.</p>
+            <div class="actors">
+              <span class="actor-chip user">쇼핑몰 고객</span>
+              <span class="actor-chip cafe24">카페24 쇼핑몰</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================
+       3. 주요 기능 설명
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">3</span>
+      주요 기능 설명
+    </div>
+    <div class="section-desc">
+      번개가입의 세 가지 핵심 기능 구성 요소를 설명합니다.
+    </div>
+
+    <div class="feature-list">
+
+      <div class="feature-item">
+        <div class="feature-item-label">
+          <div class="feature-item-badge">WIDGET</div>
+          <div class="feature-item-title">소셜 로그인 위젯</div>
+          <div class="feature-item-sub">쇼핑몰 회원가입·로그인 페이지에 삽입되는 버튼 UI 컴포넌트</div>
+        </div>
+        <div class="feature-item-body">
+          <p>번개가입 위젯은 카페24 쇼핑몰의 회원가입 및 로그인 페이지에 JavaScript 스니펫 한 줄로 삽입됩니다. 위젯은 운영자가 활성화한 소셜 프로바이더(네이버, 카카오, 구글, 애플)의 버튼을 자동으로 표시합니다.</p>
+          <ul class="detail-list">
+            <li>지원 프로바이더: 네이버, 카카오, 구글, 애플 (운영자가 개별 활성화)</li>
+            <li>쇼핑몰 테마 색상에 맞춰 버튼 색상·크기·레이아웃 커스터마이징 가능</li>
+            <li>모바일·PC 반응형 디자인 지원</li>
+            <li>스크립트 삽입만으로 설치 완료 (별도 서버 설치 불필요)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-item-label">
+          <div class="feature-item-badge">SSO</div>
+          <div class="feature-item-title">카페24 SSO 연동</div>
+          <div class="feature-item-sub">소셜 인증과 카페24 회원 시스템을 연결하는 인증 중개 서비스</div>
+        </div>
+        <div class="feature-item-body">
+          <p>번개가입의 핵심 기술은 소셜 OAuth 인증 결과를 카페24 SSO(Single Sign-On) API로 전달하여 쇼핑몰 회원 계정을 자동으로 생성·연결하는 인증 중개 역할입니다.</p>
+          <ul class="detail-list">
+            <li>소셜 OAuth 2.0 인증 → 번개가입 서버 → 카페24 SSO API 순서로 인증 체인 구성</li>
+            <li>네이버에서 수신한 이메일·이름으로 카페24 쇼핑몰 회원 자동 생성</li>
+            <li>기존 쇼핑몰 회원이면 소셜 계정과 연결 후 자동 로그인 처리</li>
+            <li>카페24 멀티쇼핑몰 구조 지원 (쇼핑몰별 개별 설정)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-item-label">
+          <div class="feature-item-badge">DASHBOARD</div>
+          <div class="feature-item-title">관리자 대시보드</div>
+          <div class="feature-item-sub">쇼핑몰 운영자가 번개가입 서비스를 설정·운영하는 관리 도구</div>
+        </div>
+        <div class="feature-item-body">
+          <p>쇼핑몰 운영자는 번개가입 대시보드(https://bg.suparain.kr)에서 서비스 전반을 설정하고 가입 현황을 모니터링합니다.</p>
+          <ul class="detail-list">
+            <li>가입 통계: 소셜 프로바이더별·기간별 회원가입 수 현황</li>
+            <li>프로바이더 설정: 사용할 소셜 로그인 항목 활성화/비활성화</li>
+            <li>위젯 커스터마이징: 버튼 색상, 크기, 텍스트, 표시 순서 등 조정</li>
+            <li>설치 가이드: 카페24 스크립트 삽입 방법 안내 및 코드 복사</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================
+       4. 네이버 로그인 활용 방식
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">4</span>
+      네이버 로그인 활용 방식
+    </div>
+    <div class="section-desc">
+      번개가입에서 네이버 로그인 API가 어떤 목적으로, 어떤 방식으로 사용되는지 상세히 설명합니다.
+    </div>
+
+    <div class="naver-usage-box">
+      <h3>네이버 로그인 사용 목적</h3>
+      <p>
+        번개가입은 카페24 쇼핑몰 방문 고객이 <strong>네이버 계정을 이용해 쇼핑몰 회원가입 및 로그인을 1-클릭으로 완료</strong>할 수 있도록 하기 위해 네이버 로그인 API를 사용합니다.
+      </p>
+      <p>
+        네이버 로그인은 쇼핑몰 자체 회원가입 양식(아이디/비밀번호/이메일 입력 등)을 대체하는 인증 수단으로만 활용됩니다. 소셜 인증이 완료되면 수신된 정보(이메일, 이름)는 카페24 쇼핑몰 회원 계정 생성에만 사용되며, 다른 목적으로 활용되지 않습니다.
+      </p>
+    </div>
+
+    <div class="overview-grid" style="margin-top: 20px;">
+      <div class="overview-card">
+        <h3>사용 주체</h3>
+        <ul class="key-value-list">
+          <li>
+            <span class="key">서비스명</span>
+            <span class="val">번개가입 (BungaeGaib)</span>
+          </li>
+          <li>
+            <span class="key">인증 방식</span>
+            <span class="val">OAuth 2.0 Authorization Code Flow</span>
+          </li>
+          <li>
+            <span class="key">콜백 URL</span>
+            <span class="val">https://bg.suparain.kr/auth/callback/naver</span>
+          </li>
+        </ul>
+      </div>
+      <div class="overview-card">
+        <h3>사용 맥락</h3>
+        <ul class="key-value-list">
+          <li>
+            <span class="key">표시 위치</span>
+            <span class="val">카페24 쇼핑몰 회원가입 및 로그인 페이지의 번개가입 위젯 내</span>
+          </li>
+          <li>
+            <span class="key">버튼 텍스트</span>
+            <span class="val">"네이버로 시작하기" 또는 운영자 설정 텍스트</span>
+          </li>
+          <li>
+            <span class="key">인증 후 처리</span>
+            <span class="val">네이버 프로필 조회 → 카페24 SSO 회원 생성 → 쇼핑몰 로그인</span>
+          </li>
+        </ul>
+      </div>
+      <div class="overview-card full">
+        <h3>네이버 로그인이 사용되지 않는 용도</h3>
+        <ul class="key-value-list">
+          <li>
+            <span class="key">마케팅</span>
+            <span class="val">수신된 사용자 정보를 마케팅·광고 목적으로 사용하지 않음</span>
+          </li>
+          <li>
+            <span class="key">제3자 제공</span>
+            <span class="val">네이버에서 수신한 정보를 제3자에게 제공하지 않음 (카페24로의 SSO 연동 제외)</span>
+          </li>
+          <li>
+            <span class="key">프로필 연동</span>
+            <span class="val">네이버 게시물, 친구 목록, 쇼핑 내역 등 소셜 활동 정보에 접근하지 않음</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================
+       5. 수집하는 사용자 정보
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">5</span>
+      수집하는 사용자 정보
+    </div>
+    <div class="section-desc">
+      번개가입이 네이버 로그인을 통해 수집하는 정보 항목과 수집 목적을 명시합니다.
+    </div>
+
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>필수 여부</th>
+            <th>수집 목적</th>
+            <th>보존 기간 및 처리 방법</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>이메일 주소</td>
+            <td><span class="badge-required">필수</span></td>
+            <td>카페24 쇼핑몰 회원 계정 생성 시 이메일(아이디) 항목에 사용. 쇼핑몰 로그인 식별자로 활용.</td>
+            <td>카페24 쇼핑몰 회원 데이터베이스에 저장됨. 번개가입 서버에는 인증 처리 후 AES-256-GCM으로 암호화하여 저장하며, 회원 탈퇴 요청 시 즉시 삭제.</td>
+          </tr>
+          <tr>
+            <td>이름</td>
+            <td><span class="badge-required">필수</span></td>
+            <td>카페24 쇼핑몰 회원 프로필의 이름 항목에 사용. 쇼핑몰 주문·배송 서비스에 활용됨.</td>
+            <td>위와 동일. 카페24 쇼핑몰 회원 데이터베이스에 저장됨.</td>
+          </tr>
+          <tr>
+            <td>네이버 고유 식별자 (id)</td>
+            <td><span class="badge-optional">내부 처리</span></td>
+            <td>동일 네이버 계정으로 재방문 시 기존 회원을 식별하기 위한 내부 매핑 키. 외부에 노출되지 않음.</td>
+            <td>번개가입 서버에 AES-256-GCM으로 암호화하여 저장. 회원 탈퇴 시 삭제.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px 20px;">
+      <p style="font-size: 13px; color: #92400e; line-height: 1.7;">
+        <strong>중요:</strong> 번개가입은 네이버 로그인을 통해 위 3가지 항목만 수집하며, 이 외 어떠한 정보(친구 목록, 네이버 메일 내용, 결제 정보, 위치 정보 등)도 수집하지 않습니다. 수집된 정보는 카페24 쇼핑몰 회원 생성 목적 외에 사용되지 않습니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================
+       6. 개인정보 처리
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">6</span>
+      개인정보 처리
+    </div>
+    <div class="section-desc">
+      수집된 개인정보의 보호 방법과 처리 방침을 설명합니다.
+    </div>
+
+    <div class="privacy-grid">
+      <div class="privacy-card">
+        <h4>암호화 저장</h4>
+        <p>네이버에서 수신한 개인정보(이메일, 이름, 고유 식별자)는 번개가입 서버 데이터베이스에 AES-256-GCM 방식으로 암호화하여 저장됩니다. 평문으로 저장되지 않습니다.</p>
+        <span class="highlight">AES-256-GCM 암호화</span>
+      </div>
+      <div class="privacy-card">
+        <h4>전송 구간 보호</h4>
+        <p>모든 데이터 송수신은 HTTPS(TLS 1.2 이상)를 통해 이루어집니다. 네이버 인증 서버와 번개가입 서버, 카페24 API 간의 모든 통신이 암호화됩니다.</p>
+        <span class="highlight">HTTPS / TLS 1.2+</span>
+      </div>
+      <div class="privacy-card">
+        <h4>보존 기간 및 파기</h4>
+        <p>개인정보는 서비스 이용 기간 동안 보존됩니다. 이용자가 연동 해제 또는 회원 탈퇴를 요청하면 관련 개인정보를 즉시 삭제 처리합니다.</p>
+        <span class="highlight">탈퇴 요청 시 즉시 삭제</span>
+      </div>
+      <div class="privacy-card">
+        <h4>제3자 제공 제한</h4>
+        <p>수집된 개인정보는 카페24 SSO 회원가입 처리에 필요한 최소한의 범위에서만 카페24 플랫폼으로 전달됩니다. 다른 제3자에게 제공되지 않습니다.</p>
+        <span class="highlight">카페24 SSO 처리 목적만</span>
+      </div>
+      <div class="privacy-card">
+        <h4>접근 통제</h4>
+        <p>개인정보에 접근 가능한 직원을 최소화하고, 접근 이력을 기록·관리합니다. 불필요한 개인정보 접근이 발생하지 않도록 내부 접근 권한을 엄격히 제한합니다.</p>
+        <span class="highlight">최소 권한 원칙 적용</span>
+      </div>
+      <div class="privacy-card">
+        <h4>이용자 권리 보장</h4>
+        <p>이용자는 언제든지 자신의 개인정보 조회, 수정, 삭제, 처리 정지를 요청할 수 있습니다. 요청 접수 후 지체 없이 처리합니다.</p>
+        <span class="highlight">조회·수정·삭제 권리 보장</span>
+      </div>
+    </div>
+
+    <div class="privacy-url-box">
+      <span class="label">개인정보처리방침</span>
+      <a href="https://bg.suparain.kr/privacy" target="_blank">https://bg.suparain.kr/privacy</a>
+    </div>
+  </div>
+
+  <!-- ============================
+       7. 운영사 정보
+  ============================= -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">7</span>
+      운영사 정보
+    </div>
+    <div class="section-desc">
+      번개가입 서비스를 운영하는 법인 정보입니다.
+    </div>
+
+    <div class="company-card">
+      <div class="company-name">주식회사 수파레인</div>
+      <div class="company-name-en">Suparain Co., Ltd.</div>
+      <div class="company-info-grid">
+        <div class="company-info-row">
+          <span class="ci-key">사업자등록번호</span>
+          <span class="ci-val">716-88-01081</span>
+        </div>
+        <div class="company-info-row">
+          <span class="ci-key">대표이사</span>
+          <span class="ci-val">임호빈</span>
+        </div>
+        <div class="company-info-row">
+          <span class="ci-key">주소</span>
+          <span class="ci-val">경기도 김포시 태장로 789 금광하이테크시티 465호</span>
+        </div>
+        <div class="company-info-row">
+          <span class="ci-key">서비스 URL</span>
+          <span class="ci-val"><a href="https://bg.suparain.kr" target="_blank">https://bg.suparain.kr</a></span>
+        </div>
+        <div class="company-info-row">
+          <span class="ci-key">개인정보처리방침</span>
+          <span class="ci-val"><a href="https://bg.suparain.kr/privacy" target="_blank">https://bg.suparain.kr/privacy</a></span>
+        </div>
+        <div class="company-info-row">
+          <span class="ci-key">이용약관</span>
+          <span class="ci-val"><a href="https://bg.suparain.kr/terms" target="_blank">https://bg.suparain.kr/terms</a></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================
+     FOOTER
+============================= -->
+<div class="page-footer">
+  <strong>번개가입 (BungaeGaib)</strong> &nbsp;|&nbsp; 주식회사 수파레인<br>
+  사업자등록번호 716-88-01081 &nbsp;|&nbsp; 경기도 김포시 태장로 789 금광하이테크시티 465호<br>
+  <span style="font-size: 11px; opacity: 0.6;">본 문서는 네이버 로그인 검수 목적으로 작성된 서비스 소개자료입니다. &nbsp;|&nbsp; 작성일: 2026-03-30</span>
+</div>
+
+</body>
+</html>
