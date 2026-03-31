@@ -545,6 +545,29 @@ export class Cafe24Client {
   }
 
   // ──────────────────────────────────────────────
+  // Customer Social API
+  // ──────────────────────────────────────────────
+
+  /**
+   * Get social login linked accounts for a customer.
+   * Requires special permission from Cafe24 support.
+   *
+   * @see https://developers.cafe24.com/docs/api/admin/#get-a-customers-social
+   */
+  async getCustomerSocial(
+    mallId: string,
+    accessToken: string,
+    memberId: string,
+  ): Promise<Record<string, unknown>[]> {
+    const result = await this.apiGet<{ social?: Record<string, unknown>[] }>(
+      mallId,
+      accessToken,
+      `/admin/customers/${encodeURIComponent(memberId)}/social`,
+    );
+    return result.social ?? [];
+  }
+
+  // ──────────────────────────────────────────────
   // ScriptTag management
   // ──────────────────────────────────────────────
 
