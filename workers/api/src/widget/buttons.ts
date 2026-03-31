@@ -673,13 +673,277 @@ export const WIDGET_JS = `(function() {
     return null;
   };
 
+  // ─── [TEST] 상품 상세 BUY 버튼 오버레이 뱃지 ─────────────────
+  // TODO: 테스트 완료 후 삭제 (TEST_CODE_TRACKER.md 참조)
+  function initBuyBadge() {
+    // 모바일 플로팅 버튼 (#orderFixArea) 우선, 없으면 본문 버튼
+    var fixArea = document.getElementById('orderFixArea');
+    var buyBtn = null;
+    if (fixArea) {
+      buyBtn = fixArea.querySelector('a.btnSubmit');
+    }
+    if (!buyBtn) {
+      var buySpan = document.getElementById('actionBuy');
+      buyBtn = buySpan ? buySpan.closest('a') : null;
+    }
+    if (!buyBtn) return;
+
+    var btnPos = window.getComputedStyle(buyBtn).position;
+    if (btnPos === 'static') buyBtn.style.position = 'relative';
+    buyBtn.style.overflow = 'visible';
+
+    var badge = document.createElement('div');
+    badge.id = 'bg-buy-badge';
+    var s = badge.style;
+    s.position = 'absolute';
+    s.left = '-2px';
+    s.top = '-6px';
+    s.padding = '0px 4px';
+    s.lineHeight = '14px';
+    s.height = '14px';
+    s.borderRadius = '7px';
+    s.background = '#ef4444';
+    s.color = '#ffffff';
+    s.fontSize = '8px';
+    s.fontWeight = '700';
+    s.whiteSpace = 'nowrap';
+    s.zIndex = '10';
+    s.pointerEvents = 'none';
+    s.boxShadow = '0 1px 3px rgba(0,0,0,0.25)';
+    s.transition = 'opacity 0.4s ease';
+    s.letterSpacing = '-0.3px';
+    s.boxSizing = 'border-box';
+    badge.textContent = '3,000\\uC6D0 \\uD560\\uC778';
+    buyBtn.appendChild(badge);
+
+    var vis = true;
+    setInterval(function() {
+      vis = !vis;
+      badge.style.opacity = vis ? '1' : '0';
+    }, 700);
+  }
+
+  // ─── [TEST] 배송비 옆 무료배송쿠폰 뱃지 ──────────────────────
+  function initShippingBadge() {
+    var delvPrice = document.querySelector('.delv_price_B');
+    if (!delvPrice) return;
+
+    var badge = document.createElement('span');
+    badge.id = 'bg-ship-badge';
+    var s = badge.style;
+    s.display = 'inline-block';
+    s.marginLeft = '6px';
+    s.padding = '1px 6px';
+    s.borderRadius = '3px';
+    s.background = '#2563eb';
+    s.color = '#fff';
+    s.fontSize = '10px';
+    s.fontWeight = '700';
+    s.verticalAlign = 'middle';
+    s.lineHeight = '16px';
+    s.whiteSpace = 'nowrap';
+    s.animation = 'bg-pulse 2s ease-in-out infinite';
+    badge.textContent = '\\uD68C\\uC6D0\\uAC00\\uC785 \\uC2DC \\uBB34\\uB8CC\\uBC30\\uC1A1\\uCFE0\\uD3F0';  // 회원가입 시 무료배송쿠폰
+
+    delvPrice.appendChild(badge);
+
+    // pulse 애니메이션 CSS 주입
+    if (!document.getElementById('bg-test-css')) {
+      var css = document.createElement('style');
+      css.id = 'bg-test-css';
+      css.textContent = '@keyframes bg-pulse{0%,100%{opacity:1}50%{opacity:0.4}} @keyframes bg-countup{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}';
+      document.head.appendChild(css);
+    }
+  }
+
+  // ─── [TEST] 상품명 옆 "오늘 N개 판매" 카운트업 뱃지 ──────────
+  function initSalesBadge() {
+    var h1 = document.querySelector('.headingArea h1');
+    if (!h1) return;
+
+    var badge = document.createElement('span');
+    badge.id = 'bg-sales-badge';
+    var s = badge.style;
+    s.display = 'inline-block';
+    s.marginLeft = '8px';
+    s.padding = '2px 8px';
+    s.borderRadius = '10px';
+    s.background = '#f97316';
+    s.color = '#fff';
+    s.fontSize = '11px';
+    s.fontWeight = '700';
+    s.verticalAlign = 'middle';
+    s.lineHeight = '16px';
+    s.whiteSpace = 'nowrap';
+
+    h1.appendChild(badge);
+
+    // 87에서 시작해서 카운트업
+    var count = 87;
+    badge.textContent = '\\uC624\\uB298 ' + count + '\\uAC1C \\uD310\\uB9E4';  // 오늘 87개 판매
+
+    setInterval(function() {
+      count += Math.floor(Math.random() * 3) + 1;  // 1~3씩 증가
+      badge.textContent = '\\uC624\\uB298 ' + count + '\\uAC1C \\uD310\\uB9E4';
+      badge.style.animation = 'none';
+      badge.offsetHeight;  // reflow
+      badge.style.animation = 'bg-countup 0.3s ease';
+    }, 3000 + Math.random() * 2000);  // 3~5초 간격
+  }
+
+  // ─── [TEST] 판매가 -3,000원 할인 카운트다운 효과 ──────────────
+  function initPriceEffect() {
+    var priceEl = document.getElementById('span_product_price_text');
+    if (!priceEl) return;
+
+    var priceText = priceEl.textContent || '';
+    var priceNum = parseInt(priceText.replace(/[^0-9]/g, ''), 10);
+    if (!priceNum) return;
+
+    // 할인가 표시 요소 삽입
+    var wrapper = priceEl.parentNode;
+    var discountEl = document.createElement('span');
+    discountEl.id = 'bg-price-discount';
+    var ds = discountEl.style;
+    ds.display = 'block';
+    ds.marginTop = '2px';
+    ds.fontSize = '13px';
+    ds.fontWeight = '800';
+    ds.color = '#ef4444';
+    ds.letterSpacing = '-0.5px';
+    wrapper.appendChild(discountEl);
+
+    var label = document.createElement('span');
+    label.style.fontSize = '10px';
+    label.style.color = '#ef4444';
+    label.style.fontWeight = '600';
+    label.textContent = '\\uD68C\\uC6D0\\uAC00 ';  // 회원가
+    discountEl.appendChild(label);
+
+    var numSpan = document.createElement('span');
+    discountEl.appendChild(numSpan);
+
+    // 원래 가격에서 3000 빼기 카운트다운
+    var targetPrice = priceNum - 3000;
+    var currentPrice = priceNum;
+    var step = 100;
+    var interval = 30;
+
+    function formatPrice(n) {
+      return n.toLocaleString() + '\\uC6D0';  // 원
+    }
+
+    numSpan.textContent = formatPrice(currentPrice);
+
+    // 1초 후 카운트다운 시작
+    setTimeout(function() {
+      var timer = setInterval(function() {
+        currentPrice -= step;
+        if (currentPrice <= targetPrice) {
+          currentPrice = targetPrice;
+          clearInterval(timer);
+          // 완료 후 강조
+          numSpan.style.fontSize = '14px';
+          var saving = document.createElement('span');
+          saving.style.fontSize = '9px';
+          saving.style.color = '#666';
+          saving.style.marginLeft = '4px';
+          saving.textContent = '(-3,000\\uC6D0)';
+          discountEl.appendChild(saving);
+        }
+        numSpan.textContent = formatPrice(currentPrice);
+      }, interval);
+    }, 1000);
+  }
+
+  // ─── [TEST] 옵션 재고 카운트다운 + 품절 강조 ──────────────────
+  function initOptionStock() {
+    var sel = document.getElementById('product_option_id1');
+    if (!sel) return;
+
+    // 재고 있는 옵션 개수 세기 (품절 아닌 것)
+    var opts = sel.querySelectorAll('optgroup option');
+    var available = 0;
+    for (var i = 0; i < opts.length; i++) {
+      if (opts[i].textContent.indexOf('\\uD488\\uC808') === -1 && !opts[i].disabled) {  // 품절
+        available++;
+      }
+    }
+
+    // select 옆에 재고 뱃지 추가
+    var wrapper = sel.parentNode;
+    var badge = document.createElement('div');
+    badge.id = 'bg-stock-badge';
+    var bs = badge.style;
+    bs.marginTop = '6px';
+    bs.padding = '4px 10px';
+    bs.borderRadius = '4px';
+    bs.background = '#fef2f2';
+    bs.border = '1px solid #fecaca';
+    bs.fontSize = '12px';
+    bs.fontWeight = '600';
+    bs.color = '#dc2626';
+    bs.display = 'flex';
+    bs.alignItems = 'center';
+    bs.gap = '6px';
+
+    var dot = document.createElement('span');
+    dot.style.width = '6px';
+    dot.style.height = '6px';
+    dot.style.borderRadius = '50%';
+    dot.style.background = '#ef4444';
+    dot.style.display = 'inline-block';
+    dot.style.animation = 'bg-pulse 1s ease-in-out infinite';
+
+    var txt = document.createElement('span');
+
+    badge.appendChild(dot);
+    badge.appendChild(txt);
+    wrapper.appendChild(badge);
+
+    // 재고 카운트다운 (가상)
+    var stock = available > 0 ? 3 : 0;
+    function updateStock() {
+      if (stock <= 0) {
+        txt.textContent = '\\uC7AC\\uACE0 \\uC18C\\uC9C4! \\uC785\\uACE0 \\uB300\\uAE30 \\uC911';  // 재고 소진! 입고 대기 중
+        dot.style.background = '#9ca3af';
+      } else if (stock === 1) {
+        txt.textContent = '\\uB9C8\\uC9C0\\uB9C9 1\\uAC1C \\uB0A8\\uC74C!';  // 마지막 1개 남음!
+        badge.style.background = '#fef2f2';
+        badge.style.borderColor = '#ef4444';
+        txt.style.fontWeight = '800';
+      } else {
+        txt.textContent = '\\uC7AC\\uACE0 ' + stock + '\\uAC1C \\uB0A8\\uC74C';  // 재고 N개 남음
+      }
+    }
+    updateStock();
+
+    // 일정 간격으로 카운트다운 (3 → 2 → 1 → 소진)
+    setInterval(function() {
+      if (stock > 0) {
+        stock--;
+        updateStock();
+      }
+    }, 8000);  // 8초 간격
+  }
+
   // ─── Initialize ──────────────────────────────────────────────
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
       new BGWidget().init();
+      initBuyBadge();
+      initShippingBadge();
+      initSalesBadge();
+      initPriceEffect();
+      initOptionStock();
     });
   } else {
     new BGWidget().init();
+    initBuyBadge();
+    initShippingBadge();
+    initSalesBadge();
+    initPriceEffect();
+    initOptionStock();
   }
 })();`;

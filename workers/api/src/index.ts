@@ -13,6 +13,7 @@ import pageRoutes from './routes/pages';
 import adminRoutes from './routes/admin';
 import facebookRoutes from './routes/facebook';
 import { WIDGET_JS } from './widget/buttons';
+import { TEST_DOM_JS } from './widget/test-dom';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -69,6 +70,15 @@ app.get('/widget/buttons.js', (c) => {
     'Content-Type': 'application/javascript; charset=utf-8',
     'Cache-Control': 'public, max-age=3600, s-maxage=86400',
     'ETag': WIDGET_ETAG,
+    'Access-Control-Allow-Origin': '*',
+  });
+});
+
+// ── ScriptTag DOM 조작 테스트 (개발용) ──────────────────────
+app.get('/widget/test.js', (c) => {
+  return c.body(TEST_DOM_JS, 200, {
+    'Content-Type': 'application/javascript; charset=utf-8',
+    'Cache-Control': 'no-cache, no-store',
     'Access-Control-Allow-Origin': '*',
   });
 });
