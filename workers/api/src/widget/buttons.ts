@@ -10,6 +10,9 @@
 export const WIDGET_JS = `(function() {
   'use strict';
 
+  // ─── 서버에서 주입된 BASE_URL (런타임에 치환됨) ─────────────
+  var __MY_BASE_URL__ = '';
+
   // ─── Provider Info ───────────────────────────────────────────
   var PROVIDERS = {
     kakao: {
@@ -119,28 +122,28 @@ export const WIDGET_JS = `(function() {
     style.textContent = WIDGET_CSS;
     document.head.appendChild(style);
 
-    // Find script tag to get shop client_id
-    var scripts = document.querySelectorAll('script[src*="buttons.js"]');
+    // 서버에서 주입된 BASE_URL 사용
+    this.myBaseUrl = __MY_BASE_URL__;
+
+    // ScriptTag src에서 client_id 추출
     var clientId = null;
+    var scripts = document.querySelectorAll('script[src*="buttons.js"]');
     for (var i = 0; i < scripts.length; i++) {
       var src = scripts[i].getAttribute('src') || '';
-      var match = src.match(/[?&]shop=([^&]+)/);
-      if (match) {
-        clientId = match[1];
-        break;
-      }
-      // Also check data attribute
+      // 자기 도메인의 ScriptTag만 매치
+      if (this.myBaseUrl && src.indexOf(this.myBaseUrl) === -1) continue;
+      var shopMatch = src.match(new RegExp('[?&]shop=([^&]+)'));
+      if (shopMatch) { clientId = shopMatch[1]; break; }
       var dataShop = scripts[i].getAttribute('data-shop');
-      if (dataShop) {
-        clientId = dataShop;
-        break;
-      }
+      if (dataShop) { clientId = dataShop; break; }
     }
 
     if (!clientId) {
-      console.warn('[번개가입] client_id not found. scripts found:', scripts.length);
+      console.warn('[번개가입] client_id not found for ' + this.myBaseUrl);
       return;
     }
+
+    this.clientId = clientId;
 
     // Save last provider from URL (after OAuth callback)
     this.saveLastProvider();
@@ -214,13 +217,9 @@ export const WIDGET_JS = `(function() {
   };
 
   BGWidget.prototype.getApiBase = function() {
-    var scripts = document.querySelectorAll('script[src*="buttons.js"]');
-    for (var i = 0; i < scripts.length; i++) {
-      var src = scripts[i].getAttribute('src') || '';
-      var match = src.match(/^(https?:\\/\\/[^/]+)/);
-      if (match) return match[1];
-    }
-    return 'https://bg.suparain.kr';
+    // 초기화 시 저장한 자신의 baseUrl 사용
+    if (this.myBaseUrl) return this.myBaseUrl;
+    return '';
   };
 
   BGWidget.prototype.render = function() {

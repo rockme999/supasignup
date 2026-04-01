@@ -74,12 +74,36 @@ cafe24.get('/install', async (c) => {
   oauthUrl.searchParams.set('client_id', c.env.CAFE24_CLIENT_ID);
   oauthUrl.searchParams.set('redirect_uri', `${c.env.BASE_URL}/api/cafe24/callback`);
   oauthUrl.searchParams.set('scope', [
-    'mall.read_store',
-    'mall.write_store',
-    'mall.read_customer',
-    'mall.write_customer',
+    // 1. 앱(Application) — Read+Write
     'mall.read_application',
     'mall.write_application',
+    // 2. 상품분류(Category) — Read
+    'mall.read_category',
+    // 3. 상품(Product) — Read
+    'mall.read_product',
+    // 4. 판매분류(Collection) — Read (브랜드, 자체분류, 제조사, 트렌드)
+    'mall.read_collection',
+    // 5. 공급사(Supply) — Read
+    'mall.read_supply',
+    // 6. 개인화정보(Personal) — Read (장바구니, 관심상품, 좋아요)
+    'mall.read_personal',
+    // 7. 주문(Order) — Read
+    'mall.read_order',
+    // 8. 회원(Customer) — Read+Write
+    'mall.read_customer',
+    'mall.write_customer',
+    // 9. 상점(Store) — Read+Write
+    'mall.read_store',
+    'mall.write_store',
+    // 10. 프로모션(Promotion) — Read+Write (쿠폰, 혜택, 시리얼쿠폰)
+    'mall.read_promotion',
+    'mall.write_promotion',
+    // 11. 매출통계(Salesreport) — Read
+    'mall.read_salesreport',
+    // 12. 개인정보(Privacy) — Read
+    'mall.read_privacy',
+    // 13. 배송(Shipping) — Read
+    'mall.read_shipping',
   ].join(','));
   // CSRF 방어: state에 랜덤 토큰을 포함하고 KV에 저장 (TTL 600초)
   const csrfToken = generateSecret(16);
@@ -93,6 +117,7 @@ cafe24.get('/install', async (c) => {
 
 // ─── GET /callback ───────────────────────────────────────────
 cafe24.get('/callback', async (c) => {
+  try {
   const code = c.req.query('code');
   const stateParam = c.req.query('state');
   const error = c.req.query('error');
@@ -210,6 +235,15 @@ cafe24.get('/callback', async (c) => {
       ['Set-Cookie', platformCookie],
     ],
   });
+  } catch (err: any) {
+    console.error('Callback error:', err?.message, err?.stack);
+    return c.json({
+      error: 'callback_failed',
+      message: err?.message ?? String(err),
+      detail: err?.detail ?? null,
+      stack: err?.stack?.split('\n').slice(0, 5),
+    }, 500);
+  }
 });
 
 // ─── POST /webhook ───────────────────────────────────────────

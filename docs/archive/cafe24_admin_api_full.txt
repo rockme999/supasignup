@@ -1,0 +1,2808 @@
+메뉴
+닫기
+Admin API
+Front API
+API Index
+Introduction
+Authentication
+Store
+Activitylogs
+Automessages arguments
+Automessages setting
+Benefits setting
+Boards setting
+Carts setting
+Categories properties setting
+Coupons setting
+Currency
+Customers setting
+Dashboard
+Financials paymentgateway
+Financials store
+Images setting
+Information
+Kakaoalimtalk profile
+Kakaoalimtalk setting
+Kakaopay setting
+Mains properties setting
+Menus
+Mobile setting
+Naverpay setting
+Orderform setting
+Orders setting
+Orders status
+Payment setting
+Paymentgateway
+Paymentgateway paymentmethods
+Paymentmethods
+Paymentmethods paymentproviders
+Paymentservices
+Points setting
+Policy
+Privacy boards
+Privacy join
+Privacy orders
+Products display setting
+Products properties setting
+Products setting
+Redirects
+Restocknotification setting
+Seo setting
+Shippingmanager
+Shops
+Sms setting
+Socials apple
+Socials kakaosync
+Socials naverlogin
+Socials navershopping
+Store
+Store accounts
+Store dropshipping
+Store setting
+Subscription shipments setting
+Taxmanager
+Users
+Product
+Bundleproducts
+Categories products
+Categories properties
+Mains products
+Mains properties
+Products
+Products additionalimages
+Products approve
+Products customproperties
+Products decorationimages
+Products discountprice
+Products hits
+Products icons
+Products images
+Products memos
+Products options
+Products seo
+Products tags
+Products variants
+Products variants inventories
+Products customproperties
+Products decorationimages
+Products icons
+Products images
+Products properties
+Order
+Cancellation
+Cancellationrequests
+Cashreceipt
+Cashreceipt cancellation
+Collectrequests
+Control
+Exchange
+Exchangerequests
+Fulfillments
+Labels
+Orderform properties
+Orders
+Orders autocalculation
+Orders buyer
+Orders buyer history
+Orders cancellation
+Orders exchange
+Orders exchangerequests
+Orders items
+Orders items labels
+Orders items options
+Orders memos
+Orders payments
+Orders paymenttimeline
+Orders receivers
+Orders receivers history
+Orders refunds
+Orders return
+Orders shipments
+Orders shippingfeecancellation
+Orders shortagecancellation
+Orders benefits
+Orders calculation
+Orders coupons
+Orders dashboard
+Orders inflowgroups
+Orders inflowgroups inflows
+Orders memos
+Orders migrations
+Orders paymentamount
+Orders saleschannels
+Payments
+Refunds
+Reservations
+Return
+Returnrequests
+Shipments
+Subscription shipments
+Subscription shipments items
+Unpaidorders
+Customer
+Customergroups
+Customergroups customers
+Customergroups setting
+Customers
+Customers autoupdate
+Customers memos
+Customers paymentinformation
+Customers plusapp
+Customers social
+Customers properties
+Community
+Boards
+Boards articles
+Boards articles comments
+Boards comments
+Boards seo
+Commenttemplates
+Financials monthlyreviews
+Urgentinquiry
+Urgentinquiry reply
+Design
+Icons
+Themes
+Themes pages
+Promotion
+Benefits
+Commonevents
+Coupons
+Coupons issuancecustomers
+Coupons issues
+Customerevents
+Customers coupons
+Discountcodes
+Serialcoupons
+Serialcoupons issues
+Application
+Apps
+Appstore orders
+Appstore payments
+Databridge logs
+Recipes
+Scripttags
+Webhooks logs
+Webhooks setting
+Category
+Autodisplay
+Categories
+Categories decorationimages
+Categories seo
+Mains
+Collection
+Brands
+Classifications
+Manufacturers
+Origin
+Trends
+Supply
+Shipping suppliers
+Shipping suppliers additionalfees
+Suppliers
+Suppliers users
+Suppliers users regionalsurcharges
+Suppliers users regionalsurcharges setting
+Shipping
+Carriers
+Regionalsurcharges
+Shipping
+Shipping additionalfees
+Shippingorigins
+Salesreport
+Financials dailysales
+Financials monthlysales
+Reports hourlysales
+Reports productsales
+Reports salesvolume
+Personal
+Carts
+Customers wishlist
+Products carts
+Privacy
+Customersprivacy
+Products wishlist customers
+Mileage
+Credits
+Credits report
+Points
+Points autoexpiration
+Points report
+Notification
+Automails
+Customers invitation
+Recipientgroups
+Sms
+Sms balance
+Sms receivers
+Sms senders
+Translation
+Translations categories
+Translations products
+Translations store
+Translations themes
+Analytics
+Financials dailyvisits
+API version: 2026-03-01 (latest)
+상점
+Store
+상품
+Product
+주문
+Order
+회원
+Customer
+게시판
+Community
+디자인
+Design
+프로모션
+Promotion
+앱
+Application
+상품분류
+Category
+판매분류
+Collection
+공급사 정보
+Supply
+배송
+Shipping
+매출통계
+Salesreport
+개인화정보
+Personal
+개인정보
+Privacy
+적립금
+Mileage
+알림
+Notification
+번역
+Translation
+접속통계
+Analytics
+Introduction
+Cafe24 API 
+
+카페24 쇼핑몰 API는 카페24 쇼핑몰에 연동하여 서비스를 제공하기 위한 앱스토어 입점 개발사, 서드파티 솔루션 제공자 등에 제공하는 API입니다.
+
+카페24 API는 RESTful한 아키텍쳐로서 OAuth 2.0 기반의 인증 시스템과 표준 HTTP Request Method, 리소스를 예측할 수 있는 엔드포인트 URL, HTTP 코드 기반의 에러 메시지를 제공합니다.
+
+API Diagram 
+
+리소스 관계를 다이어그램으로 제공하여, 전체적인 카페24 API 체계를 확인할 수 있습니다.
+
+Request/Response Format 
+
+API 요청과 응답은 JSON Format을 지원합니다.
+
+개인정보 보호를 위하여 카페24 API는 HTTPS 프로토콜만 지원합니다.
+
+Dates 속성은 ISO_8601  Format으로 제공합니다. : YYYY-MM-DDTHH:MM:SS+09:00
+
+요청 예제 (조회)
+cURL
+Java
+Python
+Node.js
+PHP
+Go
+curl -X GET \
+  'https://{mallid}.cafe24api.com/{endpoint_url}' \
+  -H 'Authorization: Bearer {access_token}' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Cafe24-Api-Version: {version}'
+요청 예제 (등록/수정)
+cURL
+Java
+Python
+Node.js
+PHP
+Go
+curl -X POST \
+  'https://{mallid}.cafe24api.com/{endpoint_url}' \
+  -H 'Authorization: Bearer {access_token}' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Cafe24-Api-Version: {version}' \
+  -d '{ .... }'
+정상 응답 예제
+{
+  "resource": {
+      "key": "value",
+      "key": "value"
+   }
+}
+에러 응답 예제
+{
+  "error": {
+      "code": "error code",
+      "message": "error message",
+      "more_info": {
+      }
+  }
+}
+Method 
+
+각 리소스 별로 Create, Read, Update, Delete를 지원하며 표준 HTTP Method를 사용하여 API를 사용할 수 있습니다.
+
+POST : 해당 리소스를 생성(Create)합니다.
+
+GET : 해당 리소스의 정보를 조회(Read)합니다.
+
+PUT : 해당 리소스를 수정(Update)합니다.
+
+DELETE : 해당 리소스를 삭제(Delete)합니다.
+
+Admin API Intro 
+
+Admin API는 쇼핑몰 관리자가 쇼핑몰의 정보를 조회하거나 생성, 수정, 삭제하는데 적합합니다. Admin API는 해당 리소스의 정보를 대부분 조회할 수 있으며 OAuth 2.0 방식의 별도 인증을 통과한 경우에만 사용할 수 있습니다.
+
+사용 예시
+https://{mallid}.cafe24api.com/api/v2/admin/sampleapi
+API Status Code 
+Code	발생하는 사례	오류 해결 방법
+200	GET 성공, PUT 성공, DELETE 성공시	
+201	POST 성공시	
+202	비동기 처리 요청이 접수되었으나 아직 처리가 완료되지 않은 경우	
+204	DELETE 성공시 응답 본문이 없는 경우	
+207	다중 요청 등록시 상태가 객체별로 다른 경우	오류 상태를 객체별로 확인하여 해당 상태에 따라 대응합니다.
+400	서버에서 요청을 이해할 수 없음
+1) Content-Type이 잘못 지정되어있음
+2) application/type이 json이 아님	요청시 "Content-Type"이 application/json으로 되어있는지 확인합니다.
+400	요청 API URL에 한글 또는 특수문자를 인코딩하지 않고 그대로 사용한 경우	요청 API URL에 한글 또는 특수문자를 URL 인코딩하였는지 확인합니다.
+401	1) Access Token 없이 호출한 경우
+2) Access Token이 유효하지 않은 경우
+3) Access Token이 만료된 경우
+4) 알 수 없는 클라이언트일 경우	유효한 발급 절차에 따라 발급받은 Access Token을 사용하였는지 확인합니다.
+401	Front API 사용시 client_id를 미입력한 경우	유효한 클라이언트 ID를 사용하였는지 확인합니다.
+403	1) Access Token은 있으나 해당 Scope에 권한이 없음
+2) Front API에서 볼 수 있는 권한이 없을 경우	API를 호출할 수 있는 권한이 있는지 API의 Scope 또는 쇼핑몰의 설정을 확인합니다.
+403	https 프로토콜이 아닌 경우	API 요청시 https 로 요청하였는지 확인합니다.
+403	뉴상품 쇼핑몰이 아닌 경우	쇼핑몰이 (뉴)상품관리로 업그레이드 되어야 사용 가능합니다.
+403	(Admin API 호출시) 쇼핑몰에서 해당 앱이 삭제된 경우	쇼핑몰에 앱이 설치되었는지 확인 후 앱을 다시 설치합니다.
+403	(Front API 호출시) 쇼핑몰에서 해당 앱이 삭제된 경우	쇼핑몰에 앱이 설치되었는지 확인 후 앱을 다시 설치합니다.
+403	(Customer API 호출시) 쇼핑몰에서 해당 앱이 삭제된 경우	쇼핑몰에 앱이 설치되었는지 확인 후 앱을 다시 설치합니다.
+404	1) API URL을 잘못 호출한 경우
+2) 리소스를 찾을 수 없을 경우
+3) {#id}가 없는 경우	엔드포인트 URL의 오류가 있는지 API 문서를 참고하여 확인합니다.
+409	동일 리소스에 동일 내용을 업데이트할 경우	수정할 데이터를 요청해주세요.
+422	조회/처리 요청시 값이 정해진 스펙과 다를 경우
+1) 필수 파라메터 누락함
+2) 정해진 스펙과 다를 경우	API 문서를 참고하여 필수 파라메터가 입력되지 않았거나 유효하지 않은 값을 입력하였는지 확인합니다.
+429	클라이언트의 API 요청이 Bucket을 초과한 경우	API 최대 허용 요청 건수를 초과하지 않도록 잠시 후 다시 요청합니다.
+500	내부 서버 에러, 알 수 없는 에러	일시적으로 에러가 발생하였습니다. 잠시 후에 다시 시도합니다.
+503	현재 서버가 다운된 경우	개발자센터로 문의해주세요.
+503	서버가 다운된 경우. API를 사용할 수 없음.	개발자센터로 문의해주세요.
+504	요청 시간이 초과된 경우(Timeout)	일시적으로 에러가 발생하여 응답이 지연되고 있습니다. 잠시 후에 다시 시도해주세요.
+How to use GET API 
+
+카페24 API는 데이터를 조회하는 여러가지 방법을 제공하고 있습니다.
+
+다음은 API 조회시 여러가지 파라메터를 사용하여 다양하게 데이터를 호출할 수 있는 방법을 설명하고 있습니다.
+
+1. 검색조건 추가
+
+검색조건은 엔드포인트에 파라메터를 추가하여 검색할 수 있습니다.
+
+여러 조건을 같이 검색할 경우 "&" 구분자를 이용하여 검색 조건을 추가할 수 있습니다.
+
+API에서 지원하는 경우, 타임존을 사용하여 날짜와 시간 검색을 할 수 있습니다.
+
+검색조건 추가
+예) 특정 브랜드 내에서 상품 판매가가 1000원 이상인 상품 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?brand_code=B000000A&price_min=1000
+
+예) 상품 등록일 범위를 지정하여 상품 조회 GET https://{mallid}.cafe24api.com/api/v2/admin/products?created_start_date=2018-01-03&created_end_date=2018-02-03
+
+예) 상품 수정일 범위를 지정하여 상품 조회 GET https://{mallid}.cafe24api.com/api/v2/admin/products?updated_start_date=2018-01-03T14:01:26+09:00&updated_end_date=2018-02-03T14:01:26+09:00 ```
+
+2. 콤마로 여러 건을 검색
+
+API에서 지원하는 경우, 콤마(,)를 사용하여 여러 값을 동시에 검색할 수 있습니다. (단, 100개 항목 이하로 입력 해주세요.)
+
+콤마(,)로 추가한 검색 조건은 OR 조건으로, 검색 조건에 해당되는 모든 값들이 검색됩니다.
+
+콤마로 여러 건을 검색
+예) 특정 상품번호를 지정하여 상품 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?product_no=11,12,13
+
+예) 특정 상품번호와 상품코드를 지정하여 상품 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?product_no=11,12,13&product_code=P000000X,P000000W
+3. 멀티쇼핑몰 정보 조회
+
+특정 멀티쇼핑몰 번호를 명시하면 해당 멀티쇼핑몰의 정보를 조회할 수 있습니다.
+
+멀티쇼핑몰 번호를 명시하지 않을 경우, 기본 쇼핑몰의 정보를 조회합니다.
+
+멀티쇼핑몰 정보 조회
+예) 특정 멀티쇼핑몰의 상품 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?shop_no=2
+4. 상세 조회와 단건 조회
+
+리소스의 ID를 명시하여 상세 조회를 할 수 있습니다.
+
+상세 조회는 리소스 하나만 조회할 수 있지만, 목록 조회보다 더 많은 항목이 반환됩니다.
+
+상세 조회와 단건 조회
+예) 특정 상품번호를 지정하여 상품 상세 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products/128
+
+
+예) 특정 상품번호를 지정하여 상품 단건 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?product_no=128
+5. Pagination
+
+조회 결과가 많을 경우, 정해진 'limit' 기본 값만큼 결과가 조회됩니다.
+
+'limit' 파라메터를 이용하여 조회 건수를 확장할 수 있으며, API마다 정의된 최대 값만큼만 확장할 수 있습니다.
+
+'limit' 최대 값으로 모든 데이터를 조회할 수 없는 경우, 'offset' 파라메터를 사용할 수 있습니다.
+
+Pagination
+예 ) 상품 100개 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?limit=100
+
+
+예) 201번째 상품부터 300번째 상품까지 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?limit=100&offset=200
+6. 특정 항목 조회
+
+특정한 값들만 조회하고 싶을 때는 'fields' 파라메터를 사용하여 조회할 수 있습니다.
+
+특정 항목 조회
+예) 상품명과 상품번호 항목만 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products?fields=product_name,product_no
+7. 하위 리소스 조회
+
+API에서 지원하는 경우, 'embed' 파라메터를 사용하여 하위 리소스의 데이터를 같이 조회할 수 있습니다.
+
+하위 리소스 조회
+예) 상품 조회시 품목과 재고 데이터를 함께 조회
+GET https://{mallid}.cafe24api.com/api/v2/admin/products/570?embed=variants,inventories
+API Limit 
+
+카페24 API는 안정적인 응답 속도와 플랫폼 전체의 가용성을 보장하기 위해, 요청 수 제한 정책과 사용량 제한 정책을 병행 적용합니다.
+
+요청 수 제한
+
+카페24 API는 "Leaky Bucket" 알고리즘으로 작동합니다. Leaky Bucket 알고리즘은 성능을 위해 비정상적으로 많은 API 요청만 제한되고 일상적인 API 요청은 별다른 제약 없이 사용할 수 있는 효과가 있습니다.제한되고 일상적인 API 요청은 별다른 제약 없이 사용할 수 있는 효과가 있습니다.
+
+카페24 API는 API 요청을 Bucket에 쌓아둡니다. Bucket은 쇼핑몰 당 "호출건 수 제한"만큼 가득차면 API 호출이 제한됩니다. Bucket은 1초에 2회씩 감소하며, 감소한만큼 다시 API 호출을 할 수 있습니다.
+
+만약 앱이 1초에 2회씩 API를 호출한다면 API 호출을 별다른 제약 없이 계속 사용할 수 있습니다.
+
+순간적으로 1초 이내에 "호출건 수 제한" 이상의 콜이 발생한다면 429 에러(Too Many Request)를 반환합니다.
+
+Bucket 이내의 호출이라도 해당 쇼핑몰에서 동일 IP로 초당 10회 이상의 호출이 발생할 경우 비정상적인 호출로 판단될 수 있습니다.
+
+Header에 X-Api-Call-Limit을 확인하면 429 에러를 피할 수 있습니다. 해당 쇼핑몰에서 얼마나 API를 호출했는지, 그리고 Bucket 여유량은 얼마나 남았는지를 확인할 수 있습니다.
+
+X-Api-Call-Limit : 1/40
+사용량 제한
+
+카페24 API는 단순 호출 횟수 제한 외에도 사용량 기반 제한 정책을 적용합니다. API 응답에는 Usage와 Remain 관련 Header가 함께 포함되며, 이를 통해 현재 사용량과 재호출 가능 시간을 확인할 수 있습니다.
+
+X-Cafe24-Call-Usage : 호출 횟수 한도 대비 사용률(%)
+
+X-Cafe24-Call-Remain : 호출 재개 가능까지 남은 시간(초)
+
+X-Cafe24-Time-Usage : 처리 시간 한도 대비 사용률(%)
+
+X-Cafe24-Time-Remain : 처리 시간 재개 가능까지 남은 시간(초)
+
+Remain 항목은 Usage 값이 100% 이상, 즉 자원이 모두 소진된 상태에서만 응답에 포함됩니다.
+
+정상 사용 구간에서는 Remain 값이 내려오지 않으며, 이는 아직 제한에 도달하지 않았음을 의미합니다.
+
+제한을 초과하면 해당 클라이언트의 API 호출은 일시적으로 차단되며, 차단된 상태에서 계속 호출을 시도할 경우 Usage 값이 100%를 초과하여 재호출 가능까지 남은 시간은 더 길어질 수 있습니다.
+
+따라서 서비스 영향 최소화를 위해 Header 값을 반드시 확인하고, 호출 로직을 조정하는 것이 필요합니다.
+
+X-Cafe24-Call-Usage : 120.04
+X-Cafe24-Call-Remain : 32
+X-Cafe24-Time-Usage : 100.5
+X-Cafe24-Time-Remain : 7
+Versioning 
+
+Version 2026-03-01 (latest) 이전 버전과 호환되지 않은 변경사항에 대해 날짜로 버전을 제공합니다.
+
+custom headers "X-Cafe24-Api-Version"를 통해 원하시는 버전을 지정할 수 있으며 버전을 지정하지 않을경우 개발정보의 앱 버전으로 동작합니다.
+
+앱 버전은 아래 경로를 통해 확인 및 변경이 가능합니다.
+
+개발자센터(로그인) > Apps > 개발정보 > 인증정보 내 버전관리
+
+버전의 만료 기간은 최신 버전 릴리즈가 출시된 시점부터 최대 1년입니다.
+
+해당 버전이 만료된 이후에는 만료되지 않은 버전 중 가장 오래된 버전으로 동작합니다.
+
+예시 코드 (요청)
+cURL
+Java
+Python
+Node.js
+PHP
+Go
+curl -X GET \
+  'https://{mallid}.cafe24api.com/api/v2/categories' \
+  -H 'Authorization: Bearer {access_token}' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Cafe24-Api-Version: 2026-03-01'
+Authentication
+Get Authentication Code 
+
+토큰발급 요청시 사용된 code는 재사용할 수 없으며 코드 발급 후 1분이 경과하면 만료됩니다.
+
+{mallid} : 해당 쇼핑몰ID를 입력합니다.
+
+{client_id} : 개발자 센터에서 생성한 앱의 client_id를 입력합니다.
+
+{state} : 위변조 방지를 위해 입력하는 값으로 코드 반환시 같은 값이 반환됩니다.
+
+{redirect_uri} : 개발자 센터에서 생성한 앱의 Redirect URL을 입력합니다.
+
+{scope} : 해당 접근 토큰으로 접근할 리소스 서버의 권한을 입력할 수 있습니다.
+
+접근 토큰을 발급 받으려면 면저 접근 코드를 요청해야 합니다. 접근 코드는 클라이언트가 웹 애플리케이션 형태일 경우 이용됩니다. 코드 요청은 cURL이 아닌 웹브라우저에서 진행하셔야 합니다.
+
+예시 코드 (요청)
+GET 'https://{mallid}.cafe24api.com/api/v2/oauth/authorize?response_type=code&client_id={client_id}&state={state}&redirect_uri={redirect_uri}&scope={scope}'
+예시 코드 (응답)
+HTTP/1.1 302 Found
+Location: {redirect_uri}?code={authorize_code}&state={state}
+Get Access Token 
+
+발급 받은 인증 코드를 사용하여 실제로 API를 호출할 수 있는 사용자 토큰(Access Token, Refresh Token)을 받아 올 수 있습니다.
+
+{mallid} : 해당 쇼핑몰ID를 입력합니다.
+
+{client_id} : 개발자 센터에서 생성한 앱의 client_id를 입력합니다.
+
+{client_secret} : 개발자 센터에서 생성한 앱의 client_secret을 입력합니다.
+
+{code} : 발급받은 코드를 입력합니다.
+
+{redirect_uri} : 개발자 센터에서 생성한 앱의 Redirect URL을 입력합니다.
+
+access_token : 접근 토큰으로서 클라이언트가 리소스 서버에 접근시 사용됩니다.
+
+refresh_token : 접근 토큰 만료 후 재발급을 위해 사용하는 토큰입니다.
+
+예시 코드 (요청)
+cURL
+Java
+Python
+Node.js
+PHP
+Go
+curl -X POST \
+  'https://{mallid}.cafe24api.com/api/v2/oauth/token' \
+  -H 'Authorization: Basic {base64_encode({client_id}:{client_secret})}' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=authorization_code&code={code}&redirect_uri={redirect_uri}'
+예시 코드 (응답)
+HTTP/1.1 200 OK
+{
+    "access_token": "0iqR5nM5EJIq..........",
+    "expires_at": "2021-03-01T14:00:00.000",
+    "refresh_token": "JeTJ7XpnFC0P..........",
+    "refresh_token_expires_at": "2021-03-15T12:00:00.000",
+    "client_id": "BrIfqEKoPxeE..........",
+    "mall_id": "yourmall",
+    "user_id": "test",
+    "scopes": [
+        "mall.read_order",
+        "mall.read_product",
+        "mall.read_store",
+        "...etc...",
+    ],
+    "issued_at": "2021-03-01T12:00:00.000",
+    "shop_no": "1",
+    "token_type": "Bearer"
+}
+Get Access Token using refresh token 
+
+접근 토큰은 발급 받은 후 2시간이 지나면 사용할 수 없습니다. 접근 토큰이 만료된 후 다시 재발급을 받아야 리소스 서버에 접근할 수 있습니다. 이미 접근 토큰을 발급 받았다면 refresh_token를 사용하여 접근 토큰을 재발급 받을수 있습니다.
+
+refresh token은 2주간 유효하며, refresh token 만료전에 요청을 하면 갱신된 access token과 갱신된 refresh token이 함께 반환됩니다. 기존 refresh token은 만료처리되어 사용할 수 없습니다.
+
+발급 받은 인증 코드를 사용하여 실제로 API를 호출할 수 있는 사용자 토큰(Access Token, Refresh Token)을 받아 올 수 있습니다.
+
+{mallid} : 해당 쇼핑몰ID를 입력합니다.
+
+{client_id} : 개발자 센터에서 생성한 앱의 client_id를 입력합니다.
+
+{client_secret} : 개발자 센터에서 생성한 앱의 client_secret을 입력합니다.
+
+{refresh_token} : 토큰 발급시 받은 refresh_token을 입력합니다.
+
+access_token : 접근 토큰으로서 클라이언트가 리소스 서버에 접근시 사용됩니다.
+
+refresh_token : 접근 토큰 만료 후 재발급을 위해 사용하는 토큰입니다.
+
+예시 코드 (요청)
+cURL
+Java
+Python
+Node.js
+PHP
+Go
+curl -X POST \
+  'https://{mallid}.cafe24api.com/api/v2/oauth/token' \
+  -H 'Authorization: Basic {base64_encode({client_id}:{client_secret})}' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=refresh_token&refresh_token={refresh_token}'
+예시 코드 (응답)
+HTTP/1.1 200 OK
+{
+    "access_token": "21EZes0dGSfN..........",
+    "expires_at": "2021-03-01T15:50:00.000",
+    "refresh_token": "xLlhWztQHBik............",
+    "refresh_token_expires_at": "2021-03-15T13:50:00.000",
+    "client_id": "BrIfqEKoPxeE..........",
+    "mall_id": "yourmall",
+    "user_id": "test",
+    "scopes": [
+        "mall.read_order",
+        "mall.read_product",
+        "mall.read_store",
+        "...etc...",
+    ],
+    "issued_at": "2021-03-01T13:50:00.000",
+    "shop_no": "1",
+    "token_type": "Bearer"
+}
+Revoke Access Token 
+
+Access Token을 사용하여 직접 토큰을 폐기할 수 있습니다.
+
+요청한 토큰에 해당하는 리프레시 토큰도 함께 폐기됩니다.
+
+{mallid} : 해당 쇼핑몰ID를 입력합니다.
+
+{client_id} : 개발자 센터에서 생성한 앱의 client_id를 입력합니다.
+
+{client_secret} : 개발자 센터에서 생성한 앱의 client_secret을 입력합니다.
+
+{token} : 토큰 발급시 받은 access_token 또는 refresh_token, id_token 입력합니다.
+
+{token_hint} : 토큰이 access_token이면 access_token, refresh_token이면 refresh_token, id_token이면 id_token 입력합니다.
+
+예시 코드 (요청)
+cURL
+Java
+Python
+Node.js
+PHP
+Go
+curl -X POST \
+  'https://{mallid}.cafe24api.com/api/v2/oauth/revoke' \
+  -H 'Authorization: Basic {base64_encode({client_id}:{client_secret})}' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'token={token}&token_hint={token_hint}'
+예시 코드 (응답)
+HTTP/1.1 200 OK
+Activitylogs
+
+활동로그(Activitylog)는 쇼핑몰 관리자가 쇼핑몰 어드민에서 진행한 운영 활동을 기록한 내역입니다.
+활동로그 리소스를 사용하면 쇼핑몰의 활동로그를 생성하거나 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/activitylogs
+GET /api/v2/admin/activitylogs/{process_no}
+더보기
+Automessages arguments
+
+자동메시지 변수(Automessages arguments)는 자동메시지 발신 시 사용할 수 있는 변수를 확인하는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/automessages/arguments
+더보기
+Automessages setting
+
+자동메시지 설정(Automessages setting)은 메시지 자동 발송 시 사용 중인 발송 수단을 확인 및 어떤 발송 수단으로 우선발송할 지 조회, 변경하는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/automessages/setting
+PUT /api/v2/admin/automessages/setting
+더보기
+Benefits setting
+
+기간 할인, 재구매 할인, 대량 구매 할인, 회원 할인, 신규 상품 할인, 사은품 증정, 1+N 이벤트 등의 혜택을 등록하고 설정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/benefits/setting
+PUT /api/v2/admin/benefits/setting
+더보기
+Boards setting
+
+게시판 관리자명, 게시판 연동하기, 구매후기 작성 버튼의 노출 시점, 게시판 비밀번호 작성규칙 설정여부, 스팸 자동생성 방지 설정여부 설정 등 게시판 관련 설정의 설정 관리할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/boards/setting
+PUT /api/v2/admin/boards/setting
+더보기
+Carts setting
+
+장바구니 설정을 조회하고 설정을 변경할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/carts/setting
+PUT /api/v2/admin/carts/setting
+더보기
+Categories properties setting
+
+상품 목록 화면에 표시되는 항목의 추가 설정을 조회하고 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/categories/properties/setting
+PUT /api/v2/admin/categories/properties/setting
+더보기
+Coupons setting
+
+쿠폰 설정(Coupons setting)은 쇼핑몰에서 사용할 쿠폰의 기본적인 설정을 입력할 수 있습니다.
+쿠폰의 할인, 적립 기능의 사용여부와 제한조건, 진열 등 다양한 측면의 설정이 가능합니다.
+
+Endpoints
+GET /api/v2/admin/coupons/setting
+PUT /api/v2/admin/coupons/setting
+더보기
+Currency
+
+환율 정보(Currency)는 쇼핑몰의 화폐 정보, 환율 정보 등을 확인할 수 있는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/currency
+PUT /api/v2/admin/currency
+더보기
+Customers setting
+
+회원관련 설정 시 회원가입항목을 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers/setting
+PUT /api/v2/admin/customers/setting
+더보기
+Dashboard
+
+대시보드(Dashboard)는 쇼핑몰의 주문 현황과 매출 현황 등 쇼핑몰 운영에 필요한 정보를 간략하게 요약해놓은 정보입니다.
+
+Endpoints
+GET /api/v2/admin/dashboard
+더보기
+Financials paymentgateway
+
+Financials paymentgateway(PG 정보)는 PG사별 계약정보를 제공합니다.
+
+Endpoints
+GET /api/v2/admin/financials/paymentgateway
+더보기
+Financials store
+
+Financials store(상점의 거래정보)는 상점의 PG사별 거래정보를 제공합니다.
+
+Endpoints
+GET /api/v2/admin/financials/store
+더보기
+Images setting
+
+상품 이미지 사이즈 설정 값을 조회하거나 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/images/setting
+PUT /api/v2/admin/images/setting
+더보기
+Information
+
+쇼핑몰의 기타이용 안내사항을 설정할 수 있습니다
+
+Endpoints
+GET /api/v2/admin/information
+PUT /api/v2/admin/information
+더보기
+Kakaoalimtalk profile
+
+상점의 카카오채널 프로필키 등록여부를 확인할 수 있는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/kakaoalimtalk/profile
+더보기
+Kakaoalimtalk setting
+
+카카오알림톡 서비스(Kakaoalimtalk setting) 사용 여부를 조회하고 설정을 변경하는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/kakaoalimtalk/setting
+PUT /api/v2/admin/kakaoalimtalk/setting
+더보기
+Kakaopay setting
+
+쇼핑몰의 카카오페이 설정을 조회하거나 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/kakaopay/setting
+PUT /api/v2/admin/kakaopay/setting
+더보기
+Mains properties setting
+
+메인 화면에 표시되는 항목의 추가 설정을 조회하고 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/mains/properties/setting
+PUT /api/v2/admin/mains/properties/setting
+더보기
+Menus
+
+메뉴(Menus)는 쇼핑몰의 메뉴 모드에 관한 기능입니다.
+쇼핑몰의 메뉴 모드와 경로 등을 조회할 수 있습니다.
+쇼핑몰의 메뉴 모드로는 프로모드, 스마트모드, 모바일 어드민이 있습니다.
+
+Endpoints
+GET /api/v2/admin/menus
+더보기
+Mobile setting
+
+모바일 설정(Mobile setting)은 쇼핑몰의 모바일 쇼핑몰 설정에 관한 리소스입니다.
+모바일 쇼핑몰 사용 여부와 접속 주소 자동연결의 사용/사용안함 여부를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/mobile/setting
+PUT /api/v2/admin/mobile/setting
+더보기
+Naverpay setting
+
+네이버페이 설정(Naverpay Setting)은 쇼핑몰의 네이버페이 공통인증키를 조회하거나 수정할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/naverpay/setting
+POST /api/v2/admin/naverpay/setting
+PUT /api/v2/admin/naverpay/setting
+더보기
+Orderform setting
+
+주문서 입력항목을 설정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orderform/setting
+PUT /api/v2/admin/orderform/setting
+더보기
+Orders setting
+
+취소/반품시 자동 수량 복구 및 할인/적립 금액 등 주문 설정에 대해 조회, 수정 할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/orders/setting
+PUT /api/v2/admin/orders/setting
+더보기
+Orders status
+
+쇼핑몰에서 사용하는 주문상태 유형 및 표기를 관리할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/status
+PUT /api/v2/admin/orders/status
+더보기
+Payment setting
+
+결제수단의 설정정보를 관리하는 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/payment/setting
+PUT /api/v2/admin/payment/setting
+더보기
+Paymentgateway
+
+
+
+PG(Paymentgateway)를 통해 PG앱의 조회, 등록, 수정, 삭제가 가능합니다.
+
+Endpoints
+POST /api/v2/admin/paymentgateway
+PUT /api/v2/admin/paymentgateway/{client_id}
+DELETE /api/v2/admin/paymentgateway/{client_id}
+더보기
+Paymentgateway paymentmethods
+
+PG의 결제수단(Paymentgateway paymentmethods)은 쇼핑몰에 등록된 PG의 결제수단에 대한 기능입니다.
+특정 PG에서 제공하고 있는 결제수단의 등록, 조회, 수정, 삭제가 가능합니다.
+
+
+
+Endpoints
+GET /api/v2/admin/paymentgateway/{client_id}/paymentmethods
+POST /api/v2/admin/paymentgateway/{client_id}/paymentmethods
+PUT /api/v2/admin/paymentgateway/{client_id}/paymentmethods/{payment_method_code}
+DELETE /api/v2/admin/paymentgateway/{client_id}/paymentmethods/{payment_method_code}
+더보기
+Paymentmethods
+
+
+
+쇼핑몰에 설정된 결제수단을 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/paymentmethods
+더보기
+Paymentmethods paymentproviders
+
+
+
+쇼핑몰에 설정된 결제수단의 정보를 조회하거나 결제수단의 노출여부를 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/paymentmethods/{code}/paymentproviders
+PUT /api/v2/admin/paymentmethods/{code}/paymentproviders/{name}
+더보기
+Paymentservices
+
+국내PG의 세팅사항을 관리할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/paymentservices
+더보기
+Points setting
+
+적립금 설정(Points setting)은 적립금 사용에 필요한 설정값을 관리하기 위한 기능입니다.
+
+Endpoints
+GET /api/v2/admin/points/setting
+PUT /api/v2/admin/points/setting
+더보기
+Policy
+
+쇼핑몰 이용약관 및 개인정보처리방침 약관의 정보를 관리합니다.
+
+Endpoints
+GET /api/v2/admin/policy
+PUT /api/v2/admin/policy
+더보기
+Privacy boards
+
+이용약관 중 게시판 글 작성시점에 대한 개인정보처리방침을 조회할 수 있습니다
+
+Endpoints
+GET /api/v2/admin/privacy/boards
+PUT /api/v2/admin/privacy/boards
+더보기
+Privacy join
+
+이용약관 중 회원가입시점에 대한 개인정보처리방침을 조회할 수 있습니다
+
+Endpoints
+GET /api/v2/admin/privacy/join
+PUT /api/v2/admin/privacy/join
+더보기
+Privacy orders
+
+이용약관 중 주문시점에 대한 개인정보처리방침을 조회할 수 있습니다
+
+Endpoints
+GET /api/v2/admin/privacy/orders
+PUT /api/v2/admin/privacy/orders
+더보기
+Products display setting
+
+상품 화면 설정(Products display setting)은 상품 목록 화면에서 상품 정보의 노출 방식을 설정하는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/products/display/setting
+PUT /api/v2/admin/products/display/setting
+더보기
+Products properties setting
+
+상품 상세 화면에 표시되는 항목의 추가 설정을 조회하고 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/properties/setting
+PUT /api/v2/admin/products/properties/setting
+더보기
+Products setting
+
+상품의 설정(Products setting)은 상품의 판매가 등의 설정값에 대한 기능입니다.
+
+Endpoints
+GET /api/v2/admin/products/setting
+더보기
+Redirects
+
+특정 URL로 접속 했을때, 설정한 URL로 리다이렉트할 수 있는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/redirects
+POST /api/v2/admin/redirects
+PUT /api/v2/admin/redirects/{id}
+DELETE /api/v2/admin/redirects/{id}
+더보기
+Restocknotification setting
+
+재입고 알림 상품의 설정 관리할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/restocknotification/setting
+PUT /api/v2/admin/restocknotification/setting
+더보기
+Seo setting
+
+SEO 설정(Seo setting)은 검색결과 상위에 쇼핑몰이 노출되고 방문자가 증가하도록 하는 검색엔진 최적화(SEO) 작업입니다.
+
+Endpoints
+GET /api/v2/admin/seo/setting
+PUT /api/v2/admin/seo/setting
+더보기
+Shippingmanager
+
+배송 관리자(Shippingmanager)는 배송 관리자 활성화 정보 관련 기능입니다.
+배송 관리자의 사용 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/shippingmanager
+더보기
+Shops
+
+멀티쇼핑몰(Shops)은 한개의 몰아이디에서 두개 이상의 쇼핑몰을 운영하고 있는 경우 생성한 멀티 쇼핑몰의 정보입니다.
+멀티쇼핑몰은 최대 15개까지 생성이 가능하며, 각각 다른 언어와 화폐로 생성할 수 있어 다국어 쇼핑몰을 운영하기 용이합니다.
+
+Endpoints
+GET /api/v2/admin/shops
+GET /api/v2/admin/shops/{shop_no}
+더보기
+Sms setting
+
+SMS 설정(Sms setting)은 쇼핑몰의 SMS 설정에 관한 기능입니다.
+SMS API를 사용하기 위해서는 먼저 쇼핑몰에서 SMS 발송 서비스를 사용하고 있는지 확인이 필요합니다.
+
+Endpoints
+GET /api/v2/admin/sms/setting
+PUT /api/v2/admin/sms/setting
+더보기
+Socials apple
+
+애플아이디 로그인(Socials apple)은 쇼핑몰 이용 고객의 애플아이디 로그인에 관한 기능입니다.
+애플아이디 로그인 설정을 사용하기 위해서는 먼저 애플의 개발자 계정에서 Sign in with Apple 앱 설정을 완료하여야 합니다.
+
+Endpoints
+GET /api/v2/admin/socials/apple
+PUT /api/v2/admin/socials/apple
+더보기
+Socials kakaosync
+
+카카오싱크 SNS(Socials kakaosync)는 쇼핑몰의 카카오싱크에 대한 설정을 조회하거나 설정할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/socials/kakaosync
+PUT /api/v2/admin/socials/kakaosync
+더보기
+Socials naverlogin
+
+네이버 로그인 설정정보를 조회하고 설정정보를 변경하는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/socials/naverlogin
+PUT /api/v2/admin/socials/naverlogin
+더보기
+Socials navershopping
+Endpoints
+GET /api/v2/admin/socials/navershopping
+더보기
+Store
+
+
+
+상점(Store)은 쇼핑몰의 쇼핑몰명, 관리자 정보, 사업자 등록번호와 고객센터 전화번호 등 쇼핑몰의 기본적인 정보를 확인할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/store
+더보기
+Store accounts
+
+
+
+상점 계좌(Store accounts)는 쇼핑몰의 무통장입금 정보에 대한 기능입니다.
+
+Endpoints
+GET /api/v2/admin/store/accounts
+더보기
+Store dropshipping
+Endpoints
+GET /api/v2/admin/store/dropshipping
+PUT /api/v2/admin/store/dropshipping
+더보기
+Store setting
+Endpoints
+GET /api/v2/admin/store/setting
+PUT /api/v2/admin/store/setting
+더보기
+Subscription shipments setting
+
+정기배송 설정(Subscription shipments setting)은 정기결제를 통해 이루어지는 정기배송에 대한 기능입니다.
+정기배송 설정을 통해 쇼핑몰의 정기배송 상품을 설정하거나 정기배송 상품을 조회할 수 있습니다.
+정기배송 기능을 사용하기 위해서는 먼저 정기배송 서비스가 신청되어 있어야 합니다.
+정기배송 서비스의 신청은 어드민에서 가능합니다.
+
+Endpoints
+GET /api/v2/admin/subscription/shipments/setting
+POST /api/v2/admin/subscription/shipments/setting
+PUT /api/v2/admin/subscription/shipments/setting/{subscription_no}
+DELETE /api/v2/admin/subscription/shipments/setting/{subscription_no}
+더보기
+Taxmanager
+
+세금 관리자(MSA)의 활성화 정보 관련 기능입니다.
+
+Endpoints
+GET /api/v2/admin/taxmanager
+더보기
+Users
+
+운영자(Users)는 쇼핑몰의 대표관리자와 더불어 쇼핑몰을 운영할 수 있는 운영자와 관련된 기능입니다.
+부운영자는 대표관리자가 부여한 권한 내에서 쇼핑몰을 운영할 수 있습니다.
+쇼핑몰에 등록된 운영자를 목록으로 조회하거나 특정 운영자를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/users
+GET /api/v2/admin/users/{user_id}
+더보기
+Bundleproducts
+
+
+
+세트상품(Bunldeproducts)은 여러 개의 상품을 묶어서 판매하는 상품을 의미합니다.
+세트 상품은 상품을 각각 주문하는 것보다 더 싸게 구입할 수 있도록 추가 할인을 설정할 수 있습니다.
+세트상품 주문시에는 하나의 상품처럼 주문을 관리할 수 있습니다.
+세트상품 리소스에서는 세트상품만 조회하거나, 세트상품 등록/수정/삭제를 진행할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/bundleproducts
+GET /api/v2/admin/bundleproducts/{product_no}
+POST /api/v2/admin/bundleproducts
+PUT /api/v2/admin/bundleproducts/{product_no}
+DELETE /api/v2/admin/bundleproducts/{product_no}
+더보기
+Categories products
+
+
+
+카테고리 상품(Categories products)은 카테고리의 상품의 표시 순서, 고정 여부, 진열 영역 등을 조회, 수정할 수 있는 관계형 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/categories/{category_no}/products
+GET /api/v2/admin/categories/{category_no}/products/count
+POST /api/v2/admin/categories/{category_no}/products
+PUT /api/v2/admin/categories/{category_no}/products
+DELETE /api/v2/admin/categories/{category_no}/products/{product_no}
+더보기
+Categories properties
+
+상품 목록 화면에 표시되는 항목을 조회하고 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/categories/properties
+POST /api/v2/admin/categories/properties
+PUT /api/v2/admin/categories/properties
+더보기
+Mains products
+
+특정 메인분류에 배정된 상품을 목록으로 조회하거나 상품배정, 수정, 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/mains/{display_group}/products
+GET /api/v2/admin/mains/{display_group}/products/count
+POST /api/v2/admin/mains/{display_group}/products
+PUT /api/v2/admin/mains/{display_group}/products
+DELETE /api/v2/admin/mains/{display_group}/products/{product_no}
+더보기
+Mains properties
+
+메인 화면에 표시되는 항목을 조회하고 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/mains/properties
+POST /api/v2/admin/mains/properties
+PUT /api/v2/admin/mains/properties
+더보기
+Products
+
+
+
+상품(Products)은 쇼핑몰에서 거래되는 제품의 기본 단위입니다.
+컬러, 사이즈 같은 옵션이 있을 경우 각각의 옵션이 상품 하위의 품목으로 생성될 수 있습니다.
+상품은 상품명, 공급가, 판매가, 재고정보 등의 정보를 포함하고 있습니다.
+상품은 품목, 상품 메모, SEO 등 여러 하위 리소스들을 갖고 있습니다.
+
+Endpoints
+GET /api/v2/admin/products
+GET /api/v2/admin/products/count
+GET /api/v2/admin/products/{product_no}
+POST /api/v2/admin/products
+PUT /api/v2/admin/products/{product_no}
+DELETE /api/v2/admin/products/{product_no}
+더보기
+Products additionalimages
+
+
+
+상품 추가 이미지(Products additionalimages)는 상품의 추가이미지를 나타내는 하위 리소스로, 상품(Products)리소스의 하위에서만 사용할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/products/{product_no}/additionalimages
+PUT /api/v2/admin/products/{product_no}/additionalimages
+DELETE /api/v2/admin/products/{product_no}/additionalimages
+더보기
+Products approve
+
+
+
+상품 승인(Products approve)은 공급사가 업로드한 상품을 검토 후 승인하는 기능입니다.
+해당 기능은 일부 쇼핑몰에만 적용된 상태로, 공급사 상품 승인 기능을 사용중인 몰에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/approve
+POST /api/v2/admin/products/{product_no}/approve
+PUT /api/v2/admin/products/{product_no}/approve
+더보기
+Products customproperties
+
+상품에 등록된 사용자정의 속성을 관리 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/customproperties
+PUT /api/v2/admin/products/{product_no}/customproperties/{property_no}
+DELETE /api/v2/admin/products/{product_no}/customproperties/{property_no}
+더보기
+Products decorationimages
+
+
+
+꾸미기 이미지(Decorationimages)는 쇼핑몰에 진열된 상품 이미지 위에 추가하여 상품에 포인트를 줄 수 있는 기능입니다.
+쇼핑몰에 등록되어있는 꾸미기 이미지를 조회하여 상품별로 꾸미기 이미지를 지정하거나, 상품에 등록되어있는 꾸미기 이미지를 조회할 수 있습니다.
+꾸미기 이미지는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/decorationimages
+POST /api/v2/admin/products/{product_no}/decorationimages
+PUT /api/v2/admin/products/{product_no}/decorationimages
+DELETE /api/v2/admin/products/{product_no}/decorationimages/{code}
+더보기
+Products discountprice
+
+
+
+상품 할인가(Discountprice)는 상품의 할인가격을 표시하는 리소스입니다. 혜택(Benefits)이 적용된 상품의 경우 상품의 할인가를 조회할 수 있습니다.
+상품 할인가는 하위 리소스로서 상품(Products) 하위에서만 사용가능하며, 상품 목록 조회시 Embed 파라메터로 호출가능합니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/discountprice
+더보기
+Products hits
+
+
+
+상품 조회수(Hits)는 상품을 쇼핑몰 고객들이 얼마나 조회했는지를 나타내는 지표입니다.
+상품 조회수를 확인하면, 고객들이 어떤 상품을 가장 많이 조회하는지 알 수 있습니다.
+상품 조회수는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/hits/count
+더보기
+Products icons
+
+
+
+상품 아이콘은 상품을 강조하기 위해 상품 옆에 추가할 수 있는 작은 이미지들입니다. 진열된 상품에 할인 정보, "매진 임박" 등의 메시지를 추가하여 상품을 강조할 수 있습니다.
+상품 아이콘는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/icons
+POST /api/v2/admin/products/{product_no}/icons
+PUT /api/v2/admin/products/{product_no}/icons
+DELETE /api/v2/admin/products/{product_no}/icons/{code}
+더보기
+Products images
+
+
+
+상품 이미지(Products Images)는 상품의 판매를 위해서 업로드한 상품의 사진이나 그림을 의미합니다.
+상품 이미지 API를 사용해 상품 상세설명에서 사용할 이미지를 업로드하거나, 상품의 이미지를 업로드할 수 있습니다.
+상품의 이미지는 Base64 코드 로 인코딩하여 업로드할 수 있습니다
+
+Endpoints
+POST /api/v2/admin/products/{product_no}/images
+DELETE /api/v2/admin/products/{product_no}/images
+더보기
+Products memos
+
+
+
+상품 메모(Products memos)는 상품에 관한 특이사항을 메모하거나 운영자 간의 의사소통을 위한 도구로 활용할 수 있습니다.
+상품 메모는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/memos
+GET /api/v2/admin/products/{product_no}/memos/{memo_no}
+POST /api/v2/admin/products/{product_no}/memos
+PUT /api/v2/admin/products/{product_no}/memos/{memo_no}
+DELETE /api/v2/admin/products/{product_no}/memos/{memo_no}
+더보기
+Products options
+
+
+
+상품 옵션(Products options)은 상품이 다른 색상이나 사이즈를 갖고 있는 경우 이를 각각의 옵션으로 구현할 수 있도록 하는 기능입니다.
+옵션은 색상, 사이즈 같은 옵션명(option_name)과 색상 중 빨간색, 노란색과 같은 옵션값(option_value)으로 구성되어있습니다.
+상품에 옵션 등록시 옵션을 기반으로 품목(variants)이 생성됩니다.
+옵션은 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+옵션의 목록조회, 생성, 수정, 삭제가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/options
+POST /api/v2/admin/products/{product_no}/options
+PUT /api/v2/admin/products/{product_no}/options
+DELETE /api/v2/admin/products/{product_no}/options
+더보기
+Products seo
+
+
+
+상품 SEO(Products seo)는 특정 상품의 SEO 에 대한 설정과 설정값의 조회가 가능한 기능입니다.
+SEO는 검색엔진 최적화(Search Engine Optimization)의 약자로서 본 기능을 활용하여 검색엔진에 상품이나 쇼핑몰이 더 잘 검색될 수 있도록 할 수 있습니다.
+상품 SEO는 상품의 하위 리소스로서 특정 상품의 검색엔진 최적화 설정을 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/seo
+PUT /api/v2/admin/products/{product_no}/seo
+더보기
+Products tags
+
+
+
+상품 태그(Products tags)는 상품이 특정 단어로 검색 되어야할 경우 추가할 수 있는 검색 키워드와 관련된 기능입니다.
+상품 태그는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+상품명이나 상품 상세 설명 외에 다른 단어로도 상품이 검색되길 원할 경우 검색어를 상품에 추가할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/tags/count
+GET /api/v2/admin/products/{product_no}/tags
+POST /api/v2/admin/products/{product_no}/tags
+DELETE /api/v2/admin/products/{product_no}/tags/{tag}
+더보기
+Products variants
+
+
+
+상품의 품목(Products variants)은 쇼핑몰에서 판매되는 상품의 기본 단위입니다.
+쇼핑몰은 일반적으로 고객에게 다양한 선택권을 제공하기 위해 같은 상품이지만 사이즈가 다르거나, 혹은 색상이 다른 품목들을 판매합니다.
+품목의 조회, 등록, 수정 또는 삭제를 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/variants
+GET /api/v2/admin/products/{product_no}/variants/{variant_code}
+PUT /api/v2/admin/products/{product_no}/variants/{variant_code}
+PUT /api/v2/admin/products/{product_no}/variants
+DELETE /api/v2/admin/products/{product_no}/variants/{variant_code}
+더보기
+Products variants inventories
+
+
+
+재고(Inventories)는 판매 가능한 해당 품목의 수량을 의미합니다. 재고는 품목(Variants)별로 존재하며 해당 재고 이상 품목이 판매되면 해당 상품은 품절 상태가 됩니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/variants/{variant_code}/inventories
+PUT /api/v2/admin/products/{product_no}/variants/{variant_code}/inventories
+더보기
+Products customproperties
+
+상품에 등록된 사용자정의 속성을 관리 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/products/customproperties
+POST /api/v2/admin/products/customproperties
+PUT /api/v2/admin/products/customproperties/{property_no}
+DELETE /api/v2/admin/products/customproperties/{property_no}
+더보기
+Products decorationimages
+
+
+
+꾸미기 이미지(Decorationimages)는 쇼핑몰에 진열된 상품 이미지 위에 추가하여 상품에 포인트를 줄 수 있는 기능입니다.
+쇼핑몰에 등록되어있는 꾸미기 이미지를 조회하여 상품별로 꾸미기 이미지를 지정하거나, 상품에 등록되어있는 꾸미기 이미지를 조회할 수 있습니다.
+꾸미기 이미지는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/decorationimages
+더보기
+Products icons
+
+
+
+상품 아이콘은 상품을 강조하기 위해 상품 옆에 추가할 수 있는 작은 이미지들입니다. 진열된 상품에 할인 정보, "매진 임박" 등의 메시지를 추가하여 상품을 강조할 수 있습니다.
+상품 아이콘는 하위 리소스로서 상품(Products) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/icons
+더보기
+Products images
+
+
+
+상품 이미지(Products Images)는 상품의 판매를 위해서 업로드한 상품의 사진이나 그림을 의미합니다.
+상품 이미지 API를 사용해 상품 상세설명에서 사용할 이미지를 업로드하거나, 상품의 이미지를 업로드할 수 있습니다.
+상품의 이미지는 Base64 코드 로 인코딩하여 업로드할 수 있습니다
+
+Endpoints
+POST /api/v2/admin/products/images
+더보기
+Products properties
+
+상품 상세 화면에 표시되는 항목을 조회하고 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/properties
+POST /api/v2/admin/products/properties
+PUT /api/v2/admin/products/properties
+더보기
+Cancellation
+
+취소(Cancellation)는 특정 주문을 배송 전에 취소하는 기능입니다.
+판매자가 접수한 이후부터 생성되며 취소처리중의 단계를 거쳐 취소완료까지 진행됩니다.
+취소 리소스에서는 복수의 주문을 한번에 취소하거나 취소 상태를 수정하거나 조회할 수 있습니다.
+특정 주문을 취소할 때와 달리 PG 취소까지 진행되도록 취소할 수는 없습니다.
+
+Endpoints
+GET /api/v2/admin/cancellation/{claim_code}
+POST /api/v2/admin/cancellation
+PUT /api/v2/admin/cancellation
+더보기
+Cancellationrequests
+
+취소요청(Cancellationrequests)은 주문에 대한 취소요청에 관한 기능입니다.
+취소를 요청하거나 취소요청중인 주문을 접수거부 할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/cancellationrequests
+PUT /api/v2/admin/cancellationrequests
+더보기
+Cashreceipt
+
+현금영수증(Cashreceipts)은 현금으로 구매 후 구매자가 발급 받을 수 있는 결제 증빙입니다.
+현금영수증 리소스를 통해 현금영수증을 발급하거나 수정할 수 있고, 현재까지 발급된 현금영수증을 조회할 수 있습니다.
+현금영수증은 대한민국에만 있는 제도로, 한국 쇼핑몰에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/cashreceipt
+POST /api/v2/admin/cashreceipt
+PUT /api/v2/admin/cashreceipt/{cashreceipt_no}
+더보기
+Cashreceipt cancellation
+
+현금영수증 취소(Cashreceipt cancellation)는 발행된 현금영수증에 대해 신청취소 혹은 발행취소를 할 수 있는 기능입니다.
+
+Endpoints
+PUT /api/v2/admin/cashreceipt/{cashreceipt_no}/cancellation
+더보기
+Collectrequests
+
+수거신청 정보(Collectrequests)는 반품, 교환처리로 수거요청시 수거신청 정보를 수정할 수 있는 리소스입니다.
+
+Endpoints
+PUT /api/v2/admin/collectrequests/{request_no}
+더보기
+Control
+
+주문 입금확인 제한여부 기능을 제공합니다.
+
+Endpoints
+PUT /api/v2/admin/control
+더보기
+Exchange
+
+교환(Exchange)은 주문의 교환 접수 상태를 변경하는 리소스입니다.
+교환 접수를 할 수 있으며 교환이 접수된 주문의 상태를 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/exchange/{claim_code}
+POST /api/v2/admin/exchange
+PUT /api/v2/admin/exchange
+더보기
+Exchangerequests
+
+교환요청(Exchangerequests)은 주문에 대해 교환을 요청할 수 있는 기능입니다.
+
+Endpoints
+POST /api/v2/admin/exchangerequests
+PUT /api/v2/admin/exchangerequests
+더보기
+Fulfillments
+
+배송앱에서 N개의 배송사와 연동하여 배송 정보를 등록하는 기능입니다.
+
+Endpoints
+POST /api/v2/admin/fulfillments
+더보기
+Labels
+
+Labels(주문 라벨)이란, 각각의 주문을 쉽게 식별하고 구분할 수 있도록 도와주는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/labels
+POST /api/v2/admin/labels
+더보기
+Orderform properties
+
+구매자가 주문할 때 추가로 입력받아야 하는 항목을 설정 할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/orderform/properties
+POST /api/v2/admin/orderform/properties
+PUT /api/v2/admin/orderform/properties/{orderform_property_id}
+DELETE /api/v2/admin/orderform/properties/{orderform_property_id}
+더보기
+Orders
+
+
+
+주문(Order)은 쇼핑몰에서 고객이 상품의 구매의사를 쇼핑몰에 요청한 내역입니다.
+결제수단이 무통장입금인 경우 입금전에도 주문은 생성됩니다.
+쇼핑몰 운영자는 결제가 완료된 주문 정보를 참고하여 쇼핑몰 고객에게 물건을 배송합니다.
+주문 정보에는 주문과 결제를 진행한 주문자의 정보와 상품을 배송 받을 수령자 정보가 포함됩니다.
+주문은 품주, 주문자정보 등 여러 하위 리소스들을 갖고 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders
+GET /api/v2/admin/orders/{order_id}
+GET /api/v2/admin/orders/count
+PUT /api/v2/admin/orders
+PUT /api/v2/admin/orders/{order_id}
+더보기
+Orders autocalculation
+
+
+
+자동금액 계산(autocalculation)은 취소/교환/반품시 할인 금액 등 주문 단위의 금액을 자동으로 배분해주는 기능입니다.
+해당 리소스에서는 특정 주문에 대해 자동금액 계산을 해제할 수 있습니다.
+
+Endpoints
+DELETE /api/v2/admin/orders/{order_id}/autocalculation
+더보기
+Orders buyer
+
+
+
+주문자(Buyer)는 쇼핑몰의 상품을 주문한 사람을 나타냅니다.
+주문자 리소스를 통해 특정 주문의 주문자의 이름, 주소, 전화번호, 이메일 등의 정보를 조회하거나 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/buyer
+PUT /api/v2/admin/orders/{order_id}/buyer
+더보기
+Orders buyer history
+
+
+
+주문자 수정 이력(Buyer History)은 특정 주문의 주문자 정보가 수정된 이력을 나타냅니다.
+주문자 정보가 수정될 때마다 이력이 추가됩니다.
+주문자 수정 이력 리소스를 통해 특정 주문의 주문자 정보가 수정된 내역을 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/buyer/history
+더보기
+Orders cancellation
+
+
+
+주문 취소(Orders cancellation) 는 배송 전의 특정 주문 하나를 취소 처리할 수 있는 기능입니다.
+해당 API를 사용하여 취소완료처리할 경우 환불완료 처리와 함께 PG 취소도 같이 진행할 수 있습니다.(payment_gateway_cancel : "T"로 요청시)
+
+Endpoints
+POST /api/v2/admin/orders/{order_id}/cancellation
+PUT /api/v2/admin/orders/{order_id}/cancellation/{claim_code}
+더보기
+Orders exchange
+
+주문 교환(Orders exchange)은 주문의 교환 접수 상태와 관련된 기능입니다.
+특정 주문에 대해 교환 접수를 할 수 있으며 교환이 접수된 주문의 상태를 수정할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/orders/{order_id}/exchange
+PUT /api/v2/admin/orders/{order_id}/exchange/{claim_code}
+더보기
+Orders exchangerequests
+
+교환 처리를 요청한 주문의 교환접수를 거부할 수 있습니다.
+
+Endpoints
+PUT /api/v2/admin/orders/{order_id}/exchangerequests
+더보기
+Orders items
+
+
+
+품주(Items)는 쇼핑몰 고객이 주문할 때 구매한 품목 정보입니다.
+쇼핑몰의 품목은 쇼핑몰에서 판매하는 상품의 기본 단위로, 품주에는 구입한 상품의 품목 정보와 더불어, 구매시 선택한 옵션, 주문 수량 등의 정보를 추가로 확인할 수 있습니다.
+품주는 하위 리소스로서 주문(Order) 하위에서만 사용할 수 있습니다.
+품주의 조회와 상태변경, 취소/교환/반품 요청 사유 등의 입력과 수정이 가능합니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/items
+POST /api/v2/admin/orders/{order_id}/items
+PUT /api/v2/admin/orders/{order_id}/items/{order_item_code}
+더보기
+Orders items labels
+
+원하는 주문 품목에 라벨을 남기거나 조회, 수정, 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/items/{order_item_code}/labels
+POST /api/v2/admin/orders/{order_id}/items/{order_item_code}/labels
+PUT /api/v2/admin/orders/{order_id}/items/{order_item_code}/labels
+DELETE /api/v2/admin/orders/{order_id}/items/{order_item_code}/labels/{name}
+더보기
+Orders items options
+
+주문 품목에 추가입력 옵션을 둥록, 수정, 삭제할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/orders/{order_id}/items/{order_item_code}/options
+PUT /api/v2/admin/orders/{order_id}/items/{order_item_code}/options
+더보기
+Orders memos
+
+
+
+주문 메모(Orders memos)는 특정 주문의 메모에 대한 주문의 하위 리소스 입니다.
+주문에 대하여 관리자 메모의 조회, 등록, 수정, 삭제를 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/memos
+POST /api/v2/admin/orders/{order_id}/memos
+PUT /api/v2/admin/orders/{order_id}/memos/{memo_no}
+DELETE /api/v2/admin/orders/{order_id}/memos/{memo_no}
+더보기
+Orders payments
+
+
+
+주문의 결제상태(Orders payments)는 특정 주문의 결제상태에 대한 기능입니다.
+
+Endpoints
+PUT /api/v2/admin/orders/{order_id}/payments
+더보기
+Orders paymenttimeline
+
+
+
+주문의 결제타임라인(Orders paymenttimeline)은 특정 주문의 결제에 대한 시간적인 연대표에 대한 기능입니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/paymenttimeline
+GET /api/v2/admin/orders/{order_id}/paymenttimeline/{payment_no}
+더보기
+Orders receivers
+
+
+
+주문수령자 정보(Orders receivers)는 주문한 상품을 배송 받을 수령자의 이름, 연락처, 주소 등의 정보에 대한 기능 입니다.
+수령자 정보는 하위 리소스로서 주문(Order) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/receivers
+PUT /api/v2/admin/orders/{order_id}/receivers
+PUT /api/v2/admin/orders/{order_id}/receivers/{shipping_code}
+더보기
+Orders receivers history
+
+
+
+주문수령자 이력(Orders receivers history)은 특정 주문의 수령자 정보 변경이력에 대한 기능입니다.
+수정일(updated_date) 파라메터를 통해 언제 정보가 변경되었는지 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/receivers/history
+더보기
+Orders refunds
+
+주문 환불(Orders refunds)은 특정 주문의 환불상태와 관련된 기능입니다.
+특정 주문의 환불상태를 수정할 수 있습니다.
+
+Endpoints
+PUT /api/v2/admin/orders/{order_id}/refunds/{refund_code}
+더보기
+Orders return
+
+
+
+주문 반품(Orders return)은 특정 주문의 반품과 관련된 기능입니다.
+특정 주문을 반품처리 하거나, 반품처리중인 주문의 상태를 수정할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/orders/{order_id}/return
+PUT /api/v2/admin/orders/{order_id}/return/{claim_code}
+더보기
+Orders shipments
+
+
+
+주문의 배송(Shipments)은 주문을 배송처리하기 위해 필요한 배송 정보를 의미합니다.
+주문의 배송 정보에는 송장번호와 배송사 정보, 배송 상태 등이 있습니다.
+주문의 배송 기능을 활용하여 주문을 배송대기 처리하거나 배송중 처리할 수 있으며 송장번호 등도 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/shipments
+POST /api/v2/admin/orders/{order_id}/shipments
+PUT /api/v2/admin/orders/{order_id}/shipments/{shipping_code}
+DELETE /api/v2/admin/orders/{order_id}/shipments/{shipping_code}
+더보기
+Orders shippingfeecancellation
+
+
+
+주문의 배송비취소(Orders shippingfeecancellation)를 통해 주문의 취소현황을 조회하거나 취소처리를 요청할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/{order_id}/shippingfeecancellation
+POST /api/v2/admin/orders/{order_id}/shippingfeecancellation
+더보기
+Orders shortagecancellation
+
+
+
+주문의 재고부족취소(Orders shortagecancellation)는 이벤트 혹은 재고설정의 착오 등으로 인해 보유한 재고보다 많은 수량이 판매되었을 때
+취소완료 및 환불까지 처리할 수 있는 기능입니다.
+
+Endpoints
+POST /api/v2/admin/orders/{order_id}/shortagecancellation
+더보기
+Orders benefits
+
+
+
+주문혜택(Orders benefits)은 특정 주문에 적용된 혜택에 관한 기능입니다.
+
+Endpoints
+GET /api/v2/admin/orders/benefits
+더보기
+Orders calculation
+
+주문의 결제예정금액 계산(Orders calculation)은 주문의 배송국가 등을 체크하여 결제예정금액을 계산하는 기능입니다.
+
+Endpoints
+POST /api/v2/admin/orders/calculation
+더보기
+Orders coupons
+
+
+
+주문 쿠폰(Orders coupons)은 주문에 적용된 쿠폰에 관한 기능입니다.
+특정 주문에 대해 적용된 쿠폰의 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/coupons
+더보기
+Orders dashboard
+
+주문관련 요약 정보를 확인할 수 있습니다.
+이 정보는 최근 한달동안 누적된 데이터를 기반으로 합니다.
+
+Endpoints
+GET /api/v2/admin/orders/dashboard
+더보기
+Orders inflowgroups
+
+
+
+유입경로 그룹(Inflowgroups)은 주문이 유입된 경로의 그룹을 의미합니다.
+유입경로 그룹은 하위 리소스로 주문(Orders) 하위에서만 사용할 수 있습니다.
+유입경로 그룹에 대한 조회, 생성, 수정, 삭제가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/orders/inflowgroups
+POST /api/v2/admin/orders/inflowgroups
+PUT /api/v2/admin/orders/inflowgroups/{inflow_group_id}
+DELETE /api/v2/admin/orders/inflowgroups/{inflow_group_id}
+더보기
+Orders inflowgroups inflows
+
+
+
+유입경로 그룹(Inflowgroups)은 주문이 유입된 경로의 그룹을 의미합니다.
+유입경로 그룹은 하위 리소스로 주문(Orders) 하위에서만 사용할 수 있습니다.
+유입경로 그룹에 대한 조회, 생성, 수정, 삭제가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/orders/inflowgroups/{group_id}/inflows
+POST /api/v2/admin/orders/inflowgroups/{group_id}/inflows
+PUT /api/v2/admin/orders/inflowgroups/{group_id}/inflows/{inflow_id}
+DELETE /api/v2/admin/orders/inflowgroups/{group_id}/inflows/{inflow_id}
+더보기
+Orders memos
+
+
+
+주문 메모(Orders memos)는 특정 주문의 메모에 대한 주문의 하위 리소스 입니다.
+주문에 대하여 관리자 메모의 조회, 등록, 수정, 삭제를 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/memos
+더보기
+Orders migrations
+
+이전된 몰의 주문에 대한 주문정보를 등록, 조회, 수정, 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/migrations
+POST /api/v2/admin/orders/migrations
+PUT /api/v2/admin/orders/migrations
+DELETE /api/v2/admin/orders/migrations/{order_id}
+더보기
+Orders paymentamount
+
+
+
+주문의 실결제금액(Orders paymentamount)은 특정 주문의 실제 결제금액에 대한 기능입니다.
+1개 혹은 여러 개의 품주에 대한 실제 결제금액과 관련된 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/paymentamount
+더보기
+Orders saleschannels
+
+
+
+주문 판매채널(Orders saleschannels)은 통해 주문의 판매처의 조회, 등록, 수정, 삭제를 할 수 있습니다.
+주문 판매채널은 하위 리소스로 주문(Orders) 하위에서만 사용할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/orders/saleschannels
+POST /api/v2/admin/orders/saleschannels
+PUT /api/v2/admin/orders/saleschannels/{sales_channel_id}
+DELETE /api/v2/admin/orders/saleschannels/{sales_channel_id}
+더보기
+Payments
+
+결제상태(Payments)는 특정 주문의 결제상태에 대한 기능입니다.
+
+Endpoints
+PUT /api/v2/admin/payments
+더보기
+Refunds
+
+환불(Refunds)은 주문의 상태가 환불과 관련된 상태에 대해 조회할 수 있는 기능입니다.
+환불전, 환불보류, 환불완료 단계가 아닌 주문에 대해서는 조회할 수 없으므로 주문상태를 잘 확인하고 사용해주세요.
+
+Endpoints
+GET /api/v2/admin/refunds
+GET /api/v2/admin/refunds/{refund_code}
+더보기
+Reservations
+
+예약주문관련 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/reservations
+더보기
+Return
+
+반품(Return)은 쇼핑몰 고객이 배송 후 주문을 취소하는 것을 의미합니다.
+반품 리소스는 반품접수 이후부터 반품완료까지의 주문 상태를 조회할 수 있습니다.
+반품 리소스에서는 반품 정보를 조회하거나 반품을 처리할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/return/{claim_code}
+POST /api/v2/admin/return
+PUT /api/v2/admin/return
+더보기
+Returnrequests
+
+반품요청(Returnrequests)을 통해 특정 주문의 반품에 대한 요청을 접수하거나 거부할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/returnrequests
+PUT /api/v2/admin/returnrequests
+더보기
+Shipments
+
+배송(Shipments)은 주문의 하위리소스인 주문의 배송(Orders shipments)과 다르게 여러 주문의 배송 정보를 한번에 등록하거나 수정할 수 있습니다.
+배송 정보에는 송장번호와 배송사 정보, 배송 상태 등이 있습니다.
+
+Endpoints
+POST /api/v2/admin/shipments
+PUT /api/v2/admin/shipments
+더보기
+Subscription shipments
+
+정기배송(Subscription shipments)은 정기배송에 대한 조회, 등록, 수정, 삭제를 할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/subscription/shipments
+POST /api/v2/admin/subscription/shipments
+PUT /api/v2/admin/subscription/shipments/{subscription_id}
+더보기
+Subscription shipments items
+
+정기배송 품목(Subscription shipments items)을 통해 정기배송 품목별 수정을 할 수 있습니다.
+
+Endpoints
+PUT /api/v2/admin/subscription/shipments/{subscription_id}/items
+더보기
+Unpaidorders
+Endpoints
+GET /api/v2/admin/unpaidorders
+더보기
+Customergroups
+
+
+
+회원등급(CustomerGroups)은 쇼핑몰 회원을 등급별로 검색하여 관리할 수 있습니다.
+각 회원 등급 전체에게 메일, 적립금 지급, 선택한 회원의 등급 해제 및 변경을 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customergroups
+GET /api/v2/admin/customergroups/count
+GET /api/v2/admin/customergroups/{group_no}
+더보기
+Customergroups customers
+
+
+
+회원등급의 회원(Customergroups customers)은 특정 회원등급의 회원과 관련된 기능입니다.
+특정 회원을 특정 등급으로 변경할 수 있습니다.
+
+Endpoints
+POST /api/v2/admin/customergroups/{group_no}/customers
+더보기
+Customergroups setting
+
+회원등급에 대한 쇼핑몰 설정 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customergroups/setting
+더보기
+Customers
+
+
+
+회원(Customers)은 쇼핑몰의 상품을 구매하는 고객들 중 쇼핑몰의 쿠폰, 적립금, 할인 등의 혜택을 받기 위해 가입한 고객들입니다.
+회원 관리를 위해 쇼핑몰 운영자는 회원을 특정 회원 등급으로 분류하거나 특별회원으로 지정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers
+DELETE /api/v2/admin/customers/{member_id}
+더보기
+Customers autoupdate
+
+회원 별 회원등급 자동변경 정보(다음 예상 등급 등)를 API로 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/autoupdate
+더보기
+Customers memos
+
+
+
+회원 메모(Customers memos)는 특정 회원의 메모에 대한 회원의 하위 리소스입니다.
+회원 메모를 통해 특정 회원에 대하여 메모를 등록, 수정, 삭제 등을 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/memos/count
+GET /api/v2/admin/customers/{member_id}/memos
+GET /api/v2/admin/customers/{member_id}/memos/{memo_no}
+POST /api/v2/admin/customers/{member_id}/memos
+PUT /api/v2/admin/customers/{member_id}/memos/{memo_no}
+DELETE /api/v2/admin/customers/{member_id}/memos/{memo_no}
+더보기
+Customers paymentinformation
+
+
+
+회원의 결제수단정보(Customers paymentinformation)는 회원이 결제한 결제수단에 대해 목록조회, 삭제가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/paymentinformation
+DELETE /api/v2/admin/customers/{member_id}/paymentinformation
+DELETE /api/v2/admin/customers/{member_id}/paymentinformation/{payment_method_id}
+더보기
+Customers plusapp
+
+쇼핑몰 회원의 플러스앱 설치 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/plusapp
+더보기
+Customers social
+
+회원의 SNS(Customers social)는 특정 회원에게 연동된 SNS 계정의 정보를 조회할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/social
+더보기
+Customers properties
+
+회원가입항목 설정을 관리 할 수 있습니다. 기본회원가입항목, 상세회원가입항목 사용여부 확인이 가능하며 회원가입 시 필요항목 및 추가항목(생년월일, 결혼기념일, 배우자 생일 등) 설정을 조회하거나 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers/properties
+PUT /api/v2/admin/customers/properties
+더보기
+Boards
+
+
+
+게시판(Boards)은 상품리뷰나 상품문의 등 고객의 반응이 글로 게시되는 공간입니다.
+게시판 리소스에서는 현재 쇼핑몰에 있는 게시판의 목록을 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/boards
+GET /api/v2/admin/boards/{board_no}
+PUT /api/v2/admin/boards/{board_no}
+더보기
+Boards articles
+
+
+
+게시물(Boards articles)은 게시판에 게시되는 게시물을 관리하기 위한 리소스입니다.
+특정 게시판의 게시물을 조회하거나 게시물을 생성하거나 수정, 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/boards/{board_no}/articles
+POST /api/v2/admin/boards/{board_no}/articles
+PUT /api/v2/admin/boards/{board_no}/articles/{article_no}
+DELETE /api/v2/admin/boards/{board_no}/articles/{article_no}
+더보기
+Boards articles comments
+
+
+
+댓글(Comments)은 게시물에 쇼핑몰 고객이나 관리자가 추가한 의견입니다.
+해당 리소스를 통해 특정 게시물에 달린 댓글을 추가/삭제하거나 조회할 수 있습니다
+
+Endpoints
+GET /api/v2/admin/boards/{board_no}/articles/{article_no}/comments
+POST /api/v2/admin/boards/{board_no}/articles/{article_no}/comments
+DELETE /api/v2/admin/boards/{board_no}/articles/{article_no}/comments/{comment_no}
+더보기
+Boards comments
+
+대량으로 게시판 댓글을 관리하기 위한 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/boards/{board_no}/comments
+더보기
+Boards seo
+
+게시판 SEO의 설정을 관리하기 위한 기능을 제공합니다
+
+Endpoints
+GET /api/v2/admin/boards/{board_no}/seo
+PUT /api/v2/admin/boards/{board_no}/seo
+더보기
+Commenttemplates
+
+게시판 내에서 자주 사용하는 답변을 관리할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/commenttemplates
+GET /api/v2/admin/commenttemplates/{comment_no}
+POST /api/v2/admin/commenttemplates
+PUT /api/v2/admin/commenttemplates/{comment_no}
+DELETE /api/v2/admin/commenttemplates/{comment_no}
+더보기
+Financials monthlyreviews
+
+월별 리뷰 통계(Financials monthlyreviews)는 월별 리뷰 정보를 제공합니다. 검색 기간 내의 월별 리뷰 개수 합계, 월별 리뷰 평점 평균을 확인할 수 있습니다
+
+Endpoints
+GET /api/v2/admin/financials/monthlyreviews
+더보기
+Urgentinquiry
+
+
+
+긴급문의 게시물에 대해 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/urgentinquiry
+더보기
+Urgentinquiry reply
+
+
+
+긴급문의 게시물의 답변글을 조회, 등록, 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/urgentinquiry/{article_no}/reply
+POST /api/v2/admin/urgentinquiry/{article_no}/reply
+PUT /api/v2/admin/urgentinquiry/{article_no}/reply
+더보기
+Icons
+
+디자인 아이콘은 상품, 게시판, 이벤트, 카드, 결제수단 로고로 사용 중인 작은 이미지입니다.
+PC 쇼핑몰과 모바일 쇼핑몰의 아이콘을 모두 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/icons
+PUT /api/v2/admin/icons
+더보기
+Themes
+
+디자인(Themes)은 쇼핑몰에 사용하기 위해 구매하거나 혹은 직접 만든 디자인과 관련된 기능입니다.
+PC 쇼핑몰과 모바일 쇼핑몰의 디자인을 모두 확인할 수 있습니다.
+디자인 목록에 있는 디자인 중 대표 디자인을 지정하면 쇼핑몰의 디자인이 해당 디자인으로 변경됩니다.
+
+
+
+Endpoints
+GET /api/v2/admin/themes
+GET /api/v2/admin/themes/count
+GET /api/v2/admin/themes/{skin_no}
+더보기
+Themes pages
+
+테마 페이지(Themes pages)는 쇼핑몰의 디자인 테마의 페이지에 대한 조회, 설정, 수정, 삭제를 하는 기능입니다.
+테마 페이지는 하위 리소스로 테마(Themes) 하위에서만 사용할 수 있습니다.
+
+
+
+Endpoints
+GET /api/v2/admin/themes/{skin_no}/pages
+POST /api/v2/admin/themes/{skin_no}/pages
+PUT /api/v2/admin/themes/{skin_no}/pages
+DELETE /api/v2/admin/themes/{skin_no}/pages
+더보기
+Benefits
+
+혜택(Benefits)은 쇼핑몰 고객에게 제공하는 증정 또는 할인과 같은 고객 혜택입니다.
+혜택 리소스를 통해 고객에게 증정 또는 할인 등의 프로모션을 생성하거나 수정, 삭제할 수 있고 생성되어있는 혜택 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/benefits
+GET /api/v2/admin/benefits/count
+GET /api/v2/admin/benefits/{benefit_no}
+POST /api/v2/admin/benefits
+PUT /api/v2/admin/benefits/{benefit_no}
+DELETE /api/v2/admin/benefits/{benefit_no}
+더보기
+Commonevents
+Endpoints
+GET /api/v2/admin/commonevents
+POST /api/v2/admin/commonevents
+PUT /api/v2/admin/commonevents/{event_no}
+DELETE /api/v2/admin/commonevents/{event_no}
+더보기
+Coupons
+
+
+
+쿠폰(Coupons)은 상품의 가격을 할인하거나 배송비를 할인받을 수 있도록 쇼핑몰 회원에게 발급할 수 있는 혜택입니다.
+쿠폰은 쇼핑몰의 판매를 촉진하기 위해 사용할 수 있으며, 다양한 형태로 회원에게 발급할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/coupons
+GET /api/v2/admin/coupons/count
+POST /api/v2/admin/coupons
+PUT /api/v2/admin/coupons/{coupon_no}
+더보기
+Coupons issuancecustomers
+Endpoints
+GET /api/v2/admin/coupons/{coupon_no}/issuancecustomers
+더보기
+Coupons issues
+
+
+
+쿠폰 발급(Coupons issues)은 생성된 쿠폰에 관한 기능입니다.
+쿠폰 발급은 하위 리소스로 쿠폰(Coupons) 하위에서만 사용할 수 있습니다.
+생성된 쿠폰에 대한 발급, 발급한 쿠폰에 대한 조회가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/coupons/{coupon_no}/issues
+POST /api/v2/admin/coupons/{coupon_no}/issues
+더보기
+Customerevents
+
+회원정보 이벤트관리와 관련하여 SMS 수신동의 유도, 이메일 등록 유도 등 프로모션 연계 및 등록된 이벤트 목록과 실행 여부 파악할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customerevents
+POST /api/v2/admin/customerevents
+PUT /api/v2/admin/customerevents
+더보기
+Customers coupons
+
+
+
+회원 쿠폰(Customers coupons)은 특정 회원이 보유한 쿠폰에 관한 기능입니다.
+회원에게 발급된 쿠폰을 조회하거나 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/coupons
+GET /api/v2/admin/customers/{member_id}/coupons/count
+DELETE /api/v2/admin/customers/{member_id}/coupons/{coupon_no}
+더보기
+Discountcodes
+
+할인코드를 관리하는 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/discountcodes
+GET /api/v2/admin/discountcodes/{discount_code_no}
+POST /api/v2/admin/discountcodes
+PUT /api/v2/admin/discountcodes/{discount_code_no}
+DELETE /api/v2/admin/discountcodes/{discount_code_no}
+더보기
+Serialcoupons
+
+시리얼코드로 쿠폰을 관리하는 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/serialcoupons
+POST /api/v2/admin/serialcoupons
+DELETE /api/v2/admin/serialcoupons/{coupon_no}
+더보기
+Serialcoupons issues
+
+시리얼코드로 발급한 쿠폰을 관리하는 기능을 제공합니다.
+
+Endpoints
+GET /api/v2/admin/serialcoupons/{coupon_no}/issues
+POST /api/v2/admin/serialcoupons/{coupon_no}/issues
+더보기
+Apps
+
+앱(Apps)는 앱의 정보를 조회하고 수정할 수 있는 리소스입니다.
+해당 정보는 앱의 정보이므로, 서로 다른 쇼핑몰에서 호출해도 동일한 정보가 조회되는게 특징입니다.
+앱의 버전 정보를 조회하거나 앱의 버전을 API를 통해 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/apps
+PUT /api/v2/admin/apps
+더보기
+Appstore orders
+
+앱스토어 주문(Appstore orders)은 앱에서 사용 금액이나 기타 금액을 쇼핑몰 운영자에게 부과하기 위한 주문입니다.
+앱스토어 주문 생성을 통해 쇼핑몰 운영자에게 결제 필요한 금액을 부과할 수 있으며, 생성된 주문을 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/appstore/orders/{order_id}
+POST /api/v2/admin/appstore/orders
+더보기
+Appstore payments
+
+앱스토어 주문을 결제 완료한 경우 앱스토어 결제 조회를 통해 결제 내역을 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/appstore/payments
+GET /api/v2/admin/appstore/payments/count
+더보기
+Databridge logs
+
+쇼핑몰의 전환추적 이벤트 웹훅 정보를 제공합니다.
+
+Endpoints
+GET /api/v2/admin/databridge/logs
+더보기
+Recipes
+
+레시피(Recipes)와 관련된 기능으로,
+쇼핑몰에 레시피를 등록하거나, 등록된 레시피를 목록으로 조회하거나, 등록된 레시피를 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/recipes
+POST /api/v2/admin/recipes
+DELETE /api/v2/admin/recipes/{recipe_code}
+더보기
+Scripttags
+
+스크립트태그(Scripttags)는 앱에서 쇼핑몰의 특정 화면(Page)에 스크립트를 설치하기 위해 사용할 수 있는 기능입니다.
+스크립트 API를 사용해 쇼핑몰의 디자인을 변경하지 않고 쇼핑몰 화면에 스크립트를 쉽게 추가할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/scripttags
+GET /api/v2/admin/scripttags/count
+GET /api/v2/admin/scripttags/{script_no}
+POST /api/v2/admin/scripttags
+PUT /api/v2/admin/scripttags/{script_no}
+DELETE /api/v2/admin/scripttags/{script_no}
+더보기
+Webhooks logs
+
+웹훅 로그(Webhooks logs)를 통해 앱에서 발생한 웹훅의 로그를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/webhooks/logs
+더보기
+Webhooks setting
+
+쇼핑몰이 웹훅 사용에 동의(실시간 정보 조회 권한 동의)에 대해 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/webhooks/setting
+PUT /api/v2/admin/webhooks/setting
+더보기
+Autodisplay
+
+자동 진열(Autodisplay)은 상품 분류에 특정 조건에 따라 상품을 자동으로 진열해주는 기능입니다.
+예를 들어 가장 판매량이 높은 순서대로 상품을 진열하거나 좋아요 수가 높은 수 등으로 진열되도록 설정할 수 있습니다.
+해당 리소스에서는 자동 진열 조건을 생성하거나, 수정, 삭제하고 자동 진열 조건을 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/autodisplay
+POST /api/v2/admin/autodisplay
+PUT /api/v2/admin/autodisplay/{display_no}
+DELETE /api/v2/admin/autodisplay/{display_no}
+더보기
+Categories
+
+
+
+상품분류(Categories)는 쇼핑몰에 노출할 카테고리를 설정하는 기능입니다.
+상품분류는 대분류 하위에 중분류, 소분류, 상세 분류까지 세분화해서 설정할 수 있습니다.
+상품분류 리소스를 사용하면 쇼핑몰의 분류들을 조회하거나 분류를 생성, 수정, 삭제할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/categories
+GET /api/v2/admin/categories/count
+GET /api/v2/admin/categories/{category_no}
+POST /api/v2/admin/categories
+PUT /api/v2/admin/categories/{category_no}
+DELETE /api/v2/admin/categories/{category_no}
+더보기
+Categories decorationimages
+
+
+
+카테고리 꾸미기 이미지(Categories decorationimages)는 특정 카테고리의 꾸미기 이미지에 관한 기능입니다.
+특정 카테고리에 설정된 꾸미기 이미지를 조회하거나 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/categories/{category_no}/decorationimages
+PUT /api/v2/admin/categories/{category_no}/decorationimages
+더보기
+Categories seo
+
+
+
+카테고리 SEO(Categories seo)는 특정 카테고리의 SEO 에 대한 설정과 설정값의 조회가 가능한 기능입니다.
+SEO는 검색엔진 최적화(Search Engine Optimization)의 약자로서 본 기능을 활용하여 검색엔진에 카테고리나 쇼핑몰이 더 잘 검색될 수 있도록 할 수 있습니다.
+카테고리 SEO는 카테고리의의 하위 리소스로서 특정 카테고리의 검색엔진 최적화 설정을 할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/categories/{category_no}/seo
+PUT /api/v2/admin/categories/{category_no}/seo
+더보기
+Mains
+
+메인분류(Mains)는 쇼핑몰의 상품을 메인화면에 진열할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/mains
+POST /api/v2/admin/mains
+PUT /api/v2/admin/mains/{display_group}
+DELETE /api/v2/admin/mains/{display_group}
+더보기
+Brands
+
+브랜드(Brands)는 쇼핑몰 상품의 "브랜드"를 나타냅니다.
+브랜드는 쇼핑몰의 상품을 구분하는 판매분류의 하나로, 상품은 반드시 하나의 브랜드를 갖고 있습니다.
+브랜드가 미지정된 경우 "자체브랜드"를 사용합니다.
+
+Endpoints
+GET /api/v2/admin/brands
+GET /api/v2/admin/brands/count
+POST /api/v2/admin/brands
+PUT /api/v2/admin/brands/{brand_code}
+DELETE /api/v2/admin/brands/{brand_code}
+더보기
+Classifications
+
+자체분류(Classifications)는 상품등록시 사용할 자체분류에 입력하는 정보를 의미합니다.
+자체분류는 상품을 구분하는 판매분류의 하나이며, 상품은 반드시 하나의 자체분류를 가지고 있습니다.
+
+Endpoints
+GET /api/v2/admin/classifications
+GET /api/v2/admin/classifications/count
+더보기
+Manufacturers
+
+제조사(Manufacturers)는 상품의 제작정보 중 제조사에 입력하는 정보입니다.
+제조사는 상품을 제작, 생산한 주체를 나타내며, 상품을 구분하는 판매분류 중 하나입니다.
+상품은 반드시 하나의 제조사를 갖고 있습니다.(미지정시 '자체제작'을 사용함)
+제조사의 목록조회, 수 조회, 상세조회, 생성, 수정이 가능합니다.
+
+Endpoints
+GET /api/v2/admin/manufacturers
+GET /api/v2/admin/manufacturers/{manufacturer_code}
+GET /api/v2/admin/manufacturers/count
+POST /api/v2/admin/manufacturers
+PUT /api/v2/admin/manufacturers/{manufacturer_code}
+더보기
+Origin
+
+원산지(Origin)는 상품정보에 포함되는 데이터로 상품이 생산된 지역을 의미합니다.
+원산지는 국외 배송 등 경우에 따라 중요한 데이터가 될 수 있습니다.
+카페24는 다양한 원산지가 코드화 되어있으며, 원산지 조회 API(List all origin)를 통해 원산지 코드 정보를 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/origin
+더보기
+Trends
+
+트렌드(Trends)는 상품의 "제작정보" 중 트렌드에 해당하는 정보에 대한 기능입니다.
+트렌드는 상품을 구분하는 판매분류의 하나이며, 상품은 반드시 하나의 트렌드를 갖고 있습니다.(미지정시 "기본트렌드"를 사용함)
+
+Endpoints
+GET /api/v2/admin/trends
+GET /api/v2/admin/trends/count
+더보기
+Shipping suppliers
+
+공급사 배송(Supplier Shipping)은 쇼핑몰의 각 공급사에 등록된 배송방법과 관련된 기능입니다.
+각각의 공급사에게 등록된 배송방법에 대한 정보를 조회하거나 수정할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/shipping/suppliers/{supplier_id}
+PUT /api/v2/admin/shipping/suppliers/{supplier_id}
+더보기
+Shipping suppliers additionalfees
+Endpoints
+GET /api/v2/admin/shipping/suppliers/{supplier_id}/additionalfees
+더보기
+Suppliers
+
+공급사(Suppliers)는 상품의 "제작정보" 중 공급사에 입력하는 정보를 의미합니다.
+공급사는 쇼핑몰에 물품을 공급하여 상품을 팔 수 있게 하는 회사 또는 개인을 의미합니다.
+공급사는 상품을 구분하는 판매분류의 하나이며, 상품은 반드시 하나의 공급사를 갖고 있습니다.(미지정시 "자체공급"을 사용함)
+
+
+
+Endpoints
+GET /api/v2/admin/suppliers
+GET /api/v2/admin/suppliers/count
+GET /api/v2/admin/suppliers/{supplier_code}
+POST /api/v2/admin/suppliers
+PUT /api/v2/admin/suppliers/{supplier_code}
+DELETE /api/v2/admin/suppliers/{supplier_code}
+더보기
+Suppliers users
+
+공급사 운영자(Supplier Users)는 공급사가 쇼핑몰에 로그인하여 상품을 직접 등록해야할 경우 필요합니다.
+공급사 운영자에게 상품 업로드, 분류 관리, 게시판 관리 등 제한적인 권한을 부여할 수 있습니다.
+
+
+
+Endpoints
+GET /api/v2/admin/suppliers/users
+GET /api/v2/admin/suppliers/users/count
+GET /api/v2/admin/suppliers/users/{user_id}
+POST /api/v2/admin/suppliers/users
+PUT /api/v2/admin/suppliers/users/{user_id}
+DELETE /api/v2/admin/suppliers/users/{user_id}
+더보기
+Suppliers users regionalsurcharges
+
+공급사 지역별 배송비(Suppliers users regionalsurcharges)를 통해 공급사별로 지역별 배송비를 설정하거나, 설정된 정보를 조회할 수 있습니다.
+
+
+
+Endpoints
+GET /api/v2/admin/suppliers/users/{supplier_id}/regionalsurcharges
+POST /api/v2/admin/suppliers/users/{supplier_id}/regionalsurcharges
+DELETE /api/v2/admin/suppliers/users/{supplier_id}/regionalsurcharges/{regional_surcharge_no}
+더보기
+Suppliers users regionalsurcharges setting
+
+공급사 지역별 배송비 설정(Suppliers users regionalsurcharges setting)을 통해 공급사별로 지역별 배송비를 설정값을 조회하거나 수정할 수 있습니다.
+
+
+
+Endpoints
+GET /api/v2/admin/suppliers/users/{supplier_id}/regionalsurcharges/setting
+PUT /api/v2/admin/suppliers/users/{supplier_id}/regionalsurcharges/setting
+더보기
+Carriers
+
+배송사(Carriers)는 쇼핑몰로부터 쇼핑몰 고객에게까지 상품을 배송하는 주체입니다.
+배송사를 등록하면 쇼핑몰에서 배송처리시 해당 배송사를 선택하여 배송 처리를 진행할 수 있습니다.
+배송사 리소스에서는 현재 등록되어있는 배송사를 조회하고 배송사를 생성, 수정, 삭제처리할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/carriers
+GET /api/v2/admin/carriers/{carrier_id}
+POST /api/v2/admin/carriers
+PUT /api/v2/admin/carriers/{carrier_id}
+DELETE /api/v2/admin/carriers/{carrier_id}
+더보기
+Regionalsurcharges
+
+지역별 배송비(Suppliers users regionalsurcharges)를 통해 지역별 배송비를 설정하거나, 설정된 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/regionalsurcharges
+PUT /api/v2/admin/regionalsurcharges
+더보기
+Shipping
+
+배송(Shipping)은 쇼핑몰에 등록된 배송방법과 관련된 기능입니다.
+각각의 배송방법에 대한 상세 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/shipping
+PUT /api/v2/admin/shipping
+더보기
+Shipping additionalfees
+Endpoints
+GET /api/v2/admin/shipping/additionalfees
+더보기
+Shippingorigins
+
+출고지 관리(Shipping origins)는 출고지에 대한 정보를 관리하는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/shippingorigins
+GET /api/v2/admin/shippingorigins/{origin_code}
+POST /api/v2/admin/shippingorigins
+PUT /api/v2/admin/shippingorigins/{origin_code}
+DELETE /api/v2/admin/shippingorigins/{origin_code}
+더보기
+Financials dailysales
+
+일별 매출(Financials dailysales)은 PG사별, 일별 매출 정보를 제공합니다.
+검색 조건에 부합하는 매출 정보 검색이 가능합니다.
+
+Endpoints
+GET /api/v2/admin/financials/dailysales
+더보기
+Financials monthlysales
+
+월별 매출(Financials monthlysales)은 PG사별, 월별 매출 정보를 제공합니다.
+검색 조건에 부합하는 매출 정보 검색이 가능합니다.
+
+Endpoints
+GET /api/v2/admin/financials/monthlysales
+더보기
+Reports hourlysales
+
+시간단위 정산통계(Reports hourlysales)는 특정 날짜와 시간을 기준으로 각종 매출에 관한 데이터를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/reports/hourlysales
+더보기
+Reports productsales
+
+상품판매통계(Reports productsales)를 활용하여 상품을 기준으로 판매된 통계를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/reports/productsales
+더보기
+Reports salesvolume
+
+판매수량 통계(Reports salesvolume)는 쇼핑몰의 상품이 판매된 수량의 통계에 대한 기능입니다.
+판매수량은 주기적으로 집계하여 업데이트 되므로 실시간의 데이터는 아닌 점 참고 부탁 드립니다.
+
+Endpoints
+GET /api/v2/admin/reports/salesvolume
+더보기
+Carts
+
+장바구니(Carts)는 상품을 주문하기 전 한번에 주문할 수 있도록 상품을 미리 담아두는 기능입니다.
+장바구니 리소스에서는 Front API를 사용하여 특정 상품을 장바구니에 담을 수 있고 Admin API에서는 특정 회원의 장바구니를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/carts
+더보기
+Customers wishlist
+
+
+
+회원 관심상품(Customers wishlist)은 회원의 관심상품을 조회할 수 있는 관계형 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/customers/{member_id}/wishlist/count
+GET /api/v2/admin/customers/{member_id}/wishlist
+더보기
+Products carts
+
+
+
+상품 장바구니(Products carts)는 특정 상품을 장바구니에 담은 회원과 그 숫자를 조회할 수 있는 리소스입니다.
+특정 상품을 장바구니에 담은 회원의 ID, 담은날짜와 회원의 수 정보를 조회할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/carts/count
+GET /api/v2/admin/products/{product_no}/carts
+더보기
+Customersprivacy
+
+회원 개인정보(Customersprivacy)는 특정 회원의 개인정보에 대한 리소스입니다.
+민감한 개인정보가 포함되어 있으므로 사용에 주의를 기울여야 합니다.
+
+Endpoints
+GET /api/v2/admin/customersprivacy
+GET /api/v2/admin/customersprivacy/count
+GET /api/v2/admin/customersprivacy/{member_id}
+PUT /api/v2/admin/customersprivacy/{member_id}
+더보기
+Products wishlist customers
+
+
+
+상품을 관심상품으로 담은 회원(Products wishlist customers)은 상품을 관심상품으로 담은 회원을 조회할 수 있는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/products/{product_no}/wishlist/customers
+GET /api/v2/admin/products/{product_no}/wishlist/customers/count
+더보기
+Credits
+
+예치금(Credits)는 주문 환불시 환불수단으로서 받을 수 있는 현금성 자산입니다.
+별도의 Scope를 가지고 있으며 매우 민감한 API 이므로 이용에 주의를 기울여야 합니다.
+
+Endpoints
+GET /api/v2/admin/credits
+더보기
+Credits report
+
+
+
+예치금 통계(Credit report)는 지정한 기간동안의 예치금 통계를 조회할 수 있는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/credits/report
+더보기
+Points
+
+
+
+적립금(Points)은 쇼핑몰 회원의 적립금의 조회, 증가, 차감을 할 수 있는 기능입니다.
+적립금은 매우 민감한 기능이므로 이용에 주의를 기울여야 합니다.
+
+Endpoints
+GET /api/v2/admin/points
+POST /api/v2/admin/points
+더보기
+Points autoexpiration
+
+
+
+포인트 자동만료(Points autoexpiration)는 포인트를 자동으로 만료시키는 것과 관련된 기능입니다.
+자동만료 설정을 조회하거나 등록 및 삭제가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/points/autoexpiration
+POST /api/v2/admin/points/autoexpiration
+DELETE /api/v2/admin/points/autoexpiration
+더보기
+Points report
+
+
+
+적립금 통계(Points report)는 지정한 기간동안의 가용적립금의 증감 내역, 미가용 적립금의 총액 등 적립금과 관련된 통계를 조회할 수 있는 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/points/report
+더보기
+Automails
+
+자동 알림 메일 관리'에서 메일 항목별 고객, 운영자, 공급사 설정 값을 관리할 수 있습니다. SNS, SMS 전송이 불가한 해외 고객을 관리할 수 있음.
+
+Endpoints
+GET /api/v2/admin/automails
+PUT /api/v2/admin/automails
+더보기
+Customers invitation
+
+
+
+회원 초대(invitation)는 계정을 활성화하기 위해 SMS, 이메일 등으로 초대 메시지를 발송하는 기능입니다.
+기존에 가입되어 있는 아이디가 있어야만 초대가 가능합니다.
+
+Endpoints
+POST /api/v2/admin/customers/{member_id}/invitation
+더보기
+Recipientgroups
+
+발송 그룹(Recipientgroups)은 대량 메일 발송 그룹을 관리하는 기능입니다.
+발송 그룹의 조회, 추가, 수정, 삭제가 가능합니다.
+
+Endpoints
+GET /api/v2/admin/recipientgroups
+GET /api/v2/admin/recipientgroups/{group_no}
+POST /api/v2/admin/recipientgroups
+PUT /api/v2/admin/recipientgroups/{group_no}
+DELETE /api/v2/admin/recipientgroups/{group_no}
+더보기
+Sms
+
+
+
+SMS를 통해 회원 혹은 특정 휴대전화 번호로 SMS메시지를 발송할 수 있습니다.
+SMS API를 사용하기 위해서는 먼저 쇼핑몰에서 SMS 발송 서비스를 사용하고 있는지 확인이 필요합니다.
+
+Endpoints
+POST /api/v2/admin/sms
+더보기
+Sms balance
+
+문자발송건수는 장문, 단문발송건수에 대한 정보를 제공합니다.
+
+Endpoints
+GET /api/v2/admin/sms/balance
+더보기
+Sms receivers
+
+수신자 등록 여부에 따라 운영자, 부운영자, 공급사의 알람 메시지 발송 여부를 확인할 수 있습니다.
+
+Endpoints
+GET /api/v2/admin/sms/receivers
+더보기
+Sms senders
+
+
+
+SMS 발신자(Sms senders)는 SMS를 발송할 발신번호를 나타냅니다. SMS 발신자의 발신번호는 반드시 본인인증이 되어있어야 합니다.
+SMS 발신자는 SMS에 속해있는 하위 리소스입니다.
+
+Endpoints
+GET /api/v2/admin/sms/senders
+더보기
+Translations categories
+
+상품 분류 번역 정보(Translations categories)는, 상품 분류의 번역 정보를 조회하거나 수정할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/translations/categories
+PUT /api/v2/admin/translations/categories/{category_no}
+더보기
+Translations products
+
+상품 번역 정보(Translations products)는, 상품의 번역 정보를 조회하거나 수정할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/translations/products
+PUT /api/v2/admin/translations/products/{product_no}
+더보기
+Translations store
+
+상점 번역 정보(Translations store)는, 상점의 번역 정보를 조회하거나 수정할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/translations/store
+PUT /api/v2/admin/translations/store
+더보기
+Translations themes
+
+테마 번역 정보(Translations themes)는, 다국어 코드화된 디자인 스킨에 탑재된 번역 정보를 조회하거나 수정할 수 있는 기능입니다.
+
+Endpoints
+GET /api/v2/admin/translations/themes
+GET /api/v2/admin/translations/themes/{skin_no}
+PUT /api/v2/admin/translations/themes/{skin_no}
+더보기
+Financials dailyvisits
+
+일별 방문수(Financials dailyvisits)는 검색 기간 내의 일별 방문수를 제공합니다.
+
+Endpoints
+GET /api/v2/admin/financials/dailyvisits
+더보기
+Top

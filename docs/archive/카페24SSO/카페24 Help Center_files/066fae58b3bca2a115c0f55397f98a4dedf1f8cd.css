@@ -1,0 +1,119 @@
+/* Variables */
+
+:root {
+    /* Primary Colors */
+    --brand_01: #3971FF;
+    --brand_02: #2952B8;
+    --brand_03: #162038;
+  
+    /* Secondary Colors */
+    --sub: #7956DE;
+    --sub_blue_01: #F4F9FF;
+    --sub_blue_02: #3971FF;
+  
+    /* Grayscale */
+    --gray_600: #444B59;
+    --gray_500: #616161;
+    --gray_400: #AEB4C6;
+    --gray_300: #D6DAE1;
+    --gray_200: #E2E5EA;
+    --gray_150: #F4F5F8;
+    --gray_100: #FAFAFD;
+  
+    /* Sub colors */
+    --error_500: #B23E00;
+    --error_300: #FCBDC8;
+    --error_200: #FEEEF0;
+    --correct_500: #9CDED3;
+    --correct_300: #C3F4DD;
+    --correct_200: #EBFBF4;
+    --alert_500: #FFD77A;
+    --alert_300: #FBEFC9;
+    --alert_200: #FFF5D8;
+
+    /* Typography */
+    
+    /* Text Color */
+    --text-600: #1B1E26;
+    --text-title: #1C1C1C;
+    --link-color: #1A54F5;
+
+    /* Font weight */
+    --font-bold: bold;
+    --font-normal: normal;
+    --font-light: 300;
+
+    /* Letter spacing */
+    --letter-spacing: -1px;
+    --letter-spacing--none: 0px;
+
+    /* Header font size */
+    --h1-font-size: 32px;
+    --h2-font-size: 26px;
+    --h3-font-size: 24px;
+    --h4-font-size: 20px;
+
+    /* Header line height */
+    --h1-line-height: 44px;
+    --h2-line-height: 38px;
+    --h3-line-height: 34px;
+    --h4-line-height: 28px;
+
+    /* Body font size */
+    --body1-font-size: 16px;
+    --body2-font-size: 14px;
+    --body3-font-size: 13px;
+
+    /* Header line height */
+    --body1-line-height: 24px;
+    --body2-line-height: 22px;
+    --body3-line-height: 20px;
+}
+
+@media only screen and (min-width: 768px) {
+   :root {
+    /* Typography */
+    /* Header font size */
+    --h1-font-size: 32px;
+    --h2-font-size: 24px;
+    --h3-font-size: 14px;
+    /* Header line height */
+    --h1-line-height: 44px;
+    --h2-line-height: 36px;
+    --h3-line-height: 22px;
+    /* Body font size */
+    --body1-font-size: 13px;
+    --body2-font-size: 12px;
+    /* Header line height */
+    --body1-line-height: 20px;
+    --body2-line-height: 18px;
+  }
+}
+
+@media only screen and (min-width: 1055px) {
+   :root {
+    /* Typography */
+    /* Header font size */
+    --h1-font-size: 64px;
+    --h2-font-size: 48px;
+    --h3-font-size: 40px;
+    --h4-font-size: 28px;
+    --h5-font-size: 22px;
+    /* Header line height */
+    --h1-line-height: 78px;
+    --h2-line-height: 72px;
+    --h3-line-height: 54px;
+    --h4-line-height: 36px;
+    --h5-line-height: 34px;
+    /* Body font size */
+    --body1-font-size: 22px;
+    --body2-font-size: 18px;
+    --body3-font-size: 16px;
+    --body4-font-size: 14px;
+    /* Header line height */
+    --body1-line-height: 34px;
+    --body2-line-height: 28px;
+    --body2-line-height: 24px;
+    --body2-line-height: 22px;
+  }
+}

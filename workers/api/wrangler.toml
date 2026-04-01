@@ -5,8 +5,10 @@ compatibility_date = "2026-03-01"
 [triggers]
 crons = ["0 * * * *"]
 
-# Custom Domain: bg.suparain.kr → 이 Worker가 origin
-# 배포 시 Cloudflare가 DNS AAAA 레코드 + SSL 인증서 자동 생성
+# ══════════════════════════════════════════════════════════════
+# 프로덕션 (기본) — npx wrangler deploy
+# ══════════════════════════════════════════════════════════════
+
 [[routes]]
 pattern = "bg.suparain.kr"
 custom_domain = true
@@ -26,20 +28,55 @@ migrations_dir = "migrations"
 binding = "KV"
 id = "fe38c181822b4729850b53ab839339b5"
 
+# ══════════════════════════════════════════════════════════════
+# 스테이징 (개발) — npx wrangler deploy --env dev
+# ══════════════════════════════════════════════════════════════
+
+[env.dev]
+name = "bg-api-dev"
+
+# 스테이징은 cron 불필요
+[env.dev.triggers]
+crons = []
+
+[[env.dev.routes]]
+pattern = "bg-dev.suparain.kr"
+custom_domain = true
+
+[env.dev.vars]
+BASE_URL = "https://bg-dev.suparain.kr"
+
+# D1 Database (스테이징)
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "bg-dev"
+database_id = "d420b951-c93b-4449-8f8c-f86c9f99a2cc"
+migrations_dir = "migrations"
+
+# KV Namespace (스테이징)
+[[env.dev.kv_namespaces]]
+binding = "KV"
+id = "d3bc6faec4274bd3bacca408d4bf4277"
+
+# ══════════════════════════════════════════════════════════════
 # Secrets (wrangler secret put 으로 등록):
-# -- V1 프로바이더 --
+# ══════════════════════════════════════════════════════════════
+#
+# 프로덕션:  wrangler secret put SECRET_NAME
+# 스테이징:  wrangler secret put SECRET_NAME --env dev
+#
+# -- 카페24 (환경별 다른 앱) --
+# CAFE24_CLIENT_ID, CAFE24_CLIENT_SECRET
+# CAFE24_WEBHOOK_API_KEY
+#
+# -- 암호화 (환경별 반드시 다르게!) --
+# ENCRYPTION_KEY
+# JWT_SECRET
+#
+# -- 소셜 프로바이더 (동일 키 사용 가능, redirect_uri만 추가) --
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 # KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET
 # NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 # APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
-# -- V2 프로바이더 --
 # DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET
-# FACEBOOK_APP_ID, FACEBOOK_APP_SECRET
-# X_CLIENT_ID, X_CLIENT_SECRET
-# LINE_CHANNEL_ID, LINE_CHANNEL_SECRET
 # TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME
-# -- 공통 --
-# CAFE24_CLIENT_ID, CAFE24_CLIENT_SECRET
-# CAFE24_WEBHOOK_API_KEY
-# ENCRYPTION_KEY
-# JWT_SECRET

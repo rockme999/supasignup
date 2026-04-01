@@ -110,6 +110,113 @@ cd workers/api && npx wrangler deploy
 
 ---
 
+## [TEST-003] localStorage 용량 검증 — 50개 상품 레코드
+
+- **목적**: 행동 추론 시스템의 localStorage 저장 용량 확인 (50개 ProductRecord + Session + Profile)
+- **배포일**: 2026-04-01
+- **상태**: 🔴 활성
+- **엔드포인트**: `GET /widget/test-storage.js`
+
+### 변경 파일 목록
+
+| # | 파일 | 변경 내용 | 삭제 방법 |
+|---|------|----------|----------|
+| 1 | `workers/api/src/widget/test-storage.ts` | **신규 파일** — localStorage 검증 스크립트 | 파일 삭제 |
+| 2 | `workers/api/src/index.ts` | import + 라우트 추가 | 해당 라인/블록 삭제 |
+
+### 테스트 방법
+
+```javascript
+var s=document.createElement('script');s.src='https://bg.suparain.kr/widget/test-storage.js';document.head.appendChild(s);
+```
+
+### 테스트 결과 (2026-04-01 13:11 KST) ✅ 성공
+
+| 항목 | 결과 |
+|------|------|
+| 상품 레코드 50개 저장/파싱 | ✅ 성공 (50개) |
+| `bg_product_history` | 75.90 KB |
+| `bg_session` | 954 B |
+| `bg_visitor_profile` | 770 B |
+| 3개 키 합계 | 77.59 KB |
+| Origin 전체 | 77.84 KB |
+| **5MB 한도 대비** | **1.52%** — 전혀 문제없음 |
+
+→ 50개 상품 레코드 + 세션 + 프로필 합쳐도 **localStorage 5MB 한도의 1.5%만 사용**. 충분한 여유.
+
+---
+
+## [TEST-004] Shadow DOM + IntersectionObserver 검증
+
+- **목적**: closed Shadow DOM CSS 격리 + 스크롤 4구간(top/info/detail/review) 감지 확인
+- **배포일**: 2026-04-01
+- **상태**: 🔴 활성
+- **엔드포인트**: `GET /widget/test-shadow-io.js`
+
+### 변경 파일 목록
+
+| # | 파일 | 변경 내용 | 삭제 방법 |
+|---|------|----------|----------|
+| 1 | `workers/api/src/widget/test-shadow-io.ts` | **신규 파일** — Shadow DOM + IO 검증 스크립트 | 파일 삭제 |
+| 2 | `workers/api/src/index.ts` | import + 라우트 추가 | 해당 라인/블록 삭제 |
+
+### 테스트 방법
+
+```javascript
+var s=document.createElement('script');s.src='https://bg.suparain.kr/widget/test-shadow-io.js';document.head.appendChild(s);
+```
+
+### 테스트 결과 (2026-04-01 13:12 KST) ✅ 성공
+
+| 항목 | 결과 |
+|------|------|
+| Shadow DOM (closed) | ✅ Isolated — 호스트 CSS 격리 정상 |
+| 스크롤 존 감지 | ✅ DETAIL → REVIEW 전환 정확히 감지 |
+| 존 전환 히스토리 | ✅ 경과 시간과 함께 기록 |
+| 패널 렌더링 | ✅ 호스트 페이지 레이아웃에 영향 없음 |
+
+→ **R4 이탈 맥락 감지의 기술적 기반 확보**. 4구간 스크롤 존 실시간 감지 정상 동작.
+
+---
+
+## [TEST-005] Admin API Store/Categories/Products 응답 확인
+
+- **목적**: 카페24 Admin API 응답 필드 확인 (온보딩 자동분석용)
+- **배포일**: 2026-04-01
+- **상태**: 🔴 활성
+- **엔드포인트**: `GET /test/store-info?mall_id=suparain999`
+
+### 변경 파일 목록
+
+| # | 파일 | 변경 내용 | 삭제 방법 |
+|---|------|----------|----------|
+| 1 | `workers/api/src/routes/test.ts` | **신규 파일** — 테스트 라우트 | 파일 삭제 |
+| 2 | `workers/api/src/index.ts` | import + 라우트 마운트 | 해당 라인 삭제 |
+
+### 테스트 결과 (2026-04-01)
+
+**1차 (scope 추가 전)**:
+
+| API | 결과 | 비고 |
+|-----|:----:|------|
+| `/admin/store` | ✅ 성공 | 토큰 갱신 후 성공 |
+| `/admin/categories` | ❌ 403 | `mall.read_category` scope 필요 |
+| `/admin/products/count` | ❌ 403 | `mall.read_product` scope 필요 |
+
+**2차 (scope 추가 + 앱 재설치 후)** ✅ **전체 성공**:
+
+| API | 결과 | 핵심 데이터 |
+|-----|:----:|------------|
+| `/admin/store` | ✅ | shop_name=수파레인, condition=도소매, sales_product_categories=["Undecided"] |
+| `/admin/categories` | ✅ | **19개 카테고리**, depth 1~4 (Outerwear, Tops, Jackets, Coats, Blazers, Tees 등) |
+| `/admin/products/count` | ✅ | **상품 5개** |
+
+**온보딩 자동분석 가능 확인**:
+- `sales_product_categories`는 "Undecided"이지만 카테고리 트리로 **패션/의류** 추론 가능
+- 카테고리 depth 4단계: 대분류→중분류→소분류→상세분류
+
+---
+
 ## 완료된 테스트
 
 (삭제 완료 시 위 항목을 여기로 이동)
