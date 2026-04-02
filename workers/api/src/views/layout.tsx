@@ -497,11 +497,12 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           </aside>
           <main class="main">
             {children}
-            <footer class="site-footer">
-              <div>주식회사 수파레인 | 대표이사 임호빈 | 사업자등록번호 716-88-01081</div>
-              <div>경기도 김포시 태장로 789 금광하이테크시티 465호</div>
-              <div>전화 031-992-5988 | 이메일 help@suparain.com</div>
-              <div style="margin-top:4px"><a href="/privacy">개인정보처리방침</a></div>
+            <footer class="site-footer" style="display:flex;gap:16px;align-items:center">
+              <a href="/privacy">개인정보처리방침</a>
+              <span style="color:#d1d5db">|</span>
+              <a href="mailto:help@suparain.com">이메일 문의</a>
+              <span style="color:#d1d5db">|</span>
+              <a href="/dashboard/inquiries">문의하기</a>
             </footer>
           </main>
         </div>
