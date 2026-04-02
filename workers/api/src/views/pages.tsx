@@ -3130,13 +3130,12 @@ export const GeneralSettingsPage: FC<{
                       {pct} 할인
                     </label>
                   ))}
-                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:130px">
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex:1">
                     <input type="radio" name="couponBenefit" value="__custom__" style="margin:0" />
-                    직접 입력
+                    <input type="text" id="idCouponBenefitCustom" placeholder="직접 입력" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" onfocus="this.previousElementSibling.checked=true" />
                   </label>
                 </div>
               </div>
-              <input type="text" id="idCouponBenefitCustom" style="display:none;margin-top:6px" placeholder="예) 첫 구매 무료배송 쿠폰" />
             </div>
 
             {/* 무료배송 — 라디오 단일 선택 */}
@@ -3152,12 +3151,11 @@ export const GeneralSettingsPage: FC<{
                     </label>
                   );
                 })}
-                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:120px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex:1">
                   <input type="radio" name="freeShipping" value="__custom__" style="margin:0" />
-                  직접 입력
+                  <input type="text" id="idFreeShippingCustom" placeholder="직접 입력" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" onfocus="this.previousElementSibling.checked=true" />
                 </label>
               </div>
-              <input type="text" id="idFreeShippingCustom" style="display:none;margin-top:6px" placeholder="예) 도서산간 제외 무료배송" />
             </div>
 
             {/* 추가 혜택 — 토글 다중 선택 (2열 그리드) */}
@@ -3180,15 +3178,14 @@ export const GeneralSettingsPage: FC<{
                     <span style={`font-size:10px;color:${item.tagColor};font-weight:600`}>{item.tag}</span>
                   </label>
                 ))}
-                <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;grid-column:1/-1">
                   <span class="toggle" style="flex-shrink:0">
                     <input type="checkbox" id="extraBenefitCustomToggle" />
                     <span class="toggle-slider"></span>
                   </span>
-                  <span>직접 입력</span>
+                  <input type="text" id="idExtraBenefitCustom" placeholder="직접 입력 (예: 회원 전용 할인 이벤트)" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" onfocus="document.getElementById('extraBenefitCustomToggle').checked=true" />
                 </label>
               </div>
-              <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="예) 회원 전용 할인 이벤트 안내" />
             </div>
           </div>
           <button id="saveBenefitsBtn" class="btn btn-primary btn-sm" style="margin-top:16px">혜택 저장</button>
@@ -3209,20 +3206,7 @@ export const GeneralSettingsPage: FC<{
             var roFields = { industry: document.getElementById('roIndustry'), target: document.getElementById('roTarget'), tone: document.getElementById('roTone'), summary: document.getElementById('roSummary'), keywords: document.getElementById('roKeywords') };
             var editFields = { industry: document.getElementById('idIndustry'), target: document.getElementById('idTarget'), tone: document.getElementById('idTone'), summary: document.getElementById('idSummary'), keywords: document.getElementById('idKeywords') };
 
-            // 라디오 + 직접입력 토글
-            ['couponBenefit', 'freeShipping'].forEach(function(name) {
-              var customInput = document.getElementById('id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom');
-              document.querySelectorAll('input[name="' + name + '"]').forEach(function(radio) {
-                radio.addEventListener('change', function() {
-                  customInput.style.display = this.value === '__custom__' ? 'block' : 'none';
-                });
-              });
-            });
-
-            // 추가 혜택 직접입력 토글
-            document.getElementById('extraBenefitCustomToggle').addEventListener('change', function() {
-              document.getElementById('idExtraBenefitCustom').style.display = this.checked ? 'block' : 'none';
-            });
+            // 직접 입력 필드는 인라인이므로 별도 토글 불필요
 
             function getRadioValue(name) {
               var checked = document.querySelector('input[name="' + name + '"]:checked');
@@ -3243,9 +3227,7 @@ export const GeneralSettingsPage: FC<{
                 // 프리셋에 없는 값 → 직접 입력
                 radios.forEach(function(r) { if (r.value === '__custom__') r.checked = true; });
                 var customId = 'id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom';
-                var customInput = document.getElementById(customId);
-                customInput.value = val;
-                customInput.style.display = 'block';
+                document.getElementById(customId).value = val;
               }
             }
 
@@ -3274,9 +3256,7 @@ export const GeneralSettingsPage: FC<{
               });
               if (customItems.length > 0) {
                 document.getElementById('extraBenefitCustomToggle').checked = true;
-                var customInput = document.getElementById('idExtraBenefitCustom');
-                customInput.value = customItems.join(', ');
-                customInput.style.display = 'block';
+                document.getElementById('idExtraBenefitCustom').value = customItems.join(', ');
               }
             }
 
