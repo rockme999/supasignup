@@ -3057,49 +3057,202 @@ export const GeneralSettingsPage: FC<{
     {shop && (
       <div class="card">
         <h2>쇼핑몰 정체성 (AI 분석)</h2>
-        <p style="font-size:13px;color:#64748b;margin-bottom:12px">AI가 쇼핑몰을 분석하여 업종, 타겟 고객, 톤앤매너를 자동으로 파악합니다.</p>
-        <div id="identityDisplay" style="background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;color:#374151;white-space:pre-wrap;margin-bottom:12px;display:none"></div>
-        <button id="analyzeBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>쇼핑몰 분석하기</button>
-        <button id="confirmIdentityBtn" class="btn btn-outline btn-sm" style="margin-left:8px;display:none">확정</button>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px">AI가 쇼핑몰을 자동 분석합니다. 필요하면 수정할 수 있습니다.</p>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button id="analyzeBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>AI 자동 분석하기</button>
+          <button id="editIdentityBtn" class="btn btn-outline btn-sm" style="display:none">수정</button>
+          <button id="saveIdentityBtn" class="btn btn-primary btn-sm" style="display:none">저장</button>
+          <button id="cancelEditBtn" class="btn btn-outline btn-sm" style="display:none">취소</button>
+        </div>
+
+        {/* AI 분석 결과 읽기 전용 표시 */}
+        <div id="identityReadonly" style="display:none;background:#f8fafc;border-radius:8px;padding:16px;font-size:13px;color:#374151;margin-bottom:16px">
+          <div style="display:grid;gap:6px">
+            <div><strong>업종:</strong> <span id="roIndustry">-</span></div>
+            <div><strong>타겟 고객:</strong> <span id="roTarget">-</span></div>
+            <div><strong>톤앤매너:</strong> <span id="roTone">-</span></div>
+            <div><strong>한 줄 소개:</strong> <span id="roSummary">-</span></div>
+            <div><strong>키워드:</strong> <span id="roKeywords">-</span></div>
+          </div>
+        </div>
+
+        {/* 수정 모드 폼 (기본 숨김) */}
+        <div id="identityEditForm" style="display:none;max-width:560px">
+          <div style="display:grid;gap:12px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>업종</label>
+              <input type="text" id="idIndustry" placeholder="예: 패션/의류, 뷰티, 식품" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>타겟 고객</label>
+              <input type="text" id="idTarget" placeholder="예: 20-30대 여성" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>톤앤매너</label>
+              <input type="text" id="idTone" placeholder="예: 트렌디하고 캐주얼한" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>한 줄 소개</label>
+              <input type="text" id="idSummary" placeholder="예: 스트리트 캐주얼 브랜드 중심의 패션 쇼핑몰" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>핵심 키워드 (쉼표 구분)</label>
+              <input type="text" id="idKeywords" placeholder="예: 스트리트패션, 캐주얼, 보이런던" />
+            </div>
+          </div>
+        </div>
+
+        {/* 회원 가입 혜택 (항상 표시) */}
+        <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-top:16px;max-width:560px">
+          <h3 style="font-size:15px;margin-bottom:12px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI 카피 생성에 활용됩니다</span></h3>
+          <div style="display:grid;gap:12px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>가입 쿠폰 혜택</label>
+              <select id="idCouponBenefit" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
+                <option value="">선택하세요</option>
+                <option value="1,000원 할인 쿠폰 즉시 지급">1,000원 할인 쿠폰</option>
+                <option value="2,000원 할인 쿠폰 즉시 지급">2,000원 할인 쿠폰</option>
+                <option value="3,000원 할인 쿠폰 즉시 지급">3,000원 할인 쿠폰</option>
+                <option value="5,000원 할인 쿠폰 즉시 지급">5,000원 할인 쿠폰</option>
+                <option value="10,000원 할인 쿠폰 즉시 지급">10,000원 할인 쿠폰</option>
+                <option value="10% 할인 쿠폰 즉시 지급">10% 할인 쿠폰</option>
+                <option value="15% 할인 쿠폰 즉시 지급">15% 할인 쿠폰</option>
+                <option value="20% 할인 쿠폰 즉시 지급">20% 할인 쿠폰</option>
+                <option value="__custom__">직접 입력</option>
+              </select>
+              <input type="text" id="idCouponBenefitCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) 첫 구매 무료배송 쿠폰" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>무료배송 기준</label>
+              <select id="idFreeShipping" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
+                <option value="">선택하세요</option>
+                <option value="전 상품 무료배송">전 상품 무료배송</option>
+                <option value="30,000원 이상 무료배송">30,000원 이상</option>
+                <option value="50,000원 이상 무료배송">50,000원 이상</option>
+                <option value="70,000원 이상 무료배송">70,000원 이상</option>
+                <option value="100,000원 이상 무료배송">100,000원 이상</option>
+                <option value="__custom__">직접 입력</option>
+              </select>
+              <input type="text" id="idFreeShippingCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) 도서산간 제외 무료배송" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>추가 혜택</label>
+              <select id="idExtraBenefit" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
+                <option value="">선택하세요</option>
+                <option value="첫 구매 10% 추가 할인">첫 구매 10% 추가 할인</option>
+                <option value="적립금 1,000원 즉시 지급">적립금 1,000원 즉시 지급</option>
+                <option value="생일 쿠폰 자동 발급">생일 쿠폰 자동 발급</option>
+                <option value="회원 등급별 추가 할인">회원 등급별 추가 할인</option>
+                <option value="신상품 알림 우선 발송">신상품 알림 우선 발송</option>
+                <option value="__custom__">직접 입력</option>
+              </select>
+              <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) VIP 전용 시크릿 세일 초대" />
+            </div>
+          </div>
+          <button id="saveBenefitsBtn" class="btn btn-primary btn-sm" style="margin-top:16px">혜택 저장</button>
+        </div>
+
         <script dangerouslySetInnerHTML={{__html: `
           (function() {
-            var display = document.getElementById('identityDisplay');
-            var analyzeBtn = document.getElementById('analyzeBtn');
-            var confirmBtn = document.getElementById('confirmIdentityBtn');
-            var shopId = analyzeBtn.dataset.shopId;
+            var shopId = document.getElementById('analyzeBtn').dataset.shopId;
 
-            // 기존 정체성이 있으면 표시
+            // DOM 참조
+            var analyzeBtn = document.getElementById('analyzeBtn');
+            var editBtn = document.getElementById('editIdentityBtn');
+            var saveBtn = document.getElementById('saveIdentityBtn');
+            var cancelBtn = document.getElementById('cancelEditBtn');
+            var readonlyEl = document.getElementById('identityReadonly');
+            var editForm = document.getElementById('identityEditForm');
+
+            var roFields = { industry: document.getElementById('roIndustry'), target: document.getElementById('roTarget'), tone: document.getElementById('roTone'), summary: document.getElementById('roSummary'), keywords: document.getElementById('roKeywords') };
+            var editFields = { industry: document.getElementById('idIndustry'), target: document.getElementById('idTarget'), tone: document.getElementById('idTone'), summary: document.getElementById('idSummary'), keywords: document.getElementById('idKeywords') };
+
+            // 드롭다운 + 직접입력 토글
+            ['CouponBenefit', 'FreeShipping', 'ExtraBenefit'].forEach(function(name) {
+              var sel = document.getElementById('id' + name);
+              var custom = document.getElementById('id' + name + 'Custom');
+              sel.addEventListener('change', function() {
+                custom.style.display = this.value === '__custom__' ? 'block' : 'none';
+                if (this.value !== '__custom__') custom.value = '';
+              });
+            });
+
+            function getBenefitValue(name) {
+              var sel = document.getElementById('id' + name);
+              var custom = document.getElementById('id' + name + 'Custom');
+              return sel.value === '__custom__' ? custom.value.trim() : sel.value;
+            }
+
+            function setBenefitValue(name, val) {
+              var sel = document.getElementById('id' + name);
+              var custom = document.getElementById('id' + name + 'Custom');
+              var found = false;
+              for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === val) { sel.selectedIndex = i; found = true; break; }
+              }
+              if (!found && val) {
+                sel.value = '__custom__';
+                custom.value = val;
+                custom.style.display = 'block';
+              }
+            }
+
+            function showReadonly(id) {
+              roFields.industry.textContent = id.industry || '-';
+              roFields.target.textContent = id.target || id.target_audience || '-';
+              roFields.tone.textContent = id.tone || '-';
+              roFields.summary.textContent = id.summary || '-';
+              roFields.keywords.textContent = Array.isArray(id.keywords) ? id.keywords.join(', ') : (id.keywords || '-');
+              readonlyEl.style.display = 'block';
+              editForm.style.display = 'none';
+              editBtn.style.display = 'inline-flex';
+              saveBtn.style.display = 'none';
+              cancelBtn.style.display = 'none';
+              analyzeBtn.textContent = 'AI 다시 분석하기';
+            }
+
+            function enterEditMode() {
+              editFields.industry.value = roFields.industry.textContent !== '-' ? roFields.industry.textContent : '';
+              editFields.target.value = roFields.target.textContent !== '-' ? roFields.target.textContent : '';
+              editFields.tone.value = roFields.tone.textContent !== '-' ? roFields.tone.textContent : '';
+              editFields.summary.value = roFields.summary.textContent !== '-' ? roFields.summary.textContent : '';
+              editFields.keywords.value = roFields.keywords.textContent !== '-' ? roFields.keywords.textContent : '';
+              readonlyEl.style.display = 'none';
+              editForm.style.display = 'block';
+              editBtn.style.display = 'none';
+              saveBtn.style.display = 'inline-flex';
+              cancelBtn.style.display = 'inline-flex';
+            }
+
+            // 기존 데이터 로드
             fetch('/api/ai/identity?shop_id=' + shopId, { credentials: 'same-origin' })
               .then(function(r) { return r.json(); })
               .then(function(d) {
-                if (d.identity) {
-                  var id = d.identity;
-                  display.textContent = '업종: ' + (id.industry||'-') + '\\n타겟: ' + (id.target||id.target_audience||'-') + '\\n톤앤매너: ' + (id.tone||'-') + (id.summary ? '\\n요약: ' + id.summary : '');
-                  display.style.display = 'block';
-                  analyzeBtn.textContent = '다시 분석하기';
+                if (d.identity && d.identity.industry) {
+                  showReadonly(d.identity);
+                  // 혜택 로드
+                  setBenefitValue('CouponBenefit', d.identity.coupon_benefit || '');
+                  setBenefitValue('FreeShipping', d.identity.free_shipping || '');
+                  setBenefitValue('ExtraBenefit', d.identity.extra_benefit || '');
                 }
               }).catch(function() {});
 
+            // AI 분석
             analyzeBtn.addEventListener('click', async function() {
               analyzeBtn.disabled = true;
-              analyzeBtn.textContent = '⏳ AI 분석 중... (30초 이상 소요될 수 있습니다)';
+              analyzeBtn.textContent = '⏳ AI 분석 중... (30초 이상 소요)';
               analyzeBtn.style.opacity = '0.5';
               analyzeBtn.style.cursor = 'not-allowed';
-              display.style.display = 'none';
               try {
                 var resp = await fetch('/api/ai/identity', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'same-origin',
-                  body: JSON.stringify({ shop_id: shopId })
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin', body: JSON.stringify({ shop_id: shopId })
                 });
                 var data = await resp.json();
                 if (resp.ok && data.identity) {
-                  var id = data.identity;
-                  display.textContent = '업종: ' + (id.industry||'-') + '\\n타겟: ' + (id.target||id.target_audience||'-') + '\\n톤앤매너: ' + (id.tone||'-') + (id.summary ? '\\n요약: ' + id.summary : '');
-                  display.style.display = 'block';
-                  confirmBtn.style.display = 'inline-flex';
-                  showToast('success', 'AI 분석이 완료되었습니다. 내용을 확인하고 확정해주세요.');
+                  showReadonly(data.identity);
+                  showToast('success', 'AI 분석 완료! 수정이 필요하면 수정 버튼을 클릭하세요.');
                 } else {
                   showToast('error', data.message || 'AI 분석에 실패했습니다.');
                 }
@@ -3107,15 +3260,61 @@ export const GeneralSettingsPage: FC<{
                 showToast('error', '오류: ' + e.message);
               } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.textContent = '다시 분석하기';
+                analyzeBtn.textContent = 'AI 다시 분석하기';
                 analyzeBtn.style.opacity = '1';
                 analyzeBtn.style.cursor = 'pointer';
               }
             });
 
-            confirmBtn.addEventListener('click', function() {
-              confirmBtn.style.display = 'none';
-              showToast('success', '쇼핑몰 정체성이 확정되었습니다.');
+            // 수정 모드
+            editBtn.addEventListener('click', enterEditMode);
+
+            // 취소
+            cancelBtn.addEventListener('click', function() {
+              readonlyEl.style.display = 'block';
+              editForm.style.display = 'none';
+              editBtn.style.display = 'inline-flex';
+              saveBtn.style.display = 'none';
+              cancelBtn.style.display = 'none';
+            });
+
+            // 정체성 저장
+            saveBtn.addEventListener('click', async function() {
+              var identity = {
+                industry: editFields.industry.value.trim(),
+                target: editFields.target.value.trim(),
+                tone: editFields.tone.value.trim(),
+                summary: editFields.summary.value.trim(),
+                keywords: editFields.keywords.value.split(',').map(function(k) { return k.trim(); }).filter(Boolean),
+              };
+              saveBtn.disabled = true; saveBtn.textContent = '저장 중...';
+              try {
+                var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId, { shop_identity: JSON.stringify(identity) });
+                if (resp.ok) {
+                  showReadonly(identity);
+                  showToast('success', '쇼핑몰 정체성이 저장되었습니다.');
+                } else { showToast('error', '저장 중 오류가 발생했습니다.'); }
+              } catch(e) { showToast('error', '오류: ' + e.message); }
+              finally { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+            });
+
+            // 혜택 저장
+            document.getElementById('saveBenefitsBtn').addEventListener('click', async function() {
+              var btn = this;
+              // 기존 정체성에 혜택 정보 병합
+              var resp1 = await fetch('/api/ai/identity?shop_id=' + shopId, { credentials: 'same-origin' });
+              var existing = {};
+              try { var d = await resp1.json(); existing = d.identity || {}; } catch(e) {}
+              existing.coupon_benefit = getBenefitValue('CouponBenefit');
+              existing.free_shipping = getBenefitValue('FreeShipping');
+              existing.extra_benefit = getBenefitValue('ExtraBenefit');
+              btn.disabled = true; btn.textContent = '저장 중...';
+              try {
+                var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId, { shop_identity: JSON.stringify(existing) });
+                if (resp.ok) { showToast('success', '혜택 정보가 저장되었습니다.'); }
+                else { showToast('error', '저장 중 오류가 발생했습니다.'); }
+              } catch(e) { showToast('error', '오류: ' + e.message); }
+              finally { btn.disabled = false; btn.textContent = '혜택 저장'; }
             });
           })();
         `}} />
