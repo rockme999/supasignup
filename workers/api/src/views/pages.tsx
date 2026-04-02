@@ -243,50 +243,86 @@ type HomeStats = {
   by_provider: Record<string, number>;
 };
 
-type BillingShop = {
+type HomeShop = {
   shop_id: string;
   shop_name: string;
+  mall_id: string;
   plan: string;
+  sso_configured: number;
   monthly_signups: number;
-  usage_percent: number | null;
-  needs_upgrade: boolean;
-  is_over_limit: boolean;
-};
-
-type CouponShopSummary = {
-  shop_id: string;
-  shop_name: string;
   coupon_enabled: boolean;
 };
 
-export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[]; couponShops: CouponShopSummary[]; isCafe24?: boolean }> = ({ stats, billingShops, couponShops, isCafe24 }) => {
-  const activeCoupons = couponShops.filter(s => s.coupon_enabled).length;
-  const totalShops = couponShops.length;
+export const HomePage: FC<{
+  shop: HomeShop | null;
+  stats: HomeStats | null;
+  isCafe24?: boolean;
+}> = ({ shop, stats, isCafe24 }) => {
+  // 앱 미설치 상태
+  if (!shop) {
+    return (
+      <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
+        <h1>대시보드</h1>
+        <div class="card" style="text-align:center;padding:48px 24px">
+          <div style="font-size:48px;margin-bottom:16px">📦</div>
+          <h2 style="margin-bottom:8px">앱 설치를 기다리고 있습니다</h2>
+          <p style="font-size:14px;color:#64748b;margin-bottom:8px">카페24 앱스토어에서 번개가입을 설치하면 자동으로 연결됩니다.</p>
+          <p style="font-size:13px;color:#94a3b8">앱 설치 후 이 페이지를 새로고침 하거나, 카페24 쇼핑몰 관리자에서 번개가입 앱을 실행하세요.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const isPlus = shop.plan !== 'free';
 
   return (
     <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
       <h1>대시보드</h1>
 
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="label">전체 가입</div>
-          <div class="value">{stats.total_signups.toLocaleString()}</div>
+      {/* SSO 미설정 경고 */}
+      {!shop.sso_configured && (
+        <div class="alert alert-warn alert-banner" style="margin-bottom:16px">
+          <span>SSO 연동이 아직 설정되지 않았습니다. 설정하지 않으면 쇼핑몰 로그인 페이지에 번개가입 버튼이 표시되지 않습니다.</span>
+          <a href="/dashboard/settings/sso-guide" class="btn btn-sm btn-outline" style="white-space:nowrap">SSO 설정 가이드</a>
         </div>
-        <div class="stat-card">
-          <div class="label">전체 로그인</div>
-          <div class="value">{stats.total_logins.toLocaleString()}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">오늘 가입</div>
-          <div class="value">{stats.today_signups}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">이번 달 가입</div>
-          <div class="value">{stats.month_signups}</div>
+      )}
+
+      {/* 쇼핑몰 요약 */}
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h2 style="margin-bottom:4px">{shop.shop_name || shop.mall_id}</h2>
+            <p style="font-size:13px;color:#64748b">Mall ID: {shop.mall_id}</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class={`badge ${isPlus ? 'badge-green' : 'badge-gray'}`}>{isPlus ? 'Plus' : 'Free'}</span>
+            {!isPlus && (
+              <a href="/dashboard/billing" class="btn btn-sm btn-outline" style="white-space:nowrap">업그레이드</a>
+            )}
+          </div>
         </div>
       </div>
 
-      {Object.keys(stats.by_provider).length > 0 && (
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">전체 가입</div>
+          <div class="value">{(stats?.total_signups ?? 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">전체 로그인</div>
+          <div class="value">{(stats?.total_logins ?? 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">오늘 가입</div>
+          <div class="value">{stats?.today_signups ?? 0}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">이번 달 가입</div>
+          <div class="value">{stats?.month_signups ?? 0}</div>
+        </div>
+      </div>
+
+      {stats && Object.keys(stats.by_provider).length > 0 && (
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 style="margin-bottom:0">소셜별 가입 현황</h2>
@@ -303,178 +339,39 @@ export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[]; coupo
         </div>
       )}
 
+      {/* 빠른 바로가기 */}
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">쇼핑몰 현황</h2>
-          <a href="/dashboard/billing" style="font-size:13px">플랜/과금 →</a>
-        </div>
-        {billingShops.length === 0 ? (
-          <div class="empty-state">
-            <p>등록된 쇼핑몰이 없습니다.</p>
-            <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">쇼핑몰 등록</a>
-          </div>
-        ) : (
-          <div style="overflow-x:auto">
-            <table style="margin-top:4px">
-              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th></tr></thead>
-              <tbody>
-                {billingShops.map((shop) => (
-                  <tr>
-                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
-                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td>
-                    <td>{shop.monthly_signups} <span style="color:#94a3b8;font-size:12px">건</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {totalShops > 0 && (
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h2 style="margin-bottom:0">쿠폰 설정 현황</h2>
-            <span style="font-size:13px;color:#64748b">
-              활성 <strong style="color:#2563eb">{activeCoupons}</strong>개 / 전체 {totalShops}개
-            </span>
-          </div>
-          {activeCoupons === 0 ? (
-            <p style="font-size:13px;color:#94a3b8;margin-top:8px">쿠폰이 활성화된 쇼핑몰이 없습니다. 쇼핑몰 설정에서 쿠폰을 활성화하세요.</p>
-          ) : (
-            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
-              {couponShops.filter(s => s.coupon_enabled).map(s => (
-                <a href={`/dashboard/shops/${s.shop_id}`} style="font-size:12px;background:#dbeafe;color:#1d4ed8;padding:2px 10px;border-radius:99px;text-decoration:none">
-                  {s.shop_name || s.shop_id}
-                </a>
-              ))}
-            </div>
+        <h2 style="margin-bottom:16px">빠른 바로가기</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+          <a href="/dashboard/settings/providers" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">👥</span>
+            <span style="font-size:13px;font-weight:600">소셜 프로바이더</span>
+          </a>
+          <a href="/dashboard/settings/login-design" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">🎨</span>
+            <span style="font-size:13px;font-weight:600">로그인 디자인</span>
+          </a>
+          <a href="/dashboard/settings/coupon" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">🎟️</span>
+            <span style="font-size:13px;font-weight:600">쿠폰 설정{shop.coupon_enabled ? ' ✓' : ''}</span>
+          </a>
+          <a href="/dashboard/stats" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">📊</span>
+            <span style="font-size:13px;font-weight:600">통계 보기</span>
+          </a>
+          {isPlus && (
+            <a href="/dashboard/ai-reports" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+              <span style="font-size:28px">🤖</span>
+              <span style="font-size:13px;font-weight:600">AI 보고서</span>
+            </a>
           )}
         </div>
-      )}
+      </div>
     </Layout>
   );
 };
 
-// ─── Shops List ──────────────────────────────────────────────
-
-type ShopListItem = {
-  shop_id: string;
-  shop_name: string;
-  mall_id: string;
-  platform: string;
-  plan: string;
-  enabled_providers: string;
-  created_at: string;
-};
-
-export const ShopsPage: FC<{ shops: ShopListItem[]; currentSearch?: string; isCafe24?: boolean }> = ({ shops, currentSearch, isCafe24 }) => (
-  <Layout title="쇼핑몰 관리" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
-    <h1>쇼핑몰 관리</h1>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">+ 쇼핑몰 등록</a>
-      <div class="filter-bar" style="flex:1;min-width:200px">
-        <input
-          type="text"
-          id="shopSearch"
-          placeholder="쇼핑몰명 또는 Mall ID 검색"
-          value={currentSearch || ''}
-          onkeyup="if(event.key==='Enter')applySearch()"
-          style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;flex:1;max-width:300px"
-        />
-        <button onclick="applySearch()" class="btn btn-outline btn-sm">검색</button>
-        {currentSearch && <a href="/dashboard/shops" class="btn btn-outline btn-sm">초기화</a>}
-      </div>
-    </div>
-
-    {shops.length === 0 ? (
-      <div class="card">
-        <div class="empty-state">
-          <p>{currentSearch ? '검색 결과가 없습니다.' : '등록된 쇼핑몰이 없습니다.'}</p>
-          {!currentSearch && <p style="font-size:13px">카페24 앱 설치를 통해 자동으로 등록되거나, 직접 등록할 수 있습니다.</p>}
-        </div>
-      </div>
-    ) : (
-      <div class="card">
-        <div style="overflow-x:auto">
-          <table>
-            <thead><tr><th>쇼핑몰명</th><th>Mall ID</th><th>플랫폼</th><th>플랜</th><th>프로바이더</th><th></th></tr></thead>
-            <tbody>
-              {shops.map((shop) => {
-                const providers = parseProviders(shop.enabled_providers);
-                return (
-                  <tr>
-                    <td>{shop.shop_name || '-'}</td>
-                    <td>{shop.mall_id}</td>
-                    <td>{shop.platform || 'cafe24'}</td>
-                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                    <td>{(providers as string[]).join(', ') || '-'}</td>
-                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>설정</a></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )}
-
-    <script dangerouslySetInnerHTML={{__html: `
-      function applySearch() {
-        var q = document.getElementById('shopSearch').value.trim();
-        window.location.href = '/dashboard/shops' + (q ? '?search=' + encodeURIComponent(q) : '');
-      }
-    `}} />
-  </Layout>
-);
-
-// ─── Shop New ────────────────────────────────────────────────
-
-export const ShopNewPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
-  <Layout title="쇼핑몰 등록" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
-    <h1>쇼핑몰 등록</h1>
-    <div class="card">
-      <form id="newShopForm">
-        <div class="form-group">
-          <label>Mall ID (카페24 쇼핑몰 ID)</label>
-          <input type="text" name="mall_id" required placeholder="예: myshop" />
-        </div>
-        <div class="form-group">
-          <label>쇼핑몰명 (선택)</label>
-          <input type="text" name="shop_name" placeholder="예: 마이쇼핑몰" />
-        </div>
-        <div class="form-group">
-          <label>플랫폼</label>
-          <select name="platform">
-            <option value="cafe24">카페24</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-primary">등록</button>
-      </form>
-      <script dangerouslySetInnerHTML={{__html: `
-        document.getElementById('newShopForm').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const form = e.target;
-          var btn = form.querySelector('button[type=submit]');
-          const resp = await apiCall('POST', '/api/dashboard/shops', {
-            mall_id: form.mall_id.value,
-            shop_name: form.shop_name.value || undefined,
-            platform: form.platform.value,
-          }, btn);
-          if (resp.ok) {
-            const data = await resp.json();
-            window.location.href = '/dashboard/shops/' + data.shop.shop_id;
-          } else {
-            const data = await resp.json();
-            showToast('error', data.error === 'duplicate_mall_id' ? '이미 등록된 Mall ID입니다.' : '등록 중 오류가 발생했습니다.');
-          }
-        });
-      `}} />
-    </div>
-  </Layout>
-);
-
-// ─── Shop Detail ─────────────────────────────────────────────
+// ─── Shop types (used by SsoGuidePage, ProvidersPage, etc.) ──
 
 type ShopDetail = {
   shop_id: string;
@@ -489,350 +386,18 @@ type ShopDetail = {
   sso_configured: number;
 };
 
-type CouponConfig = {
-  enabled: boolean;
-  coupon_no: string;
-  coupon_name?: string;
-  multi_coupon: boolean;
-};
+// NOTE: ShopsPage, ShopNewPage, ShopDetailPage removed (단일 쇼핑몰 구조 전환)
 
-export const ShopDetailPage: FC<{
-  shop: ShopDetail;
-  monthlySignups: number;
-  baseUrl: string;
-  couponConfig: CouponConfig | null;
-  kakaoChannelId?: string;
-  isCafe24?: boolean;
-}> = ({ shop, monthlySignups, baseUrl, couponConfig, kakaoChannelId, isCafe24 }) => {
-  const providers = parseProviders(shop.enabled_providers);
-  const isPlus = shop.plan !== 'free';
-  const cc = couponConfig ?? { enabled: false, coupon_no: '', coupon_name: '', multi_coupon: false };
+// ─── SSO Guide Page ──────────────────────────────────────────
 
-  return (
-    <Layout title={shop.shop_name || shop.mall_id} loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
-      <h1>{shop.shop_name || shop.mall_id}</h1>
-
-      <div class="tab-nav">
-        <a href={`/dashboard/shops/${shop.shop_id}`} class="active">설정</a>
-        <a href={`/dashboard/shops/${shop.shop_id}/providers`}>프로바이더</a>
-        <a href={`/dashboard/shops/${shop.shop_id}/setup`}>SSO 가이드</a>
-      </div>
-
-      <div class="card">
-        <h2>기본 정보</h2>
-        <div style="overflow-x:auto">
-          <table>
-            <tbody>
-              <tr><th style="width:140px">Shop ID</th><td>{shop.shop_id}</td></tr>
-              <tr><th>Mall ID</th><td>{shop.mall_id}</td></tr>
-              <tr><th>플랫폼</th><td>{shop.platform || 'cafe24'}</td></tr>
-              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td></tr>
-              <tr><th>이번 달 가입</th><td>{monthlySignups} <span style="color:#94a3b8;font-size:12px">건</span></td></tr>
-              <tr><th>Client ID</th><td>
-                <code>{shop.client_id}</code>
-                <button class="copy-btn" onclick={`copyText('${shop.client_id}',this)`} style="position:static; margin-left:8px">복사</button>
-              </td></tr>
-              <tr><th>Client Secret</th><td>
-                <code>{shop.client_secret}</code>
-                <span style="color:#94a3b8; font-size:12px; margin-left:8px">(마스킹됨)</span>
-              </td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">소셜 프로바이더</h2>
-          <a href={`/dashboard/shops/${shop.shop_id}/providers`} class="btn btn-outline btn-sm">관리 →</a>
-        </div>
-        <p style="font-size:13px; color:#64748b">
-          활성: {providers.length > 0 ? providers.map(p => providerDisplayNames[p] || p).join(', ') : '없음'}
-        </p>
-      </div>
-
-      <div class="card" style={`border: 1px solid ${shop.sso_configured ? '#dcfce7' : '#fef3c7'}`}>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <h2 style="margin-bottom:4px">SSO 설정 {shop.sso_configured ? <span class="badge badge-green">완료</span> : <span class="badge badge-yellow">미완료</span>}</h2>
-            <p style="font-size:13px;color:#64748b">카페24 관리자에서 SSO 연동 설정이 필요합니다.</p>
-          </div>
-          <a href={`/dashboard/shops/${shop.shop_id}/setup`} class="btn btn-primary btn-sm">SSO 설정 가이드</a>
-        </div>
-      </div>
-
-      {/* ─── 쿠폰 설정 카드 ─── */}
-      <div class="card" id="couponCard">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">쿠폰 설정</h2>
-          <div class="provider-toggle" style="border:none;padding:0;margin-bottom:0">
-            <label class="toggle">
-              <input type="checkbox" id="couponEnabled" checked={cc.enabled} />
-              <span class="toggle-slider"></span>
-            </label>
-            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">쿠폰 활성화</span>
-          </div>
-        </div>
-
-        <div id="couponFields" style={cc.enabled ? '' : 'display:none'}>
-          <div class="form-group">
-            <label style="font-size:13px;font-weight:600;color:#475569">쿠폰 번호 (coupon_no)</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="text" id="couponNo" value={cc.coupon_no} placeholder="카페24 쿠폰 번호 입력" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" />
-            </div>
-            {cc.coupon_name && (
-              <p id="couponNameDisplay" style="font-size:12px;color:#22c55e;margin-top:4px">{cc.coupon_name}</p>
-            )}
-            {!cc.coupon_name && (
-              <p id="couponNameDisplay" style="font-size:12px;color:#94a3b8;margin-top:4px"></p>
-            )}
-          </div>
-
-          <div class="provider-toggle" style="border:none;padding:0;margin-top:12px">
-            <label class="toggle">
-              <input type="checkbox" id="multiCoupon" checked={cc.multi_coupon} disabled={!isPlus} />
-              <span class="toggle-slider" style={isPlus ? '' : 'cursor:not-allowed;opacity:0.5'}></span>
-            </label>
-            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">멀티 쿠폰</span>
-            {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
-            <span style="font-size:12px;color:#94a3b8;margin-left:8px">신규 가입 시 여러 쿠폰 동시 지급</span>
-          </div>
-        </div>
-
-        <div style="margin-top:16px;display:flex;justify-content:flex-end">
-          <button id="saveCouponBtn" class="btn btn-primary btn-sm">저장</button>
-        </div>
-
-        <script dangerouslySetInnerHTML={{__html: `
-          (function() {
-            var shopId = '${shop.shop_id}';
-            var isPlus = ${JSON.stringify(isPlus)};
-
-            var enabledToggle = document.getElementById('couponEnabled');
-            var couponFields = document.getElementById('couponFields');
-            var multiCouponToggle = document.getElementById('multiCoupon');
-
-            enabledToggle.addEventListener('change', function() {
-              couponFields.style.display = this.checked ? '' : 'none';
-            });
-
-            if (!isPlus) {
-              multiCouponToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                showToast('warn', '멀티 쿠폰은 Plus 플랜에서만 사용할 수 있습니다.');
-              });
-            }
-
-            document.getElementById('saveCouponBtn').addEventListener('click', async function() {
-              var btn = this;
-              var couponNo = document.getElementById('couponNo').value.trim();
-              var enabled = enabledToggle.checked;
-              var multiCoupon = multiCouponToggle.checked && isPlus;
-
-              if (enabled && !couponNo) {
-                showToast('warn', '쿠폰 번호를 입력해주세요.');
-                return;
-              }
-
-              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon', {
-                enabled: enabled,
-                coupon_no: couponNo,
-                multi_coupon: multiCoupon,
-              }, btn);
-
-              if (resp.ok) {
-                var data = await resp.json();
-                var nameEl = document.getElementById('couponNameDisplay');
-                if (nameEl) {
-                  if (data.coupon_name) {
-                    nameEl.textContent = data.coupon_name;
-                    nameEl.style.color = '#22c55e';
-                  } else {
-                    nameEl.textContent = '';
-                  }
-                }
-                showToast('success', '쿠폰 설정이 저장되었습니다.');
-              } else {
-                var err = await resp.json();
-                showToast('error', err.error || '저장 중 오류가 발생했습니다.');
-              }
-            });
-          })();
-        `}} />
-      </div>
-
-      {/* ─── Plus 기능 카드 ─── */}
-      <div class="card" style={isPlus ? '' : 'opacity:0.85'}>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">Plus 기능</h2>
-          {!isPlus && (
-            <a href="/dashboard/billing" class="badge badge-gray" style="text-decoration:none;font-size:12px;padding:4px 10px">
-              Plus 업그레이드 필요
-            </a>
-          )}
-        </div>
-
-        {/* 카카오 채널 ID */}
-        <div class="form-group" style="margin-bottom:16px">
-          <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:6px">
-            카카오 채널 ID
-            {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
-          </label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input
-              type="text"
-              id="kakaoChannelId"
-              value={kakaoChannelId || ''}
-              placeholder="예: @my-shop-kakao"
-              disabled={!isPlus}
-              style={`flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;${!isPlus ? 'background:#f8fafc;cursor:not-allowed' : ''}`}
-            />
-            <button
-              id="saveKakaoBtn"
-              class="btn btn-outline btn-sm"
-              disabled={!isPlus}
-              style={!isPlus ? 'cursor:not-allowed;opacity:0.5' : ''}
-            >
-              저장
-            </button>
-          </div>
-          <p style="font-size:12px;color:#94a3b8;margin-top:4px">신규 가입 시 카카오 채널 추가 유도에 사용됩니다.</p>
-        </div>
-
-        {/* AI 쇼핑몰 분석 */}
-        <div style="border-top:1px solid #f1f5f9;padding-top:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <p style="font-size:13px;font-weight:600;color:#475569;margin-bottom:2px">
-                AI 쇼핑몰 정체성 분석
-                {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
-              </p>
-              <p style="font-size:12px;color:#94a3b8">업종·타겟 고객·톤앤매너를 AI가 자동 분석합니다.</p>
-            </div>
-            <button
-              id="analyzeIdentityBtn"
-              class="btn btn-outline btn-sm"
-              data-shop-id={shop.shop_id}
-              disabled={!isPlus}
-              style={!isPlus ? 'cursor:not-allowed;opacity:0.5' : ''}
-            >
-              쇼핑몰 분석하기
-            </button>
-          </div>
-          <div id="identityResult" style="display:none;margin-top:12px;background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;color:#374151;white-space:pre-wrap"></div>
-        </div>
-
-        {/* AI 브리핑 링크 */}
-        {isPlus && (
-          <div style="border-top:1px solid #f1f5f9;padding-top:16px;margin-top:0">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <p style="font-size:13px;font-weight:600;color:#475569;margin-bottom:2px">AI 주간 브리핑</p>
-                <p style="font-size:12px;color:#94a3b8">지난 주 성과 분석 및 이번 주 전략을 AI가 생성합니다.</p>
-              </div>
-              <a href={`/dashboard/shops/${shop.shop_id}/ai-briefing`} class="btn btn-outline btn-sm">브리핑 보기 →</a>
-            </div>
-          </div>
-        )}
-
-        <script dangerouslySetInnerHTML={{__html: `
-          (function() {
-            var shopId = '${shop.shop_id}';
-            var isPlus = ${JSON.stringify(isPlus)};
-
-            // 카카오 채널 ID 저장
-            var saveKakaoBtn = document.getElementById('saveKakaoBtn');
-            if (saveKakaoBtn && isPlus) {
-              saveKakaoBtn.addEventListener('click', async function() {
-                var btn = this;
-                var channelId = document.getElementById('kakaoChannelId').value.trim();
-                var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/kakao-channel', { kakao_channel_id: channelId }, btn);
-                if (resp.ok) {
-                  showToast('success', '카카오 채널 ID가 저장되었습니다.');
-                } else {
-                  var err = await resp.json();
-                  showToast('error', err.error || '저장 중 오류가 발생했습니다.');
-                }
-              });
-            }
-
-            // AI 쇼핑몰 분석
-            var analyzeBtn = document.getElementById('analyzeIdentityBtn');
-            if (analyzeBtn && isPlus) {
-              analyzeBtn.addEventListener('click', async function() {
-                var btn = this;
-                var resultEl = document.getElementById('identityResult');
-                btn.disabled = true;
-                btn.textContent = '분석 중...';
-                resultEl.style.display = 'none';
-                try {
-                  var resp = await fetch('/api/ai/identity', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ shop_id: shopId })
-                  });
-                  var data = await resp.json();
-                  if (resp.ok && data.identity) {
-                    var id = data.identity;
-                    var text = [
-                      '업종: ' + (id.industry || '-'),
-                      '타겟 고객: ' + (id.target_audience || '-'),
-                      '톤앤매너: ' + (id.tone || '-'),
-                      id.summary ? '\\n' + id.summary : ''
-                    ].filter(Boolean).join('\\n');
-                    resultEl.textContent = text;
-                    resultEl.style.display = 'block';
-                    showToast('success', 'AI 분석이 완료되었습니다.');
-                  } else {
-                    showToast('error', data.message || 'AI 분석에 실패했습니다.');
-                  }
-                } catch(e) {
-                  showToast('error', '오류: ' + e.message);
-                } finally {
-                  btn.disabled = false;
-                  btn.textContent = '쇼핑몰 분석하기';
-                }
-              });
-            }
-          })();
-        `}} />
-      </div>
-
-      <div class="card" style="border: 1px solid #fee2e2">
-        <h2 style="color:#991b1b">위험 영역</h2>
-        <p style="font-size:13px; color:#64748b; margin-bottom:12px">쇼핑몰을 삭제하면 소셜 로그인이 비활성화됩니다.</p>
-        <button id="deleteShopBtn" class="btn btn-danger btn-sm" data-shop-id={shop.shop_id}>쇼핑몰 삭제</button>
-        <script dangerouslySetInnerHTML={{__html: `
-          document.getElementById('deleteShopBtn').addEventListener('click', async function() {
-            if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-            var btn = this;
-            const resp = await apiCall('DELETE', '/api/dashboard/shops/' + this.dataset.shopId, undefined, btn);
-            if (resp.ok) { window.location.href = '/dashboard/shops'; }
-            else { showToast('error', '삭제 중 오류가 발생했습니다.'); }
-          });
-        `}} />
-      </div>
-    </Layout>
-  );
-};
-
-// ─── Shop Setup (SSO Guide) ─────────────────────────────────
-
-export const ShopSetupPage: FC<{
+export const SsoGuidePage: FC<{
   shop: ShopDetail;
   clientId: string;
   baseUrl: string;
   isCafe24?: boolean;
 }> = ({ shop, clientId, baseUrl, isCafe24 }) => (
-  <Layout title="SSO 설정" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
-    <h1>{shop.shop_name || shop.mall_id}</h1>
-
-    <div class="tab-nav">
-      <a href={`/dashboard/shops/${shop.shop_id}`}>설정</a>
-      <a href={`/dashboard/shops/${shop.shop_id}/providers`}>프로바이더</a>
-      <a href={`/dashboard/shops/${shop.shop_id}/setup`} class="active">SSO 가이드</a>
-    </div>
+  <Layout title="SSO 설정 가이드" loggedIn currentPath="/dashboard/settings/sso-guide" isCafe24={isCafe24}>
+    <h1>SSO 설정 가이드</h1>
 
     <div class="alert alert-info">
       카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; <strong>SSO 로그인 연동 관리</strong> &gt; 연동 등록에서 아래 값을 입력하세요.
@@ -949,7 +514,7 @@ export const ShopSetupPage: FC<{
     </div>
 
     <div style="margin-top:16px">
-      <a href={`/dashboard/shops/${shop.shop_id}`} class="btn btn-outline btn-sm">돌아가기</a>
+      <a href="/dashboard" class="btn btn-outline btn-sm">대시보드로 돌아가기</a>
     </div>
   </Layout>
 );
@@ -1117,6 +682,16 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
 };
 
 // ─── Billing Page ───────────────────────────────────────────
+
+type BillingShop = {
+  shop_id: string;
+  shop_name: string;
+  plan: string;
+  monthly_signups: number;
+  usage_percent: number | null;
+  needs_upgrade: boolean;
+  is_over_limit: boolean;
+};
 
 type BillingPageProps = {
   billingShops: BillingShop[];
@@ -1296,6 +871,8 @@ const DEFAULT_WIDGET_STYLE = {
   showIcon: true,
   iconGap: 8,
   paddingLeft: 16,
+  showTitle: true,
+  showPoweredBy: true,
 };
 
 type WidgetStyle = {
@@ -1309,6 +886,8 @@ type WidgetStyle = {
   showIcon?: boolean;
   iconGap?: number;
   paddingLeft?: number;
+  showTitle?: boolean;
+  showPoweredBy?: boolean;
 };
 
 export const ProvidersPage: FC<{
@@ -1323,14 +902,8 @@ export const ProvidersPage: FC<{
   const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
 
   return (
-    <Layout title="프로바이더 관리" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
-      <h1>{shop.shop_name || shop.mall_id}</h1>
-
-      <div class="tab-nav">
-        <a href={`/dashboard/shops/${shop.shop_id}`}>설정</a>
-        <a href={`/dashboard/shops/${shop.shop_id}/providers`} class="active">프로바이더</a>
-        <a href={`/dashboard/shops/${shop.shop_id}/setup`}>SSO 가이드</a>
-      </div>
+    <Layout title="소셜 프로바이더" loggedIn currentPath="/dashboard/settings/providers" isCafe24={isCafe24}>
+      <h1>소셜 프로바이더</h1>
 
       <div class="provider-layout" style="display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start">
       <div class="card" style="margin-bottom:0">
@@ -3413,23 +2986,17 @@ export const LandingPage: FC = () => (
   </html>
 );
 
-// ─── AI 브리핑 페이지 ───────────────────────────────────────
+// ─── AI Reports 페이지 ──────────────────────────────────────
 
-export const AiBriefingPage: FC<{
+export const AiReportsPage: FC<{
   shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
   const isPlus = shop.plan !== 'free';
 
   return (
-    <Layout title="AI 주간 브리핑" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-        <a href={`/dashboard/shops/${shop.shop_id}`} style="font-size:14px;color:#64748b;text-decoration:none">
-          ← {shop.shop_name || shop.mall_id}
-        </a>
-      </div>
-
-      <h1 style="margin-bottom:4px">AI 주간 브리핑</h1>
+    <Layout title="AI 보고서" loggedIn currentPath="/dashboard/ai-reports" isCafe24={isCafe24}>
+      <h1 style="margin-bottom:4px">AI 보고서</h1>
       <p style="font-size:14px;color:#64748b;margin-bottom:24px">지난 주 성과를 분석하고 이번 주 전략을 AI가 생성합니다.</p>
 
       {!isPlus ? (
@@ -3536,3 +3103,744 @@ export const AiBriefingPage: FC<{
     </Layout>
   );
 };
+
+// ─── Plus Lock Overlay ───────────────────────────────────────
+
+const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => (
+  <div class="card" style="text-align:center;padding:48px">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <h2>{feature}</h2>
+    <p style="color:#64748b;margin:8px 0 24px">이 기능은 Plus 플랜에서 사용할 수 있습니다.</p>
+    <a href="/dashboard/billing" class="btn btn-primary" style="display:inline-flex;width:auto">
+      Plus로 업그레이드 (월 ₩6,900)
+    </a>
+  </div>
+);
+
+// ─── General Settings Page ───────────────────────────────────
+
+type ShopSummary = {
+  shop_id: string;
+  shop_name: string;
+  mall_id: string;
+  plan: string;
+  sso_configured: number;
+  created_at: string;
+};
+
+export const GeneralSettingsPage: FC<{
+  email: string;
+  name: string;
+  shop: ShopSummary | null;
+  isCafe24?: boolean;
+}> = ({ email, name, shop, isCafe24 }) => (
+  <Layout title="기본 설정" loggedIn currentPath="/dashboard/settings/general" isCafe24={isCafe24}>
+    <h1>기본 설정</h1>
+
+    {shop && (
+      <div class="card">
+        <h2>쇼핑몰 정보</h2>
+        <div style="overflow-x:auto">
+          <table>
+            <tbody>
+              <tr><th style="width:140px">쇼핑몰명</th><td>{shop.shop_name || '-'}</td></tr>
+              <tr><th>Mall ID</th><td><code>{shop.mall_id}</code></td></tr>
+              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td></tr>
+              <tr><th>SSO 연동</th><td>
+                {shop.sso_configured
+                  ? <span class="badge badge-green">완료</span>
+                  : <span class="badge badge-yellow">미완료</span>}
+                {!shop.sso_configured && (
+                  <a href="/dashboard/settings/sso-guide" style="font-size:13px;margin-left:8px">설정 가이드 →</a>
+                )}
+              </td></tr>
+              <tr><th>Shop ID</th><td><code style="font-size:12px;color:#64748b">{shop.shop_id}</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    {!shop && (
+      <div class="alert alert-info" style="margin-bottom:16px">
+        아직 연결된 쇼핑몰이 없습니다. 카페24 앱스토어에서 번개가입을 설치하면 자동으로 연결됩니다.
+      </div>
+    )}
+
+    <div class="card">
+      <h2>계정 정보</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <tbody>
+            <tr><th style="width:120px">이름</th>
+              <td>
+                <span id="nameDisplay">{name || '-'}</span>
+                <button id="editNameBtn" class="btn btn-outline btn-sm" style="margin-left:12px;display:inline-flex;width:auto">수정</button>
+              </td>
+            </tr>
+            <tr><th>이메일</th><td>{email}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="editNameForm" style="display:none;margin-top:16px;display:none">
+        <div class="form-group" style="max-width:320px">
+          <label style="font-size:13px;font-weight:600;color:#475569">이름 변경</label>
+          <input type="text" id="newNameInput" value={name || ''} style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" />
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="saveNameBtn" class="btn btn-primary btn-sm">저장</button>
+          <button id="cancelNameBtn" class="btn btn-outline btn-sm">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>비밀번호 변경</h2>
+      <form id="pwForm" style="max-width:320px">
+        <div class="form-group">
+          <label style="font-size:13px;font-weight:600;color:#475569">현재 비밀번호</label>
+          <input type="password" id="currentPw" required />
+        </div>
+        <div class="form-group">
+          <label style="font-size:13px;font-weight:600;color:#475569">새 비밀번호</label>
+          <input type="password" id="newPw" required minlength={8} placeholder="8자 이상" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">변경</button>
+      </form>
+    </div>
+
+    <div class="card" style="border:1px solid #fee2e2">
+      <h2 style="color:#991b1b">위험 영역</h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px">계정을 삭제하면 모든 데이터가 삭제되며 복구할 수 없습니다.</p>
+      <button id="deleteAccountBtn" class="btn btn-danger btn-sm">계정 삭제</button>
+    </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+      // 이름 수정
+      var editNameBtn = document.getElementById('editNameBtn');
+      var editNameForm = document.getElementById('editNameForm');
+      var cancelNameBtn = document.getElementById('cancelNameBtn');
+      var saveNameBtn = document.getElementById('saveNameBtn');
+      var nameDisplay = document.getElementById('nameDisplay');
+
+      editNameBtn.addEventListener('click', function() {
+        editNameForm.style.display = 'block';
+        editNameBtn.style.display = 'none';
+      });
+      cancelNameBtn.addEventListener('click', function() {
+        editNameForm.style.display = 'none';
+        editNameBtn.style.display = 'inline-flex';
+      });
+      saveNameBtn.addEventListener('click', async function() {
+        var newName = document.getElementById('newNameInput').value.trim();
+        if (!newName) { showToast('warn', '이름을 입력하세요.'); return; }
+        var resp = await apiCall('PUT', '/api/dashboard/settings/profile', { name: newName }, saveNameBtn);
+        if (resp.ok) {
+          nameDisplay.textContent = newName;
+          editNameForm.style.display = 'none';
+          editNameBtn.style.display = 'inline-flex';
+          showToast('success', '이름이 변경되었습니다.');
+        } else {
+          showToast('error', '저장 중 오류가 발생했습니다.');
+        }
+      });
+
+      // 비밀번호 변경
+      document.getElementById('pwForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var btn = this.querySelector('button[type=submit]');
+        var resp = await apiCall('PUT', '/api/dashboard/settings/password', {
+          current_password: document.getElementById('currentPw').value,
+          new_password: document.getElementById('newPw').value,
+        }, btn);
+        if (resp.ok) {
+          showToast('success', '비밀번호가 변경되었습니다.');
+          this.reset();
+        } else {
+          var data = await resp.json();
+          showToast('error', data.error === 'wrong_password' ? '현재 비밀번호가 올바르지 않습니다.' : '변경 중 오류가 발생했습니다.');
+        }
+      });
+
+      // 계정 삭제
+      document.getElementById('deleteAccountBtn').addEventListener('click', async function() {
+        var pw = prompt('계정을 삭제하려면 현재 비밀번호를 입력하세요:');
+        if (!pw) return;
+        if (!confirm('정말 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+        var resp = await apiCall('DELETE', '/api/dashboard/settings/account', { password: pw }, this);
+        if (resp.ok) {
+          showToast('success', '계정이 삭제되었습니다.');
+          setTimeout(function() { window.location.href = '/dashboard/login'; }, 1500);
+        } else {
+          var data = await resp.json();
+          showToast('error', data.error === 'wrong_password' ? '비밀번호가 올바르지 않습니다.' : '삭제 중 오류가 발생했습니다.');
+        }
+      });
+    `}} />
+  </Layout>
+);
+
+// ─── Login Design Page ───────────────────────────────────────
+
+export const LoginDesignPage: FC<{
+  shop: { shop_id: string; shop_name: string; mall_id: string; plan: string; enabled_providers: string };
+  baseUrl: string;
+  isCafe24?: boolean;
+  widgetStyle?: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string };
+}> = ({ shop, baseUrl, isCafe24, widgetStyle }) => {
+  // 위젯 디자인 설정 부분만 ProvidersPage에서 분리
+  const DEFAULT_WIDGET_STYLE = { preset: 'default', buttonWidth: 300, buttonGap: 8, borderRadius: 8, align: 'center' };
+  const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
+  const providers = (() => { try { return JSON.parse(shop.enabled_providers || '[]'); } catch { return []; } })();
+
+  return (
+    <Layout title="로그인 디자인" loggedIn currentPath="/dashboard/settings/login-design" isCafe24={isCafe24}>
+      <h1>로그인 디자인</h1>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">쇼핑몰 로그인 페이지에 표시될 소셜 로그인 버튼의 디자인을 설정합니다.</p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start" class="provider-layout">
+        {/* Widget preview */}
+        <div class="card">
+          <h2>위젯 미리보기</h2>
+          <p style="font-size:13px; color:#64748b; margin-bottom:16px">쇼핑몰에 표시될 소셜 로그인 버튼의 실제 모습입니다.</p>
+          <div id="previewFrame" style="background:#f8fafc; border:2px solid #e5e7eb; border-radius:12px; padding:32px; min-height:200px; display:flex; align-items:center; justify-content:center;">
+            <div id="previewButtons" style="display:flex; flex-direction:column; align-items:center;"></div>
+          </div>
+        </div>
+
+        {/* Widget design settings */}
+        <div class="card">
+          <h2>위젯 디자인</h2>
+          <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
+            <button class="preset-card" data-preset="default" type="button"><div class="preset-preview">컬러 버튼</div><span>기본</span></button>
+            <button class="preset-card" data-preset="mono" type="button"><div class="preset-preview">흑백</div><span>모노톤</span></button>
+            <button class="preset-card" data-preset="outline" type="button"><div class="preset-preview">테두리</div><span>호버 채움</span></button>
+            <button class="preset-card" data-preset="outline-mono" type="button"><div class="preset-preview">테두리 흑백</div><span>호버 채움</span></button>
+            <button class="preset-card" data-preset="icon-only" type="button"><div class="preset-preview">아이콘만</div><span>아이콘</span></button>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">버튼 너비</label>
+            <input type="range" id="btnWidth" min="200" max="480" value={ws.buttonWidth} style="width:100%" />
+            <span id="btnWidthLabel" style="font-size:12px;color:#64748b">{ws.buttonWidth}px</span>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">버튼 간격</label>
+            <input type="range" id="btnGap" min="0" max="24" value={ws.buttonGap} style="width:100%" />
+            <span id="btnGapLabel" style="font-size:12px;color:#64748b">{ws.buttonGap}px</span>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">버튼 모서리</label>
+            <input type="range" id="btnRadius" min="0" max="28" value={ws.borderRadius} style="width:100%" />
+            <span id="btnRadiusLabel" style="font-size:12px;color:#64748b">{ws.borderRadius}px</span>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">정렬</label>
+            <div style="display:flex;gap:8px">
+              {(['left','center','right'] as const).map(a => (
+                <button class={`align-btn${ws.align === a ? ' active' : ''}`} data-align={a} type="button">{a === 'left' ? '왼쪽' : a === 'center' ? '가운데' : '오른쪽'}</button>
+              ))}
+            </div>
+          </div>
+          <button id="saveWidgetBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>저장</button>
+        </div>
+      </div>
+
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var shopId = '${shop.shop_id}';
+          var currentPreset = '${ws.preset}';
+          var providers = ${JSON.stringify(providers)};
+
+          // previewColors / icons (간소화)
+          var previewColors = ${JSON.stringify({ google:'#4285f4',kakao:'#fee500',naver:'#03c75a',apple:'#000',discord:'#5865f2',telegram:'#26a5e4' })};
+          var previewNames = ${JSON.stringify({ google:'Google',kakao:'카카오',naver:'네이버',apple:'Apple',discord:'Discord',telegram:'Telegram' })};
+
+          function renderPreview() {
+            var previewEl = document.getElementById('previewButtons');
+            if (!previewEl) return;
+            var width = parseInt(document.getElementById('btnWidth').value);
+            var gap = parseInt(document.getElementById('btnGap').value);
+            var radius = parseInt(document.getElementById('btnRadius').value);
+            var align = document.querySelector('.align-btn.active')?.dataset.align || 'center';
+            var preset = currentPreset;
+
+            previewEl.innerHTML = '';
+            previewEl.style.gap = gap + 'px';
+            previewEl.style.alignItems = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+
+            providers.forEach(function(p) {
+              var btn = document.createElement('button');
+              btn.style.width = width + 'px';
+              btn.style.borderRadius = radius + 'px';
+              btn.style.padding = '10px 20px';
+              btn.style.fontWeight = '600';
+              btn.style.fontSize = '14px';
+              btn.style.cursor = 'default';
+              btn.style.border = 'none';
+              btn.style.display = 'flex';
+              btn.style.alignItems = 'center';
+              btn.style.justifyContent = 'center';
+              btn.style.gap = '8px';
+
+              var color = previewColors[p] || '#888';
+              var name = previewNames[p] || p;
+
+              if (preset === 'default') {
+                btn.style.background = color;
+                btn.style.color = p === 'kakao' ? '#191919' : '#fff';
+              } else if (preset === 'mono') {
+                btn.style.background = '#333';
+                btn.style.color = '#fff';
+              } else if (preset === 'outline' || preset === 'outline-mono') {
+                btn.style.background = 'transparent';
+                btn.style.border = '1px solid ' + (preset === 'outline' ? color : '#ccc');
+                btn.style.color = preset === 'outline' ? color : '#333';
+              } else if (preset === 'icon-only') {
+                btn.style.background = color;
+                btn.style.color = p === 'kakao' ? '#191919' : '#fff';
+                btn.style.width = '44px';
+                btn.style.height = '44px';
+                btn.style.borderRadius = '50%';
+                btn.style.padding = '0';
+              }
+
+              btn.textContent = preset === 'icon-only' ? name.slice(0,1) : name + ' 로그인';
+              previewEl.appendChild(btn);
+            });
+          }
+
+          window.renderProviderPreview = renderPreview;
+
+          // Preset 클릭
+          document.querySelectorAll('.preset-card').forEach(function(card) {
+            if (card.dataset.preset === currentPreset) card.classList.add('active');
+            card.addEventListener('click', function() {
+              document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+              this.classList.add('active');
+              currentPreset = this.dataset.preset;
+              renderPreview();
+            });
+          });
+
+          // Align 클릭
+          document.querySelectorAll('.align-btn').forEach(function(btn) {
+            if (btn.dataset.align === '${ws.align}') btn.classList.add('active');
+            btn.addEventListener('click', function() {
+              document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
+              this.classList.add('active');
+              renderPreview();
+            });
+          });
+
+          // Range 입력
+          ['btnWidth','btnGap','btnRadius'].forEach(function(id) {
+            var el = document.getElementById(id);
+            var label = document.getElementById(id + 'Label');
+            el.addEventListener('input', function() {
+              label.textContent = this.value + 'px';
+              renderPreview();
+            });
+          });
+
+          // 저장
+          document.getElementById('saveWidgetBtn').addEventListener('click', async function() {
+            var btn = this;
+            var style = {
+              preset: currentPreset,
+              buttonWidth: parseInt(document.getElementById('btnWidth').value),
+              buttonGap: parseInt(document.getElementById('btnGap').value),
+              borderRadius: parseInt(document.getElementById('btnRadius').value),
+              align: document.querySelector('.align-btn.active')?.dataset.align || 'center',
+            };
+            var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style, btn);
+            if (resp.ok) {
+              showToast('success', '위젯 디자인이 저장되었습니다.');
+            } else {
+              showToast('error', '저장 중 오류가 발생했습니다.');
+            }
+          });
+
+          renderPreview();
+        })();
+      `}} />
+    </Layout>
+  );
+};
+
+// ─── Coupon Settings Page ────────────────────────────────────
+
+type CouponConfig2 = {
+  enabled: boolean;
+  coupon_no: string;
+  coupon_name?: string;
+  multi_coupon: boolean;
+};
+
+export const CouponSettingsPage: FC<{
+  shop: { shop_id: string; shop_name: string; plan: string };
+  couponConfig: CouponConfig2 | null;
+  isCafe24?: boolean;
+}> = ({ shop, couponConfig, isCafe24 }) => {
+  const isPlus = shop.plan !== 'free';
+  const cc = couponConfig ?? { enabled: false, coupon_no: '', coupon_name: '', multi_coupon: false };
+
+  return (
+    <Layout title="쿠폰 설정" loggedIn currentPath="/dashboard/settings/coupon" isCafe24={isCafe24}>
+      <h1>쿠폰 설정</h1>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">신규 가입 시 자동으로 지급할 쿠폰을 설정합니다.</p>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">쿠폰 설정</h2>
+          <div class="provider-toggle" style="border:none;padding:0;margin-bottom:0">
+            <label class="toggle">
+              <input type="checkbox" id="couponEnabled" checked={cc.enabled} />
+              <span class="toggle-slider"></span>
+            </label>
+            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">쿠폰 활성화</span>
+          </div>
+        </div>
+
+        <div id="couponFields" style={cc.enabled ? '' : 'display:none'}>
+          <div class="form-group">
+            <label style="font-size:13px;font-weight:600;color:#475569">쿠폰 번호 (coupon_no)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="couponNo" value={cc.coupon_no} placeholder="카페24 쿠폰 번호 입력" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" />
+            </div>
+            <p id="couponNameDisplay" style={`font-size:12px;margin-top:4px;${cc.coupon_name ? 'color:#22c55e' : 'color:#94a3b8'}`}>
+              {cc.coupon_name || ''}
+            </p>
+          </div>
+
+          <div class="provider-toggle" style="border:none;padding:0;margin-top:12px">
+            <label class="toggle">
+              <input type="checkbox" id="multiCoupon" checked={cc.multi_coupon} disabled={!isPlus} />
+              <span class="toggle-slider" style={isPlus ? '' : 'cursor:not-allowed;opacity:0.5'}></span>
+            </label>
+            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">멀티 쿠폰</span>
+            {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
+            <span style="font-size:12px;color:#94a3b8;margin-left:8px">신규 가입 시 여러 쿠폰 동시 지급</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button id="saveCouponBtn" class="btn btn-primary btn-sm">저장</button>
+        </div>
+      </div>
+
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var shopId = '${shop.shop_id}';
+          var isPlus = ${JSON.stringify(isPlus)};
+
+          var enabledToggle = document.getElementById('couponEnabled');
+          var couponFields = document.getElementById('couponFields');
+          var multiCouponToggle = document.getElementById('multiCoupon');
+
+          enabledToggle.addEventListener('change', function() {
+            couponFields.style.display = this.checked ? '' : 'none';
+          });
+
+          if (!isPlus) {
+            multiCouponToggle.addEventListener('click', function(e) {
+              e.preventDefault();
+              showToast('warn', '멀티 쿠폰은 Plus 플랜에서만 사용할 수 있습니다.');
+            });
+          }
+
+          document.getElementById('saveCouponBtn').addEventListener('click', async function() {
+            var btn = this;
+            var couponNo = document.getElementById('couponNo').value.trim();
+            var enabled = enabledToggle.checked;
+            var multiCoupon = multiCouponToggle.checked && isPlus;
+
+            if (enabled && !couponNo) {
+              showToast('warn', '쿠폰 번호를 입력해주세요.');
+              return;
+            }
+
+            var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon', {
+              enabled: enabled,
+              coupon_no: couponNo,
+              multi_coupon: multiCoupon,
+            }, btn);
+
+            if (resp.ok) {
+              var data = await resp.json();
+              var nameEl = document.getElementById('couponNameDisplay');
+              if (nameEl) {
+                if (data.coupon_name) {
+                  nameEl.textContent = data.coupon_name;
+                  nameEl.style.color = '#22c55e';
+                } else {
+                  nameEl.textContent = '';
+                }
+              }
+              showToast('success', '쿠폰 설정이 저장되었습니다.');
+            } else {
+              var err = await resp.json();
+              showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+            }
+          });
+        })();
+      `}} />
+    </Layout>
+  );
+};
+
+// ─── Banner Settings Page [Plus] ────────────────────────────
+
+export const BannerSettingsPage: FC<{
+  shop: { plan: string } | null;
+  isCafe24?: boolean;
+}> = ({ shop, isCafe24 }) => {
+  const isPlus = shop?.plan !== 'free';
+  return (
+    <Layout title="미니배너" loggedIn currentPath="/dashboard/settings/banner" isCafe24={isCafe24}>
+      <h1>미니배너</h1>
+      {!isPlus
+        ? <PlusLockOverlay feature="미니배너" />
+        : (
+          <div class="card">
+            <h2>미니배너 설정</h2>
+            <p style="font-size:14px;color:#64748b">미니배너 설정 기능은 준비 중입니다.</p>
+          </div>
+        )
+      }
+    </Layout>
+  );
+};
+
+// ─── Popup Settings Page [Plus] ─────────────────────────────
+
+export const PopupSettingsPage: FC<{
+  shop: { plan: string } | null;
+  isCafe24?: boolean;
+}> = ({ shop, isCafe24 }) => {
+  const isPlus = shop?.plan !== 'free';
+  return (
+    <Layout title="이탈 감지 팝업" loggedIn currentPath="/dashboard/settings/popup" isCafe24={isCafe24}>
+      <h1>이탈 감지 팝업</h1>
+      {!isPlus
+        ? <PlusLockOverlay feature="이탈 감지 팝업" />
+        : (
+          <div class="card">
+            <h2>이탈 감지 팝업 설정</h2>
+            <p style="font-size:14px;color:#64748b">이탈 감지 팝업 설정 기능은 준비 중입니다.</p>
+          </div>
+        )
+      }
+    </Layout>
+  );
+};
+
+// ─── Escalation Settings Page [Plus] ────────────────────────
+
+export const EscalationSettingsPage: FC<{
+  shop: { plan: string } | null;
+  isCafe24?: boolean;
+}> = ({ shop, isCafe24 }) => {
+  const isPlus = shop?.plan !== 'free';
+  return (
+    <Layout title="에스컬레이션" loggedIn currentPath="/dashboard/settings/escalation" isCafe24={isCafe24}>
+      <h1>에스컬레이션</h1>
+      {!isPlus
+        ? <PlusLockOverlay feature="에스컬레이션" />
+        : (
+          <div class="card">
+            <h2>에스컬레이션 설정</h2>
+            <p style="font-size:14px;color:#64748b">에스컬레이션 설정 기능은 준비 중입니다.</p>
+          </div>
+        )
+      }
+    </Layout>
+  );
+};
+
+// ─── Kakao Settings Page [Plus] ─────────────────────────────
+
+export const KakaoSettingsPage: FC<{
+  shop: { shop_id: string; plan: string };
+  kakaoChannelId: string;
+  isCafe24?: boolean;
+}> = ({ shop, kakaoChannelId, isCafe24 }) => {
+  const isPlus = shop.plan !== 'free';
+  return (
+    <Layout title="카카오 채널" loggedIn currentPath="/dashboard/settings/kakao" isCafe24={isCafe24}>
+      <h1>카카오 채널</h1>
+      {!isPlus
+        ? <PlusLockOverlay feature="카카오 채널" />
+        : (
+          <div class="card">
+            <h2>카카오 채널 ID</h2>
+            <p style="font-size:13px;color:#64748b;margin-bottom:16px">신규 가입 시 카카오 채널 추가 유도에 사용됩니다.</p>
+            <div class="form-group" style="max-width:360px">
+              <input
+                type="text"
+                id="kakaoChannelId"
+                value={kakaoChannelId}
+                placeholder="예: @my-shop-kakao"
+                style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"
+              />
+            </div>
+            <button id="saveKakaoBtn" class="btn btn-primary btn-sm">저장</button>
+            <script dangerouslySetInnerHTML={{__html: `
+              document.getElementById('saveKakaoBtn').addEventListener('click', async function() {
+                var channelId = document.getElementById('kakaoChannelId').value.trim();
+                var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
+                if (resp.ok) {
+                  showToast('success', '카카오 채널 ID가 저장되었습니다.');
+                } else {
+                  var err = await resp.json();
+                  showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+                }
+              });
+            `}} />
+          </div>
+        )
+      }
+    </Layout>
+  );
+};
+
+// ─── AI Settings Page [Plus] ─────────────────────────────────
+
+export const AiSettingsPage: FC<{
+  shop: { shop_id?: string; plan: string } | null;
+  isCafe24?: boolean;
+}> = ({ shop, isCafe24 }) => {
+  const isPlus = shop?.plan !== 'free';
+  return (
+    <Layout title="AI 설정" loggedIn currentPath="/dashboard/settings/ai" isCafe24={isCafe24}>
+      <h1>AI 설정</h1>
+      {!isPlus
+        ? <PlusLockOverlay feature="AI 설정" />
+        : (
+          <div>
+            <div class="card">
+              <h2>AI 쇼핑몰 정체성 분석</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:16px">업종·타겟 고객·톤앤매너를 AI가 자동 분석합니다.</p>
+              <button
+                id="analyzeIdentityBtn"
+                class="btn btn-outline btn-sm"
+                data-shop-id={shop?.shop_id ?? ''}
+              >
+                쇼핑몰 분석하기
+              </button>
+              <div id="identityResult" style="display:none;margin-top:12px;background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;color:#374151;white-space:pre-wrap"></div>
+              <script dangerouslySetInnerHTML={{__html: `
+                document.getElementById('analyzeIdentityBtn').addEventListener('click', async function() {
+                  var btn = this;
+                  var resultEl = document.getElementById('identityResult');
+                  btn.disabled = true;
+                  btn.textContent = '분석 중...';
+                  resultEl.style.display = 'none';
+                  try {
+                    var resp = await fetch('/api/ai/identity', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'same-origin',
+                      body: JSON.stringify({ shop_id: btn.dataset.shopId })
+                    });
+                    var data = await resp.json();
+                    if (resp.ok && data.identity) {
+                      var id = data.identity;
+                      resultEl.textContent = ['업종: ' + (id.industry||'-'), '타겟: ' + (id.target_audience||'-'), '톤앤매너: ' + (id.tone||'-'), id.summary ? '\\n' + id.summary : ''].filter(Boolean).join('\\n');
+                      resultEl.style.display = 'block';
+                      showToast('success', 'AI 분석이 완료되었습니다.');
+                    } else {
+                      showToast('error', data.message || 'AI 분석에 실패했습니다.');
+                    }
+                  } catch(e) {
+                    showToast('error', '오류: ' + e.message);
+                  } finally {
+                    btn.disabled = false;
+                    btn.textContent = '쇼핑몰 분석하기';
+                  }
+                });
+              `}} />
+            </div>
+          </div>
+        )
+      }
+    </Layout>
+  );
+};
+
+// ─── Guide Page ──────────────────────────────────────────────
+
+export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
+  <Layout title="사용 가이드" loggedIn currentPath="/dashboard/guide" isCafe24={isCafe24}>
+    <h1>사용 가이드</h1>
+
+    <div class="card">
+      <h2>시작하기</h2>
+      <ol style="padding-left:20px;font-size:14px;line-height:2.2">
+        <li>카페24 앱스토어에서 <strong>번개가입</strong>을 설치합니다.</li>
+        <li>설치 완료 후 대시보드에서 <strong>SSO 설정 가이드</strong>를 확인하세요.</li>
+        <li>카페24 쇼핑몰 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; <strong>SSO 로그인 연동 관리</strong>에서 설정합니다.</li>
+        <li><strong>소셜 프로바이더</strong>에서 사용할 소셜 로그인 서비스를 활성화합니다.</li>
+        <li>쇼핑몰 로그인 페이지에서 번개가입 버튼이 정상 표시되는지 확인합니다.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>SSO 설정</h2>
+      <p style="font-size:14px;color:#64748b;margin-bottom:12px">카페24 SSO 연동을 위해 다음 값들이 필요합니다.</p>
+      <ul style="padding-left:20px;font-size:14px;line-height:2">
+        <li><strong>연동 서비스명</strong>: 번개가입</li>
+        <li><strong>Client ID / Client Secret</strong>: 설정 &gt; SSO 설정 가이드에서 확인</li>
+        <li><strong>Authorize Redirect URL</strong>: SSO 설정 가이드에서 복사</li>
+        <li><strong>Access Token Return API</strong>: SSO 설정 가이드에서 복사</li>
+        <li><strong>User info Return API</strong>: SSO 설정 가이드에서 복사</li>
+      </ul>
+      <a href="/dashboard/settings/sso-guide" class="btn btn-primary btn-sm" style="margin-top:12px;display:inline-flex;width:auto">SSO 설정 가이드 바로가기</a>
+    </div>
+
+    <div class="card">
+      <h2>쿠폰 설정</h2>
+      <p style="font-size:14px;color:#64748b;margin-bottom:12px">신규 가입 시 자동으로 쿠폰을 지급할 수 있습니다.</p>
+      <ol style="padding-left:20px;font-size:14px;line-height:2">
+        <li>카페24 쇼핑몰 관리자에서 발급할 쿠폰을 먼저 생성합니다.</li>
+        <li>대시보드 &gt; 설정 &gt; 쿠폰 설정에서 쿠폰 번호를 입력합니다.</li>
+        <li>쿠폰 활성화 토글을 켭니다.</li>
+      </ol>
+      <a href="/dashboard/settings/coupon" class="btn btn-outline btn-sm" style="margin-top:12px;display:inline-flex;width:auto">쿠폰 설정 바로가기</a>
+    </div>
+
+    <div class="card">
+      <h2>Plus 기능</h2>
+      <ul style="padding-left:20px;font-size:14px;line-height:2">
+        <li><strong>미니배너</strong>: 쇼핑몰 내 소셜 가입 유도 배너</li>
+        <li><strong>이탈 감지 팝업</strong>: 페이지 이탈 시 소셜 가입 유도</li>
+        <li><strong>에스컬레이션</strong>: 특정 조건 달성 시 자동 혜택 제공</li>
+        <li><strong>카카오 채널</strong>: 신규 가입 시 카카오 채널 추가 유도</li>
+        <li><strong>AI 설정</strong>: 쇼핑몰 맞춤 AI 분석</li>
+        <li><strong>AI 보고서</strong>: 주간 성과 분석 AI 리포트</li>
+        <li><strong>멀티 쿠폰</strong>: 여러 쿠폰 동시 지급</li>
+      </ul>
+      <a href="/dashboard/billing" class="btn btn-primary btn-sm" style="margin-top:12px;display:inline-flex;width:auto">Plus 업그레이드</a>
+    </div>
+  </Layout>
+);
+
+// ─── Inquiries Page ──────────────────────────────────────────
+
+export const InquiriesPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
+  <Layout title="문의하기" loggedIn currentPath="/dashboard/inquiries" isCafe24={isCafe24}>
+    <h1>문의하기</h1>
+
+    <div class="card" style="text-align:center;padding:48px 24px">
+      <div style="font-size:48px;margin-bottom:16px">💬</div>
+      <h2 style="margin-bottom:8px">문의하기</h2>
+      <p style="font-size:14px;color:#64748b;margin-bottom:8px">번개가입 사용 중 궁금한 점이나 문제가 있으시면 아래로 문의해 주세요.</p>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">
+        이메일: <a href="mailto:help@suparain.com">help@suparain.com</a><br />
+        전화: 031-992-5988
+      </p>
+      <div class="alert alert-info" style="text-align:left;max-width:480px;margin:0 auto">
+        문의 게시판 기능은 현재 준비 중입니다. 이메일 또는 전화로 문의해 주세요.
+      </div>
+    </div>
+  </Layout>
+);

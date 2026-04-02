@@ -13,13 +13,21 @@ import {
   LoginPage,
   RegisterPage,
   HomePage,
-  ShopsPage,
-  ShopNewPage,
-  ShopDetailPage,
-  ShopSetupPage,
+  SsoGuidePage,
   StatsPage,
   BillingPage,
   ProvidersPage,
+  LoginDesignPage,
+  GeneralSettingsPage,
+  CouponSettingsPage,
+  BannerSettingsPage,
+  PopupSettingsPage,
+  EscalationSettingsPage,
+  KakaoSettingsPage,
+  AiSettingsPage,
+  AiReportsPage,
+  GuidePage,
+  InquiriesPage,
   SettingsPage,
   PrivacyPage,
   TermsPage,
@@ -29,7 +37,6 @@ import {
   AdminSubscriptionsPage,
   AdminAuditLogPage,
   AdminOwnersPage,
-  AiBriefingPage,
 } from '../views/pages';
 
 type PageEnv = {
@@ -39,6 +46,19 @@ type PageEnv = {
 
 function escapeLike(s: string): string {
   return s.replace(/[%_\\]/g, '\\$&');
+}
+
+// 현재 owner의 shop을 자동 조회 (단일 쇼핑몰 구조)
+async function getOwnerShop(db: D1Database, ownerId: string) {
+  return db.prepare(
+    `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
+            enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style
+     FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
+  ).bind(ownerId).first<ShopRow & {
+    coupon_config: string | null;
+    kakao_channel_id: string | null;
+    widget_style: string | null;
+  }>();
 }
 
 type ShopRow = {
@@ -52,6 +72,9 @@ type ShopRow = {
   enabled_providers: string;
   sso_configured: number;
   created_at: string;
+  coupon_config?: string | null;
+  kakao_channel_id?: string | null;
+  widget_style?: string | null;
 };
 
 const pages = new Hono<PageEnv>();
@@ -168,6 +191,18 @@ pages.get('/dashboard/logout', (c) => {
 
 pages.get('/dashboard', async (c) => {
   const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+
+  if (!shop) {
+    // 앱 미설치 상태
+    return c.html(
+      <HomePage
+        shop={null}
+        stats={null}
+        isCafe24={c.get('isCafe24')}
+      />
+    );
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const yearMonth = today.slice(0, 7);
@@ -175,52 +210,38 @@ pages.get('/dashboard', async (c) => {
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
   const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 
-  const [totalResult, todayResult, monthResult, providerResult, billingResult, couponResult] = await Promise.all([
+  const [totalResult, todayResult, monthResult, providerResult, billingResult] = await Promise.all([
     c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
         SUM(CASE WHEN action = 'signup' THEN 1 ELSE 0 END) as signups,
         SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins
-       FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
-    ).bind(ownerId).first<{ total: number; signups: number; logins: number }>(),
+       FROM login_stats WHERE shop_id = ?`,
+    ).bind(shop.shop_id).first<{ total: number; signups: number; logins: number }>(),
 
     c.env.DB.prepare(
-      `SELECT COUNT(*) as cnt FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.action = 'signup' AND ls.created_at >= ?`,
-    ).bind(ownerId, today).first<{ cnt: number }>(),
+      `SELECT COUNT(*) as cnt FROM login_stats
+       WHERE shop_id = ? AND action = 'signup' AND created_at >= ?`,
+    ).bind(shop.shop_id, today).first<{ cnt: number }>(),
 
     c.env.DB.prepare(
-      `SELECT COUNT(*) as cnt FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.action = 'signup' AND ls.created_at >= ?`,
-    ).bind(ownerId, `${yearMonth}-01`).first<{ cnt: number }>(),
+      `SELECT COUNT(*) as cnt FROM login_stats
+       WHERE shop_id = ? AND action = 'signup' AND created_at >= ?`,
+    ).bind(shop.shop_id, `${yearMonth}-01`).first<{ cnt: number }>(),
 
     c.env.DB.prepare(
-      `SELECT ls.provider, COUNT(*) as cnt
-       FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'
-       GROUP BY ls.provider`,
-    ).bind(ownerId).all<{ provider: string; cnt: number }>(),
+      `SELECT provider, COUNT(*) as cnt
+       FROM login_stats
+       WHERE shop_id = ? AND action = 'signup'
+       GROUP BY provider`,
+    ).bind(shop.shop_id).all<{ provider: string; cnt: number }>(),
 
     c.env.DB.prepare(
-      `SELECT s.shop_id, s.shop_name, s.plan,
-        (SELECT COUNT(*) FROM login_stats ls
-         WHERE ls.shop_id = s.shop_id AND ls.action = 'signup'
-         AND ls.created_at >= ? AND ls.created_at < ?) as monthly_signups
-       FROM shops s
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
-    ).bind(`${billingMonth}-01`, nextMonthFirst, ownerId)
-     .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>(),
-
-    c.env.DB.prepare(
-      `SELECT shop_id, shop_name, coupon_config FROM shops WHERE owner_id = ? AND deleted_at IS NULL`,
-    ).bind(ownerId).all<{ shop_id: string; shop_name: string; coupon_config: string | null }>(),
+      `SELECT COUNT(*) as monthly_signups FROM login_stats
+       WHERE shop_id = ? AND action = 'signup'
+       AND created_at >= ? AND created_at < ?`,
+    ).bind(shop.shop_id, `${billingMonth}-01`, nextMonthFirst)
+     .first<{ monthly_signups: number }>(),
   ]);
 
   const byProvider: Record<string, number> = {};
@@ -228,23 +249,22 @@ pages.get('/dashboard', async (c) => {
     byProvider[row.provider] = row.cnt;
   }
 
-  const billingShops = (billingResult.results ?? []).map((shop) => ({
-    ...shop,
-    usage_percent: 0,
-    needs_upgrade: false,
-    is_over_limit: false,
-  }));
-
-  const couponShops = (couponResult.results ?? []).map((shop) => {
-    let enabled = false;
-    if (shop.coupon_config) {
-      try { enabled = JSON.parse(shop.coupon_config)?.enabled === true; } catch { /* ignore */ }
-    }
-    return { shop_id: shop.shop_id, shop_name: shop.shop_name, coupon_enabled: enabled };
-  });
+  let couponEnabled = false;
+  if (shop.coupon_config) {
+    try { couponEnabled = JSON.parse(shop.coupon_config)?.enabled === true; } catch { /* ignore */ }
+  }
 
   return c.html(
     <HomePage
+      shop={{
+        shop_id: shop.shop_id,
+        shop_name: shop.shop_name,
+        mall_id: shop.mall_id,
+        plan: shop.plan,
+        sso_configured: shop.sso_configured,
+        monthly_signups: billingResult?.monthly_signups ?? 0,
+        coupon_enabled: couponEnabled,
+      }}
       stats={{
         total_signups: totalResult?.signups ?? 0,
         total_logins: totalResult?.logins ?? 0,
@@ -252,8 +272,6 @@ pages.get('/dashboard', async (c) => {
         month_signups: monthResult?.cnt ?? 0,
         by_provider: byProvider,
       }}
-      billingShops={billingShops}
-      couponShops={couponShops}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -440,49 +458,37 @@ pages.get('/dashboard/billing', async (c) => {
   );
 });
 
-// ─── Shops ───────────────────────────────────────────────────
+// ─── Settings: General ──────────────────────────────────────
 
-pages.get('/dashboard/shops', async (c) => {
-  const ownerId = c.get('ownerId');
-  const search = c.req.query('search') || '';
-
-  let query = `SELECT shop_id, shop_name, mall_id, platform, plan, enabled_providers, created_at
-               FROM shops WHERE owner_id = ? AND deleted_at IS NULL`;
-  const params: string[] = [ownerId];
-
-  if (search) {
-    const escaped = escapeLike(search);
-    query += ` AND (shop_name LIKE ? ESCAPE '\\' OR mall_id LIKE ? ESCAPE '\\')`;
-    params.push(`%${escaped}%`, `%${escaped}%`);
+pages.get('/dashboard/settings/general', async (c) => {
+  if (c.get('isCafe24')) {
+    return c.redirect('/dashboard');
   }
-
-  query += ' ORDER BY created_at DESC';
-
-  const result = await c.env.DB
-    .prepare(query)
-    .bind(...params)
-    .all<{ shop_id: string; shop_name: string; mall_id: string; platform: string; plan: string; enabled_providers: string; created_at: string }>();
-
-  return c.html(<ShopsPage shops={result.results ?? []} currentSearch={search || undefined} isCafe24={c.get('isCafe24')} />);
-});
-
-pages.get('/dashboard/shops/new', (c) => {
-  return c.html(<ShopNewPage isCafe24={c.get('isCafe24')} />);
-});
-
-pages.get('/dashboard/shops/:id', async (c) => {
   const ownerId = c.get('ownerId');
-  const shopId = c.req.param('id');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  const owner = await c.env.DB
+    .prepare('SELECT email, name FROM owners WHERE owner_id = ?')
+    .bind(ownerId)
+    .first<{ email: string; name: string }>();
 
-  const shop = await c.env.DB
-    .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id
-       FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
-    )
-    .bind(shopId, ownerId)
-    .first<ShopRow & { coupon_config: string | null; kakao_channel_id: string | null }>();
+  if (!owner) return c.redirect('/dashboard/login');
 
-  if (!shop) return c.redirect('/dashboard/shops');
+  return c.html(
+    <GeneralSettingsPage
+      email={owner.email}
+      name={owner.name}
+      shop={shop ?? null}
+      isCafe24={c.get('isCafe24')}
+    />
+  );
+});
+
+// ─── Settings: SSO Guide ─────────────────────────────────────
+
+pages.get('/dashboard/settings/sso-guide', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
 
   // Mask secret
   const secret = shop.client_secret;
@@ -490,50 +496,9 @@ pages.get('/dashboard/shops/:id', async (c) => {
     ? secret.slice(0, 4) + '****' + secret.slice(-4)
     : '****';
 
-  const now = new Date();
-  const ym = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  const countResult = await c.env.DB
-    .prepare(
-      `SELECT COUNT(*) as cnt FROM login_stats
-       WHERE shop_id = ? AND action = 'signup' AND created_at >= ?`,
-    )
-    .bind(shopId, `${ym}-01`)
-    .first<{ cnt: number }>();
-
-  let couponConfig: { enabled: boolean; coupon_no: string; coupon_name?: string; multi_coupon: boolean } | null = null;
-  if (shop.coupon_config) {
-    try { couponConfig = JSON.parse(shop.coupon_config); } catch { /* ignore */ }
-  }
-
   return c.html(
-    <ShopDetailPage
+    <SsoGuidePage
       shop={{ ...shop, client_secret: masked }}
-      monthlySignups={countResult?.cnt ?? 0}
-      baseUrl={c.env.BASE_URL}
-      couponConfig={couponConfig}
-      kakaoChannelId={shop.kakao_channel_id ?? ''}
-      isCafe24={c.get('isCafe24')}
-    />
-  );
-});
-
-pages.get('/dashboard/shops/:id/setup', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shopId = c.req.param('id');
-
-  const shop = await c.env.DB
-    .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at
-       FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
-    )
-    .bind(shopId, ownerId)
-    .first<ShopRow>();
-
-  if (!shop) return c.redirect('/dashboard/shops');
-
-  return c.html(
-    <ShopSetupPage
-      shop={shop}
       clientId={shop.client_id}
       baseUrl={c.env.BASE_URL}
       isCafe24={c.get('isCafe24')}
@@ -541,19 +506,12 @@ pages.get('/dashboard/shops/:id/setup', async (c) => {
   );
 });
 
-pages.get('/dashboard/shops/:id/providers', async (c) => {
+// ─── Settings: Providers ─────────────────────────────────────
+
+pages.get('/dashboard/settings/providers', async (c) => {
   const ownerId = c.get('ownerId');
-  const shopId = c.req.param('id');
-
-  const shop = await c.env.DB
-    .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at, widget_style
-       FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
-    )
-    .bind(shopId, ownerId)
-    .first<ShopRow & { widget_style: string | null }>();
-
-  if (!shop) return c.redirect('/dashboard/shops');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
 
   let widgetStyle: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string } | undefined;
   if (shop.widget_style) {
@@ -570,25 +528,171 @@ pages.get('/dashboard/shops/:id/providers', async (c) => {
   );
 });
 
-// ─── Settings ────────────────────────────────────────────────
+// ─── Settings: Login Design ──────────────────────────────────
 
-pages.get('/dashboard/settings', async (c) => {
-  if (c.get('isCafe24')) {
-    return c.redirect('/dashboard');
+pages.get('/dashboard/settings/login-design', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+
+  let widgetStyle: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string } | undefined;
+  if (shop.widget_style) {
+    try { widgetStyle = JSON.parse(shop.widget_style); } catch { /* use default */ }
   }
 
+  return c.html(
+    <LoginDesignPage
+      shop={shop}
+      baseUrl={c.env.BASE_URL}
+      isCafe24={c.get('isCafe24')}
+      widgetStyle={widgetStyle}
+    />
+  );
+});
+
+// ─── Settings: Coupon ────────────────────────────────────────
+
+pages.get('/dashboard/settings/coupon', async (c) => {
   const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
 
-  const owner = await c.env.DB
-    .prepare('SELECT email, name FROM owners WHERE owner_id = ?')
-    .bind(ownerId)
-    .first<{ email: string; name: string }>();
-
-  if (!owner) return c.redirect('/dashboard/login');
+  let couponConfig: { enabled: boolean; coupon_no: string; coupon_name?: string; multi_coupon: boolean } | null = null;
+  if (shop.coupon_config) {
+    try { couponConfig = JSON.parse(shop.coupon_config); } catch { /* ignore */ }
+  }
 
   return c.html(
-    <SettingsPage email={owner.email} name={owner.name} />
+    <CouponSettingsPage
+      shop={shop}
+      couponConfig={couponConfig}
+      isCafe24={c.get('isCafe24')}
+    />
   );
+});
+
+// ─── Settings: Banner [Plus] ─────────────────────────────────
+
+pages.get('/dashboard/settings/banner', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  return c.html(
+    <BannerSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── Settings: Popup [Plus] ──────────────────────────────────
+
+pages.get('/dashboard/settings/popup', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  return c.html(
+    <PopupSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── Settings: Escalation [Plus] ────────────────────────────
+
+pages.get('/dashboard/settings/escalation', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  return c.html(
+    <EscalationSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── Settings: Kakao [Plus] ──────────────────────────────────
+
+pages.get('/dashboard/settings/kakao', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+
+  return c.html(
+    <KakaoSettingsPage
+      shop={shop}
+      kakaoChannelId={shop.kakao_channel_id ?? ''}
+      isCafe24={c.get('isCafe24')}
+    />
+  );
+});
+
+// ─── Settings: AI [Plus] ─────────────────────────────────────
+
+pages.get('/dashboard/settings/ai', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  return c.html(
+    <AiSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── AI Reports [Plus] ───────────────────────────────────────
+
+pages.get('/dashboard/ai-reports', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+
+  return c.html(
+    <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── Guide ───────────────────────────────────────────────────
+
+pages.get('/dashboard/guide', (c) => {
+  return c.html(
+    <GuidePage isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── Inquiries ───────────────────────────────────────────────
+
+pages.get('/dashboard/inquiries', (c) => {
+  return c.html(
+    <InquiriesPage isCafe24={c.get('isCafe24')} />
+  );
+});
+
+// ─── (Legacy) Shops ──────────────────────────────────────────
+// 기존 /dashboard/shops/* 라우트 — 단일 쇼핑몰 구조로 전환 후 리다이렉트
+
+pages.get('/dashboard/shops', (c) => c.redirect('/dashboard'));
+pages.get('/dashboard/shops/new', (c) => c.redirect('/dashboard'));
+
+pages.get('/dashboard/shops/:id', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+  return c.redirect('/dashboard/settings/general');
+});
+
+pages.get('/dashboard/shops/:id/setup', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+  return c.redirect('/dashboard/settings/sso-guide');
+});
+
+pages.get('/dashboard/shops/:id/providers', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+  return c.redirect('/dashboard/settings/providers');
+});
+
+pages.get('/dashboard/shops/:id/ai-briefing', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+  return c.redirect('/dashboard/ai-reports');
+});
+
+// ─── (Legacy) /dashboard/settings — 계정 설정 리다이렉트 ───────
+
+pages.get('/dashboard/settings', (c) => {
+  return c.redirect('/dashboard/settings/general');
 });
 
 // ─── Settings API (password change) ─────────────────────────
@@ -917,26 +1021,6 @@ pages.get('/admin/owners', async (c) => {
       owners={ownersResult.results ?? []}
       pagination={{ page, pages: Math.ceil(total / limit), total }}
       search={search}
-    />
-  );
-});
-
-// ─── AI 브리핑 페이지 ────────────────────────────────────────
-pages.get('/dashboard/shops/:id/ai-briefing', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shopId = c.req.param('id');
-
-  const shop = await c.env.DB
-    .prepare('SELECT shop_id, shop_name, mall_id, plan FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
-    .bind(shopId, ownerId)
-    .first<{ shop_id: string; shop_name: string; mall_id: string; plan: string }>();
-
-  if (!shop) return c.redirect('/dashboard/shops');
-
-  return c.html(
-    <AiBriefingPage
-      shop={shop}
-      isCafe24={c.get('isCafe24')}
     />
   );
 });
