@@ -25,19 +25,22 @@ compare_schemas() {
   echo "=== D1 스키마 비교 ==="
 
   PROD_SCHEMA=$(npx wrangler d1 execute bg-production --remote \
-    --command "SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
-    2>/dev/null | grep -o '"name":"[^"]*"' | sort)
+    --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
+    2>&1 | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"//' | sort)
 
   DEV_SCHEMA=$(npx wrangler d1 execute bg-dev --env dev --remote \
-    --command "SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
-    2>/dev/null | grep -o '"name":"[^"]*"' | sort)
+    --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
+    2>&1 | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"//' | sort)
 
-  if [ "$PROD_SCHEMA" = "$DEV_SCHEMA" ]; then
+  if [ -z "$PROD_SCHEMA" ] || [ -z "$DEV_SCHEMA" ]; then
+    warn "스키마 조회 실패 — 수동 확인 필요"
+  elif [ "$PROD_SCHEMA" = "$DEV_SCHEMA" ]; then
     log "테이블 목록 일치"
+    echo "  테이블: $(echo "$PROD_SCHEMA" | tr '\n' ', ')"
   else
     warn "테이블 목록 불일치!"
-    echo "  프로덕션: $PROD_SCHEMA"
-    echo "  스테이징: $DEV_SCHEMA"
+    echo "  프로덕션: $(echo "$PROD_SCHEMA" | tr '\n' ', ')"
+    echo "  스테이징: $(echo "$DEV_SCHEMA" | tr '\n' ', ')"
   fi
 }
 
@@ -63,22 +66,22 @@ check_secrets() {
   echo ""
   echo "=== Secrets 비교 ==="
 
-  PROD_SECRETS=$(npx wrangler secret list 2>/dev/null | grep '"name"' | sort)
-  DEV_SECRETS=$(npx wrangler secret list --env dev 2>/dev/null | grep '"name"' | sort)
+  PROD_SECRETS=$(npx wrangler secret list 2>&1 | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"//;s/"//' | sort)
+  DEV_SECRETS=$(npx wrangler secret list --env dev 2>&1 | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"//;s/"//' | sort)
 
   PROD_ONLY=$(comm -23 <(echo "$PROD_SECRETS") <(echo "$DEV_SECRETS"))
   DEV_ONLY=$(comm -13 <(echo "$PROD_SECRETS") <(echo "$DEV_SECRETS"))
 
   if [ -z "$PROD_ONLY" ] && [ -z "$DEV_ONLY" ]; then
-    log "Secrets 목록 일치"
+    log "Secrets 목록 일치 ($(echo "$PROD_SECRETS" | wc -l | tr -d ' ')개)"
   else
     if [ -n "$PROD_ONLY" ]; then
       warn "프로덕션에만 있는 Secrets:"
-      echo "$PROD_ONLY" | sed 's/.*"name": *"//;s/".*/  - /'
+      echo "$PROD_ONLY" | sed 's/^/    - /'
     fi
     if [ -n "$DEV_ONLY" ]; then
       warn "스테이징에만 있는 Secrets:"
-      echo "$DEV_ONLY" | sed 's/.*"name": *"//;s/".*/  - /'
+      echo "$DEV_ONLY" | sed 's/^/    - /'
     fi
   fi
 }
