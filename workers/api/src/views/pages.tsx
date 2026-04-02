@@ -3057,7 +3057,9 @@ export const GeneralSettingsPage: FC<{
     {shop && (
       <div class="card">
         <h2>쇼핑몰 정체성 (AI 분석)</h2>
-        <p style="font-size:13px;color:#64748b;margin-bottom:16px">AI가 쇼핑몰을 자동 분석합니다. 필요하면 수정할 수 있습니다.</p>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1e40af">
+          <strong>AI가 이 정보를 활용합니다</strong> — 쇼핑몰 정체성과 혜택 정보를 기반으로 AI가 <strong>미니배너, 이탈 감지 팝업, 재방문 에스컬레이션</strong> 등의 가입 유도 카피를 자동 생성하고, <strong>주간 AI 브리핑</strong>에서 맞춤 전략을 제안합니다.
+        </div>
 
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <button id="analyzeBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>AI 자동 분석하기</button>
@@ -3105,7 +3107,7 @@ export const GeneralSettingsPage: FC<{
 
         {/* 회원 가입 혜택 (항상 표시) */}
         <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-top:16px;max-width:560px">
-          <h3 style="font-size:15px;margin-bottom:8px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI 카피 생성에 활용됩니다</span></h3>
+          <h3 style="font-size:15px;margin-bottom:8px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI가 이 혜택을 강조하여 가입 유도 카피를 생성합니다</span></h3>
           <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
             <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 번개가입이 자동 처리 &nbsp;|&nbsp;
             <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정 필요
