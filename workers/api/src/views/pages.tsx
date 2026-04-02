@@ -3188,7 +3188,7 @@ export const GeneralSettingsPage: FC<{
                   <span>직접 입력</span>
                 </label>
               </div>
-              <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="예) VIP 전용 시크릿 세일 초대" />
+              <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="예) 회원 전용 할인 이벤트 안내" />
             </div>
           </div>
           <button id="saveBenefitsBtn" class="btn btn-primary btn-sm" style="margin-top:16px">혜택 저장</button>
