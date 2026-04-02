@@ -17,7 +17,6 @@ import {
   StatsPage,
   BillingPage,
   ProvidersPage,
-  LoginDesignPage,
   GeneralSettingsPage,
   CouponSettingsPage,
   BannerSettingsPage,
@@ -528,27 +527,8 @@ pages.get('/dashboard/settings/providers', async (c) => {
   );
 });
 
-// ─── Settings: Login Design ──────────────────────────────────
-
-pages.get('/dashboard/settings/login-design', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-
-  let widgetStyle: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string } | undefined;
-  if (shop.widget_style) {
-    try { widgetStyle = JSON.parse(shop.widget_style); } catch { /* use default */ }
-  }
-
-  return c.html(
-    <LoginDesignPage
-      shop={shop}
-      baseUrl={c.env.BASE_URL}
-      isCafe24={c.get('isCafe24')}
-      widgetStyle={widgetStyle}
-    />
-  );
-});
+// ─── Settings: Login Design (redirect old URL) ─────────────
+pages.get('/dashboard/settings/login-design', (c) => c.redirect('/dashboard/settings/providers', 301));
 
 // ─── Settings: Coupon ────────────────────────────────────────
 

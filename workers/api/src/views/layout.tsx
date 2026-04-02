@@ -132,8 +132,7 @@ const mainNavItems: NavItem[] = [
 const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/general', label: '기본 설정', icon: <IconCog /> },
   { path: '/dashboard/settings/sso-guide', label: 'SSO 설정 가이드', icon: <IconBook /> },
-  { path: '/dashboard/settings/providers', label: '소셜 프로바이더', icon: <IconUsers /> },
-  { path: '/dashboard/settings/login-design', label: '로그인 디자인', icon: <IconPalette /> },
+  { path: '/dashboard/settings/providers', label: '로그인 디자인', icon: <IconPalette /> },
   { path: '/dashboard/settings/coupon', label: '쿠폰 설정', icon: <IconTicket /> },
   { path: '/dashboard/settings/banner', label: '미니배너', icon: <IconFlag />, plus: true },
   { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
