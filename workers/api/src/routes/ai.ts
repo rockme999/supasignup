@@ -90,6 +90,32 @@ async function getOwnedShop(db: D1Database, shopId: string, ownerId: string) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// GET /identity — 기존 정체성 분석 결과 조회
+// ═══════════════════════════════════════════════════════════════
+ai.get('/identity', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.query('shop_id');
+  if (!shopId) {
+    return c.json({ error: 'bad_request', message: 'shop_id is required' }, 400);
+  }
+
+  const shop = await getOwnedShop(c.env.DB, shopId, ownerId) as Record<string, unknown> | null;
+  if (!shop) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (!shop.shop_identity) {
+    return c.json({ identity: null });
+  }
+
+  try {
+    return c.json({ identity: JSON.parse(shop.shop_identity as string) });
+  } catch {
+    return c.json({ identity: null });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
 // POST /identity — 쇼핑몰 정체성 자동 분석
 // ═══════════════════════════════════════════════════════════════
 ai.post('/identity', async (c) => {
@@ -113,7 +139,7 @@ ai.post('/identity', async (c) => {
     return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
   }
 
-  const shopUrl = (shop.shop_url as string) || '';
+  const shopUrl = (shop.shop_url as string) || (shop.mall_id ? `https://${shop.mall_id}.cafe24.com` : '');
   if (!shopUrl) {
     return c.json({ error: 'bad_request', message: 'Shop URL is not configured' }, 400);
   }
