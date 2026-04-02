@@ -3194,26 +3194,6 @@ export const GeneralSettingsPage: FC<{
       </div>
     </div>
 
-    <div class="card">
-      <h2>비밀번호 변경</h2>
-      <form id="pwForm" style="max-width:320px">
-        <div class="form-group">
-          <label style="font-size:13px;font-weight:600;color:#475569">현재 비밀번호</label>
-          <input type="password" id="currentPw" required />
-        </div>
-        <div class="form-group">
-          <label style="font-size:13px;font-weight:600;color:#475569">새 비밀번호</label>
-          <input type="password" id="newPw" required minlength={8} placeholder="8자 이상" />
-        </div>
-        <button type="submit" class="btn btn-primary btn-sm">변경</button>
-      </form>
-    </div>
-
-    <div class="card" style="border:1px solid #fee2e2">
-      <h2 style="color:#991b1b">위험 영역</h2>
-      <p style="font-size:13px;color:#64748b;margin-bottom:12px">계정을 삭제하면 모든 데이터가 삭제되며 복구할 수 없습니다.</p>
-      <button id="deleteAccountBtn" class="btn btn-danger btn-sm">계정 삭제</button>
-    </div>
 
     <script dangerouslySetInnerHTML={{__html: `
       // 이름 수정
@@ -3245,37 +3225,6 @@ export const GeneralSettingsPage: FC<{
         }
       });
 
-      // 비밀번호 변경
-      document.getElementById('pwForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        var btn = this.querySelector('button[type=submit]');
-        var resp = await apiCall('PUT', '/api/dashboard/settings/password', {
-          current_password: document.getElementById('currentPw').value,
-          new_password: document.getElementById('newPw').value,
-        }, btn);
-        if (resp.ok) {
-          showToast('success', '비밀번호가 변경되었습니다.');
-          this.reset();
-        } else {
-          var data = await resp.json();
-          showToast('error', data.error === 'wrong_password' ? '현재 비밀번호가 올바르지 않습니다.' : '변경 중 오류가 발생했습니다.');
-        }
-      });
-
-      // 계정 삭제
-      document.getElementById('deleteAccountBtn').addEventListener('click', async function() {
-        var pw = prompt('계정을 삭제하려면 현재 비밀번호를 입력하세요:');
-        if (!pw) return;
-        if (!confirm('정말 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-        var resp = await apiCall('DELETE', '/api/dashboard/settings/account', { password: pw }, this);
-        if (resp.ok) {
-          showToast('success', '계정이 삭제되었습니다.');
-          setTimeout(function() { window.location.href = '/dashboard/login'; }, 1500);
-        } else {
-          var data = await resp.json();
-          showToast('error', data.error === 'wrong_password' ? '비밀번호가 올바르지 않습니다.' : '삭제 중 오류가 발생했습니다.');
-        }
-      });
     `}} />
   </Layout>
 );
