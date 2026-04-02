@@ -712,7 +712,7 @@ created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 - 가입 전환 퍼널 통계
 - "Powered by" 브랜딩 제거
 
-### Phase 2 — 고도화
+### Phase 2 — 고도화 (구현계획서 Phase 4에 해당)
 
 - 카페24 앱스토어 정식 등록
 - 위젯 커스터마이징 (색상, 레이아웃, 버튼 순서)
@@ -795,7 +795,7 @@ created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 | 통합 대시보드 | ~1.5주 | 기본 통계 + Plus 전환 퍼널 |
 | 과금 시스템 | ~3일 | Free/Plus 플랜 전환 |
 | E2E 테스트 | ~1주 | 실제 카페24 쇼핑몰 테스트 |
-| **MVP 출시까지** | **약 6-7주** | |
+| **MVP 출시까지** | **약 4주 (구현계획서 v2 기준 약 19일)** | ※ 구 v1 기준 6-7주에서 단축 |
 
 ---
 
