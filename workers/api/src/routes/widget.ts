@@ -60,10 +60,11 @@ widget.get('/config', async (c) => {
     sso_type: ssoType,
     style,
     plan: shop.plan,
-    banner_config: null,
-    popup_config: null,
-    escalation_config: null,
-    kakao_channel_id: null,
+    banner_config: null,      // 향후 추가 예정 (shops 테이블 컬럼 미존재)
+    popup_config: null,       // 향후 추가 예정 (shops 테이블 컬럼 미존재)
+    escalation_config: null,  // 향후 추가 예정 (shops 테이블 컬럼 미존재)
+    // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
+    kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
   };
 
   // Cache in KV
@@ -76,12 +77,26 @@ widget.get('/config', async (c) => {
 
 // ─── POST /event ─────────────────────────────────────────────
 widget.post('/event', async (c) => {
-  const body = await c.req.json<{
+  // IP 기반 rate limit: 1분당 최대 30건
+  const ip = c.req.header('cf-connecting-ip') || 'unknown';
+  const rateKey = `rate:event:${ip}`;
+  const current = await c.env.KV.get(rateKey);
+  if (current && parseInt(current) >= 30) {
+    return c.json({ error: 'rate_limit_exceeded' }, 429);
+  }
+
+  // body 파싱 (잘못된 JSON 방어)
+  let body: {
     client_id: string;
     event_type: string;
     event_data?: Record<string, unknown>;
     page_url?: string;
-  }>();
+  };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_json' }, 400);
+  }
 
   if (!body.client_id || !body.event_type) {
     return c.json({ error: 'missing_params' }, 400);
@@ -115,6 +130,11 @@ widget.post('/event', async (c) => {
     )
       .bind(eventId, shop.shop_id, body.event_type, JSON.stringify(body.event_data || {}), body.page_url || '')
       .run(),
+  );
+
+  // rate limit 카운터 증가 (비동기, 응답 블로킹 없음)
+  c.executionCtx.waitUntil(
+    c.env.KV.put(rateKey, String((parseInt(current || '0')) + 1), { expirationTtl: 60 })
   );
 
   return c.json({ ok: true });

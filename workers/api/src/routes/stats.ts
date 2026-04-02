@@ -209,60 +209,9 @@ stats.get('/stats/export', async (c) => {
   });
 });
 
-// ─── GET /stats/:shop_id ────────────────────────────────────
-stats.get('/stats/:shop_id', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shopId = c.req.param('shop_id');
-
-  // Verify ownership
-  const shop = await c.env.DB
-    .prepare('SELECT shop_id FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
-    .bind(shopId, ownerId)
-    .first();
-
-  if (!shop) {
-    return c.json({ error: 'not_found' }, 404);
-  }
-
-  // Daily stats for last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
-  const thirtyDaysAgoDate = thirtyDaysAgo.toISOString().slice(0, 10);
-  const dailyResult = await c.env.DB
-    .prepare(
-      `SELECT DATE(created_at) as day, action, COUNT(*) as cnt
-       FROM login_stats
-       WHERE shop_id = ? AND created_at >= ?
-       GROUP BY day, action
-       ORDER BY day`,
-    )
-    .bind(shopId, thirtyDaysAgoDate)
-    .all<{ day: string; action: string; cnt: number }>();
-
-  // Per-provider breakdown for this shop
-  const providerResult = await c.env.DB
-    .prepare(
-      `SELECT provider, COUNT(*) as cnt
-       FROM login_stats
-       WHERE shop_id = ? AND action = 'signup'
-       GROUP BY provider`,
-    )
-    .bind(shopId)
-    .all<{ provider: string; cnt: number }>();
-
-  const providerStats: Record<string, number> = {};
-  for (const row of providerResult.results ?? []) {
-    providerStats[row.provider] = row.cnt;
-  }
-
-  return c.json({
-    shop_id: shopId,
-    daily: dailyResult.results ?? [],
-    by_provider: providerStats,
-  });
-});
-
 // ─── GET /stats/funnel ──────────────────────────────────────
+// NOTE: /funnel은 반드시 /:shop_id 보다 먼저 등록해야 함.
+// Hono는 등록 순서대로 매칭하므로 /:shop_id가 먼저 오면 'funnel'이 shop_id로 인식됨.
 stats.get('/stats/funnel', async (c) => {
   const ownerId = c.get('ownerId');
   const shopId = c.req.query('shop_id');
@@ -321,6 +270,59 @@ stats.get('/stats/funnel', async (c) => {
     banner_ctr:     bannerShow   > 0 ? Math.round((bannerClick  / bannerShow)  * 100) : 0,
     popup_cvr:      popupShow    > 0 ? Math.round((popupSignup  / popupShow)   * 100) : 0,
     overall_cvr:    bannerShow   > 0 ? Math.round((signupComplete / bannerShow) * 100) : 0,
+  });
+});
+
+// ─── GET /stats/:shop_id ────────────────────────────────────
+stats.get('/stats/:shop_id', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('shop_id');
+
+  // Verify ownership
+  const shop = await c.env.DB
+    .prepare('SELECT shop_id FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
+    .bind(shopId, ownerId)
+    .first();
+
+  if (!shop) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  // Daily stats for last 30 days
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+  const thirtyDaysAgoDate = thirtyDaysAgo.toISOString().slice(0, 10);
+  const dailyResult = await c.env.DB
+    .prepare(
+      `SELECT DATE(created_at) as day, action, COUNT(*) as cnt
+       FROM login_stats
+       WHERE shop_id = ? AND created_at >= ?
+       GROUP BY day, action
+       ORDER BY day`,
+    )
+    .bind(shopId, thirtyDaysAgoDate)
+    .all<{ day: string; action: string; cnt: number }>();
+
+  // Per-provider breakdown for this shop
+  const providerResult = await c.env.DB
+    .prepare(
+      `SELECT provider, COUNT(*) as cnt
+       FROM login_stats
+       WHERE shop_id = ? AND action = 'signup'
+       GROUP BY provider`,
+    )
+    .bind(shopId)
+    .all<{ provider: string; cnt: number }>();
+
+  const providerStats: Record<string, number> = {};
+  for (const row of providerResult.results ?? []) {
+    providerStats[row.provider] = row.cnt;
+  }
+
+  return c.json({
+    shop_id: shopId,
+    daily: dailyResult.results ?? [],
+    by_provider: providerStats,
   });
 });
 

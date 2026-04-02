@@ -69,6 +69,18 @@ async function callAI(
   throw new Error('AI binding not available: set Workers AI binding or CF_ACCOUNT_ID + CF_AI_TOKEN');
 }
 
+// ─── AI 일일 호출 제한 헬퍼 ──────────────────────────────────
+// 반환값: true = 호출 허용, false = 한도 초과
+async function checkAiRateLimit(env: Env, shopId: string, endpoint: string, dailyLimit: number): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const key = `ai_rate:${shopId}:${endpoint}:${today}`;
+  const current = await env.KV.get(key);
+  const count = current ? parseInt(current) : 0;
+  if (count >= dailyLimit) return false;
+  await env.KV.put(key, String(count + 1), { expirationTtl: 86400 });
+  return true;
+}
+
 // ─── shop 소유권 검증 헬퍼 ────────────────────────────────────
 async function getOwnedShop(db: D1Database, shopId: string, ownerId: string) {
   const shop = await db.prepare(
@@ -93,6 +105,12 @@ ai.post('/identity', async (c) => {
   const shop = await getOwnedShop(c.env.DB, body.shop_id, ownerId) as Record<string, unknown> | null;
   if (!shop) {
     return c.json({ error: 'not_found', message: 'Shop not found' }, 404);
+  }
+
+  // 일일 호출 제한: 3회
+  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'identity', 3);
+  if (!allowed) {
+    return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
   }
 
   const shopUrl = (shop.shop_url as string) || '';
@@ -174,6 +192,12 @@ ai.post('/briefing', async (c) => {
     return c.json({ error: 'not_found', message: 'Shop not found' }, 404);
   }
 
+  // 일일 호출 제한: 5회
+  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'briefing', 5);
+  if (!allowed) {
+    return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
+  }
+
   // 최근 7일 통계 조회
   const statsRows = await c.env.DB.prepare(`
     SELECT
@@ -213,17 +237,17 @@ ai.post('/briefing', async (c) => {
 쇼핑몰 정보: ${identityText}
 최근 7일 소셜 로그인/가입 통계: ${statSummary}
 
-브리핑에 포함할 내용:
-1. 주간 성과 요약 (1-2문장)
-2. 눈에 띄는 패턴 또는 인사이트 (있으면)
-3. 다음 주 추천 액션 1-2가지
+반드시 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "performance": "지난주 성과 요약 (2-3줄)",
+  "strategy": "이번 주 전략 제안 (2-3줄)",
+  "actions": ["추천 액션 1", "추천 액션 2", "추천 액션 3"]
+}`;
 
-친근하고 실용적인 톤으로, 300자 내외로 작성하세요.`;
-
-  let briefing = '';
+  let rawBriefing = '';
   try {
-    briefing = await callAI(c.env, [
-      { role: 'system', content: 'You are a Korean e-commerce marketing advisor. Respond in Korean, concise and actionable.' },
+    rawBriefing = await callAI(c.env, [
+      { role: 'system', content: 'You are a Korean e-commerce marketing advisor. Always respond with valid JSON only, no markdown, no explanation.' },
       { role: 'user', content: prompt },
     ]);
   } catch (e) {
@@ -231,9 +255,29 @@ ai.post('/briefing', async (c) => {
     return c.json({ error: 'ai_error', message: 'AI service unavailable' }, 503);
   }
 
+  // AI 응답에서 JSON 추출 및 구조화
+  let parsed: { performance: string; strategy: string; actions: string[] } | null = null;
+  try {
+    const jsonMatch = rawBriefing.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
+  } catch {
+    console.warn('[AI/briefing] Failed to parse AI response:', rawBriefing);
+  }
+
+  if (!parsed || !parsed.performance) {
+    // 파싱 실패 시 전체 텍스트를 performance에 넣고 기본 구조 반환
+    parsed = {
+      performance: rawBriefing.trim(),
+      strategy: '',
+      actions: [],
+    };
+  }
+
   return c.json({
     success: true,
-    briefing: briefing.trim(),
+    briefing: parsed,
     period: '최근 7일',
     stats,
   });
@@ -359,6 +403,12 @@ ai.post('/escalation-copy', async (c) => {
   const shop = await getOwnedShop(c.env.DB, body.shop_id, ownerId) as Record<string, unknown> | null;
   if (!shop) {
     return c.json({ error: 'not_found', message: 'Shop not found' }, 404);
+  }
+
+  // 일일 호출 제한: 5회
+  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'escalation-copy', 5);
+  if (!allowed) {
+    return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
   }
 
   // 쇼핑몰 정체성 파싱
