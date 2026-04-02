@@ -3110,48 +3110,78 @@ export const GeneralSettingsPage: FC<{
             <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 번개가입이 자동 처리 &nbsp;|&nbsp;
             <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정 필요
           </p>
-          <div style="display:grid;gap:12px">
-            <div class="form-group" style="margin-bottom:0">
-              <label>가입 쿠폰 혜택</label>
-              <select id="idCouponBenefit" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
-                <option value="">선택하세요</option>
-                <option value="1,000원 할인 쿠폰 즉시 지급">1,000원 할인 쿠폰 [자동 발급]</option>
-                <option value="2,000원 할인 쿠폰 즉시 지급">2,000원 할인 쿠폰 [자동 발급]</option>
-                <option value="3,000원 할인 쿠폰 즉시 지급">3,000원 할인 쿠폰 [자동 발급]</option>
-                <option value="5,000원 할인 쿠폰 즉시 지급">5,000원 할인 쿠폰 [자동 발급]</option>
-                <option value="10,000원 할인 쿠폰 즉시 지급">10,000원 할인 쿠폰 [자동 발급]</option>
-                <option value="10% 할인 쿠폰 즉시 지급">10% 할인 쿠폰 [자동 발급]</option>
-                <option value="15% 할인 쿠폰 즉시 지급">15% 할인 쿠폰 [자동 발급]</option>
-                <option value="20% 할인 쿠폰 즉시 지급">20% 할인 쿠폰 [자동 발급]</option>
-                <option value="__custom__">직접 입력</option>
-              </select>
-              <input type="text" id="idCouponBenefitCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) 첫 구매 무료배송 쿠폰" />
+          <div style="display:grid;gap:20px">
+            {/* 가입 쿠폰 — 라디오 단일 선택 */}
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">가입 쿠폰 혜택 <span style="color:#2563eb;font-size:11px">[자동 발급]</span></label>
+              <div id="couponRadios" style="display:grid;gap:6px">
+                {['1,000원', '2,000원', '3,000원', '5,000원', '10,000원'].map(amt => (
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                    <input type="radio" name="couponBenefit" value={`${amt} 할인 쿠폰 즉시 지급`} style="margin:0" />
+                    {amt} 할인 쿠폰
+                  </label>
+                ))}
+                {['10%', '15%', '20%'].map(pct => (
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                    <input type="radio" name="couponBenefit" value={`${pct} 할인 쿠폰 즉시 지급`} style="margin:0" />
+                    {pct} 할인 쿠폰
+                  </label>
+                ))}
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="couponBenefit" value="__custom__" style="margin:0" />
+                  직접 입력
+                </label>
+              </div>
+              <input type="text" id="idCouponBenefitCustom" style="display:none;margin-top:6px" placeholder="예) 첫 구매 무료배송 쿠폰" />
             </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label>무료배송 기준</label>
-              <select id="idFreeShipping" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
-                <option value="">선택하세요</option>
-                <option value="전 상품 무료배송">전 상품 무료배송 [쇼핑몰 설정]</option>
-                <option value="30,000원 이상 무료배송">30,000원 이상 [쇼핑몰 설정]</option>
-                <option value="50,000원 이상 무료배송">50,000원 이상 [쇼핑몰 설정]</option>
-                <option value="70,000원 이상 무료배송">70,000원 이상 [쇼핑몰 설정]</option>
-                <option value="100,000원 이상 무료배송">100,000원 이상 [쇼핑몰 설정]</option>
-                <option value="__custom__">직접 입력</option>
-              </select>
-              <input type="text" id="idFreeShippingCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) 도서산간 제외 무료배송" />
+
+            {/* 무료배송 — 라디오 단일 선택 */}
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">무료배송 기준 <span style="color:#f59e0b;font-size:11px">[쇼핑몰 설정]</span></label>
+              <div id="shippingRadios" style="display:grid;gap:6px">
+                {['전 상품 무료배송', '30,000원 이상 무료배송', '50,000원 이상 무료배송', '70,000원 이상 무료배송', '100,000원 이상 무료배송'].map(opt => (
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                    <input type="radio" name="freeShipping" value={opt} style="margin:0" />
+                    {opt}
+                  </label>
+                ))}
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="freeShipping" value="__custom__" style="margin:0" />
+                  직접 입력
+                </label>
+              </div>
+              <input type="text" id="idFreeShippingCustom" style="display:none;margin-top:6px" placeholder="예) 도서산간 제외 무료배송" />
             </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label>추가 혜택</label>
-              <select id="idExtraBenefit" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
-                <option value="">선택하세요</option>
-                <option value="첫 구매 10% 추가 할인">첫 구매 10% 추가 할인 [자동 발급]</option>
-                <option value="적립금 1,000원 즉시 지급">적립금 1,000원 즉시 지급 [쇼핑몰 설정]</option>
-                <option value="생일 쿠폰 자동 발급">생일 쿠폰 자동 발급 [쇼핑몰 설정]</option>
-                <option value="회원 등급별 추가 할인">회원 등급별 추가 할인 [쇼핑몰 설정]</option>
-                <option value="신상품 알림 우선 발송">신상품 알림 우선 발송 [쇼핑몰 설정]</option>
-                <option value="__custom__">직접 입력</option>
-              </select>
-              <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) VIP 전용 시크릿 세일 초대" />
+
+            {/* 추가 혜택 — 토글 다중 선택 */}
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">추가 혜택 (여러 개 선택 가능)</label>
+              <div id="extraBenefitToggles" style="display:grid;gap:8px">
+                {[
+                  { value: '첫 구매 10% 추가 할인', label: '첫 구매 10% 추가 할인', tag: '[자동 발급]', tagColor: '#2563eb' },
+                  { value: '적립금 1,000원 즉시 지급', label: '적립금 1,000원 즉시 지급', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
+                  { value: '생일 쿠폰 자동 발급', label: '생일 쿠폰 자동 발급', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
+                  { value: '회원 등급별 추가 할인', label: '회원 등급별 추가 할인', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
+                  { value: '신상품 알림 우선 발송', label: '신상품 알림 우선 발송', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
+                ].map(item => (
+                  <label class="provider-toggle" style="padding:8px 0;border-bottom:1px solid #f1f5f9">
+                    <span class="toggle">
+                      <input type="checkbox" name="extraBenefit" value={item.value} />
+                      <span class="toggle-slider"></span>
+                    </span>
+                    <span style="font-size:13px">{item.label}</span>
+                    <span style={`font-size:11px;color:${item.tagColor};font-weight:600;margin-left:auto`}>{item.tag}</span>
+                  </label>
+                ))}
+                <label class="provider-toggle" style="padding:8px 0">
+                  <span class="toggle">
+                    <input type="checkbox" id="extraBenefitCustomToggle" />
+                    <span class="toggle-slider"></span>
+                  </span>
+                  <span style="font-size:13px">직접 입력</span>
+                </label>
+              </div>
+              <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="예) VIP 전용 시크릿 세일 초대" />
             </div>
           </div>
           <button id="saveBenefitsBtn" class="btn btn-primary btn-sm" style="margin-top:16px">혜택 저장</button>
@@ -3172,33 +3202,74 @@ export const GeneralSettingsPage: FC<{
             var roFields = { industry: document.getElementById('roIndustry'), target: document.getElementById('roTarget'), tone: document.getElementById('roTone'), summary: document.getElementById('roSummary'), keywords: document.getElementById('roKeywords') };
             var editFields = { industry: document.getElementById('idIndustry'), target: document.getElementById('idTarget'), tone: document.getElementById('idTone'), summary: document.getElementById('idSummary'), keywords: document.getElementById('idKeywords') };
 
-            // 드롭다운 + 직접입력 토글
-            ['CouponBenefit', 'FreeShipping', 'ExtraBenefit'].forEach(function(name) {
-              var sel = document.getElementById('id' + name);
-              var custom = document.getElementById('id' + name + 'Custom');
-              sel.addEventListener('change', function() {
-                custom.style.display = this.value === '__custom__' ? 'block' : 'none';
-                if (this.value !== '__custom__') custom.value = '';
+            // 라디오 + 직접입력 토글
+            ['couponBenefit', 'freeShipping'].forEach(function(name) {
+              var customInput = document.getElementById('id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom');
+              document.querySelectorAll('input[name="' + name + '"]').forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                  customInput.style.display = this.value === '__custom__' ? 'block' : 'none';
+                });
               });
             });
 
-            function getBenefitValue(name) {
-              var sel = document.getElementById('id' + name);
-              var custom = document.getElementById('id' + name + 'Custom');
-              return sel.value === '__custom__' ? custom.value.trim() : sel.value;
+            // 추가 혜택 직접입력 토글
+            document.getElementById('extraBenefitCustomToggle').addEventListener('change', function() {
+              document.getElementById('idExtraBenefitCustom').style.display = this.checked ? 'block' : 'none';
+            });
+
+            function getRadioValue(name) {
+              var checked = document.querySelector('input[name="' + name + '"]:checked');
+              if (!checked) return '';
+              if (checked.value === '__custom__') {
+                var customId = 'id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom';
+                return document.getElementById(customId).value.trim();
+              }
+              return checked.value;
             }
 
-            function setBenefitValue(name, val) {
-              var sel = document.getElementById('id' + name);
-              var custom = document.getElementById('id' + name + 'Custom');
+            function setRadioValue(name, val) {
+              if (!val) return;
+              var radios = document.querySelectorAll('input[name="' + name + '"]');
               var found = false;
-              for (var i = 0; i < sel.options.length; i++) {
-                if (sel.options[i].value === val) { sel.selectedIndex = i; found = true; break; }
+              radios.forEach(function(r) { if (r.value === val) { r.checked = true; found = true; } });
+              if (!found) {
+                // 프리셋에 없는 값 → 직접 입력
+                radios.forEach(function(r) { if (r.value === '__custom__') r.checked = true; });
+                var customId = 'id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom';
+                var customInput = document.getElementById(customId);
+                customInput.value = val;
+                customInput.style.display = 'block';
               }
-              if (!found && val) {
-                sel.value = '__custom__';
-                custom.value = val;
-                custom.style.display = 'block';
+            }
+
+            function getExtraBenefits() {
+              var values = [];
+              document.querySelectorAll('input[name="extraBenefit"]:checked').forEach(function(cb) {
+                values.push(cb.value);
+              });
+              var customToggle = document.getElementById('extraBenefitCustomToggle');
+              var customInput = document.getElementById('idExtraBenefitCustom');
+              if (customToggle.checked && customInput.value.trim()) {
+                values.push(customInput.value.trim());
+              }
+              return values;
+            }
+
+            function setExtraBenefits(arr) {
+              if (!Array.isArray(arr)) return;
+              var knownValues = [];
+              document.querySelectorAll('input[name="extraBenefit"]').forEach(function(cb) { knownValues.push(cb.value); });
+              var customItems = [];
+              arr.forEach(function(val) {
+                var cb = document.querySelector('input[name="extraBenefit"][value="' + val + '"]');
+                if (cb) { cb.checked = true; }
+                else { customItems.push(val); }
+              });
+              if (customItems.length > 0) {
+                document.getElementById('extraBenefitCustomToggle').checked = true;
+                var customInput = document.getElementById('idExtraBenefitCustom');
+                customInput.value = customItems.join(', ');
+                customInput.style.display = 'block';
               }
             }
 
@@ -3236,9 +3307,9 @@ export const GeneralSettingsPage: FC<{
                 if (d.identity && d.identity.industry) {
                   showReadonly(d.identity);
                   // 혜택 로드
-                  setBenefitValue('CouponBenefit', d.identity.coupon_benefit || '');
-                  setBenefitValue('FreeShipping', d.identity.free_shipping || '');
-                  setBenefitValue('ExtraBenefit', d.identity.extra_benefit || '');
+                  setRadioValue('couponBenefit', d.identity.coupon_benefit || '');
+                  setRadioValue('freeShipping', d.identity.free_shipping || '');
+                  setExtraBenefits(d.identity.extra_benefits || []);
                 }
               }).catch(function() {});
 
@@ -3309,9 +3380,9 @@ export const GeneralSettingsPage: FC<{
               var resp1 = await fetch('/api/ai/identity?shop_id=' + shopId, { credentials: 'same-origin' });
               var existing = {};
               try { var d = await resp1.json(); existing = d.identity || {}; } catch(e) {}
-              existing.coupon_benefit = getBenefitValue('CouponBenefit');
-              existing.free_shipping = getBenefitValue('FreeShipping');
-              existing.extra_benefit = getBenefitValue('ExtraBenefit');
+              existing.coupon_benefit = getRadioValue('couponBenefit');
+              existing.free_shipping = getRadioValue('freeShipping');
+              existing.extra_benefits = getExtraBenefits();
               btn.disabled = true; btn.textContent = '저장 중...';
               try {
                 var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId, { shop_identity: JSON.stringify(existing) });
