@@ -3105,20 +3105,24 @@ export const GeneralSettingsPage: FC<{
 
         {/* 회원 가입 혜택 (항상 표시) */}
         <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-top:16px;max-width:560px">
-          <h3 style="font-size:15px;margin-bottom:12px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI 카피 생성에 활용됩니다</span></h3>
+          <h3 style="font-size:15px;margin-bottom:8px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI 카피 생성에 활용됩니다</span></h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
+            <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 번개가입이 자동 처리 &nbsp;|&nbsp;
+            <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정 필요
+          </p>
           <div style="display:grid;gap:12px">
             <div class="form-group" style="margin-bottom:0">
               <label>가입 쿠폰 혜택</label>
               <select id="idCouponBenefit" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
                 <option value="">선택하세요</option>
-                <option value="1,000원 할인 쿠폰 즉시 지급">1,000원 할인 쿠폰</option>
-                <option value="2,000원 할인 쿠폰 즉시 지급">2,000원 할인 쿠폰</option>
-                <option value="3,000원 할인 쿠폰 즉시 지급">3,000원 할인 쿠폰</option>
-                <option value="5,000원 할인 쿠폰 즉시 지급">5,000원 할인 쿠폰</option>
-                <option value="10,000원 할인 쿠폰 즉시 지급">10,000원 할인 쿠폰</option>
-                <option value="10% 할인 쿠폰 즉시 지급">10% 할인 쿠폰</option>
-                <option value="15% 할인 쿠폰 즉시 지급">15% 할인 쿠폰</option>
-                <option value="20% 할인 쿠폰 즉시 지급">20% 할인 쿠폰</option>
+                <option value="1,000원 할인 쿠폰 즉시 지급">1,000원 할인 쿠폰 [자동 발급]</option>
+                <option value="2,000원 할인 쿠폰 즉시 지급">2,000원 할인 쿠폰 [자동 발급]</option>
+                <option value="3,000원 할인 쿠폰 즉시 지급">3,000원 할인 쿠폰 [자동 발급]</option>
+                <option value="5,000원 할인 쿠폰 즉시 지급">5,000원 할인 쿠폰 [자동 발급]</option>
+                <option value="10,000원 할인 쿠폰 즉시 지급">10,000원 할인 쿠폰 [자동 발급]</option>
+                <option value="10% 할인 쿠폰 즉시 지급">10% 할인 쿠폰 [자동 발급]</option>
+                <option value="15% 할인 쿠폰 즉시 지급">15% 할인 쿠폰 [자동 발급]</option>
+                <option value="20% 할인 쿠폰 즉시 지급">20% 할인 쿠폰 [자동 발급]</option>
                 <option value="__custom__">직접 입력</option>
               </select>
               <input type="text" id="idCouponBenefitCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) 첫 구매 무료배송 쿠폰" />
@@ -3127,11 +3131,11 @@ export const GeneralSettingsPage: FC<{
               <label>무료배송 기준</label>
               <select id="idFreeShipping" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
                 <option value="">선택하세요</option>
-                <option value="전 상품 무료배송">전 상품 무료배송</option>
-                <option value="30,000원 이상 무료배송">30,000원 이상</option>
-                <option value="50,000원 이상 무료배송">50,000원 이상</option>
-                <option value="70,000원 이상 무료배송">70,000원 이상</option>
-                <option value="100,000원 이상 무료배송">100,000원 이상</option>
+                <option value="전 상품 무료배송">전 상품 무료배송 [쇼핑몰 설정]</option>
+                <option value="30,000원 이상 무료배송">30,000원 이상 [쇼핑몰 설정]</option>
+                <option value="50,000원 이상 무료배송">50,000원 이상 [쇼핑몰 설정]</option>
+                <option value="70,000원 이상 무료배송">70,000원 이상 [쇼핑몰 설정]</option>
+                <option value="100,000원 이상 무료배송">100,000원 이상 [쇼핑몰 설정]</option>
                 <option value="__custom__">직접 입력</option>
               </select>
               <input type="text" id="idFreeShippingCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) 도서산간 제외 무료배송" />
@@ -3140,11 +3144,11 @@ export const GeneralSettingsPage: FC<{
               <label>추가 혜택</label>
               <select id="idExtraBenefit" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
                 <option value="">선택하세요</option>
-                <option value="첫 구매 10% 추가 할인">첫 구매 10% 추가 할인</option>
-                <option value="적립금 1,000원 즉시 지급">적립금 1,000원 즉시 지급</option>
-                <option value="생일 쿠폰 자동 발급">생일 쿠폰 자동 발급</option>
-                <option value="회원 등급별 추가 할인">회원 등급별 추가 할인</option>
-                <option value="신상품 알림 우선 발송">신상품 알림 우선 발송</option>
+                <option value="첫 구매 10% 추가 할인">첫 구매 10% 추가 할인 [자동 발급]</option>
+                <option value="적립금 1,000원 즉시 지급">적립금 1,000원 즉시 지급 [쇼핑몰 설정]</option>
+                <option value="생일 쿠폰 자동 발급">생일 쿠폰 자동 발급 [쇼핑몰 설정]</option>
+                <option value="회원 등급별 추가 할인">회원 등급별 추가 할인 [쇼핑몰 설정]</option>
+                <option value="신상품 알림 우선 발송">신상품 알림 우선 발송 [쇼핑몰 설정]</option>
                 <option value="__custom__">직접 입력</option>
               </select>
               <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="직접 입력: 예) VIP 전용 시크릿 세일 초대" />
