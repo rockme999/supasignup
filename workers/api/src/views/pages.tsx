@@ -3391,65 +3391,6 @@ export const GeneralSettingsPage: FC<{
       </div>
     )}
 
-    <div class="card">
-      <h2>계정 정보</h2>
-      <div style="overflow-x:auto">
-        <table>
-          <tbody>
-            <tr><th style="width:120px">이름</th>
-              <td>
-                <span id="nameDisplay">{name || '-'}</span>
-                <button id="editNameBtn" class="btn btn-outline btn-sm" style="margin-left:12px;display:inline-flex;width:auto">수정</button>
-              </td>
-            </tr>
-            <tr><th>이메일</th><td>{email}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div id="editNameForm" style="display:none;margin-top:16px;display:none">
-        <div class="form-group" style="max-width:320px">
-          <label style="font-size:13px;font-weight:600;color:#475569">이름 변경</label>
-          <input type="text" id="newNameInput" value={name || ''} style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" />
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="saveNameBtn" class="btn btn-primary btn-sm">저장</button>
-          <button id="cancelNameBtn" class="btn btn-outline btn-sm">취소</button>
-        </div>
-      </div>
-    </div>
-
-
-    <script dangerouslySetInnerHTML={{__html: `
-      // 이름 수정
-      var editNameBtn = document.getElementById('editNameBtn');
-      var editNameForm = document.getElementById('editNameForm');
-      var cancelNameBtn = document.getElementById('cancelNameBtn');
-      var saveNameBtn = document.getElementById('saveNameBtn');
-      var nameDisplay = document.getElementById('nameDisplay');
-
-      editNameBtn.addEventListener('click', function() {
-        editNameForm.style.display = 'block';
-        editNameBtn.style.display = 'none';
-      });
-      cancelNameBtn.addEventListener('click', function() {
-        editNameForm.style.display = 'none';
-        editNameBtn.style.display = 'inline-flex';
-      });
-      saveNameBtn.addEventListener('click', async function() {
-        var newName = document.getElementById('newNameInput').value.trim();
-        if (!newName) { showToast('warn', '이름을 입력하세요.'); return; }
-        var resp = await apiCall('PUT', '/api/dashboard/settings/profile', { name: newName }, saveNameBtn);
-        if (resp.ok) {
-          nameDisplay.textContent = newName;
-          editNameForm.style.display = 'none';
-          editNameBtn.style.display = 'inline-flex';
-          showToast('success', '이름이 변경되었습니다.');
-        } else {
-          showToast('error', '저장 중 오류가 발생했습니다.');
-        }
-      });
-
-    `}} />
   </Layout>
 );
 
