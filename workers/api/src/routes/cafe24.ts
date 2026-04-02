@@ -23,6 +23,8 @@ function buildAllowedRedirectUris(mallId: string, shopDomain?: string, baseUrl?:
   const uris = [
     `https://${mallId}.cafe24api.com/api/v2/oauth/callback`,
     `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso/`,
+    `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso1/`,
+    `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientCallback/sso2/`,
   ];
 
   // 소셜 연동 완료 페이지 (마이페이지 팝업용)
@@ -36,6 +38,8 @@ function buildAllowedRedirectUris(mallId: string, shopDomain?: string, baseUrl?:
       const host = new URL(shopDomain).host;
       if (!host.endsWith('.cafe24.com')) {
         uris.push(`https://${host}/Api/Member/Oauth2ClientCallback/sso/`);
+        uris.push(`https://${host}/Api/Member/Oauth2ClientCallback/sso1/`);
+        uris.push(`https://${host}/Api/Member/Oauth2ClientCallback/sso2/`);
       }
     } catch { /* invalid URL, skip */ }
   }
@@ -241,7 +245,6 @@ cafe24.get('/callback', async (c) => {
       error: 'callback_failed',
       message: err?.message ?? String(err),
       detail: err?.detail ?? null,
-      stack: err?.stack?.split('\n').slice(0, 5),
     }, 500);
   }
 });

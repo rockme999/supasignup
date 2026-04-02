@@ -42,8 +42,9 @@ widget.get('/config', async (c) => {
     : JSON.parse(shop.enabled_providers);
 
   // Build SSO callback URI from mall_id for Cafe24 platform
+  const ssoType = shop.sso_type || 'sso';
   const ssoCallbackUri = shop.platform === 'cafe24' && shop.mall_id
-    ? `https://${shop.mall_id}.cafe24.com/Api/Member/OAuth2ClientCallback/sso/`
+    ? `https://${shop.mall_id}.cafe24.com/Api/Member/OAuth2ClientCallback/${ssoType}/`
     : undefined;
 
   // Parse widget style (fall back to defaults)
@@ -56,6 +57,7 @@ widget.get('/config', async (c) => {
     providers,
     base_url: c.env.BASE_URL,
     sso_callback_uri: ssoCallbackUri,
+    sso_type: ssoType,
     style,
   };
 

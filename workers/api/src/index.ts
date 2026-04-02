@@ -30,14 +30,20 @@ app.use('/api/widget/*', cors({
 
 // ── CORS: Dashboard routes (restricted origin) ──────────────
 app.use('/api/dashboard/*', cors({
-  origin: 'https://bg.suparain.kr',
+  origin: (origin, c) => {
+    const baseUrl = (c.env as Env).BASE_URL.replace(/\/+$/, '');
+    return origin === baseUrl ? origin : '';
+  },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // ── CORS: Admin API routes (restricted origin) ───────────────
 app.use('/api/admin/*', cors({
-  origin: 'https://bg.suparain.kr',
+  origin: (origin, c) => {
+    const baseUrl = (c.env as Env).BASE_URL.replace(/\/+$/, '');
+    return origin === baseUrl ? origin : '';
+  },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));

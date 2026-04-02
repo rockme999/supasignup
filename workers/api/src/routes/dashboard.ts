@@ -194,13 +194,19 @@ dashboard.put('/shops/:id', async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
 
   // Prevent direct modification of protected fields
-  const allowed = ['shop_name', 'shop_url', 'allowed_redirect_uris', 'sso_configured'];
+  const allowed = ['shop_name', 'shop_url', 'allowed_redirect_uris', 'sso_configured', 'sso_type'];
   const updates: Record<string, unknown> = {};
 
   for (const key of allowed) {
     if (key in body) {
       if (key === 'allowed_redirect_uris' && Array.isArray(body[key])) {
         updates[key] = JSON.stringify(body[key]);
+      } else if (key === 'sso_type') {
+        const validSsoTypes = ['sso', 'sso1', 'sso2'];
+        if (!validSsoTypes.includes(body[key] as string)) {
+          return c.json({ error: 'invalid_sso_type', message: 'sso_type must be one of: sso, sso1, sso2' }, 400);
+        }
+        updates[key] = body[key];
       } else {
         updates[key] = body[key];
       }

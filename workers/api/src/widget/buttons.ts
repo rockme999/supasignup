@@ -458,9 +458,9 @@ export const WIDGET_JS = `(function() {
       // Save last provider to localStorage for smart button (Cafe24 SSO doesn't pass bg_provider back)
       try { localStorage.setItem('bg_last_provider', provider); } catch (e) {}
       fetch(hintUrl, { mode: 'cors' }).then(function() {
-        MemberAction.snsLogin('sso', returnUrl);
+        MemberAction.snsLogin(config.sso_type || 'sso', returnUrl);
       }).catch(function() {
-        MemberAction.snsLogin('sso', returnUrl);
+        MemberAction.snsLogin(config.sso_type || 'sso', returnUrl);
       });
       return;
     }

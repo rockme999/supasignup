@@ -73,6 +73,23 @@ oauth.get('/authorize', async (c) => {
     return c.json({ error: 'invalid_redirect_uri', message: 'redirect_uri is not registered' }, 400);
   }
 
+  // redirect_uri에서 sso_type 자동 감지 (sso / sso1 / sso2)
+  const ssoMatch = redirectUri.match(/\/Oauth2ClientCallback\/(sso[12]?)\//i);
+  if (ssoMatch) {
+    const detectedSsoType = ssoMatch[1].toLowerCase();
+    if (detectedSsoType !== shop.sso_type) {
+      // 비동기로 DB + KV 캐시 업데이트 (응답 차단하지 않음)
+      c.executionCtx.waitUntil(
+        Promise.all([
+          c.env.DB.prepare("UPDATE shops SET sso_type = ?, updated_at = datetime('now') WHERE shop_id = ?")
+            .bind(detectedSsoType, shop.shop_id)
+            .run(),
+          c.env.KV.delete(`widget_config:${shop.client_id}`),
+        ])
+      );
+    }
+  }
+
   // If no provider specified, check KV hint (set by widget before Cafe24 SSO trigger)
   const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
   if (!provider) {

@@ -5,6 +5,7 @@
 --   2026-03-19: audit_logs 테이블 추가 (Phase 8 관리자 감사 로그)
 --   2026-03-20: owners.deleted_at 컬럼 추가 (계정 탈퇴 soft delete)
 --   2026-03-20: shops.widget_style 컬럼 추가 (위젯 커스터마이징)
+--   2026-04-02: shops.sso_type 컬럼 추가 (카페24 SSO 앱 슬롯 식별자: sso, sso1, sso2 ...)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS shops (
   plan                   TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'monthly', 'yearly')),
   sso_configured         INTEGER NOT NULL DEFAULT 0,
   widget_style           TEXT,              -- JSON: {"preset":"default","buttonWidth":280,"buttonGap":8,"borderRadius":10,"align":"center"}
+  sso_type               TEXT NOT NULL DEFAULT 'sso',  -- 카페24 SSO 슬롯 식별자 (sso, sso1, sso2, ...)
   deleted_at             TEXT,
   created_at             TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at             TEXT NOT NULL DEFAULT (datetime('now')),
