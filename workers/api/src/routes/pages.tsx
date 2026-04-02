@@ -174,7 +174,7 @@ pages.get('/dashboard', async (c) => {
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
   const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 
-  const [totalResult, todayResult, monthResult, providerResult, billingResult] = await Promise.all([
+  const [totalResult, todayResult, monthResult, providerResult, billingResult, couponResult] = await Promise.all([
     c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
@@ -216,6 +216,10 @@ pages.get('/dashboard', async (c) => {
        WHERE s.owner_id = ? AND s.deleted_at IS NULL`,
     ).bind(`${billingMonth}-01`, nextMonthFirst, ownerId)
      .all<{ shop_id: string; shop_name: string; plan: string; monthly_signups: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT shop_id, shop_name, coupon_config FROM shops WHERE owner_id = ? AND deleted_at IS NULL`,
+    ).bind(ownerId).all<{ shop_id: string; shop_name: string; coupon_config: string | null }>(),
   ]);
 
   const byProvider: Record<string, number> = {};
@@ -225,12 +229,18 @@ pages.get('/dashboard', async (c) => {
 
   const billingShops = (billingResult.results ?? []).map((shop) => ({
     ...shop,
-    usage_percent: shop.plan === 'free'
-      ? Math.round((shop.monthly_signups / FREE_PLAN_MONTHLY_LIMIT) * 100)
-      : null,
-    needs_upgrade: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_WARN_THRESHOLD,
-    is_over_limit: shop.plan === 'free' && shop.monthly_signups >= FREE_PLAN_MONTHLY_LIMIT,
+    usage_percent: 0,
+    needs_upgrade: false,
+    is_over_limit: false,
   }));
+
+  const couponShops = (couponResult.results ?? []).map((shop) => {
+    let enabled = false;
+    if (shop.coupon_config) {
+      try { enabled = JSON.parse(shop.coupon_config)?.enabled === true; } catch { /* ignore */ }
+    }
+    return { shop_id: shop.shop_id, shop_name: shop.shop_name, coupon_enabled: enabled };
+  });
 
   return c.html(
     <HomePage
@@ -242,6 +252,7 @@ pages.get('/dashboard', async (c) => {
         by_provider: byProvider,
       }}
       billingShops={billingShops}
+      couponShops={couponShops}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -451,11 +462,11 @@ pages.get('/dashboard/shops/:id', async (c) => {
 
   const shop = await c.env.DB
     .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at
+      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at, coupon_config
        FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
     )
     .bind(shopId, ownerId)
-    .first<ShopRow>();
+    .first<ShopRow & { coupon_config: string | null }>();
 
   if (!shop) return c.redirect('/dashboard/shops');
 
@@ -475,11 +486,17 @@ pages.get('/dashboard/shops/:id', async (c) => {
     .bind(shopId, `${ym}-01`)
     .first<{ cnt: number }>();
 
+  let couponConfig: { enabled: boolean; coupon_no: string; coupon_name?: string; multi_coupon: boolean } | null = null;
+  if (shop.coupon_config) {
+    try { couponConfig = JSON.parse(shop.coupon_config); } catch { /* ignore */ }
+  }
+
   return c.html(
     <ShopDetailPage
       shop={{ ...shop, client_secret: masked }}
       monthlySignups={countResult?.cnt ?? 0}
       baseUrl={c.env.BASE_URL}
+      couponConfig={couponConfig}
       isCafe24={c.get('isCafe24')}
     />
   );

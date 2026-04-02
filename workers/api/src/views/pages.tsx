@@ -253,96 +253,108 @@ type BillingShop = {
   is_over_limit: boolean;
 };
 
-export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[]; isCafe24?: boolean }> = ({ stats, billingShops, isCafe24 }) => (
-  <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
-    <h1>대시보드</h1>
+type CouponShopSummary = {
+  shop_id: string;
+  shop_name: string;
+  coupon_enabled: boolean;
+};
 
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="label">전체 가입</div>
-        <div class="value">{stats.total_signups.toLocaleString()}</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">전체 로그인</div>
-        <div class="value">{stats.total_logins.toLocaleString()}</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">오늘 가입</div>
-        <div class="value">{stats.today_signups}</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">이번 달 가입</div>
-        <div class="value">{stats.month_signups}</div>
-      </div>
-    </div>
+export const HomePage: FC<{ stats: HomeStats; billingShops: BillingShop[]; couponShops: CouponShopSummary[]; isCafe24?: boolean }> = ({ stats, billingShops, couponShops, isCafe24 }) => {
+  const activeCoupons = couponShops.filter(s => s.coupon_enabled).length;
+  const totalShops = couponShops.length;
 
-    {Object.keys(stats.by_provider).length > 0 && (
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">소셜별 가입 현황</h2>
-          <a href="/dashboard/stats" style="font-size:13px">자세히 보기 →</a>
+  return (
+    <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
+      <h1>대시보드</h1>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">전체 가입</div>
+          <div class="value">{stats.total_signups.toLocaleString()}</div>
         </div>
-        {Object.entries(stats.by_provider).map(([provider, count]) => (
-          <ProgressBar
-            label={providerDisplayNames[provider] || provider}
-            value={count}
-            max={stats.total_signups}
-            color={providerColors[provider]}
-          />
-        ))}
-      </div>
-    )}
-
-    {billingShops.some((s) => s.needs_upgrade) && (
-      <div class="alert alert-warn">
-        무료 플랜 한도(100건/월)에 근접한 쇼핑몰이 있습니다. <a href="/dashboard/billing">과금 현황 확인 →</a>
-      </div>
-    )}
-
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 style="margin-bottom:0">쇼핑몰 과금 현황</h2>
-        <a href="/dashboard/billing" style="font-size:13px">자세히 보기 →</a>
-      </div>
-      {billingShops.length === 0 ? (
-        <div class="empty-state">
-          <p>등록된 쇼핑몰이 없습니다.</p>
-          <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">쇼핑몰 등록</a>
+        <div class="stat-card">
+          <div class="label">전체 로그인</div>
+          <div class="value">{stats.total_logins.toLocaleString()}</div>
         </div>
-      ) : (
-        <>
-          {billingShops.filter(s => s.plan === 'free').map((shop) => (
+        <div class="stat-card">
+          <div class="label">오늘 가입</div>
+          <div class="value">{stats.today_signups}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">이번 달 가입</div>
+          <div class="value">{stats.month_signups}</div>
+        </div>
+      </div>
+
+      {Object.keys(stats.by_provider).length > 0 && (
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin-bottom:0">소셜별 가입 현황</h2>
+            <a href="/dashboard/stats" style="font-size:13px">자세히 보기 →</a>
+          </div>
+          {Object.entries(stats.by_provider).map(([provider, count]) => (
             <ProgressBar
-              label={shop.shop_name || shop.shop_id}
-              value={shop.monthly_signups}
-              max={100}
-              color={shop.is_over_limit ? '#ef4444' : shop.needs_upgrade ? '#f59e0b' : '#22c55e'}
+              label={providerDisplayNames[provider] || provider}
+              value={count}
+              max={stats.total_signups}
+              color={providerColors[provider]}
             />
           ))}
+        </div>
+      )}
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">쇼핑몰 현황</h2>
+          <a href="/dashboard/billing" style="font-size:13px">플랜/과금 →</a>
+        </div>
+        {billingShops.length === 0 ? (
+          <div class="empty-state">
+            <p>등록된 쇼핑몰이 없습니다.</p>
+            <a href="/dashboard/shops/new" class="btn btn-primary btn-sm">쇼핑몰 등록</a>
+          </div>
+        ) : (
           <div style="overflow-x:auto">
-            <table style="margin-top:12px">
-              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>상태</th></tr></thead>
+            <table style="margin-top:4px">
+              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th></tr></thead>
               <tbody>
                 {billingShops.map((shop) => (
                   <tr>
                     <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
-                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                    <td>{shop.monthly_signups}{shop.usage_percent !== null && <span style="color:#94a3b8"> / 100 ({shop.usage_percent}%)</span>}</td>
-                    <td>
-                      {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
-                      {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
-                      {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
-                    </td>
+                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td>
+                    <td>{shop.monthly_signups} <span style="color:#94a3b8;font-size:12px">건</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </>
+        )}
+      </div>
+
+      {totalShops > 0 && (
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2 style="margin-bottom:0">쿠폰 설정 현황</h2>
+            <span style="font-size:13px;color:#64748b">
+              활성 <strong style="color:#2563eb">{activeCoupons}</strong>개 / 전체 {totalShops}개
+            </span>
+          </div>
+          {activeCoupons === 0 ? (
+            <p style="font-size:13px;color:#94a3b8;margin-top:8px">쿠폰이 활성화된 쇼핑몰이 없습니다. 쇼핑몰 설정에서 쿠폰을 활성화하세요.</p>
+          ) : (
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+              {couponShops.filter(s => s.coupon_enabled).map(s => (
+                <a href={`/dashboard/shops/${s.shop_id}`} style="font-size:12px;background:#dbeafe;color:#1d4ed8;padding:2px 10px;border-radius:99px;text-decoration:none">
+                  {s.shop_name || s.shop_id}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       )}
-    </div>
-  </Layout>
-);
+    </Layout>
+  );
+};
 
 // ─── Shops List ──────────────────────────────────────────────
 
@@ -477,13 +489,23 @@ type ShopDetail = {
   sso_configured: number;
 };
 
+type CouponConfig = {
+  enabled: boolean;
+  coupon_no: string;
+  coupon_name?: string;
+  multi_coupon: boolean;
+};
+
 export const ShopDetailPage: FC<{
   shop: ShopDetail;
   monthlySignups: number;
   baseUrl: string;
+  couponConfig: CouponConfig | null;
   isCafe24?: boolean;
-}> = ({ shop, monthlySignups, baseUrl, isCafe24 }) => {
+}> = ({ shop, monthlySignups, baseUrl, couponConfig, isCafe24 }) => {
   const providers = parseProviders(shop.enabled_providers);
+  const isPlus = shop.plan !== 'free';
+  const cc = couponConfig ?? { enabled: false, coupon_no: '', coupon_name: '', multi_coupon: false };
 
   return (
     <Layout title={shop.shop_name || shop.mall_id} loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
@@ -503,8 +525,8 @@ export const ShopDetailPage: FC<{
               <tr><th style="width:140px">Shop ID</th><td>{shop.shop_id}</td></tr>
               <tr><th>Mall ID</th><td>{shop.mall_id}</td></tr>
               <tr><th>플랫폼</th><td>{shop.platform || 'cafe24'}</td></tr>
-              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td></tr>
-              <tr><th>이번 달 가입</th><td>{monthlySignups}{shop.plan === 'free' && ' / 100'}</td></tr>
+              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td></tr>
+              <tr><th>이번 달 가입</th><td>{monthlySignups} <span style="color:#94a3b8;font-size:12px">건</span></td></tr>
               <tr><th>Client ID</th><td>
                 <code>{shop.client_id}</code>
                 <button class="copy-btn" onclick={`copyText('${shop.client_id}',this)`} style="position:static; margin-left:8px">복사</button>
@@ -536,6 +558,106 @@ export const ShopDetailPage: FC<{
           </div>
           <a href={`/dashboard/shops/${shop.shop_id}/setup`} class="btn btn-primary btn-sm">SSO 설정 가이드</a>
         </div>
+      </div>
+
+      {/* ─── 쿠폰 설정 카드 ─── */}
+      <div class="card" id="couponCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">쿠폰 설정</h2>
+          <div class="provider-toggle" style="border:none;padding:0;margin-bottom:0">
+            <label class="toggle">
+              <input type="checkbox" id="couponEnabled" checked={cc.enabled} />
+              <span class="toggle-slider"></span>
+            </label>
+            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">쿠폰 활성화</span>
+          </div>
+        </div>
+
+        <div id="couponFields" style={cc.enabled ? '' : 'display:none'}>
+          <div class="form-group">
+            <label style="font-size:13px;font-weight:600;color:#475569">쿠폰 번호 (coupon_no)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="couponNo" value={cc.coupon_no} placeholder="카페24 쿠폰 번호 입력" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" />
+            </div>
+            {cc.coupon_name && (
+              <p id="couponNameDisplay" style="font-size:12px;color:#22c55e;margin-top:4px">{cc.coupon_name}</p>
+            )}
+            {!cc.coupon_name && (
+              <p id="couponNameDisplay" style="font-size:12px;color:#94a3b8;margin-top:4px"></p>
+            )}
+          </div>
+
+          <div class="provider-toggle" style="border:none;padding:0;margin-top:12px">
+            <label class="toggle">
+              <input type="checkbox" id="multiCoupon" checked={cc.multi_coupon} disabled={!isPlus} />
+              <span class="toggle-slider" style={isPlus ? '' : 'cursor:not-allowed;opacity:0.5'}></span>
+            </label>
+            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">멀티 쿠폰</span>
+            {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
+            <span style="font-size:12px;color:#94a3b8;margin-left:8px">신규 가입 시 여러 쿠폰 동시 지급</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button id="saveCouponBtn" class="btn btn-primary btn-sm">저장</button>
+        </div>
+
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var shopId = '${shop.shop_id}';
+            var isPlus = ${JSON.stringify(isPlus)};
+
+            var enabledToggle = document.getElementById('couponEnabled');
+            var couponFields = document.getElementById('couponFields');
+            var multiCouponToggle = document.getElementById('multiCoupon');
+
+            enabledToggle.addEventListener('change', function() {
+              couponFields.style.display = this.checked ? '' : 'none';
+            });
+
+            if (!isPlus) {
+              multiCouponToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                showToast('warn', '멀티 쿠폰은 Plus 플랜에서만 사용할 수 있습니다.');
+              });
+            }
+
+            document.getElementById('saveCouponBtn').addEventListener('click', async function() {
+              var btn = this;
+              var couponNo = document.getElementById('couponNo').value.trim();
+              var enabled = enabledToggle.checked;
+              var multiCoupon = multiCouponToggle.checked && isPlus;
+
+              if (enabled && !couponNo) {
+                showToast('warn', '쿠폰 번호를 입력해주세요.');
+                return;
+              }
+
+              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon', {
+                enabled: enabled,
+                coupon_no: couponNo,
+                multi_coupon: multiCoupon,
+              }, btn);
+
+              if (resp.ok) {
+                var data = await resp.json();
+                var nameEl = document.getElementById('couponNameDisplay');
+                if (nameEl) {
+                  if (data.coupon_name) {
+                    nameEl.textContent = data.coupon_name;
+                    nameEl.style.color = '#22c55e';
+                  } else {
+                    nameEl.textContent = '';
+                  }
+                }
+                showToast('success', '쿠폰 설정이 저장되었습니다.');
+              } else {
+                var err = await resp.json();
+                showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+              }
+            });
+          })();
+        `}} />
       </div>
 
       <div class="card" style="border: 1px solid #fee2e2">
@@ -800,69 +922,32 @@ type BillingPageProps = {
 };
 
 export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, currentPlan, isCafe24 }) => {
-  const hasOverLimit = billingShops.some(s => s.is_over_limit);
-  const hasNearLimit = billingShops.some(s => s.needs_upgrade && !s.is_over_limit);
-
   return (
     <Layout title="플랜/과금" loggedIn currentPath="/dashboard/billing" isCafe24={isCafe24}>
       <h1>플랜/과금</h1>
 
-      {hasOverLimit && (
-        <div class="alert alert-error">
-          <div class="alert-banner">
-            <span>무료 플랜 한도(100건/월)를 초과한 쇼핑몰이 있습니다. 소셜 로그인 버튼이 비활성화됩니다.</span>
-            <a href="#plans" class="btn btn-primary btn-sm">유료 전환</a>
-          </div>
-        </div>
-      )}
-      {!hasOverLimit && hasNearLimit && (
-        <div class="alert alert-warn">
-          <div class="alert-banner">
-            <span>무료 플랜 한도(100건/월)에 근접한 쇼핑몰이 있습니다.</span>
-            <a href="#plans" class="btn btn-outline btn-sm">플랜 확인</a>
-          </div>
-        </div>
-      )}
-
       <div class="card">
-        <h2>{month} 사용 현황</h2>
+        <h2>{month} 가입 현황</h2>
 
         {billingShops.length === 0 ? (
           <div class="empty-state">
             <p>등록된 쇼핑몰이 없습니다.</p>
           </div>
         ) : (
-          <>
-            {billingShops.filter(s => s.plan === 'free').map((shop) => (
-              <ProgressBar
-                label={shop.shop_name || shop.shop_id}
-                value={shop.monthly_signups}
-                max={100}
-                color={shop.is_over_limit ? '#ef4444' : shop.needs_upgrade ? '#f59e0b' : '#22c55e'}
-              />
-            ))}
-
-            <div style="overflow-x:auto">
-              <table style="margin-top:16px">
-                <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th><th>한도</th><th>상태</th></tr></thead>
-                <tbody>
-                  {billingShops.map((shop) => (
-                    <tr>
-                      <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
-                      <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan}</span></td>
-                      <td>{shop.monthly_signups}</td>
-                      <td>{shop.plan === 'free' ? '100건/월' : '무제한'}</td>
-                      <td>
-                        {shop.is_over_limit && <span class="badge badge-red">한도 초과</span>}
-                        {!shop.is_over_limit && shop.needs_upgrade && <span class="badge badge-yellow">한도 근접</span>}
-                        {!shop.is_over_limit && !shop.needs_upgrade && <span class="badge badge-green">정상</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <div style="overflow-x:auto">
+            <table style="margin-top:4px">
+              <thead><tr><th>쇼핑몰</th><th>플랜</th><th>이번 달 가입</th></tr></thead>
+              <tbody>
+                {billingShops.map((shop) => (
+                  <tr>
+                    <td><a href={`/dashboard/shops/${shop.shop_id}`}>{shop.shop_name || shop.shop_id}</a></td>
+                    <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td>
+                    <td>{shop.monthly_signups} <span style="color:#94a3b8;font-size:12px">건</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -870,43 +955,47 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
         <h2 style="margin: 24px 0 16px">플랜 비교</h2>
         <div class="plan-grid">
           <div class={`plan-card${currentPlan === 'free' ? ' current' : ''}`}>
-            <h3>무료</h3>
+            <h3>Free</h3>
             <div class="price">₩0<small>/월</small></div>
             <ul>
-              <li>월 100건 신규 가입</li>
-              <li>소셜 로그인 4종</li>
+              <li>무제한 신규 가입</li>
+              <li>소셜 로그인 6종</li>
               <li>기본 통계</li>
               <li>이메일 지원</li>
             </ul>
             {currentPlan === 'free' && <span class="badge badge-green">현재 플랜</span>}
           </div>
           <div class={`plan-card${currentPlan === 'monthly' ? ' current' : ''}`}>
-            <h3>월간</h3>
-            <div class="price">₩29,900<small>/월</small></div>
+            <h3>Plus 월간</h3>
+            <div class="price">₩6,900<small>/월</small></div>
             <ul>
               <li>무제한 신규 가입</li>
-              <li>소셜 로그인 4종</li>
-              <li>고급 통계</li>
+              <li>소셜 로그인 6종</li>
+              <li>쿠폰 자동 지급</li>
+              <li>멀티 쿠폰 설정</li>
+              <li>브랜딩 제거</li>
               <li>우선 지원</li>
             </ul>
             {currentPlan === 'monthly'
               ? <span class="badge badge-green">현재 플랜</span>
-              : <button class="btn btn-primary btn-sm subscribe-btn" data-plan="monthly">월간 플랜 전환</button>
+              : <button class="btn btn-primary btn-sm subscribe-btn" data-plan="monthly">Plus 월간 전환</button>
             }
           </div>
           <div class={`plan-card${currentPlan === 'yearly' ? ' current' : ''}`}>
-            <h3>연간</h3>
-            <div class="price">₩329,900<small>/년</small></div>
-            <p style="font-size:12px;color:#22c55e;margin-bottom:8px">월 ₩27,492 (8% 할인)</p>
+            <h3>Plus 연간</h3>
+            <div class="price">₩79,000<small>/년</small></div>
+            <p style="font-size:12px;color:#22c55e;margin-bottom:8px">월 ₩6,584 (약 5% 할인)</p>
             <ul>
               <li>무제한 신규 가입</li>
-              <li>소셜 로그인 4종</li>
-              <li>고급 통계</li>
+              <li>소셜 로그인 6종</li>
+              <li>쿠폰 자동 지급</li>
+              <li>멀티 쿠폰 설정</li>
+              <li>브랜딩 제거</li>
               <li>우선 지원</li>
             </ul>
             {currentPlan === 'yearly'
               ? <span class="badge badge-green">현재 플랜</span>
-              : <button class="btn btn-primary btn-sm subscribe-btn" data-plan="yearly">연간 플랜 전환</button>
+              : <button class="btn btn-primary btn-sm subscribe-btn" data-plan="yearly">Plus 연간 전환</button>
             }
           </div>
         </div>
@@ -949,26 +1038,22 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
                 if (popup && !popup.closed) { popup.location.href = data.confirmation_url; }
                 else { window.location.href = data.confirmation_url; return; }
 
-                // 팝업 닫힘 감지
                 var checkPopup = setInterval(function() {
                   if (!popup || popup.closed) {
                     clearInterval(checkPopup);
-                    // 구독 상태 확인
                     fetch('/api/dashboard/billing/status/' + subId, { credentials: 'same-origin' })
                       .then(function(r) { return r.json(); })
                       .then(function(s) {
                         if (s.status === 'active') {
-                          // 결제 완료 → 페이지 새로고침
                           location.reload();
                         } else {
-                          // 결제 미완료 → 버튼 복원
                           btnEl.disabled = false;
-                          btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+                          btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
                         }
                       })
                       .catch(function() {
                         btnEl.disabled = false;
-                        btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+                        btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
                       });
                   }
                 }, 1000);
@@ -977,13 +1062,13 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
                 showToast('error', err.message || '결제 주문 생성에 실패했습니다.');
                 if (popup && !popup.closed) popup.close();
                 btnEl.disabled = false;
-                btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+                btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
               }
             } catch(e) {
               showToast('error', '오류: ' + e.message);
               if (popup && !popup.closed) popup.close();
               btnEl.disabled = false;
-              btnEl.textContent = plan === 'monthly' ? '월간 플랜 전환' : '연간 플랜 전환';
+              btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
             }
           });
         });
