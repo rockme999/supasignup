@@ -3054,6 +3054,70 @@ export const GeneralSettingsPage: FC<{
       </div>
     )}
 
+    {shop && (
+      <div class="card">
+        <h2>쇼핑몰 정체성 (AI 분석)</h2>
+        <p style="font-size:13px;color:#64748b;margin-bottom:12px">AI가 쇼핑몰을 분석하여 업종, 타겟 고객, 톤앤매너를 자동으로 파악합니다.</p>
+        <div id="identityDisplay" style="background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;color:#374151;white-space:pre-wrap;margin-bottom:12px;display:none"></div>
+        <button id="analyzeBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>쇼핑몰 분석하기</button>
+        <button id="confirmIdentityBtn" class="btn btn-outline btn-sm" style="margin-left:8px;display:none">확정</button>
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var display = document.getElementById('identityDisplay');
+            var analyzeBtn = document.getElementById('analyzeBtn');
+            var confirmBtn = document.getElementById('confirmIdentityBtn');
+            var shopId = analyzeBtn.dataset.shopId;
+
+            // 기존 정체성이 있으면 표시
+            fetch('/api/ai/identity?shop_id=' + shopId, { credentials: 'same-origin' })
+              .then(function(r) { return r.json(); })
+              .then(function(d) {
+                if (d.identity) {
+                  var id = d.identity;
+                  display.textContent = '업종: ' + (id.industry||'-') + '\\n타겟: ' + (id.target||id.target_audience||'-') + '\\n톤앤매너: ' + (id.tone||'-') + (id.summary ? '\\n요약: ' + id.summary : '');
+                  display.style.display = 'block';
+                  analyzeBtn.textContent = '다시 분석하기';
+                }
+              }).catch(function() {});
+
+            analyzeBtn.addEventListener('click', async function() {
+              analyzeBtn.disabled = true;
+              analyzeBtn.textContent = '분석 중...';
+              display.style.display = 'none';
+              try {
+                var resp = await fetch('/api/ai/identity', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  body: JSON.stringify({ shop_id: shopId })
+                });
+                var data = await resp.json();
+                if (resp.ok && data.identity) {
+                  var id = data.identity;
+                  display.textContent = '업종: ' + (id.industry||'-') + '\\n타겟: ' + (id.target||id.target_audience||'-') + '\\n톤앤매너: ' + (id.tone||'-') + (id.summary ? '\\n요약: ' + id.summary : '');
+                  display.style.display = 'block';
+                  confirmBtn.style.display = 'inline-flex';
+                  showToast('success', 'AI 분석이 완료되었습니다. 내용을 확인하고 확정해주세요.');
+                } else {
+                  showToast('error', data.message || 'AI 분석에 실패했습니다.');
+                }
+              } catch(e) {
+                showToast('error', '오류: ' + e.message);
+              } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '다시 분석하기';
+              }
+            });
+
+            confirmBtn.addEventListener('click', function() {
+              confirmBtn.style.display = 'none';
+              showToast('success', '쇼핑몰 정체성이 확정되었습니다.');
+            });
+          })();
+        `}} />
+      </div>
+    )}
+
     {!shop && (
       <div class="alert alert-info" style="margin-bottom:16px">
         아직 연결된 쇼핑몰이 없습니다. 카페24 앱스토어에서 번개가입을 설치하면 자동으로 연결됩니다.
