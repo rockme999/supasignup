@@ -367,6 +367,83 @@ dashboard.get('/shops/:id/setup', async (c) => {
   });
 });
 
+// ─── GET /shops/:id/coupon ───────────────────────────────────
+dashboard.get('/shops/:id/coupon', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  // coupon_config가 없으면 기본값 반환
+  const defaultConfig = { enabled: false, coupons: [], multi_coupon: false };
+  if (!shop.coupon_config) {
+    return c.json({ coupon_config: defaultConfig });
+  }
+
+  try {
+    const config = JSON.parse(shop.coupon_config);
+    return c.json({ coupon_config: config });
+  } catch {
+    return c.json({ coupon_config: defaultConfig });
+  }
+});
+
+// ─── PUT /shops/:id/coupon ───────────────────────────────────
+dashboard.put('/shops/:id/coupon', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  const body = await c.req.json<{
+    enabled?: boolean;
+    coupons?: unknown[];
+    multi_coupon?: boolean;
+  }>();
+
+  const isPlusPlan = shop.plan !== 'free';
+
+  // multi_coupon은 Plus 플랜에서만 허용; Free 플랜이면 false 강제
+  const multiCoupon = isPlusPlan ? (body.multi_coupon ?? false) : false;
+
+  // coupons 배열 검증 + 정규화: 허용 필드만 추출, coupon_no 필수
+  const rawCoupons = Array.isArray(body.coupons) ? body.coupons : [];
+  const validatedCoupons = rawCoupons
+    .filter((c): c is Record<string, unknown> =>
+      typeof c === 'object' && c !== null &&
+      typeof (c as any).coupon_no === 'number' &&
+      Number.isInteger((c as any).coupon_no) &&
+      (c as any).coupon_no > 0
+    )
+    .map(c => ({
+      coupon_no: c.coupon_no as number,
+      coupon_name: typeof c.coupon_name === 'string' ? c.coupon_name : undefined,
+      benefit_type: typeof c.benefit_type === 'string' ? c.benefit_type : undefined,
+      discount_amount: typeof c.discount_amount === 'number' ? c.discount_amount : undefined,
+      min_order: typeof c.min_order === 'number' ? c.min_order : undefined,
+      expire_days: typeof c.expire_days === 'number' ? c.expire_days : undefined,
+    }));
+  const coupons = isPlusPlan ? validatedCoupons : validatedCoupons.slice(0, 1);
+
+  const config = {
+    enabled: body.enabled ?? false,
+    coupons,
+    multi_coupon: multiCoupon,
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    coupon_config: JSON.stringify(config),
+  });
+
+  return c.json({ ok: true, coupon_config: config });
+});
+
 // ─── Helper ──────────────────────────────────────────────────
 
 function maskSecret(secret: string): string {

@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS shops (
   sso_configured         INTEGER NOT NULL DEFAULT 0,
   widget_style           TEXT,              -- JSON: {"preset":"default","buttonWidth":280,"buttonGap":8,"borderRadius":10,"align":"center"}
   sso_type               TEXT NOT NULL DEFAULT 'sso',  -- 카페24 SSO 슬롯 식별자 (sso, sso1, sso2, ...)
+  coupon_config          TEXT,                         -- JSON: {"enabled":false,"coupons":[...],"multi_coupon":false}
   deleted_at             TEXT,
   created_at             TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at             TEXT NOT NULL DEFAULT (datetime('now')),

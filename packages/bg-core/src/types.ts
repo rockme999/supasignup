@@ -12,9 +12,10 @@ export interface Shop {
   platform_access_token: string | null;
   platform_refresh_token: string | null;
   allowed_redirect_uris: string | null; // JSON array string
-  plan: 'free' | 'monthly' | 'yearly';
+  plan: 'free' | 'plus';
   sso_configured: number; // 0 or 1
   widget_style: string | null; // JSON string
+  coupon_config?: string | null; // JSON string (CouponConfig)
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -59,7 +60,8 @@ export interface Subscription {
   id: string;
   owner_id: string;
   shop_id: string;
-  plan: 'monthly' | 'yearly';
+  plan: 'plus';
+  billing_cycle: 'monthly' | 'yearly';
   status: 'pending' | 'active' | 'cancelled' | 'expired';
   payment_id: string | null;
   started_at: string;
@@ -202,15 +204,16 @@ export interface Env {
 }
 
 // Billing
-export const FREE_PLAN_MONTHLY_LIMIT = 100;
-export const FREE_PLAN_WARN_THRESHOLD = 80;
 export const PLANS = {
   FREE: 'free',
-  MONTHLY: 'monthly',
-  YEARLY: 'yearly',
+  PLUS: 'plus',
 } as const;
 
 export const PLAN_PRICES = {
-  monthly: 29900,
-  yearly: 329900,
+  monthly: 6900,
+  yearly: 79000,
 } as const;
+
+// v2: Free 무제한이지만 기존 billing/stats 코드 호환성을 위해 유지 (대시보드 개편 시 제거 예정)
+export const FREE_PLAN_MONTHLY_LIMIT = Infinity;
+export const FREE_PLAN_WARN_THRESHOLD = Infinity;

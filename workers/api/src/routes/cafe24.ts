@@ -14,6 +14,10 @@ import { hashPassword } from '../services/password';
 import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
 import { encrypt } from '@supasignup/bg-core';
+import { issueCouponOnSignup } from '../services/coupon';
+
+// 카페24 회원 가입 이벤트
+const MEMBER_JOINED = 90083;
 
 /**
  * 쇼핑몰의 allowed_redirect_uris 목록을 생성.
@@ -327,6 +331,24 @@ cafe24.post('/webhook', async (c) => {
           received_at: new Date().toISOString(),
         }), { expirationTtl: 300 });
         console.warn(`Payment webhook: no pending subscription for order_id=${orderId}, saved to KV for deferred processing`);
+      }
+    }
+  }
+
+  // ─── Member joined (90083) — 가입 쿠폰 자동 발급 ────────────
+  if (eventNo === MEMBER_JOINED) {
+    const mallId = payload.resource?.mall_id as string | undefined;
+    const memberId = payload.resource?.member_id as string | undefined;
+
+    if (mallId && memberId) {
+      const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
+      if (shop) {
+        // waitUntil로 Worker 수명 연장 — 응답(200) 반환 후에도 쿠폰 발급 완료까지 실행
+        c.executionCtx.waitUntil(
+          issueCouponOnSignup(c.env, shop, memberId).catch((err) => {
+            console.error(`[Coupon] 웹훅 쿠폰 발급 예외: mall=${mallId}, member=${memberId}`, err);
+          })
+        );
       }
     }
   }
