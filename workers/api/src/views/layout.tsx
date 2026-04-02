@@ -168,9 +168,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
     </a>
   );
 
-  const visibleSettingNavItems = isCafe24
-    ? settingNavItems.filter((item) => item.path !== '/dashboard/settings/general')
-    : settingNavItems;
+  const visibleSettingNavItems = settingNavItems;
 
   return (
   <html lang="ko">
