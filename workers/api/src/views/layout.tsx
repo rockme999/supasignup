@@ -18,25 +18,80 @@ const IconGrid = () => (
     <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
   </svg>
 );
-const IconStorefront = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4"/>
-  </svg>
-);
 const IconChartBar = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8" rx="1"/><rect x="14" y="6" width="3" height="12" rx="1"/>
   </svg>
 );
-const IconCreditCard = () => (
+const IconSparkle = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
   </svg>
 );
 const IconCog = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <circle cx="12" cy="12" r="3"/>
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+);
+const IconBook = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+  </svg>
+);
+const IconUsers = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+const IconPalette = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/>
+    <circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/>
+    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.042a1.65 1.65 0 0 1 1.648-1.648h1.99c3.029 0 5.589-2.56 5.589-5.589C22 6.5 17.5 2 12 2z"/>
+  </svg>
+);
+const IconTicket = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/>
+    <path d="M13 5v2M13 17v2M13 11v2"/>
+  </svg>
+);
+const IconFlag = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+    <line x1="4" y1="22" x2="4" y2="15"/>
+  </svg>
+);
+const IconBell = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+);
+const IconTrending = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+    <polyline points="17 6 23 6 23 12"/>
+  </svg>
+);
+const IconChat = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+const IconHelp = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+const IconCreditCard = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
   </svg>
 );
 const IconKey = () => (
@@ -47,12 +102,6 @@ const IconKey = () => (
 const IconBuilding = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
-  </svg>
-);
-const IconUsers = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
   </svg>
 );
 const IconCurrencyDollar = () => (
@@ -67,12 +116,36 @@ const IconClipboard = () => (
   </svg>
 );
 
-const navItems = [
+type NavItem = {
+  path: string;
+  label: string;
+  icon: unknown;
+  plus?: boolean;
+};
+
+const mainNavItems: NavItem[] = [
   { path: '/dashboard', label: '홈', icon: <IconGrid /> },
-  { path: '/dashboard/shops', label: '쇼핑몰 관리', icon: <IconStorefront /> },
-  { path: '/dashboard/stats', label: '통합 통계', icon: <IconChartBar /> },
-  { path: '/dashboard/billing', label: '플랜/과금', icon: <IconCreditCard /> },
-  { path: '/dashboard/settings', label: '계정 설정', icon: <IconCog /> },
+  { path: '/dashboard/stats', label: '통계', icon: <IconChartBar /> },
+  { path: '/dashboard/ai-reports', label: 'AI 보고서', icon: <IconSparkle />, plus: true },
+];
+
+const settingNavItems: NavItem[] = [
+  { path: '/dashboard/settings/general', label: '기본 설정', icon: <IconCog /> },
+  { path: '/dashboard/settings/sso-guide', label: 'SSO 설정 가이드', icon: <IconBook /> },
+  { path: '/dashboard/settings/providers', label: '소셜 프로바이더', icon: <IconUsers /> },
+  { path: '/dashboard/settings/login-design', label: '로그인 디자인', icon: <IconPalette /> },
+  { path: '/dashboard/settings/coupon', label: '쿠폰 설정', icon: <IconTicket /> },
+  { path: '/dashboard/settings/banner', label: '미니배너', icon: <IconFlag />, plus: true },
+  { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
+  { path: '/dashboard/settings/escalation', label: '에스컬레이션', icon: <IconTrending />, plus: true },
+  { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
+  { path: '/dashboard/settings/ai', label: 'AI 설정', icon: <IconSparkle />, plus: true },
+];
+
+const etcNavItems: NavItem[] = [
+  { path: '/dashboard/billing', label: '플랜 & 결제', icon: <IconCreditCard /> },
+  { path: '/dashboard/guide', label: '사용 가이드', icon: <IconHelp /> },
+  { path: '/dashboard/inquiries', label: '문의하기', icon: <IconChat /> },
 ];
 
 const adminNavItems = [
@@ -84,9 +157,22 @@ const adminNavItems = [
 ];
 
 export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, isCafe24, children }) => {
-  const visibleNavItems = isCafe24
-    ? navItems.filter((item) => item.path !== '/dashboard/settings')
-    : navItems;
+  const isActive = (item: NavItem) =>
+    item.path === '/dashboard'
+      ? currentPath === '/dashboard'
+      : currentPath?.startsWith(item.path) ?? false;
+
+  const renderNavLink = (item: NavItem) => (
+    <a href={item.path} class={isActive(item) ? 'active' : ''}>
+      {item.icon} {item.label}
+      {item.plus && <span class="nav-plus-badge">Plus</span>}
+    </a>
+  );
+
+  const visibleSettingNavItems = isCafe24
+    ? settingNavItems.filter((item) => item.path !== '/dashboard/settings/general')
+    : settingNavItems;
+
   return (
   <html lang="ko">
     <head>
@@ -269,6 +355,27 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           .provider-layout { grid-template-columns: 1fr !important; }
         }
 
+        /* Nav section label */
+        .nav-section-label {
+          padding: 16px 20px 4px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        /* Plus badge */
+        .nav-plus-badge {
+          font-size: 10px;
+          padding: 1px 6px;
+          border-radius: 4px;
+          background: #7c3aed;
+          color: #fff;
+          margin-left: auto;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+
         /* Site footer */
         .site-footer {
           margin-top: 48px;
@@ -329,14 +436,14 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           <div class="mobile-nav-drawer" id="mobile-nav-drawer">
             <div class="sidebar-logo">⚡ <span>번개가입</span></div>
             <nav>
-              {visibleNavItems.map((item) => (
-                <a
-                  href={item.path}
-                  class={currentPath === item.path || (item.path !== '/dashboard' && currentPath?.startsWith(item.path)) ? 'active' : ''}
-                >
-                  {item.icon} {item.label}
-                </a>
-              ))}
+              {mainNavItems.map(renderNavLink)}
+
+              <div class="nav-section-label">설정</div>
+              {visibleSettingNavItems.map(renderNavLink)}
+
+              <div class="nav-section-label">기타</div>
+              {etcNavItems.map(renderNavLink)}
+
               {isAdmin && (
                 <>
                   <div style="border-top:1px solid #334155;margin:12px 0"></div>
@@ -362,14 +469,14 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           <aside class="sidebar">
             <div class="sidebar-logo">⚡ <span>번개가입</span></div>
             <nav>
-              {visibleNavItems.map((item) => (
-                <a
-                  href={item.path}
-                  class={currentPath === item.path || (item.path !== '/dashboard' && currentPath?.startsWith(item.path)) ? 'active' : ''}
-                >
-                  {item.icon} {item.label}
-                </a>
-              ))}
+              {mainNavItems.map(renderNavLink)}
+
+              <div class="nav-section-label">설정</div>
+              {visibleSettingNavItems.map(renderNavLink)}
+
+              <div class="nav-section-label">기타</div>
+              {etcNavItems.map(renderNavLink)}
+
               {isAdmin && (
                 <>
                   <div style="border-top:1px solid #334155;margin:12px 0"></div>
