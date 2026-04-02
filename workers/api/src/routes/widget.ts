@@ -107,20 +107,14 @@ widget.post('/event', async (c) => {
     return c.json({ error: 'invalid_client_id' }, 404);
   }
 
-  // funnel_events 테이블이 준비될 때까지 KV에 임시 저장 (30일 보존)
-  const eventKey = `event:${shop.shop_id}:${Date.now()}`;
+  // funnel_events 테이블에 D1으로 영구 저장
+  const eventId = crypto.randomUUID();
   c.executionCtx.waitUntil(
-    c.env.KV.put(
-      eventKey,
-      JSON.stringify({
-        shop_id: shop.shop_id,
-        event_type: body.event_type,
-        event_data: body.event_data || {},
-        page_url: body.page_url || '',
-        created_at: new Date().toISOString(),
-      }),
-      { expirationTtl: 86400 * 30 },
-    ),
+    c.env.DB.prepare(
+      'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url) VALUES (?, ?, ?, ?, ?)'
+    )
+      .bind(eventId, shop.shop_id, body.event_type, JSON.stringify(body.event_data || {}), body.page_url || '')
+      .run(),
   );
 
   return c.json({ ok: true });

@@ -29,6 +29,7 @@ import {
   AdminSubscriptionsPage,
   AdminAuditLogPage,
   AdminOwnersPage,
+  AiBriefingPage,
 } from '../views/pages';
 
 type PageEnv = {
@@ -312,6 +313,18 @@ pages.get('/dashboard/stats', async (c) => {
   const dailyParams: string[] = [ownerId, sinceDateStr];
   if (shopIdFilter) dailyParams.push(shopIdFilter);
 
+  // Funnel data (only when a specific shop is selected)
+  let funnelData: { event_type: string; cnt: number }[] = [];
+  if (shopIdFilter) {
+    const funnelResult = await c.env.DB.prepare(
+      `SELECT event_type, COUNT(*) as cnt
+       FROM funnel_events
+       WHERE shop_id = ? AND created_at > datetime('now', '-7 days')
+       GROUP BY event_type`,
+    ).bind(shopIdFilter).all<{ event_type: string; cnt: number }>();
+    funnelData = funnelResult.results ?? [];
+  }
+
   // All queries in parallel
   const [totalResult, todayResult, monthResult, providerResult, dailyResult, shopsResult] = await Promise.all([
     c.env.DB.prepare(
@@ -379,6 +392,7 @@ pages.get('/dashboard/stats', async (c) => {
       shops={shopsResult.results ?? []}
       currentShopId={shopIdFilter}
       currentPeriod={period}
+      funnelData={funnelData}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -462,11 +476,11 @@ pages.get('/dashboard/shops/:id', async (c) => {
 
   const shop = await c.env.DB
     .prepare(
-      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at, coupon_config
+      `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan, enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id
        FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL`,
     )
     .bind(shopId, ownerId)
-    .first<ShopRow & { coupon_config: string | null }>();
+    .first<ShopRow & { coupon_config: string | null; kakao_channel_id: string | null }>();
 
   if (!shop) return c.redirect('/dashboard/shops');
 
@@ -497,6 +511,7 @@ pages.get('/dashboard/shops/:id', async (c) => {
       monthlySignups={countResult?.cnt ?? 0}
       baseUrl={c.env.BASE_URL}
       couponConfig={couponConfig}
+      kakaoChannelId={shop.kakao_channel_id ?? ''}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -902,6 +917,26 @@ pages.get('/admin/owners', async (c) => {
       owners={ownersResult.results ?? []}
       pagination={{ page, pages: Math.ceil(total / limit), total }}
       search={search}
+    />
+  );
+});
+
+// ─── AI 브리핑 페이지 ────────────────────────────────────────
+pages.get('/dashboard/shops/:id/ai-briefing', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await c.env.DB
+    .prepare('SELECT shop_id, shop_name, mall_id, plan FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
+    .bind(shopId, ownerId)
+    .first<{ shop_id: string; shop_name: string; mall_id: string; plan: string }>();
+
+  if (!shop) return c.redirect('/dashboard/shops');
+
+  return c.html(
+    <AiBriefingPage
+      shop={shop}
+      isCafe24={c.get('isCafe24')}
     />
   );
 });

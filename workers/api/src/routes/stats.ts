@@ -262,6 +262,68 @@ stats.get('/stats/:shop_id', async (c) => {
   });
 });
 
+// ─── GET /stats/funnel ──────────────────────────────────────
+stats.get('/stats/funnel', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.query('shop_id');
+  const period = c.req.query('period') || '7d';
+
+  if (!shopId) {
+    return c.json({ error: 'shop_id_required' }, 400);
+  }
+
+  // Verify ownership
+  const shop = await c.env.DB
+    .prepare('SELECT shop_id FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
+    .bind(shopId, ownerId)
+    .first();
+
+  if (!shop) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  // Build date window
+  let sinceExpr = "datetime('now', '-7 days')";
+  if (period === 'today') sinceExpr = "datetime('now', 'start of day')";
+  else if (period === '30d') sinceExpr = "datetime('now', '-30 days')";
+  else if (period === 'month') sinceExpr = "datetime('now', 'start of month')";
+
+  const result = await c.env.DB
+    .prepare(
+      `SELECT event_type, COUNT(*) as cnt
+       FROM funnel_events
+       WHERE shop_id = ? AND created_at >= ${sinceExpr}
+       GROUP BY event_type`,
+    )
+    .bind(shopId)
+    .all<{ event_type: string; cnt: number }>();
+
+  const counts: Record<string, number> = {};
+  for (const row of result.results ?? []) {
+    counts[row.event_type] = row.cnt;
+  }
+
+  const bannerShow   = counts['banner_show']   ?? 0;
+  const bannerClick  = counts['banner_click']  ?? 0;
+  const popupShow    = counts['popup_show']    ?? 0;
+  const popupSignup  = counts['popup_signup']  ?? 0;
+  const signupComplete = counts['signup_complete'] ?? 0;
+
+  return c.json({
+    period,
+    shop_id: shopId,
+    banner_show:      bannerShow,
+    banner_click:     bannerClick,
+    popup_show:       popupShow,
+    popup_signup:     popupSignup,
+    signup_complete:  signupComplete,
+    // 전환율 (0~100 정수 %)
+    banner_ctr:     bannerShow   > 0 ? Math.round((bannerClick  / bannerShow)  * 100) : 0,
+    popup_cvr:      popupShow    > 0 ? Math.round((popupSignup  / popupShow)   * 100) : 0,
+    overall_cvr:    bannerShow   > 0 ? Math.round((signupComplete / bannerShow) * 100) : 0,
+  });
+});
+
 // ─── GET /billing ────────────────────────────────────────────
 stats.get('/billing/status', async (c) => {
   const ownerId = c.get('ownerId');

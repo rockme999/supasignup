@@ -501,8 +501,9 @@ export const ShopDetailPage: FC<{
   monthlySignups: number;
   baseUrl: string;
   couponConfig: CouponConfig | null;
+  kakaoChannelId?: string;
   isCafe24?: boolean;
-}> = ({ shop, monthlySignups, baseUrl, couponConfig, isCafe24 }) => {
+}> = ({ shop, monthlySignups, baseUrl, couponConfig, kakaoChannelId, isCafe24 }) => {
   const providers = parseProviders(shop.enabled_providers);
   const isPlus = shop.plan !== 'free';
   const cc = couponConfig ?? { enabled: false, coupon_no: '', coupon_name: '', multi_coupon: false };
@@ -656,6 +657,144 @@ export const ShopDetailPage: FC<{
                 showToast('error', err.error || '저장 중 오류가 발생했습니다.');
               }
             });
+          })();
+        `}} />
+      </div>
+
+      {/* ─── Plus 기능 카드 ─── */}
+      <div class="card" style={isPlus ? '' : 'opacity:0.85'}>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0">Plus 기능</h2>
+          {!isPlus && (
+            <a href="/dashboard/billing" class="badge badge-gray" style="text-decoration:none;font-size:12px;padding:4px 10px">
+              Plus 업그레이드 필요
+            </a>
+          )}
+        </div>
+
+        {/* 카카오 채널 ID */}
+        <div class="form-group" style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:6px">
+            카카오 채널 ID
+            {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
+          </label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input
+              type="text"
+              id="kakaoChannelId"
+              value={kakaoChannelId || ''}
+              placeholder="예: @my-shop-kakao"
+              disabled={!isPlus}
+              style={`flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;${!isPlus ? 'background:#f8fafc;cursor:not-allowed' : ''}`}
+            />
+            <button
+              id="saveKakaoBtn"
+              class="btn btn-outline btn-sm"
+              disabled={!isPlus}
+              style={!isPlus ? 'cursor:not-allowed;opacity:0.5' : ''}
+            >
+              저장
+            </button>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin-top:4px">신규 가입 시 카카오 채널 추가 유도에 사용됩니다.</p>
+        </div>
+
+        {/* AI 쇼핑몰 분석 */}
+        <div style="border-top:1px solid #f1f5f9;padding-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <p style="font-size:13px;font-weight:600;color:#475569;margin-bottom:2px">
+                AI 쇼핑몰 정체성 분석
+                {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
+              </p>
+              <p style="font-size:12px;color:#94a3b8">업종·타겟 고객·톤앤매너를 AI가 자동 분석합니다.</p>
+            </div>
+            <button
+              id="analyzeIdentityBtn"
+              class="btn btn-outline btn-sm"
+              data-shop-id={shop.shop_id}
+              disabled={!isPlus}
+              style={!isPlus ? 'cursor:not-allowed;opacity:0.5' : ''}
+            >
+              쇼핑몰 분석하기
+            </button>
+          </div>
+          <div id="identityResult" style="display:none;margin-top:12px;background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;color:#374151;white-space:pre-wrap"></div>
+        </div>
+
+        {/* AI 브리핑 링크 */}
+        {isPlus && (
+          <div style="border-top:1px solid #f1f5f9;padding-top:16px;margin-top:0">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <p style="font-size:13px;font-weight:600;color:#475569;margin-bottom:2px">AI 주간 브리핑</p>
+                <p style="font-size:12px;color:#94a3b8">지난 주 성과 분석 및 이번 주 전략을 AI가 생성합니다.</p>
+              </div>
+              <a href={`/dashboard/shops/${shop.shop_id}/ai-briefing`} class="btn btn-outline btn-sm">브리핑 보기 →</a>
+            </div>
+          </div>
+        )}
+
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var shopId = '${shop.shop_id}';
+            var isPlus = ${JSON.stringify(isPlus)};
+
+            // 카카오 채널 ID 저장
+            var saveKakaoBtn = document.getElementById('saveKakaoBtn');
+            if (saveKakaoBtn && isPlus) {
+              saveKakaoBtn.addEventListener('click', async function() {
+                var btn = this;
+                var channelId = document.getElementById('kakaoChannelId').value.trim();
+                var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/kakao-channel', { kakao_channel_id: channelId }, btn);
+                if (resp.ok) {
+                  showToast('success', '카카오 채널 ID가 저장되었습니다.');
+                } else {
+                  var err = await resp.json();
+                  showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+                }
+              });
+            }
+
+            // AI 쇼핑몰 분석
+            var analyzeBtn = document.getElementById('analyzeIdentityBtn');
+            if (analyzeBtn && isPlus) {
+              analyzeBtn.addEventListener('click', async function() {
+                var btn = this;
+                var resultEl = document.getElementById('identityResult');
+                btn.disabled = true;
+                btn.textContent = '분석 중...';
+                resultEl.style.display = 'none';
+                try {
+                  var resp = await fetch('/api/ai/identity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ shop_id: shopId })
+                  });
+                  var data = await resp.json();
+                  if (resp.ok && data.identity) {
+                    var id = data.identity;
+                    var text = [
+                      '업종: ' + (id.industry || '-'),
+                      '타겟 고객: ' + (id.target_audience || '-'),
+                      '톤앤매너: ' + (id.tone || '-'),
+                      id.summary ? '\\n' + id.summary : ''
+                    ].filter(Boolean).join('\\n');
+                    resultEl.textContent = text;
+                    resultEl.style.display = 'block';
+                    showToast('success', 'AI 분석이 완료되었습니다.');
+                  } else {
+                    showToast('error', data.message || 'AI 분석에 실패했습니다.');
+                  }
+                } catch(e) {
+                  showToast('error', '오류: ' + e.message);
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = '쇼핑몰 분석하기';
+                }
+              });
+            }
           })();
         `}} />
       </div>
@@ -817,16 +956,19 @@ export const ShopSetupPage: FC<{
 
 // ─── Stats Page ─────────────────────────────────────────────
 
+type FunnelEventRow = { event_type: string; cnt: number };
+
 type StatsPageProps = {
   stats: HomeStats;
   daily: DailyData[];
   shops: { shop_id: string; shop_name: string }[];
   currentShopId: string | null;
   currentPeriod: string;
+  funnelData?: FunnelEventRow[];
   isCafe24?: boolean;
 };
 
-export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShopId, currentPeriod, isCafe24 }) => {
+export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShopId, currentPeriod, funnelData, isCafe24 }) => {
   const periodOptions = [
     { value: '', label: '전체 기간' },
     { value: 'today', label: '오늘' },
@@ -895,6 +1037,69 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
         <h3>일별 추이</h3>
         <LineChart data={daily} />
       </div>
+
+      {/* ─── 퍼널 차트 (쇼핑몰 선택 시만 표시) ─── */}
+      {currentShopId && funnelData !== undefined && (() => {
+        const counts: Record<string, number> = {};
+        for (const row of funnelData) counts[row.event_type] = row.cnt;
+
+        const steps = [
+          { key: 'banner_show',     label: '배너 노출',   color: '#bfdbfe' },
+          { key: 'banner_click',    label: '배너 클릭',   color: '#93c5fd' },
+          { key: 'popup_show',      label: '팝업 노출',   color: '#60a5fa' },
+          { key: 'popup_signup',    label: '팝업 가입',   color: '#3b82f6' },
+          { key: 'signup_complete', label: '가입 완료',   color: '#1d4ed8' },
+        ];
+
+        const maxCnt = Math.max(1, ...steps.map(s => counts[s.key] ?? 0));
+
+        const bannerShow  = counts['banner_show']   ?? 0;
+        const bannerClick = counts['banner_click']  ?? 0;
+        const popupSignup = counts['popup_signup']  ?? 0;
+        const signupDone  = counts['signup_complete'] ?? 0;
+
+        const bannerCtr = bannerShow  > 0 ? Math.round((bannerClick / bannerShow) * 100)  : 0;
+        const popupCvr  = bannerClick > 0 ? Math.round((popupSignup / bannerClick) * 100) : 0;
+        const overallCvr = bannerShow > 0 ? Math.round((signupDone  / bannerShow)  * 100) : 0;
+
+        return (
+          <div class="card" style="margin-top:16px">
+            <h3 style="margin-bottom:16px">퍼널 분석 <span style="font-size:12px;color:#94a3b8;font-weight:400">(최근 7일)</span></h3>
+
+            {funnelData.length === 0 ? (
+              <div class="empty-state"><p>퍼널 이벤트 데이터가 없습니다.</p></div>
+            ) : (
+              <div>
+                {steps.map(step => {
+                  const val = counts[step.key] ?? 0;
+                  const barPct = Math.max(Math.round((val / maxCnt) * 100), val > 0 ? 2 : 0);
+                  return (
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                      <span style="width:84px;font-size:13px;color:#475569;flex-shrink:0">{step.label}</span>
+                      <div style="flex:1;background:#f1f5f9;border-radius:4px;height:24px;overflow:hidden">
+                        <div style={`width:${barPct}%;background:${step.color};height:100%;border-radius:4px;transition:width .3s`}></div>
+                      </div>
+                      <span style="width:52px;text-align:right;font-size:13px;font-weight:600;color:#1e293b">{val.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
+
+                <div style="border-top:1px solid #f1f5f9;margin-top:12px;padding-top:12px;display:flex;gap:24px;flex-wrap:wrap">
+                  <div style="font-size:12px;color:#64748b">
+                    배너 CTR <strong style="color:#1e293b">{bannerCtr}%</strong>
+                  </div>
+                  <div style="font-size:12px;color:#64748b">
+                    팝업 CVR <strong style="color:#1e293b">{popupCvr}%</strong>
+                  </div>
+                  <div style="font-size:12px;color:#64748b">
+                    전체 전환율 <strong style="color:#1d4ed8">{overallCvr}%</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <script dangerouslySetInnerHTML={{__html: `
         function applyFilters() {
@@ -3207,3 +3412,127 @@ export const LandingPage: FC = () => (
     </body>
   </html>
 );
+
+// ─── AI 브리핑 페이지 ───────────────────────────────────────
+
+export const AiBriefingPage: FC<{
+  shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
+  isCafe24?: boolean;
+}> = ({ shop, isCafe24 }) => {
+  const isPlus = shop.plan !== 'free';
+
+  return (
+    <Layout title="AI 주간 브리핑" loggedIn currentPath="/dashboard/shops" isCafe24={isCafe24}>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <a href={`/dashboard/shops/${shop.shop_id}`} style="font-size:14px;color:#64748b;text-decoration:none">
+          ← {shop.shop_name || shop.mall_id}
+        </a>
+      </div>
+
+      <h1 style="margin-bottom:4px">AI 주간 브리핑</h1>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">지난 주 성과를 분석하고 이번 주 전략을 AI가 생성합니다.</p>
+
+      {!isPlus ? (
+        <div class="card" style="text-align:center;padding:48px 24px">
+          <div style="font-size:40px;margin-bottom:16px">🔒</div>
+          <h2 style="margin-bottom:8px">Plus 전용 기능</h2>
+          <p style="font-size:14px;color:#64748b;margin-bottom:20px">AI 주간 브리핑은 Plus 플랜에서만 사용할 수 있습니다.</p>
+          <a href="/dashboard/billing" class="btn btn-primary">Plus 업그레이드</a>
+        </div>
+      ) : (
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <h2 style="margin-bottom:4px">브리핑 생성</h2>
+                <p style="font-size:13px;color:#94a3b8">최근 7일 데이터를 기반으로 AI가 분석 리포트를 생성합니다.</p>
+              </div>
+              <button id="generateBriefingBtn" class="btn btn-primary" data-shop-id={shop.shop_id}>
+                브리핑 생성하기
+              </button>
+            </div>
+          </div>
+
+          <div id="briefingLoading" style="display:none;text-align:center;padding:32px;color:#64748b;font-size:14px">
+            AI가 분석 중입니다. 잠시 기다려주세요...
+          </div>
+
+          <div id="briefingResult" style="display:none">
+            {/* 지난 주 성과 */}
+            <div class="card" style="margin-bottom:16px">
+              <h2 style="margin-bottom:12px;font-size:16px;color:#1e293b">지난 주 성과</h2>
+              <div id="briefingPerformance" style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap"></div>
+            </div>
+
+            {/* 이번 주 전략 */}
+            <div class="card" style="margin-bottom:16px">
+              <h2 style="margin-bottom:12px;font-size:16px;color:#1e293b">이번 주 전략</h2>
+              <div id="briefingStrategy" style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap"></div>
+            </div>
+
+            {/* AI 추천 액션 */}
+            <div class="card">
+              <h2 style="margin-bottom:12px;font-size:16px;color:#1e293b">AI 추천 액션</h2>
+              <div id="briefingActions" style="font-size:14px;color:#374151;line-height:1.7"></div>
+            </div>
+          </div>
+
+          <script dangerouslySetInnerHTML={{__html: `
+            (function() {
+              var shopId = '${shop.shop_id}';
+              var btn = document.getElementById('generateBriefingBtn');
+              var loadingEl = document.getElementById('briefingLoading');
+              var resultEl = document.getElementById('briefingResult');
+
+              btn.addEventListener('click', async function() {
+                btn.disabled = true;
+                btn.textContent = '생성 중...';
+                loadingEl.style.display = 'block';
+                resultEl.style.display = 'none';
+
+                try {
+                  var resp = await fetch('/api/ai/briefing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ shop_id: shopId })
+                  });
+                  var data = await resp.json();
+
+                  if (resp.ok && data.briefing) {
+                    var b = data.briefing;
+
+                    document.getElementById('briefingPerformance').textContent = b.performance || '-';
+                    document.getElementById('briefingStrategy').textContent = b.strategy || '-';
+
+                    var actionsEl = document.getElementById('briefingActions');
+                    if (Array.isArray(b.actions) && b.actions.length > 0) {
+                      actionsEl.innerHTML = b.actions.map(function(a, i) {
+                        return '<div style="display:flex;gap:10px;margin-bottom:10px"><span style="width:22px;height:22px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#1d4ed8;flex-shrink:0">' + (i+1) + '</span><span>' + a + '</span></div>';
+                      }).join('');
+                    } else {
+                      actionsEl.textContent = b.actions || '-';
+                    }
+
+                    loadingEl.style.display = 'none';
+                    resultEl.style.display = 'block';
+                    showToast('success', 'AI 브리핑이 생성되었습니다.');
+                  } else {
+                    loadingEl.style.display = 'none';
+                    showToast('error', data.message || 'AI 브리핑 생성에 실패했습니다.');
+                  }
+                } catch(e) {
+                  loadingEl.style.display = 'none';
+                  showToast('error', '오류: ' + e.message);
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = '브리핑 생성하기';
+                }
+              });
+            })();
+          `}} />
+        </div>
+      )}
+    </Layout>
+  );
+};

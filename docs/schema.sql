@@ -8,6 +8,7 @@
 --   2026-04-02: shops.sso_type 컬럼 추가 (카페24 SSO 앱 슬롯 식별자: sso, sso1, sso2 ...)
 --   2026-04-02: shops.plan CHECK 변경 (free/plus), subscriptions 구조 변경 (billing_cycle 분리)
 --   2026-04-02: shops.kakao_channel_id 추가 (Plus: 카카오 채널), shops.shop_identity 추가 (Plus: AI 정체성 분석)
+--   2026-04-02: funnel_events 테이블 추가 (퍼널 이벤트 D1 영구저장)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -160,3 +161,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_id ON audit_logs(actor_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+
+-- ============================================================
+-- 9. funnel_events - Widget funnel tracking (D1 persistent)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS funnel_events (
+  id         TEXT PRIMARY KEY,
+  shop_id    TEXT NOT NULL REFERENCES shops(shop_id),
+  event_type TEXT NOT NULL,           -- banner_show | banner_click | popup_show | popup_signup | signup_complete | popup_close | escalation_show
+  event_data TEXT,                    -- JSON payload
+  page_url   TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_funnel_events_shop_id    ON funnel_events(shop_id);
+CREATE INDEX IF NOT EXISTS idx_funnel_events_created_at ON funnel_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_funnel_events_type       ON funnel_events(event_type);

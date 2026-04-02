@@ -444,6 +444,34 @@ dashboard.put('/shops/:id/coupon', async (c) => {
   return c.json({ ok: true, coupon_config: config });
 });
 
+// ─── PUT /shops/:id/kakao-channel ────────────────────────────
+
+dashboard.put('/shops/:id/kakao-channel', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await c.env.DB
+    .prepare('SELECT shop_id, plan FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
+    .bind(shopId, ownerId)
+    .first<{ shop_id: string; plan: string }>();
+
+  if (!shop) return c.json({ error: 'not_found' }, 404);
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required', message: '카카오 채널 ID는 Plus 플랜에서만 설정할 수 있습니다.' }, 403);
+  }
+
+  const body = await c.req.json<{ kakao_channel_id?: string }>();
+  const channelId = (body.kakao_channel_id ?? '').trim();
+
+  await c.env.DB
+    .prepare("UPDATE shops SET kakao_channel_id = ?, updated_at = datetime('now') WHERE shop_id = ?")
+    .bind(channelId || null, shopId)
+    .run();
+
+  return c.json({ ok: true });
+});
+
 // ─── Helper ──────────────────────────────────────────────────
 
 function maskSecret(secret: string): string {
