@@ -460,9 +460,6 @@ pages.get('/dashboard/billing', async (c) => {
 // ─── Settings: General ──────────────────────────────────────
 
 pages.get('/dashboard/settings/general', async (c) => {
-  if (c.get('isCafe24')) {
-    return c.redirect('/dashboard');
-  }
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
   const owner = await c.env.DB

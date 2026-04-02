@@ -344,12 +344,12 @@ export const HomePage: FC<{
         <h2 style="margin-bottom:16px">빠른 바로가기</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
           <a href="/dashboard/settings/providers" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-            <span style="font-size:28px">👥</span>
-            <span style="font-size:13px;font-weight:600">소셜 프로바이더</span>
-          </a>
-          <a href="/dashboard/settings/login-design" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">🎨</span>
             <span style="font-size:13px;font-weight:600">로그인 디자인</span>
+          </a>
+          <a href="/dashboard/settings/sso-guide" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">🔑</span>
+            <span style="font-size:13px;font-weight:600">SSO 설정 가이드</span>
           </a>
           <a href="/dashboard/settings/coupon" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">🎟️</span>
