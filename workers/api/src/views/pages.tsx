@@ -3820,7 +3820,7 @@ export const InquiriesPage: FC<{
         <div class="empty-state">
           <p style="color:#64748b;font-size:14px">아직 문의 내역이 없습니다. 위 버튼을 눌러 문의를 남겨보세요.</p>
           <p style="font-size:13px;color:#94a3b8;margin-top:8px">
-            긴급 문의: <a href="mailto:help@suparain.com">help@suparain.com</a> / 031-992-5988
+            긴급 문의: <a href="mailto:help@suparain.com">help@suparain.com</a>
           </p>
         </div>
       ) : (
