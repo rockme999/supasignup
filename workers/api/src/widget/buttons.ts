@@ -217,6 +217,10 @@ export const WIDGET_JS = `(function() {
         if (config.plan === 'plus') {
           self.initMiniBanner(config);
           self.initExitPopup(config);
+          self.initEscalation(config);
+          if (config.kakao_channel_id) {
+            self.initKakaoChannel(config);
+          }
         }
       })
       .catch(function(err) {
@@ -867,7 +871,237 @@ export const WIDGET_JS = `(function() {
     }
   };
 
-  // ─── Initialize ──────────────────────────────────────────────
+  // ─── Plus: 카카오 채널 추가 안내 ──────────────────────────────
+  BGWidget.prototype.initKakaoChannel = function(config) {
+    var self = this;
+
+    // 가입 완료 페이지(/member/join.html)에서만 동작
+    var path = window.location.pathname.toLowerCase();
+    var isJoinPage = path.indexOf('/member/join') >= 0;
+    if (!isJoinPage) return;
+
+    var channelId = config.kakao_channel_id;
+    if (!channelId) return;
+
+    // 카카오 채널 추가 버튼 생성
+    var btn = document.createElement('button');
+    var bs = btn.style;
+    bs.display = 'flex';
+    bs.alignItems = 'center';
+    bs.justifyContent = 'center';
+    bs.gap = '8px';
+    bs.width = '100%';
+    bs.maxWidth = '320px';
+    bs.margin = '12px auto 0';
+    bs.padding = '12px 16px';
+    bs.background = '#FEE500';
+    bs.color = '#191919';
+    bs.border = 'none';
+    bs.borderRadius = '10px';
+    bs.fontSize = '14px';
+    bs.fontWeight = '600';
+    bs.cursor = 'pointer';
+    bs.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+    bs.boxSizing = 'border-box';
+
+    // 카카오 아이콘 (SVG)
+    var iconSpan = document.createElement('span');
+    iconSpan.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="#191919" d="M12 3C6.48 3 2 6.36 2 10.4c0 2.6 1.72 4.88 4.3 6.18l-1.1 4.02c-.08.3.26.54.52.36l4.78-3.18c.48.06.98.1 1.5.1 5.52 0 10-3.36 10-7.48C22 6.36 17.52 3 12 3z"/></svg>';
+
+    var label = document.createElement('span');
+    label.textContent = '\\uCE74\\uCE74\\uC624 \\uCC44\\uB110 \\uCD94\\uAC00\\uD558\\uACE0 \\uC54C\\uB9BC \\uBC1B\\uAE30'; // 카카오 채널 추가하고 알림 받기
+
+    btn.appendChild(iconSpan);
+    btn.appendChild(label);
+
+    btn.addEventListener('mouseenter', function() { this.style.opacity = '0.85'; });
+    btn.addEventListener('mouseleave', function() { this.style.opacity = '1'; });
+
+    btn.addEventListener('click', function() {
+      self.trackEvent('kakao_channel_click', { channel_id: channelId });
+      window.open('https://pf.kakao.com/' + channelId + '/friend', '_blank');
+    });
+
+    // 가입 완료 영역 찾아서 버튼 삽입
+    var joinComplete = document.querySelector('.xans-member-join') || document.querySelector('#member_join') || document.querySelector('.join_wrap');
+    if (joinComplete) {
+      joinComplete.appendChild(btn);
+    } else {
+      // 영역을 찾지 못하면 body 하단에 플로팅 형태로 표시
+      btn.style.position = 'fixed';
+      btn.style.bottom = '80px';
+      btn.style.left = '50%';
+      btn.style.transform = 'translateX(-50%)';
+      btn.style.zIndex = '99998';
+      btn.style.boxShadow = '0 4px 20px rgba(0,0,0,.2)';
+      document.body.appendChild(btn);
+    }
+
+    // 토스트 안내 표시
+    self.showToast('\\uCE74\\uCE74\\uC624 \\uCC44\\uB110 \\uCD94\\uAC00\\uD558\\uACE0 \\uC54C\\uB9BC \\uBC1B\\uC544\\uBCF4\\uC138\\uC694! \\u2764\\uFE0F'); // 카카오 채널 추가하고 알림 받아보세요! ❤️
+    self.trackEvent('kakao_channel_show', {});
+  };
+
+  // ─── Plus: 재방문 비회원 에스컬레이션 ──────────────────────────
+  BGWidget.prototype.initEscalation = function(config) {
+    var self = this;
+
+    // 카페24 로그인 상태 감지 — 이미 로그인한 회원은 표시 안 함
+    var isLoggedIn = false;
+    // 방법 1: MemberAction 객체 존재 확인 (카페24 전용 전역 객체)
+    try {
+      if (typeof MemberAction !== 'undefined' && MemberAction.isLogin && MemberAction.isLogin()) {
+        isLoggedIn = true;
+      }
+    } catch (e) {}
+    // 방법 2: DOM에서 로그인 여부 확인 (로그아웃 링크 존재 시 로그인 상태)
+    if (!isLoggedIn) {
+      var logoutLink = document.querySelector('a[href*="/member/logout"]');
+      if (logoutLink) isLoggedIn = true;
+    }
+    if (isLoggedIn) return;
+
+    // 방문 횟수 카운트 (localStorage)
+    var visitKey = 'bg_visit_count';
+    var visitCount = 1;
+    try {
+      var stored = localStorage.getItem(visitKey);
+      visitCount = stored ? (parseInt(stored, 10) + 1) : 1;
+      localStorage.setItem(visitKey, String(visitCount));
+    } catch (e) {
+      return; // localStorage 사용 불가 — 표시 안 함
+    }
+
+    if (visitCount < 2) return; // 첫 방문은 표시 없음
+
+    self.trackEvent('escalation_show', { visit_count: visitCount });
+
+    if (visitCount === 2) {
+      // 2회 방문: 부드러운 토스트 안내
+      var toastMsg = (config.escalation_visit2_msg) || '\\uC774\\uBBF8 2\\uBC88\\uC9F8 \\uBC29\\uBB38\\uC774\\uC5D0\\uC694 :)'; // 이미 2번째 방문이에요 :)
+      setTimeout(function() { self.showToast(toastMsg); }, 1500);
+
+    } else {
+      // 3회 이상: 적극적 플로팅 배너
+      var bannerMsg = (config.escalation_visit3_msg) || '\\uD68C\\uC6D0\\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD!'; // 회원가입하면 특별 혜택!
+
+      var banner = document.createElement('div');
+      var bs2 = banner.style;
+      bs2.position = 'fixed';
+      bs2.bottom = '0';
+      bs2.left = '0';
+      bs2.right = '0';
+      bs2.background = 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)';
+      bs2.color = '#fff';
+      bs2.padding = '14px 20px';
+      bs2.display = 'flex';
+      bs2.alignItems = 'center';
+      bs2.justifyContent = 'space-between';
+      bs2.zIndex = '99997';
+      bs2.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+      bs2.boxShadow = '0 -4px 20px rgba(0,0,0,.2)';
+      bs2.gap = '12px';
+      bs2.boxSizing = 'border-box';
+
+      var msgSpan = document.createElement('span');
+      msgSpan.textContent = bannerMsg;
+      msgSpan.style.fontSize = '14px';
+      msgSpan.style.fontWeight = '600';
+      msgSpan.style.flex = '1';
+
+      var joinBtn = document.createElement('button');
+      var jbs = joinBtn.style;
+      jbs.background = '#fff';
+      jbs.color = '#2563eb';
+      jbs.border = 'none';
+      jbs.borderRadius = '20px';
+      jbs.padding = '8px 16px';
+      jbs.fontSize = '13px';
+      jbs.fontWeight = '700';
+      jbs.cursor = 'pointer';
+      jbs.whiteSpace = 'nowrap';
+      jbs.flexShrink = '0';
+      joinBtn.textContent = '\\uBC14\\uB85C \\uAC00\\uC785\\uD558\\uAE30'; // 바로 가입하기
+
+      var closeBtn2 = document.createElement('button');
+      var cbs = closeBtn2.style;
+      cbs.background = 'none';
+      cbs.border = 'none';
+      cbs.color = 'rgba(255,255,255,.7)';
+      cbs.fontSize = '18px';
+      cbs.cursor = 'pointer';
+      cbs.padding = '0 4px';
+      cbs.lineHeight = '1';
+      cbs.flexShrink = '0';
+      closeBtn2.textContent = '\\u2715'; // ✕
+
+      joinBtn.addEventListener('click', function() {
+        self.trackEvent('escalation_click', { visit_count: visitCount });
+        window.location.href = '/member/join.html';
+      });
+
+      closeBtn2.addEventListener('click', function() {
+        banner.remove();
+        self.trackEvent('escalation_dismiss', { visit_count: visitCount });
+      });
+
+      banner.appendChild(msgSpan);
+      banner.appendChild(joinBtn);
+      banner.appendChild(closeBtn2);
+
+      // 약간 지연 후 슬라이드인 효과로 표시
+      banner.style.transform = 'translateY(100%)';
+      banner.style.transition = 'transform .3s ease';
+      document.body.appendChild(banner);
+      setTimeout(function() { banner.style.transform = 'translateY(0)'; }, 300);
+    }
+  };
+
+  // ─── Plus: 토스트 알림 (공용) ─────────────────────────────────
+  BGWidget.prototype.showToast = function(message) {
+    // 이미 표시 중이면 무시
+    if (document.querySelector('.bg-toast')) return;
+
+    var toast = document.createElement('div');
+    toast.className = 'bg-toast';
+    var ts = toast.style;
+    ts.position = 'fixed';
+    ts.bottom = '24px';
+    ts.left = '50%';
+    ts.transform = 'translateX(-50%) translateY(20px)';
+    ts.background = 'rgba(30,30,30,.92)';
+    ts.color = '#fff';
+    ts.padding = '10px 20px';
+    ts.borderRadius = '24px';
+    ts.fontSize = '13px';
+    ts.fontWeight = '500';
+    ts.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+    ts.zIndex = '99999';
+    ts.opacity = '0';
+    ts.transition = 'all .3s ease';
+    ts.whiteSpace = 'nowrap';
+    ts.maxWidth = 'calc(100vw - 32px)';
+    ts.boxSizing = 'border-box';
+    ts.textAlign = 'center';
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    // 슬라이드 인
+    setTimeout(function() {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(-50%) translateY(0)';
+    }, 50);
+
+    // 3초 후 사라짐
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(10px)';
+      setTimeout(function() { toast.remove(); }, 300);
+    }, 3000);
+  };
+
+    // ─── Initialize ──────────────────────────────────────────────
 
   var widget = new BGWidget();
 

@@ -16,6 +16,8 @@ export interface Shop {
   sso_configured: number; // 0 or 1
   widget_style: string | null; // JSON string
   coupon_config?: string | null; // JSON string (CouponConfig)
+  kakao_channel_id?: string | null; // Plus: 카카오 채널 ID
+  shop_identity?: string | null; // Plus: AI 분석 쇼핑몰 정체성 JSON
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -201,6 +203,9 @@ export interface Env {
   CAFE24_WEBHOOK_API_KEY: string;
   ENCRYPTION_KEY: string;
   JWT_SECRET: string;
+  AI: any; // Cloudflare Workers AI binding
+  CF_ACCOUNT_ID: string; // Cloudflare Account ID (AI REST API fallback용)
+  CF_AI_TOKEN: string; // Cloudflare AI API Token
 }
 
 // Billing

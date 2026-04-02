@@ -28,6 +28,10 @@ migrations_dir = "migrations"
 binding = "KV"
 id = "fe38c181822b4729850b53ab839339b5"
 
+# Workers AI (프로덕션)
+[ai]
+binding = "AI"
+
 # ══════════════════════════════════════════════════════════════
 # 스테이징 (개발) — npx wrangler deploy --env dev
 # ══════════════════════════════════════════════════════════════
@@ -58,6 +62,10 @@ migrations_dir = "migrations"
 binding = "KV"
 id = "d3bc6faec4274bd3bacca408d4bf4277"
 
+# Workers AI (스테이징)
+[env.dev.ai]
+binding = "AI"
+
 # ══════════════════════════════════════════════════════════════
 # Secrets (wrangler secret put 으로 등록):
 # ══════════════════════════════════════════════════════════════
@@ -80,3 +88,6 @@ id = "d3bc6faec4274bd3bacca408d4bf4277"
 # APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
 # DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET
 # TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME
+#
+# -- AI (Cloudflare Workers AI는 바인딩으로 처리, 아래는 REST 폴백용) --
+# CF_ACCOUNT_ID, CF_AI_TOKEN

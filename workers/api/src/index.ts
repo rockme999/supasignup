@@ -13,6 +13,7 @@ import pageRoutes from './routes/pages';
 import adminRoutes from './routes/admin';
 import facebookRoutes from './routes/facebook';
 import testRoutes from './routes/test';
+import aiRoutes from './routes/ai';
 import { WIDGET_JS } from './widget/buttons';
 import { TEST_DOM_JS } from './widget/test-dom';
 import { TEST_STORAGE_JS } from './widget/test-storage';
@@ -45,6 +46,16 @@ app.use('/api/admin/*', cors({
     return origin === baseUrl ? origin : '';
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// ── CORS: AI API routes (대시보드와 동일 — restricted origin) ─
+app.use('/api/ai/*', cors({
+  origin: (origin, c) => {
+    const baseUrl = (c.env as Env).BASE_URL.replace(/\/+$/, '');
+    return origin === baseUrl ? origin : '';
+  },
+  allowMethods: ['POST'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -157,6 +168,7 @@ app.route('/api/cafe24', cafe24Routes);
 app.route('/api/facebook', facebookRoutes);
 app.route('/api/dashboard/billing', billingRoutes);
 app.route('/api/admin', adminRoutes);
+app.route('/api/ai', aiRoutes);
 app.route('/test', testRoutes);
 
 app.route('/', pageRoutes);

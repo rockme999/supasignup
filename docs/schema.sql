@@ -7,6 +7,7 @@
 --   2026-03-20: shops.widget_style 컬럼 추가 (위젯 커스터마이징)
 --   2026-04-02: shops.sso_type 컬럼 추가 (카페24 SSO 앱 슬롯 식별자: sso, sso1, sso2 ...)
 --   2026-04-02: shops.plan CHECK 변경 (free/plus), subscriptions 구조 변경 (billing_cycle 분리)
+--   2026-04-02: shops.kakao_channel_id 추가 (Plus: 카카오 채널), shops.shop_identity 추가 (Plus: AI 정체성 분석)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -43,6 +44,8 @@ CREATE TABLE IF NOT EXISTS shops (
   widget_style           TEXT,              -- JSON: {"preset":"default","buttonWidth":280,"buttonGap":8,"borderRadius":10,"align":"center"}
   sso_type               TEXT NOT NULL DEFAULT 'sso',  -- 카페24 SSO 슬롯 식별자 (sso, sso1, sso2, ...)
   coupon_config          TEXT,                         -- JSON: {"enabled":false,"coupons":[...],"multi_coupon":false}
+  kakao_channel_id       TEXT,                         -- Plus: 카카오 채널 ID (pf.kakao.com/{id}/friend)
+  shop_identity          TEXT,                         -- Plus: AI 분석 쇼핑몰 정체성 JSON {"industry","target","tone","keywords","summary"}
   deleted_at             TEXT,
   created_at             TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at             TEXT NOT NULL DEFAULT (datetime('now')),
