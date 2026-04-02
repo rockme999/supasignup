@@ -67,8 +67,8 @@ billing.post('/subscribe', async (c) => {
 
   const price = PLAN_PRICES[body.plan];
   const orderName = body.plan === 'monthly'
-    ? '번개가입 월간 플랜 (₩29,900/월)'
-    : '번개가입 연간 플랜 (₩329,900/년)';
+    ? '번개가입 Plus 월간 플랜 (₩6,900/월)'
+    : '번개가입 Plus 연간 플랜 (₩79,000/년)';
 
   // Calculate expires_at
   const now = new Date();
