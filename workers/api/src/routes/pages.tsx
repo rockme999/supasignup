@@ -27,7 +27,6 @@ import {
   AiReportsPage,
   GuidePage,
   InquiriesPage,
-  SettingsPage,
   PrivacyPage,
   TermsPage,
   LandingPage,
@@ -553,8 +552,9 @@ pages.get('/dashboard/settings/coupon', async (c) => {
 pages.get('/dashboard/settings/banner', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
   return c.html(
-    <BannerSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+    <BannerSettingsPage shop={shop} isCafe24={c.get('isCafe24')} />
   );
 });
 
@@ -563,8 +563,9 @@ pages.get('/dashboard/settings/banner', async (c) => {
 pages.get('/dashboard/settings/popup', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
   return c.html(
-    <PopupSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+    <PopupSettingsPage shop={shop} isCafe24={c.get('isCafe24')} />
   );
 });
 
@@ -573,8 +574,9 @@ pages.get('/dashboard/settings/popup', async (c) => {
 pages.get('/dashboard/settings/escalation', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
   return c.html(
-    <EscalationSettingsPage shop={shop ?? null} isCafe24={c.get('isCafe24')} />
+    <EscalationSettingsPage shop={shop} isCafe24={c.get('isCafe24')} />
   );
 });
 
@@ -635,35 +637,35 @@ pages.get('/dashboard/inquiries', (c) => {
 // ─── (Legacy) Shops ──────────────────────────────────────────
 // 기존 /dashboard/shops/* 라우트 — 단일 쇼핑몰 구조로 전환 후 리다이렉트
 
-pages.get('/dashboard/shops', (c) => c.redirect('/dashboard'));
-pages.get('/dashboard/shops/new', (c) => c.redirect('/dashboard'));
+pages.get('/dashboard/shops', (c) => c.redirect('/dashboard', 301));
+pages.get('/dashboard/shops/new', (c) => c.redirect('/dashboard', 301));
 
 pages.get('/dashboard/shops/:id', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-  return c.redirect('/dashboard/settings/general');
+  if (!shop) return c.redirect('/dashboard', 301);
+  return c.redirect('/dashboard/settings/general', 301);
 });
 
 pages.get('/dashboard/shops/:id/setup', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-  return c.redirect('/dashboard/settings/sso-guide');
+  if (!shop) return c.redirect('/dashboard', 301);
+  return c.redirect('/dashboard/settings/sso-guide', 301);
 });
 
 pages.get('/dashboard/shops/:id/providers', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-  return c.redirect('/dashboard/settings/providers');
+  if (!shop) return c.redirect('/dashboard', 301);
+  return c.redirect('/dashboard/settings/providers', 301);
 });
 
 pages.get('/dashboard/shops/:id/ai-briefing', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-  return c.redirect('/dashboard/ai-reports');
+  if (!shop) return c.redirect('/dashboard', 301);
+  return c.redirect('/dashboard/ai-reports', 301);
 });
 
 // ─── (Legacy) /dashboard/settings — 계정 설정 리다이렉트 ───────

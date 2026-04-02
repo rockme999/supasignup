@@ -2576,113 +2576,6 @@ export const AdminOwnersPage: FC<{
   </Layout>
 );
 
-// ─── Settings ────────────────────────────────────────────────
-
-export const SettingsPage: FC<{ email: string; name: string }> = ({ email, name }) => (
-  <Layout title="계정 설정" loggedIn currentPath="/dashboard/settings">
-    <h1>계정 설정</h1>
-
-    <div class="card">
-      <h2>프로필</h2>
-      <div style="overflow-x:auto">
-        <table>
-          <tbody>
-            <tr><th style="width:120px">이름</th><td>{name || '-'}</td></tr>
-            <tr><th>이메일</th><td>{email}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>이름 변경</h2>
-      <form id="nameForm">
-        <div class="form-group">
-          <label>이름</label>
-          <input type="text" name="newName" required placeholder="새 이름" value={name || ''} />
-        </div>
-        <button type="submit" class="btn btn-primary btn-sm">이름 변경</button>
-      </form>
-      <script dangerouslySetInnerHTML={{__html: `
-        document.getElementById('nameForm').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          var form = e.target;
-          var btn = form.querySelector('button[type=submit]');
-          var resp = await apiCall('PUT', '/api/dashboard/settings/profile', { name: form.newName.value }, btn);
-          if (resp.ok) { showToast('success', '이름이 변경되었습니다.'); setTimeout(function(){ location.reload(); }, 1000); }
-          else { showToast('error', '이름 변경 중 오류가 발생했습니다.'); }
-        });
-      `}} />
-    </div>
-
-    <div class="card">
-      <h2>비밀번호 변경</h2>
-      <form id="passwordForm">
-        <div class="form-group">
-          <label>현재 비밀번호</label>
-          <input type="password" name="current" required />
-        </div>
-        <div class="form-group">
-          <label>새 비밀번호</label>
-          <input type="password" name="newpass" required minlength={8} placeholder="8자 이상" />
-        </div>
-        <div class="form-group">
-          <label>새 비밀번호 확인</label>
-          <input type="password" name="newpass_confirm" required minlength={8} placeholder="새 비밀번호 재입력" />
-        </div>
-        <button type="submit" class="btn btn-primary btn-sm">비밀번호 변경</button>
-      </form>
-      <script dangerouslySetInnerHTML={{__html: `
-        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const form = e.target;
-          if (form.newpass.value !== form.newpass_confirm.value) {
-            showToast('error', '새 비밀번호가 일치하지 않습니다.');
-            return;
-          }
-          var btn = form.querySelector('button[type=submit]');
-          const resp = await apiCall('PUT', '/api/dashboard/settings/password', {
-            current_password: form.current.value,
-            new_password: form.newpass.value,
-          }, btn);
-          if (resp.ok) { showToast('success', '비밀번호가 변경되었습니다.'); form.reset(); }
-          else { const data = await resp.json(); showToast('error', data.error === 'wrong_password' ? '현재 비밀번호가 올바르지 않습니다.' : '변경 중 오류가 발생했습니다.'); }
-        });
-      `}} />
-    </div>
-
-    <div class="card" style="border: 1px solid #fee2e2">
-      <h2 style="color:#991b1b">계정 탈퇴</h2>
-      <p style="font-size:13px; color:#64748b; margin-bottom:12px">
-        계정을 탈퇴하면 모든 쇼핑몰의 소셜 로그인이 비활성화됩니다. 이 작업은 되돌릴 수 없습니다.
-      </p>
-      <form id="deleteAccountForm">
-        <div class="form-group">
-          <label>비밀번호 확인</label>
-          <input type="password" name="confirmPassword" required placeholder="현재 비밀번호 입력" />
-        </div>
-        <button type="submit" class="btn btn-danger btn-sm">계정 탈퇴</button>
-      </form>
-      <script dangerouslySetInnerHTML={{__html: `
-        document.getElementById('deleteAccountForm').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          if (!confirm('정말로 계정을 탈퇴하시겠습니까?\\n모든 쇼핑몰 데이터가 비활성화되며 이 작업은 되돌릴 수 없습니다.')) return;
-          var form = e.target;
-          var btn = form.querySelector('button[type=submit]');
-          var resp = await apiCall('DELETE', '/api/dashboard/settings/account', { password: form.confirmPassword.value }, btn);
-          if (resp.ok) {
-            showToast('success', '계정이 탈퇴되었습니다.');
-            setTimeout(function(){ window.location.href = '/dashboard/login'; }, 1000);
-          } else {
-            var data = await resp.json();
-            showToast('error', data.error === 'wrong_password' ? '비밀번호가 올바르지 않습니다.' : '탈퇴 중 오류가 발생했습니다.');
-          }
-        });
-      `}} />
-    </div>
-  </Layout>
-);
-
 // ─── Landing Page ─────────────────────────────────────────────
 
 export const LandingPage: FC = () => (
@@ -3229,192 +3122,7 @@ export const GeneralSettingsPage: FC<{
   </Layout>
 );
 
-// ─── Login Design Page ───────────────────────────────────────
-
-export const LoginDesignPage: FC<{
-  shop: { shop_id: string; shop_name: string; mall_id: string; plan: string; enabled_providers: string };
-  baseUrl: string;
-  isCafe24?: boolean;
-  widgetStyle?: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string };
-}> = ({ shop, baseUrl, isCafe24, widgetStyle }) => {
-  // 위젯 디자인 설정 부분만 ProvidersPage에서 분리
-  const DEFAULT_WIDGET_STYLE = { preset: 'default', buttonWidth: 300, buttonGap: 8, borderRadius: 8, align: 'center' };
-  const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
-  const providers = (() => { try { return JSON.parse(shop.enabled_providers || '[]'); } catch { return []; } })();
-
-  return (
-    <Layout title="로그인 디자인" loggedIn currentPath="/dashboard/settings/login-design" isCafe24={isCafe24}>
-      <h1>로그인 디자인</h1>
-      <p style="font-size:14px;color:#64748b;margin-bottom:24px">쇼핑몰 로그인 페이지에 표시될 소셜 로그인 버튼의 디자인을 설정합니다.</p>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start" class="provider-layout">
-        {/* Widget preview */}
-        <div class="card">
-          <h2>위젯 미리보기</h2>
-          <p style="font-size:13px; color:#64748b; margin-bottom:16px">쇼핑몰에 표시될 소셜 로그인 버튼의 실제 모습입니다.</p>
-          <div id="previewFrame" style="background:#f8fafc; border:2px solid #e5e7eb; border-radius:12px; padding:32px; min-height:200px; display:flex; align-items:center; justify-content:center;">
-            <div id="previewButtons" style="display:flex; flex-direction:column; align-items:center;"></div>
-          </div>
-        </div>
-
-        {/* Widget design settings */}
-        <div class="card">
-          <h2>위젯 디자인</h2>
-          <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
-            <button class="preset-card" data-preset="default" type="button"><div class="preset-preview">컬러 버튼</div><span>기본</span></button>
-            <button class="preset-card" data-preset="mono" type="button"><div class="preset-preview">흑백</div><span>모노톤</span></button>
-            <button class="preset-card" data-preset="outline" type="button"><div class="preset-preview">테두리</div><span>호버 채움</span></button>
-            <button class="preset-card" data-preset="outline-mono" type="button"><div class="preset-preview">테두리 흑백</div><span>호버 채움</span></button>
-            <button class="preset-card" data-preset="icon-only" type="button"><div class="preset-preview">아이콘만</div><span>아이콘</span></button>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">버튼 너비</label>
-            <input type="range" id="btnWidth" min="200" max="480" value={ws.buttonWidth} style="width:100%" />
-            <span id="btnWidthLabel" style="font-size:12px;color:#64748b">{ws.buttonWidth}px</span>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">버튼 간격</label>
-            <input type="range" id="btnGap" min="0" max="24" value={ws.buttonGap} style="width:100%" />
-            <span id="btnGapLabel" style="font-size:12px;color:#64748b">{ws.buttonGap}px</span>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">버튼 모서리</label>
-            <input type="range" id="btnRadius" min="0" max="28" value={ws.borderRadius} style="width:100%" />
-            <span id="btnRadiusLabel" style="font-size:12px;color:#64748b">{ws.borderRadius}px</span>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:13px;font-weight:600;color:#475569;display:block;margin-bottom:8px">정렬</label>
-            <div style="display:flex;gap:8px">
-              {(['left','center','right'] as const).map(a => (
-                <button class={`align-btn${ws.align === a ? ' active' : ''}`} data-align={a} type="button">{a === 'left' ? '왼쪽' : a === 'center' ? '가운데' : '오른쪽'}</button>
-              ))}
-            </div>
-          </div>
-          <button id="saveWidgetBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>저장</button>
-        </div>
-      </div>
-
-      <script dangerouslySetInnerHTML={{__html: `
-        (function() {
-          var shopId = '${shop.shop_id}';
-          var currentPreset = '${ws.preset}';
-          var providers = ${JSON.stringify(providers)};
-
-          // previewColors / icons (간소화)
-          var previewColors = ${JSON.stringify({ google:'#4285f4',kakao:'#fee500',naver:'#03c75a',apple:'#000',discord:'#5865f2',telegram:'#26a5e4' })};
-          var previewNames = ${JSON.stringify({ google:'Google',kakao:'카카오',naver:'네이버',apple:'Apple',discord:'Discord',telegram:'Telegram' })};
-
-          function renderPreview() {
-            var previewEl = document.getElementById('previewButtons');
-            if (!previewEl) return;
-            var width = parseInt(document.getElementById('btnWidth').value);
-            var gap = parseInt(document.getElementById('btnGap').value);
-            var radius = parseInt(document.getElementById('btnRadius').value);
-            var align = document.querySelector('.align-btn.active')?.dataset.align || 'center';
-            var preset = currentPreset;
-
-            previewEl.innerHTML = '';
-            previewEl.style.gap = gap + 'px';
-            previewEl.style.alignItems = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
-
-            providers.forEach(function(p) {
-              var btn = document.createElement('button');
-              btn.style.width = width + 'px';
-              btn.style.borderRadius = radius + 'px';
-              btn.style.padding = '10px 20px';
-              btn.style.fontWeight = '600';
-              btn.style.fontSize = '14px';
-              btn.style.cursor = 'default';
-              btn.style.border = 'none';
-              btn.style.display = 'flex';
-              btn.style.alignItems = 'center';
-              btn.style.justifyContent = 'center';
-              btn.style.gap = '8px';
-
-              var color = previewColors[p] || '#888';
-              var name = previewNames[p] || p;
-
-              if (preset === 'default') {
-                btn.style.background = color;
-                btn.style.color = p === 'kakao' ? '#191919' : '#fff';
-              } else if (preset === 'mono') {
-                btn.style.background = '#333';
-                btn.style.color = '#fff';
-              } else if (preset === 'outline' || preset === 'outline-mono') {
-                btn.style.background = 'transparent';
-                btn.style.border = '1px solid ' + (preset === 'outline' ? color : '#ccc');
-                btn.style.color = preset === 'outline' ? color : '#333';
-              } else if (preset === 'icon-only') {
-                btn.style.background = color;
-                btn.style.color = p === 'kakao' ? '#191919' : '#fff';
-                btn.style.width = '44px';
-                btn.style.height = '44px';
-                btn.style.borderRadius = '50%';
-                btn.style.padding = '0';
-              }
-
-              btn.textContent = preset === 'icon-only' ? name.slice(0,1) : name + ' 로그인';
-              previewEl.appendChild(btn);
-            });
-          }
-
-          window.renderProviderPreview = renderPreview;
-
-          // Preset 클릭
-          document.querySelectorAll('.preset-card').forEach(function(card) {
-            if (card.dataset.preset === currentPreset) card.classList.add('active');
-            card.addEventListener('click', function() {
-              document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
-              this.classList.add('active');
-              currentPreset = this.dataset.preset;
-              renderPreview();
-            });
-          });
-
-          // Align 클릭
-          document.querySelectorAll('.align-btn').forEach(function(btn) {
-            if (btn.dataset.align === '${ws.align}') btn.classList.add('active');
-            btn.addEventListener('click', function() {
-              document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
-              this.classList.add('active');
-              renderPreview();
-            });
-          });
-
-          // Range 입력
-          ['btnWidth','btnGap','btnRadius'].forEach(function(id) {
-            var el = document.getElementById(id);
-            var label = document.getElementById(id + 'Label');
-            el.addEventListener('input', function() {
-              label.textContent = this.value + 'px';
-              renderPreview();
-            });
-          });
-
-          // 저장
-          document.getElementById('saveWidgetBtn').addEventListener('click', async function() {
-            var btn = this;
-            var style = {
-              preset: currentPreset,
-              buttonWidth: parseInt(document.getElementById('btnWidth').value),
-              buttonGap: parseInt(document.getElementById('btnGap').value),
-              borderRadius: parseInt(document.getElementById('btnRadius').value),
-              align: document.querySelector('.align-btn.active')?.dataset.align || 'center',
-            };
-            var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style, btn);
-            if (resp.ok) {
-              showToast('success', '위젯 디자인이 저장되었습니다.');
-            } else {
-              showToast('error', '저장 중 오류가 발생했습니다.');
-            }
-          });
-
-          renderPreview();
-        })();
-      `}} />
-    </Layout>
-  );
-};
+// ─── Login Design Page (삭제됨 — ProvidersPage에 통합) ───────
 
 // ─── Coupon Settings Page ────────────────────────────────────
 
@@ -3543,7 +3251,8 @@ export const BannerSettingsPage: FC<{
   shop: { plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  const isPlus = shop?.plan !== 'free';
+  // shop이 null이면 Plus가 아님 (null일 때 true가 되는 버그 수정)
+  const isPlus = shop?.plan === 'plus';
   return (
     <Layout title="미니배너" loggedIn currentPath="/dashboard/settings/banner" isCafe24={isCafe24}>
       <h1>미니배너</h1>
@@ -3566,7 +3275,8 @@ export const PopupSettingsPage: FC<{
   shop: { plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  const isPlus = shop?.plan !== 'free';
+  // shop이 null이면 Plus가 아님 (null일 때 true가 되는 버그 수정)
+  const isPlus = shop?.plan === 'plus';
   return (
     <Layout title="이탈 감지 팝업" loggedIn currentPath="/dashboard/settings/popup" isCafe24={isCafe24}>
       <h1>이탈 감지 팝업</h1>
@@ -3589,7 +3299,8 @@ export const EscalationSettingsPage: FC<{
   shop: { plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  const isPlus = shop?.plan !== 'free';
+  // shop이 null이면 Plus가 아님 (null일 때 true가 되는 버그 수정)
+  const isPlus = shop?.plan === 'plus';
   return (
     <Layout title="에스컬레이션" loggedIn currentPath="/dashboard/settings/escalation" isCafe24={isCafe24}>
       <h1>에스컬레이션</h1>
