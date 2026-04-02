@@ -16,7 +16,7 @@
 | 항목 | v1 | v2 |
 |------|----|----|
 | **미션** | 소셜 로그인 통합 서비스 | **"회원을 모은다"** — 비회원 → 회원 전환 집중 |
-| **가격** | 무료(월100명) / 월 29,900원 / 연 329,900원 | **Free(0원) / Plus(월 6,900원)** |
+| **가격** | 무료(월100명) / 월 29,900원 / 연 329,900원 | **Free(0원) / Plus(월 6,900원 또는 연 79,000원)** |
 | **무료 범위** | 월 100명 제한 소셜 로그인 | 소셜 로그인 9종 **무제한** + 가입 쿠폰 1종 |
 | **서비스 경계** | 소셜 로그인 통합만 | 번개가입(유입) vs otj-shop(운영) 역할 분리 |
 | **Phase 1** | 소셜 로그인 + 대시보드 | 소셜 로그인 + 쿠폰 + 배너 + 팝업 + AI 4종(정체성/브리핑/카피/재방문메시지) + 카카오 채널 + 에스컬레이션 + 전환 통계 |
@@ -339,7 +339,8 @@ AI 엔진: **Cloudflare Workers AI — Kimi K2.5 (Moonshot AI)**
 | 플랜 | 가격 | 포함 기능 |
 |------|------|----------|
 | **Free** | 0원 (영구 무료) | 소셜 로그인 9종, 스마트 버튼, 가입 쿠폰 1종, 기본 통계, "Powered by 번개가입" 브랜딩 |
-| **Plus** | 월 6,900원 | 미니 배너, 이탈 감지 팝업, **AI 기능 4종**(쇼핑몰 정체성 설정 + 주간 AI 브리핑 + 맥락 카피 생성 월 10회 + 재방문 메시지 자동 생성), 카카오 채널 연동, 재방문 에스컬레이션, 전환 퍼널 통계, 브랜딩 제거 |
+| **Plus 월간** | 월 6,900원 | 미니 배너, 이탈 감지 팝업, **AI 기능 4종**(쇼핑몰 정체성 설정 + 주간 AI 브리핑 + 맥락 카피 생성 월 10회 + 재방문 메시지 자동 생성), 카카오 채널 연동, 재방문 에스컬레이션, 전환 퍼널 통계, 브랜딩 제거 |
+| **Plus 연간** | 연 79,000원 (월 환산 ~6,583원) | Plus 월간과 동일 기능 + 약 5% 할인 혜택 |
 
 > **가격 전략 배경**: v1의 "무료 월 100명 제한"에서 "무료 무제한"으로 전환. 경쟁사 알파푸시가 무료 모델로 6개월 만에 6,000개 쇼핑몰을 확보한 사례를 참고. 소셜 로그인 자체는 영구 무료로 진입 장벽을 없애고, 수익은 가입 유도 부가기능(Plus)에서 창출.
 
@@ -498,10 +499,10 @@ AI 엔진: **Cloudflare Workers AI — Kimi K2.5 (Moonshot AI)**
 
 | 환경 | 도메인 | 용도 |
 |------|--------|------|
-| **스테이징** | bg-staging.suparain.kr | 개발/테스트 |
+| **스테이징** | bg-dev.suparain.kr | 개발/테스트 |
 | **프로덕션** | bg.suparain.kr | 실서비스 |
 
-Cloudflare Workers 환경별 분리: `wrangler.staging.toml` / `wrangler.production.toml`
+Cloudflare Workers 환경별 분리: 단일 `wrangler.toml` + `--env dev` 분기 방식으로 스테이징/프로덕션 분리
 
 ### 7.3 시스템 구성도
 
@@ -547,14 +548,14 @@ Cloudflare Workers 환경별 분리: `wrangler.staging.toml` / `wrangler.product
     │   └─ Cloudflare Workers AI (Kimi K2.5) → 배너/팝업 카피 반환
     ├─ /api/ai/escalation-copy (Plus — 재방문 메시지 자동 생성)
     │
-    ├─ /api/stats/funnel (Plus — 전환 퍼널 통계)
+    ├─ /api/dashboard/stats/funnel (Plus — 전환 퍼널 통계)
     │
     ├─ /dashboard/* (통합 관리자 대시보드)
     │
     └─ /widget/buttons.js (ScriptTag용 JS)
 
 [Cloudflare D1]              [Cloudflare KV]
-├── owners                   ├── auth_code:{code} (10분 TTL)
+├── owners                   ├── auth_code:{code} (5분 TTL)
 ├── shops                    ├── access_token:{token} (2시간 TTL)
 ├── users                    └── session:{id} (세션 TTL)
 ├── shop_users
@@ -592,7 +593,7 @@ enabled_providers      TEXT NOT NULL DEFAULT '["google","kakao","naver","apple"]
 platform_access_token  TEXT
 platform_refresh_token TEXT
 allowed_redirect_uris  TEXT            -- JSON: 화이트리스트
-plan                   TEXT NOT NULL DEFAULT 'free'  -- 'free' | 'monthly' | 'yearly'
+plan                   TEXT NOT NULL DEFAULT 'free'  -- 'free' | 'plus'
 sso_configured         INTEGER NOT NULL DEFAULT 0
 widget_style           TEXT            -- JSON: 버튼 스타일 커스터마이징
 sso_type               TEXT NOT NULL DEFAULT 'sso'  -- 카페24 SSO 슬롯 (sso, sso1, ...)
@@ -600,8 +601,6 @@ deleted_at             TEXT
 created_at             TEXT NOT NULL DEFAULT (datetime('now'))
 updated_at             TEXT NOT NULL DEFAULT (datetime('now'))
 ```
-
-> **v2 스키마 변경 예정**: plan 컬럼의 CHECK 제약을 `('free', 'plus')` 로 변경 필요. 현재 `('free', 'monthly', 'yearly')` 는 v1 가격 구조 기준.
 
 **users** — 소셜 인증 사용자 (PII 암호화)
 ```sql
@@ -634,15 +633,16 @@ UNIQUE(shop_id, user_id)
 
 **subscriptions** — 구독/과금
 ```sql
-id         TEXT PRIMARY KEY
-owner_id   TEXT NOT NULL  -- FK: owners
-shop_id    TEXT NOT NULL  -- FK: shops
-plan       TEXT NOT NULL  -- 'monthly' | 'yearly'
-status     TEXT NOT NULL  -- 'pending' | 'active' | 'cancelled' | 'expired'
-payment_id TEXT
-started_at TEXT NOT NULL DEFAULT (datetime('now'))
-expires_at TEXT NOT NULL
-created_at TEXT NOT NULL DEFAULT (datetime('now'))
+id            TEXT PRIMARY KEY
+owner_id      TEXT NOT NULL  -- FK: owners
+shop_id       TEXT NOT NULL  -- FK: shops
+plan          TEXT NOT NULL  -- 'plus'
+billing_cycle TEXT NOT NULL  -- 'monthly' | 'yearly'
+status        TEXT NOT NULL  -- 'pending' | 'active' | 'cancelled' | 'expired'
+payment_id    TEXT
+started_at    TEXT NOT NULL DEFAULT (datetime('now'))
+expires_at    TEXT NOT NULL
+created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 ```
 
 **login_stats** — 가입/로그인 통계

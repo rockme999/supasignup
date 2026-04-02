@@ -6,6 +6,7 @@
 --   2026-03-20: owners.deleted_at 컬럼 추가 (계정 탈퇴 soft delete)
 --   2026-03-20: shops.widget_style 컬럼 추가 (위젯 커스터마이징)
 --   2026-04-02: shops.sso_type 컬럼 추가 (카페24 SSO 앱 슬롯 식별자: sso, sso1, sso2 ...)
+--   2026-04-02: shops.plan CHECK 변경 (free/plus), subscriptions 구조 변경 (billing_cycle 분리)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -37,7 +38,7 @@ CREATE TABLE IF NOT EXISTS shops (
   platform_access_token  TEXT,
   platform_refresh_token TEXT,
   allowed_redirect_uris  TEXT,
-  plan                   TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'monthly', 'yearly')),
+  plan                   TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'plus')),
   sso_configured         INTEGER NOT NULL DEFAULT 0,
   widget_style           TEXT,              -- JSON: {"preset":"default","buttonWidth":280,"buttonGap":8,"borderRadius":10,"align":"center"}
   sso_type               TEXT NOT NULL DEFAULT 'sso',  -- 카페24 SSO 슬롯 식별자 (sso, sso1, sso2, ...)
@@ -93,15 +94,16 @@ CREATE INDEX IF NOT EXISTS idx_shop_users_user_id ON shop_users(user_id);
 -- 5. subscriptions - Billing
 -- ============================================================
 CREATE TABLE IF NOT EXISTS subscriptions (
-  id         TEXT PRIMARY KEY,
-  owner_id   TEXT NOT NULL REFERENCES owners(owner_id),
-  shop_id    TEXT NOT NULL REFERENCES shops(shop_id),
-  plan       TEXT NOT NULL CHECK (plan IN ('monthly', 'yearly')),
-  status     TEXT NOT NULL CHECK (status IN ('pending', 'active', 'cancelled', 'expired')),
-  payment_id TEXT,
-  started_at TEXT NOT NULL DEFAULT (datetime('now')),
-  expires_at TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  id            TEXT PRIMARY KEY,
+  owner_id      TEXT NOT NULL REFERENCES owners(owner_id),
+  shop_id       TEXT NOT NULL REFERENCES shops(shop_id),
+  plan          TEXT NOT NULL CHECK (plan IN ('plus')),
+  billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly')),
+  status        TEXT NOT NULL CHECK (status IN ('pending', 'active', 'cancelled', 'expired')),
+  payment_id    TEXT,
+  started_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at    TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_owner_id ON subscriptions(owner_id);
