@@ -37,15 +37,53 @@ async function callAI(
   // Workers AI 바인딩이 사용 가능한 경우 직접 호출
   if (env.AI) {
     try {
-      const result = await env.AI.run('@cf/moonshotai/kimi-k2.5', { messages }) as AiTextResponse;
-      return result?.response ?? result?.result?.response ?? '';
-    } catch (e) {
-      console.error('[AI] Workers AI binding error:', e);
+      // Kimi K2.5 우선, 실패 시 Llama 3.3 fallback
+      const models = ['@cf/moonshotai/kimi-k2.5', '@cf/meta/llama-3.3-70b-instruct-fp8-fast'];
+      let result: AiTextResponse | null = null;
+      let usedModel = '';
+      for (const model of models) {
+        try {
+          result = await env.AI.run(model, { messages }) as AiTextResponse;
+          usedModel = model;
+          break;
+        } catch (modelErr: any) {
+          console.warn(`[AI] ${model} failed:`, modelErr?.message || modelErr);
+          // 마지막 모델이면 에러 상세를 throw
+          if (model === models[models.length - 1]) {
+            throw new Error(`All models failed. Last error (${model}): ${modelErr?.message || String(modelErr)}`);
+          }
+        }
+      }
+      if (!result) {
+        throw new Error('All AI models failed. Check Cloudflare Workers AI dashboard for model availability.');
+      }
+      // Workers AI 응답 형식 대응: OpenAI chat completion 또는 단순 response
+      let text = '';
+      if (typeof result === 'string') {
+        text = result;
+      } else if (result?.response) {
+        text = result.response;
+      } else if (result?.result?.response) {
+        text = result.result.response;
+      } else if ((result as any)?.choices?.[0]?.message?.content) {
+        // OpenAI-compatible chat completion format (Kimi K2.5 등)
+        text = (result as any).choices[0].message.content;
+      }
+      if (text) return text;
+      // 빈 응답이면 에러로 처리 (결과 상세 포함)
+      throw new Error(`Workers AI (${usedModel}) returned empty response. Raw result: ${JSON.stringify(result)?.substring(0, 300)}`);
+    } catch (e: any) {
+      console.error('[AI] Workers AI binding error:', e?.message || e);
+      // AI 바인딩이 있는데 모델 호출 실패 → 에러를 그대로 전파 (fallback 안 함)
+      throw new Error(`Workers AI error: ${e?.message || String(e)}`);
     }
+  } else {
+    console.warn('[AI] env.AI binding is not available');
   }
 
   // 폴백: REST API 방식 (CF_ACCOUNT_ID, CF_AI_TOKEN 환경변수 필요)
   if (env.CF_ACCOUNT_ID && env.CF_AI_TOKEN) {
+    console.log('[AI] Trying REST API fallback...');
     const resp = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run/@cf/moonshotai/kimi-k2.5`,
       {
@@ -58,15 +96,20 @@ async function callAI(
       }
     );
 
+    console.log('[AI] REST API status:', resp.status);
+    const data = await resp.json() as { result?: { response?: string }; errors?: unknown[] };
+    console.log('[AI] REST API response:', JSON.stringify(data)?.substring(0, 500));
+
     if (!resp.ok) {
-      throw new Error(`AI REST API error: ${resp.status}`);
+      throw new Error(`AI REST API error: ${resp.status} ${JSON.stringify(data?.errors)}`);
     }
 
-    const data = await resp.json() as { result?: { response?: string } };
     return data?.result?.response ?? '';
   }
 
-  throw new Error('AI binding not available: set Workers AI binding or CF_ACCOUNT_ID + CF_AI_TOKEN');
+  const envKeys = Object.keys(env).filter(k => !k.includes('SECRET') && !k.includes('KEY') && !k.includes('TOKEN') && !k.includes('PRIVATE') && !k.includes('PASSWORD'));
+  console.error('[AI] No AI backend available: env.AI =', !!env.AI, 'CF_ACCOUNT_ID =', !!env.CF_ACCOUNT_ID, 'envKeys =', envKeys);
+  throw new Error(`AI binding not available. env.AI=${!!env.AI}, envKeys=[${envKeys.join(',')}]`);
 }
 
 // ─── AI 일일 호출 제한 헬퍼 ──────────────────────────────────
@@ -134,7 +177,7 @@ ai.post('/identity', async (c) => {
   }
 
   // 일일 호출 제한: 3회
-  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'identity', 3);
+  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'identity', 10);
   if (!allowed) {
     return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
   }
@@ -144,7 +187,7 @@ ai.post('/identity', async (c) => {
     return c.json({ error: 'bad_request', message: 'Shop URL is not configured' }, 400);
   }
 
-  // 쇼핑몰 HTML 가져오기 (메타데이터 위주, 최대 50KB)
+  // 쇼핑몰 HTML에서 의미 있는 콘텐츠 추출
   let htmlSnippet = '';
   try {
     const pageResp = await fetch(shopUrl, {
@@ -154,17 +197,81 @@ ai.post('/identity', async (c) => {
 
     if (pageResp.ok) {
       const fullText = await pageResp.text();
-      // 분석에 충분한 HEAD 부분만 사용 (토큰 절약)
-      htmlSnippet = fullText.slice(0, 6000);
+      // 스크립트/스타일 태그 제거 후 의미 있는 콘텐츠 추출
+      const cleaned = fullText
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
+
+      // 메타태그 추출
+      const titleMatch = fullText.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      const metaDesc = fullText.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)/i);
+      const metaKeywords = fullText.match(/<meta[^>]*name=["']keywords["'][^>]*content=["']([^"']*)/i);
+      const ogTitle = fullText.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)/i);
+      const ogDesc = fullText.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)/i);
+
+      // 본문 텍스트 추출 (태그 제거)
+      const bodyMatch = cleaned.match(/<body[\s\S]*?<\/body>/i);
+      const bodyText = bodyMatch
+        ? bodyMatch[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 3000)
+        : '';
+
+      // AI에게 보낼 요약 구성
+      const parts = [
+        `URL: ${shopUrl}`,
+        titleMatch ? `페이지 제목: ${titleMatch[1].trim()}` : '',
+        metaDesc ? `메타 설명: ${metaDesc[1]}` : '',
+        metaKeywords ? `메타 키워드: ${metaKeywords[1]}` : '',
+        ogTitle ? `OG 제목: ${ogTitle[1]}` : '',
+        ogDesc ? `OG 설명: ${ogDesc[1]}` : '',
+        bodyText ? `본문 텍스트 (일부): ${bodyText}` : '',
+      ].filter(Boolean);
+
+      htmlSnippet = parts.join('\n');
+      console.log(`[AI/identity] Extracted content length: ${htmlSnippet.length}`);
     }
   } catch (e) {
     console.warn('[AI/identity] Failed to fetch shop URL:', shopUrl, e);
   }
 
-  // HTML 없어도 URL 기반으로 분석 시도
+  // 카페24 Admin API로 상품 정보 가져오기 (최대 5개)
+  let productInfo = '';
+  if (shop.platform_access_token) {
+    try {
+      const { decryptShopTokens } = await import('../db/queries');
+      const tokens = await decryptShopTokens(shop as any, c.env.ENCRYPTION_KEY);
+      if (tokens.access_token) {
+        const mallId = shop.mall_id as string;
+        const prodResp = await fetch(
+          `https://${mallId}.cafe24api.com/api/v2/admin/products?limit=5&fields=product_name,price,summary_description,simple_description`,
+          {
+            headers: {
+              'Authorization': `Bearer ${tokens.access_token}`,
+              'Content-Type': 'application/json',
+              'X-Cafe24-Api-Version': '2026-03-01',
+            },
+            signal: AbortSignal.timeout(5000),
+          }
+        );
+        if (prodResp.ok) {
+          const prodData = await prodResp.json() as { products?: Array<{ product_name?: string; price?: string; summary_description?: string }> };
+          if (prodData.products?.length) {
+            productInfo = '\n상품 목록:\n' + prodData.products.map((p, i) =>
+              `${i + 1}. ${p.product_name || '-'} (${p.price || '-'}원) ${p.summary_description || ''}`
+            ).join('\n');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[AI/identity] 상품 정보 조회 실패:', e);
+    }
+  }
+
+  // 쇼핑몰 정보 기반 분석 프롬프트
+  const jsonFormat = '{"industry":"업종 (예: 패션, 뷰티, 식품, 잡화 등)","target":"타겟 고객 (예: 20-30대 여성)","tone":"톤앤매너 (예: 친근하고 캐주얼)","keywords":["키워드1","키워드2","키워드3"],"summary":"한 줄 소개"}';
   const prompt = htmlSnippet
-    ? `다음은 한국 쇼핑몰의 HTML 일부입니다. 이 쇼핑몰을 분석하여 JSON으로만 응답하세요.\n\nURL: ${shopUrl}\n\nHTML:\n${htmlSnippet}\n\n반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이):\n{"industry":"업종 (예: 패션, 뷰티, 식품, 잡화 등)","target":"타겟 고객 (예: 20-30대 여성, 40대 이상 남성 등)","tone":"톤앤매너 (예: 친근하고 캐주얼, 고급스럽고 전문적 등)","keywords":["핵심키워드1","핵심키워드2","핵심키워드3"],"summary":"한 줄 소개"}`
-    : `URL만으로 한국 쇼핑몰을 추론하여 JSON으로만 응답하세요.\n\nURL: ${shopUrl}\n\n반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이):\n{"industry":"업종 (예: 패션, 뷰티, 식품, 잡화 등)","target":"타겟 고객","tone":"톤앤매너","keywords":["핵심키워드1","핵심키워드2","핵심키워드3"],"summary":"한 줄 소개"}`;
+    ? `다음은 한국 쇼핑몰에서 추출한 정보입니다. 이 쇼핑몰의 정체성을 분석하여 JSON으로만 응답하세요.\n\n${htmlSnippet}${productInfo}\n\n반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이):\n${jsonFormat}`
+    : `URL만으로 한국 쇼핑몰을 추론하여 JSON으로만 응답하세요.\n\nURL: ${shopUrl}\n\n반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이):\n${jsonFormat}`;
 
   let rawResponse = '';
   try {
@@ -172,9 +279,9 @@ ai.post('/identity', async (c) => {
       { role: 'system', content: 'You are a Korean e-commerce analyst. Always respond with valid JSON only, no markdown, no explanation.' },
       { role: 'user', content: prompt },
     ]);
-  } catch (e) {
+  } catch (e: any) {
     console.error('[AI/identity] AI call failed:', e);
-    return c.json({ error: 'ai_error', message: 'AI service unavailable' }, 503);
+    return c.json({ error: 'ai_error', message: 'AI service unavailable', detail: e?.message || String(e) }, 503);
   }
 
   // AI 응답 파싱 (방어 코드)

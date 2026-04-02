@@ -3082,7 +3082,9 @@ export const GeneralSettingsPage: FC<{
 
             analyzeBtn.addEventListener('click', async function() {
               analyzeBtn.disabled = true;
-              analyzeBtn.textContent = '분석 중...';
+              analyzeBtn.textContent = '⏳ AI 분석 중... (30초 이상 소요될 수 있습니다)';
+              analyzeBtn.style.opacity = '0.5';
+              analyzeBtn.style.cursor = 'not-allowed';
               display.style.display = 'none';
               try {
                 var resp = await fetch('/api/ai/identity', {
@@ -3106,6 +3108,8 @@ export const GeneralSettingsPage: FC<{
               } finally {
                 analyzeBtn.disabled = false;
                 analyzeBtn.textContent = '다시 분석하기';
+                analyzeBtn.style.opacity = '1';
+                analyzeBtn.style.cursor = 'pointer';
               }
             });
 
