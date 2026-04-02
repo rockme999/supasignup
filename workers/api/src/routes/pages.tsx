@@ -27,6 +27,7 @@ import {
   AiReportsPage,
   GuidePage,
   InquiriesPage,
+  InquiryDetailPage,
   PrivacyPage,
   TermsPage,
   LandingPage,
@@ -35,6 +36,8 @@ import {
   AdminSubscriptionsPage,
   AdminAuditLogPage,
   AdminOwnersPage,
+  AdminInquiriesPage,
+  AdminAiReportsPage,
 } from '../views/pages';
 
 type PageEnv = {
@@ -628,9 +631,67 @@ pages.get('/dashboard/guide', (c) => {
 
 // ─── Inquiries ───────────────────────────────────────────────
 
-pages.get('/dashboard/inquiries', (c) => {
+pages.get('/dashboard/inquiries', async (c) => {
+  const ownerId = c.get('ownerId');
+  const result = await c.env.DB.prepare(
+    `SELECT i.id, i.title, i.status, i.created_at, i.replied_at,
+            s.shop_name, s.mall_id
+     FROM inquiries i
+     JOIN shops s ON i.shop_id = s.shop_id
+     WHERE i.owner_id = ?
+     ORDER BY i.created_at DESC
+     LIMIT 50`,
+  )
+    .bind(ownerId)
+    .all<{
+      id: string;
+      title: string;
+      status: string;
+      created_at: string;
+      replied_at: string | null;
+      shop_name: string | null;
+      mall_id: string;
+    }>();
+
   return c.html(
-    <InquiriesPage isCafe24={c.get('isCafe24')} />
+    <InquiriesPage
+      isCafe24={c.get('isCafe24')}
+      inquiries={result.results ?? []}
+    />
+  );
+});
+
+pages.get('/dashboard/inquiries/:id', async (c) => {
+  const ownerId = c.get('ownerId');
+  const inquiryId = c.req.param('id');
+
+  const inquiry = await c.env.DB.prepare(
+    `SELECT i.id, i.title, i.content, i.status, i.reply, i.replied_at, i.created_at,
+            s.shop_name, s.mall_id
+     FROM inquiries i
+     JOIN shops s ON i.shop_id = s.shop_id
+     WHERE i.id = ? AND i.owner_id = ?`,
+  )
+    .bind(inquiryId, ownerId)
+    .first<{
+      id: string;
+      title: string;
+      content: string;
+      status: string;
+      reply: string | null;
+      replied_at: string | null;
+      created_at: string;
+      shop_name: string | null;
+      mall_id: string;
+    }>();
+
+  if (!inquiry) return c.redirect('/dashboard/inquiries');
+
+  return c.html(
+    <InquiryDetailPage
+      isCafe24={c.get('isCafe24')}
+      inquiry={inquiry}
+    />
   );
 });
 
@@ -1001,6 +1062,85 @@ pages.get('/admin/owners', async (c) => {
       pagination={{ page, pages: Math.ceil(total / limit), total }}
       search={search}
     />
+  );
+});
+
+// GET /admin/inquiries — 문의 관리
+pages.get('/admin/inquiries', async (c) => {
+  const statusFilter = c.req.query('status') || '';
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  let query = `
+    SELECT i.id, i.title, i.status, i.created_at, i.replied_at,
+           o.email as owner_email, s.shop_name, s.mall_id
+    FROM inquiries i
+    JOIN owners o ON i.owner_id = o.owner_id
+    JOIN shops s ON i.shop_id = s.shop_id
+    WHERE 1=1`;
+  const params: string[] = [];
+
+  if (statusFilter) {
+    query += ' AND i.status = ?';
+    params.push(statusFilter);
+  }
+
+  query += " ORDER BY CASE i.status WHEN 'pending' THEN 0 ELSE 1 END, i.created_at DESC LIMIT ? OFFSET ?";
+  params.push(String(limit), String(offset));
+
+  const countQuery = statusFilter
+    ? 'SELECT COUNT(*) as total FROM inquiries WHERE status = ?'
+    : 'SELECT COUNT(*) as total FROM inquiries';
+
+  const [result, countResult] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all<{
+      id: string; title: string; status: string; created_at: string;
+      replied_at: string | null; owner_email: string;
+      shop_name: string | null; mall_id: string;
+    }>(),
+    statusFilter
+      ? c.env.DB.prepare(countQuery).bind(statusFilter).first<{ total: number }>()
+      : c.env.DB.prepare(countQuery).first<{ total: number }>(),
+  ]);
+
+  const total = countResult?.total ?? 0;
+
+  return c.html(
+    <AdminInquiriesPage
+      inquiries={result.results ?? []}
+      pagination={{ page, pages: Math.ceil(total / limit), total }}
+      statusFilter={statusFilter}
+    />
+  );
+});
+
+// GET /admin/ai-reports — AI 보고서 현황
+pages.get('/admin/ai-reports', async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT s.shop_id, s.shop_name, s.mall_id, s.plan, s.shop_identity,
+            ab.id as briefing_id, ab.briefing_type, ab.summary,
+            ab.created_at as briefing_created_at
+     FROM shops s
+     LEFT JOIN ai_briefings ab ON ab.shop_id = s.shop_id
+       AND ab.id = (
+         SELECT id FROM ai_briefings
+         WHERE shop_id = s.shop_id
+         ORDER BY created_at DESC
+         LIMIT 1
+       )
+     WHERE s.deleted_at IS NULL
+     ORDER BY ab.created_at DESC, s.created_at DESC
+     LIMIT 100`,
+  ).all<{
+    shop_id: string; shop_name: string | null; mall_id: string;
+    plan: string; shop_identity: string | null;
+    briefing_id: string | null; briefing_type: string | null;
+    summary: string | null; briefing_created_at: string | null;
+  }>();
+
+  return c.html(
+    <AdminAiReportsPage shops={result.results ?? []} />
   );
 });
 

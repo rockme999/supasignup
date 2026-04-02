@@ -3486,21 +3486,417 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
 
 // ─── Inquiries Page ──────────────────────────────────────────
 
-export const InquiriesPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
-  <Layout title="문의하기" loggedIn currentPath="/dashboard/inquiries" isCafe24={isCafe24}>
-    <h1>문의하기</h1>
+type InquiryRow = {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  replied_at: string | null;
+  shop_name: string | null;
+  mall_id: string;
+};
 
-    <div class="card" style="text-align:center;padding:48px 24px">
-      <div style="font-size:48px;margin-bottom:16px">💬</div>
-      <h2 style="margin-bottom:8px">문의하기</h2>
-      <p style="font-size:14px;color:#64748b;margin-bottom:8px">번개가입 사용 중 궁금한 점이나 문제가 있으시면 아래로 문의해 주세요.</p>
-      <p style="font-size:14px;color:#64748b;margin-bottom:24px">
-        이메일: <a href="mailto:help@suparain.com">help@suparain.com</a><br />
-        전화: 031-992-5988
-      </p>
-      <div class="alert alert-info" style="text-align:left;max-width:480px;margin:0 auto">
-        문의 게시판 기능은 현재 준비 중입니다. 이메일 또는 전화로 문의해 주세요.
+const inquiryStatusLabel = (status: string) => {
+  if (status === 'pending') return { label: '접수됨', cls: 'badge-yellow' };
+  if (status === 'replied') return { label: '답변완료', cls: 'badge-green' };
+  if (status === 'closed') return { label: '종료', cls: 'badge-gray' };
+  return { label: status, cls: 'badge-gray' };
+};
+
+export const InquiriesPage: FC<{
+  isCafe24?: boolean;
+  inquiries: InquiryRow[];
+}> = ({ isCafe24, inquiries }) => (
+  <Layout title="문의하기" loggedIn currentPath="/dashboard/inquiries" isCafe24={isCafe24}>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h1 style="margin-bottom:0">문의하기</h1>
+      <button
+        id="openInquiryForm"
+        class="btn btn-primary"
+        style="width:auto"
+      >
+        + 문의 작성
+      </button>
+    </div>
+
+    {/* 문의 작성 폼 (기본 숨김) */}
+    <div id="inquiryForm" class="card" style="display:none;margin-bottom:24px">
+      <h2 style="margin-bottom:16px">새 문의 작성</h2>
+      <div class="form-group">
+        <label for="inquiryTitle">제목</label>
+        <input type="text" id="inquiryTitle" placeholder="문의 제목을 입력해 주세요" maxlength={200} />
       </div>
+      <div class="form-group">
+        <label for="inquiryContent">내용</label>
+        <textarea
+          id="inquiryContent"
+          placeholder="문의 내용을 자세히 작성해 주세요"
+          rows={6}
+          style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical"
+        />
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="cancelInquiry" class="btn btn-outline" style="width:auto">취소</button>
+        <button id="submitInquiry" class="btn btn-primary" style="width:auto">제출</button>
+      </div>
+    </div>
+
+    {/* 문의 목록 */}
+    <div class="card">
+      <h2 style="margin-bottom:16px">내 문의 목록</h2>
+      {inquiries.length === 0 ? (
+        <div class="empty-state">
+          <p style="color:#64748b;font-size:14px">아직 문의 내역이 없습니다. 위 버튼을 눌러 문의를 남겨보세요.</p>
+          <p style="font-size:13px;color:#94a3b8;margin-top:8px">
+            긴급 문의: <a href="mailto:help@suparain.com">help@suparain.com</a> / 031-992-5988
+          </p>
+        </div>
+      ) : (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>제목</th>
+                <th>쇼핑몰</th>
+                <th>상태</th>
+                <th>작성일</th>
+                <th>답변일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inquiries.map((inq) => {
+                const st = inquiryStatusLabel(inq.status);
+                return (
+                  <tr style="cursor:pointer" onclick={`window.location.href='/dashboard/inquiries/${inq.id}'`}>
+                    <td style="font-size:13px;font-weight:500">{inq.title}</td>
+                    <td style="font-size:12px;color:#64748b">{inq.shop_name || inq.mall_id}</td>
+                    <td><span class={`badge ${st.cls}`}>{st.label}</span></td>
+                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.created_at.slice(0, 10)}</td>
+                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.replied_at ? inq.replied_at.slice(0, 10) : '-'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+      var form = document.getElementById('inquiryForm');
+      document.getElementById('openInquiryForm').addEventListener('click', function() {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      });
+      document.getElementById('cancelInquiry').addEventListener('click', function() {
+        form.style.display = 'none';
+        document.getElementById('inquiryTitle').value = '';
+        document.getElementById('inquiryContent').value = '';
+      });
+      document.getElementById('submitInquiry').addEventListener('click', async function() {
+        var title = document.getElementById('inquiryTitle').value.trim();
+        var content = document.getElementById('inquiryContent').value.trim();
+        if (!title) { showToast('error', '제목을 입력해 주세요.'); return; }
+        if (!content) { showToast('error', '내용을 입력해 주세요.'); return; }
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = '제출 중...';
+        try {
+          var resp = await apiCall('POST', '/api/dashboard/inquiries', { title: title, content: content }, btn);
+          if (resp.ok) {
+            showToast('success', '문의가 접수되었습니다.');
+            setTimeout(function() { location.reload(); }, 1000);
+          } else {
+            var data = await resp.json();
+            showToast('error', data.error || '문의 제출 중 오류가 발생했습니다.');
+          }
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '제출';
+        }
+      });
+    `}} />
+  </Layout>
+);
+
+// ─── Inquiry Detail Page ──────────────────────────────────────
+
+type InquiryDetail = {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  reply: string | null;
+  replied_at: string | null;
+  created_at: string;
+  shop_name: string | null;
+  mall_id: string;
+};
+
+export const InquiryDetailPage: FC<{
+  isCafe24?: boolean;
+  inquiry: InquiryDetail;
+}> = ({ isCafe24, inquiry }) => {
+  const st = inquiryStatusLabel(inquiry.status);
+  return (
+    <Layout title="문의 상세" loggedIn currentPath="/dashboard/inquiries" isCafe24={isCafe24}>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <a href="/dashboard/inquiries" style="color:#64748b;font-size:14px">← 목록으로</a>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+          <h1 style="font-size:20px;margin-bottom:0">{inquiry.title}</h1>
+          <span class={`badge ${st.cls}`}>{st.label}</span>
+        </div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:16px">
+          {inquiry.shop_name || inquiry.mall_id} · {inquiry.created_at.slice(0, 16).replace('T', ' ')}
+        </div>
+        <div style="font-size:14px;line-height:1.8;white-space:pre-wrap;border-top:1px solid #f1f5f9;padding-top:16px">
+          {inquiry.content}
+        </div>
+      </div>
+
+      {inquiry.reply ? (
+        <div class="card" style="border-left:4px solid #2563eb">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span style="font-weight:700;font-size:14px;color:#2563eb">관리자 답변</span>
+            <span style="font-size:12px;color:#94a3b8">{inquiry.replied_at ? inquiry.replied_at.slice(0, 16).replace('T', ' ') : ''}</span>
+          </div>
+          <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">{inquiry.reply}</div>
+        </div>
+      ) : (
+        <div class="card" style="text-align:center;padding:32px;color:#94a3b8;font-size:14px">
+          아직 답변이 등록되지 않았습니다. 영업일 기준 1~2일 내에 답변드립니다.
+        </div>
+      )}
+    </Layout>
+  );
+};
+
+// ─── Admin Inquiries Page ─────────────────────────────────────
+
+type AdminInquiryRow = {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  replied_at: string | null;
+  owner_email: string;
+  shop_name: string | null;
+  mall_id: string;
+};
+
+export const AdminInquiriesPage: FC<{
+  inquiries: AdminInquiryRow[];
+  pagination: { page: number; pages: number; total: number };
+  statusFilter: string;
+}> = ({ inquiries, pagination, statusFilter }) => (
+  <Layout title="문의 관리" loggedIn isAdmin currentPath="/admin/inquiries">
+    <h1>문의 관리</h1>
+
+    <div class="filter-bar" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      {['', 'pending', 'replied', 'closed'].map((s) => {
+        const labels: Record<string, string> = { '': '전체', pending: '미답변', replied: '답변완료', closed: '종료' };
+        const active = statusFilter === s;
+        return (
+          <a
+            href={s ? `/admin/inquiries?status=${s}` : '/admin/inquiries'}
+            class={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
+            style="width:auto"
+          >
+            {labels[s]}
+          </a>
+        );
+      })}
+      <span style="margin-left:auto;font-size:13px;color:#64748b;align-self:center">전체 {pagination.total}건</span>
+    </div>
+
+    <div class="card">
+      {inquiries.length === 0 ? (
+        <div class="empty-state"><p>문의가 없습니다.</p></div>
+      ) : (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>제목</th>
+                <th>사용자</th>
+                <th>쇼핑몰</th>
+                <th>상태</th>
+                <th>작성일</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inquiries.map((inq) => {
+                const st = inquiryStatusLabel(inq.status);
+                return (
+                  <tr>
+                    <td style="font-size:13px;font-weight:500;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                      {inq.title}
+                    </td>
+                    <td style="font-size:12px;color:#64748b">{inq.owner_email}</td>
+                    <td style="font-size:12px;color:#64748b">{inq.shop_name || inq.mall_id}</td>
+                    <td><span class={`badge ${st.cls}`}>{st.label}</span></td>
+                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.created_at.slice(0, 10)}</td>
+                    <td>
+                      <button
+                        class="btn btn-primary btn-sm reply-btn"
+                        data-id={inq.id}
+                        data-title={inq.title}
+                        style="font-size:11px;padding:4px 8px;width:auto"
+                      >
+                        답변
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {pagination.pages > 1 && (
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+          {pagination.page > 1 && (
+            <a href={`/admin/inquiries?page=${pagination.page - 1}${statusFilter ? `&status=${statusFilter}` : ''}`} class="btn btn-outline btn-sm">이전</a>
+          )}
+          <span style="padding:6px 12px;font-size:13px;color:#64748b">{pagination.page} / {pagination.pages}</span>
+          {pagination.page < pagination.pages && (
+            <a href={`/admin/inquiries?page=${pagination.page + 1}${statusFilter ? `&status=${statusFilter}` : ''}`} class="btn btn-outline btn-sm">다음</a>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* 답변 모달 */}
+    <div id="replyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;padding:32px;width:100%;max-width:560px;margin:24px">
+        <h2 style="margin-bottom:8px;font-size:18px">답변 작성</h2>
+        <p id="replyModalTitle" style="font-size:13px;color:#64748b;margin-bottom:16px"></p>
+        <textarea
+          id="replyContent"
+          placeholder="답변 내용을 입력해 주세요"
+          rows={6}
+          style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical"
+        />
+        <input type="hidden" id="replyTargetId" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+          <button id="cancelReply" class="btn btn-outline" style="width:auto">취소</button>
+          <button id="submitReply" class="btn btn-primary" style="width:auto">답변 등록</button>
+        </div>
+      </div>
+    </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+      var modal = document.getElementById('replyModal');
+      document.querySelectorAll('.reply-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.getElementById('replyTargetId').value = this.dataset.id;
+          document.getElementById('replyModalTitle').textContent = this.dataset.title;
+          document.getElementById('replyContent').value = '';
+          modal.style.display = 'flex';
+        });
+      });
+      document.getElementById('cancelReply').addEventListener('click', function() {
+        modal.style.display = 'none';
+      });
+      document.getElementById('submitReply').addEventListener('click', async function() {
+        var id = document.getElementById('replyTargetId').value;
+        var reply = document.getElementById('replyContent').value.trim();
+        if (!reply) { showToast('error', '답변 내용을 입력해 주세요.'); return; }
+        var btn = this;
+        btn.disabled = true; btn.textContent = '등록 중...';
+        try {
+          var resp = await apiCall('PUT', '/api/admin/inquiries/' + id + '/reply', { reply: reply }, btn);
+          if (resp.ok) {
+            showToast('success', '답변이 등록되었습니다.');
+            modal.style.display = 'none';
+            setTimeout(function() { location.reload(); }, 1000);
+          } else {
+            var data = await resp.json();
+            showToast('error', data.error || '답변 등록 중 오류가 발생했습니다.');
+          }
+        } finally {
+          btn.disabled = false; btn.textContent = '답변 등록';
+        }
+      });
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+    `}} />
+  </Layout>
+);
+
+// ─── Admin AI Reports Page ────────────────────────────────────
+
+type AdminAiReportRow = {
+  shop_id: string;
+  shop_name: string | null;
+  mall_id: string;
+  plan: string;
+  shop_identity: string | null;
+  briefing_id: string | null;
+  briefing_type: string | null;
+  summary: string | null;
+  briefing_created_at: string | null;
+};
+
+export const AdminAiReportsPage: FC<{
+  shops: AdminAiReportRow[];
+}> = ({ shops }) => (
+  <Layout title="AI 보고서" loggedIn isAdmin currentPath="/admin/ai-reports">
+    <h1>AI 보고서 현황</h1>
+    <p style="font-size:14px;color:#64748b;margin-bottom:24px">
+      전체 쇼핑몰의 AI 주간 브리핑 최신 현황입니다.
+    </p>
+
+    <div class="card">
+      {shops.length === 0 ? (
+        <div class="empty-state"><p>쇼핑몰 데이터가 없습니다.</p></div>
+      ) : (
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>쇼핑몰</th>
+                <th>Mall ID</th>
+                <th>플랜</th>
+                <th>정체성 설정</th>
+                <th>최근 브리핑</th>
+                <th>브리핑 요약</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shops.map((row) => (
+                <tr>
+                  <td style="font-size:13px;font-weight:500">{row.shop_name || '-'}</td>
+                  <td style="font-size:12px;color:#64748b">{row.mall_id}</td>
+                  <td>
+                    <span class={`badge ${row.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
+                      {row.plan}
+                    </span>
+                  </td>
+                  <td style="font-size:12px;color:#64748b">
+                    {row.shop_identity ? (
+                      <span style="color:#16a34a">설정됨</span>
+                    ) : (
+                      <span style="color:#dc2626">미설정</span>
+                    )}
+                  </td>
+                  <td style="font-size:12px;color:#64748b;white-space:nowrap">
+                    {row.briefing_created_at ? row.briefing_created_at.slice(0, 10) : '-'}
+                  </td>
+                  <td style="font-size:12px;color:#64748b;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                    {row.summary || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   </Layout>
 );

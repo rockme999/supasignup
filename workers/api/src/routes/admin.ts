@@ -457,6 +457,110 @@ admin.get('/audit-log', async (c) => {
   return c.json({ logs: result.results ?? [], page, limit });
 });
 
+// ─── GET /inquiries — 전체 문의 목록 ─────────────────────────
+admin.get('/inquiries', async (c) => {
+  const status = c.req.query('status') || '';
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  let query = `
+    SELECT i.id, i.title, i.status, i.created_at, i.replied_at,
+           o.email as owner_email, s.shop_name, s.mall_id
+    FROM inquiries i
+    JOIN owners o ON i.owner_id = o.owner_id
+    JOIN shops s ON i.shop_id = s.shop_id
+    WHERE 1=1`;
+  const params: string[] = [];
+
+  if (status) {
+    query += ' AND i.status = ?';
+    params.push(status);
+  }
+
+  query += ' ORDER BY CASE i.status WHEN \'pending\' THEN 0 ELSE 1 END, i.created_at DESC LIMIT ? OFFSET ?';
+  params.push(String(limit), String(offset));
+
+  const countQuery = status
+    ? 'SELECT COUNT(*) as total FROM inquiries WHERE status = ?'
+    : 'SELECT COUNT(*) as total FROM inquiries';
+
+  const [result, countResult] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all(),
+    status
+      ? c.env.DB.prepare(countQuery).bind(status).first<{ total: number }>()
+      : c.env.DB.prepare(countQuery).first<{ total: number }>(),
+  ]);
+
+  return c.json({
+    inquiries: result.results ?? [],
+    pagination: {
+      page,
+      limit,
+      total: countResult?.total ?? 0,
+      pages: Math.ceil((countResult?.total ?? 0) / limit),
+    },
+  });
+});
+
+// ─── PUT /inquiries/:id/reply — 답변 작성 ────────────────────
+admin.put('/inquiries/:id/reply', async (c) => {
+  const inquiryId = c.req.param('id');
+  const { reply } = await c.req.json<{ reply?: string }>();
+
+  if (!reply?.trim()) {
+    return c.json({ error: 'reply is required' }, 400);
+  }
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM inquiries WHERE id = ?',
+  )
+    .bind(inquiryId)
+    .first();
+  if (!existing) return c.json({ error: 'not_found' }, 404);
+
+  await c.env.DB.prepare(
+    `UPDATE inquiries
+     SET reply = ?, status = 'replied', replied_at = datetime('now'), updated_at = datetime('now')
+     WHERE id = ?`,
+  )
+    .bind(reply.trim(), inquiryId)
+    .run();
+
+  await recordAuditLog(
+    c.env.DB,
+    c.get('ownerId'),
+    'reply_inquiry',
+    'inquiry',
+    inquiryId,
+    null,
+  );
+
+  return c.json({ ok: true });
+});
+
+// ─── GET /ai-reports — 전체 쇼핑몰 AI 브리핑 목록 ───────────
+admin.get('/ai-reports', async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT s.shop_id, s.shop_name, s.mall_id, s.plan, s.shop_identity,
+            ab.id as briefing_id, ab.briefing_type, ab.summary,
+            ab.created_at as briefing_created_at
+     FROM shops s
+     LEFT JOIN ai_briefings ab ON ab.shop_id = s.shop_id
+       AND ab.id = (
+         SELECT id FROM ai_briefings
+         WHERE shop_id = s.shop_id
+         ORDER BY created_at DESC
+         LIMIT 1
+       )
+     WHERE s.deleted_at IS NULL
+     ORDER BY ab.created_at DESC NULLS LAST, s.created_at DESC
+     LIMIT 100`,
+  ).all();
+
+  return c.json({ shops: result.results ?? [] });
+});
+
 // ─── Helper: 감사 로그 기록 ──────────────────────────────────
 async function recordAuditLog(
   db: D1Database,

@@ -9,6 +9,7 @@
 --   2026-04-02: shops.plan CHECK 변경 (free/plus), subscriptions 구조 변경 (billing_cycle 분리)
 --   2026-04-02: shops.kakao_channel_id 추가 (Plus: 카카오 채널), shops.shop_identity 추가 (Plus: AI 정체성 분석)
 --   2026-04-02: funnel_events 테이블 추가 (퍼널 이벤트 D1 영구저장)
+--   2026-04-02: inquiries 테이블 추가 (1:1 문의 게시판)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -177,3 +178,24 @@ CREATE TABLE IF NOT EXISTS funnel_events (
 CREATE INDEX IF NOT EXISTS idx_funnel_events_shop_id    ON funnel_events(shop_id);
 CREATE INDEX IF NOT EXISTS idx_funnel_events_created_at ON funnel_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_funnel_events_type       ON funnel_events(event_type);
+
+-- ============================================================
+-- 10. inquiries - 1:1 문의 게시판
+-- ============================================================
+CREATE TABLE IF NOT EXISTS inquiries (
+  id         TEXT PRIMARY KEY,
+  shop_id    TEXT NOT NULL REFERENCES shops(shop_id),
+  owner_id   TEXT NOT NULL REFERENCES owners(owner_id),
+  title      TEXT NOT NULL,
+  content    TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'replied', 'closed')),
+  reply      TEXT,
+  replied_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_inquiries_shop_id   ON inquiries(shop_id);
+CREATE INDEX IF NOT EXISTS idx_inquiries_owner_id  ON inquiries(owner_id);
+CREATE INDEX IF NOT EXISTS idx_inquiries_status    ON inquiries(status);
+CREATE INDEX IF NOT EXISTS idx_inquiries_created_at ON inquiries(created_at);

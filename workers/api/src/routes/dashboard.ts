@@ -472,6 +472,83 @@ dashboard.put('/shops/:id/kakao-channel', async (c) => {
   return c.json({ ok: true });
 });
 
+// ─── GET /inquiries — 내 문의 목록 ───────────────────────────
+dashboard.get('/inquiries', authMiddleware, async (c) => {
+  const ownerId = c.get('ownerId');
+
+  const result = await c.env.DB.prepare(
+    `SELECT i.id, i.title, i.status, i.created_at, i.replied_at,
+            s.shop_name, s.mall_id
+     FROM inquiries i
+     JOIN shops s ON i.shop_id = s.shop_id
+     WHERE i.owner_id = ?
+     ORDER BY i.created_at DESC
+     LIMIT 50`,
+  )
+    .bind(ownerId)
+    .all();
+
+  return c.json({ inquiries: result.results ?? [] });
+});
+
+// ─── POST /inquiries — 문의 작성 ─────────────────────────────
+dashboard.post('/inquiries', authMiddleware, async (c) => {
+  const ownerId = c.get('ownerId');
+  const body = await c.req.json<{ title?: string; content?: string; shop_id?: string }>();
+
+  if (!body.title?.trim() || !body.content?.trim()) {
+    return c.json({ error: 'title and content are required' }, 400);
+  }
+
+  // 해당 owner의 첫 번째 활성 쇼핑몰 (shop_id를 명시하지 않은 경우)
+  let shopId = body.shop_id;
+  if (!shopId) {
+    const shop = await c.env.DB.prepare(
+      'SELECT shop_id FROM shops WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
+    )
+      .bind(ownerId)
+      .first<{ shop_id: string }>();
+    if (!shop) return c.json({ error: 'no_shop_found' }, 400);
+    shopId = shop.shop_id;
+  } else {
+    // shop_id를 명시한 경우 소유권 확인
+    const shop = await c.env.DB.prepare(
+      'SELECT shop_id FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL',
+    )
+      .bind(shopId, ownerId)
+      .first();
+    if (!shop) return c.json({ error: 'not_found' }, 404);
+  }
+
+  const id = generateId();
+  await c.env.DB.prepare(
+    `INSERT INTO inquiries (id, shop_id, owner_id, title, content, status)
+     VALUES (?, ?, ?, ?, ?, 'pending')`,
+  )
+    .bind(id, shopId, ownerId, body.title.trim(), body.content.trim())
+    .run();
+
+  return c.json({ ok: true, id }, 201);
+});
+
+// ─── GET /inquiries/:id — 문의 상세 (답변 포함) ──────────────
+dashboard.get('/inquiries/:id', authMiddleware, async (c) => {
+  const ownerId = c.get('ownerId');
+  const inquiryId = c.req.param('id');
+
+  const inquiry = await c.env.DB.prepare(
+    `SELECT i.*, s.shop_name, s.mall_id
+     FROM inquiries i
+     JOIN shops s ON i.shop_id = s.shop_id
+     WHERE i.id = ? AND i.owner_id = ?`,
+  )
+    .bind(inquiryId, ownerId)
+    .first();
+
+  if (!inquiry) return c.json({ error: 'not_found' }, 404);
+  return c.json({ inquiry });
+});
+
 // ─── Helper ──────────────────────────────────────────────────
 
 function maskSecret(secret: string): string {

@@ -148,10 +148,12 @@ const etcNavItems: NavItem[] = [
 ];
 
 const adminNavItems = [
-  { path: '/admin', label: '관리자 홈', icon: <IconKey /> },
-  { path: '/admin/shops', label: '전체 쇼핑몰', icon: <IconBuilding /> },
+  { path: '/admin', label: '대시보드', icon: <IconGrid /> },
+  { path: '/admin/shops', label: '쇼핑몰 관리', icon: <IconBuilding /> },
   { path: '/admin/owners', label: '사용자 관리', icon: <IconUsers /> },
-  { path: '/admin/subscriptions', label: '구독 현황', icon: <IconCurrencyDollar /> },
+  { path: '/admin/subscriptions', label: '구독/결제', icon: <IconCurrencyDollar /> },
+  { path: '/admin/ai-reports', label: 'AI 보고서', icon: <IconSparkle /> },
+  { path: '/admin/inquiries', label: '문의 관리', icon: <IconChat /> },
   { path: '/admin/audit-log', label: '감사 로그', icon: <IconClipboard /> },
 ];
 

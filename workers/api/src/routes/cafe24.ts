@@ -225,20 +225,50 @@ cafe24.get('/callback', async (c) => {
     // Non-fatal: continue even if ScriptTag fails
   }
 
-  // Note: Webhook (app_uninstalled) is registered manually in Cafe24 Developer Center
-  // URL: {BASE_URL}/api/cafe24/webhook
+  // AI 쇼핑몰 정체성 자동 분석 (백그라운드)
+  if (shop.shop_url || shop.mall_id) {
+    c.executionCtx.waitUntil(
+      (async () => {
+        try {
+          const shopUrl = shop.shop_url || `https://${shop.mall_id}.cafe24.com`;
+          const htmlResp = await fetch(shopUrl, { signal: AbortSignal.timeout(5000) });
+          if (!htmlResp.ok) return;
+          const html = await htmlResp.text();
+          const snippet = html.substring(0, 6000);
+
+          const prompt = `다음 쇼핑몰 HTML을 분석하여 JSON으로 응답하세요:\n${snippet}\n\n반드시 다음 JSON 형식으로만 응답:\n{"industry":"업종","target":"타겟 고객","tone":"톤앤매너","keywords":["키워드1","키워드2"],"summary":"한 줄 요약"}`;
+
+          const aiResp = await c.env.AI.run('@cf/moonshotai/kimi-k2.5', {
+            messages: [
+              { role: 'system', content: 'You are a Korean e-commerce analyst. Always respond in JSON only.' },
+              { role: 'user', content: prompt },
+            ],
+          });
+
+          const text = typeof aiResp === 'string' ? aiResp : aiResp?.response ?? '';
+          if (text) {
+            await c.env.DB.prepare("UPDATE shops SET shop_identity = ?, updated_at = datetime('now') WHERE shop_id = ?")
+              .bind(text.trim(), shop.shop_id)
+              .run();
+            console.info(`[AI Identity] 자동 분석 완료: mall=${shop.mall_id}`);
+          }
+        } catch (err) {
+          console.error(`[AI Identity] 자동 분석 실패: mall=${shop.mall_id}`, err);
+        }
+      })()
+    );
+  }
 
   // Auto-login: issue JWT cookie for the owner so they can access the dashboard
   const token = await createToken(shop.owner_id, c.env.JWT_SECRET);
   const authCookie = `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
-  // 플랫폼 사용자 힌트 쿠키 (세션 만료 시 안내 페이지용, HttpOnly가 아님)
   const platformCookie = `bg_platform=1; Path=/; Secure; SameSite=Lax; Max-Age=604800`;
 
-  // Redirect to dashboard setup page
+  // Redirect to dashboard (새 단일 쇼핑몰 구조)
   return new Response(null, {
     status: 302,
     headers: [
-      ['Location', `${c.env.BASE_URL}/dashboard/shops/${shop.shop_id}/setup`],
+      ['Location', `${c.env.BASE_URL}/dashboard`],
       ['Set-Cookie', authCookie],
       ['Set-Cookie', platformCookie],
     ],
