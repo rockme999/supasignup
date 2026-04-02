@@ -3114,23 +3114,27 @@ export const GeneralSettingsPage: FC<{
             {/* 가입 쿠폰 — 라디오 단일 선택 */}
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">가입 쿠폰 혜택 <span style="color:#2563eb;font-size:11px">[자동 발급]</span></label>
-              <div id="couponRadios" style="display:grid;gap:6px">
-                {['1,000원', '2,000원', '3,000원', '5,000원', '10,000원'].map(amt => (
-                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                    <input type="radio" name="couponBenefit" value={`${amt} 할인 쿠폰 즉시 지급`} style="margin:0" />
-                    {amt} 할인 쿠폰
+              <div id="couponRadios">
+                <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:4px">
+                  {['1,000원', '2,000원', '3,000원', '5,000원', '10,000원'].map(amt => (
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:130px">
+                      <input type="radio" name="couponBenefit" value={`${amt} 할인 쿠폰 즉시 지급`} style="margin:0" />
+                      {amt}
+                    </label>
+                  ))}
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:4px">
+                  {['10%', '15%', '20%'].map(pct => (
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:130px">
+                      <input type="radio" name="couponBenefit" value={`${pct} 할인 쿠폰 즉시 지급`} style="margin:0" />
+                      {pct} 할인
+                    </label>
+                  ))}
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:130px">
+                    <input type="radio" name="couponBenefit" value="__custom__" style="margin:0" />
+                    직접 입력
                   </label>
-                ))}
-                {['10%', '15%', '20%'].map(pct => (
-                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                    <input type="radio" name="couponBenefit" value={`${pct} 할인 쿠폰 즉시 지급`} style="margin:0" />
-                    {pct} 할인 쿠폰
-                  </label>
-                ))}
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="couponBenefit" value="__custom__" style="margin:0" />
-                  직접 입력
-                </label>
+                </div>
               </div>
               <input type="text" id="idCouponBenefitCustom" style="display:none;margin-top:6px" placeholder="예) 첫 구매 무료배송 쿠폰" />
             </div>
@@ -3138,14 +3142,17 @@ export const GeneralSettingsPage: FC<{
             {/* 무료배송 — 라디오 단일 선택 */}
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">무료배송 기준 <span style="color:#f59e0b;font-size:11px">[쇼핑몰 설정]</span></label>
-              <div id="shippingRadios" style="display:grid;gap:6px">
-                {['전 상품 무료배송', '30,000원 이상 무료배송', '50,000원 이상 무료배송', '70,000원 이상 무료배송', '100,000원 이상 무료배송'].map(opt => (
-                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                    <input type="radio" name="freeShipping" value={opt} style="margin:0" />
-                    {opt}
-                  </label>
-                ))}
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <div id="shippingRadios" style="display:flex;flex-wrap:wrap;gap:4px 16px">
+                {['전 상품', '3만원 이상', '5만원 이상', '7만원 이상', '10만원 이상'].map((label, i) => {
+                  const values = ['전 상품 무료배송', '30,000원 이상 무료배송', '50,000원 이상 무료배송', '70,000원 이상 무료배송', '100,000원 이상 무료배송'];
+                  return (
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:120px">
+                      <input type="radio" name="freeShipping" value={values[i]} style="margin:0" />
+                      {label}
+                    </label>
+                  );
+                })}
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:120px">
                   <input type="radio" name="freeShipping" value="__custom__" style="margin:0" />
                   직접 입력
                 </label>
@@ -3153,32 +3160,32 @@ export const GeneralSettingsPage: FC<{
               <input type="text" id="idFreeShippingCustom" style="display:none;margin-top:6px" placeholder="예) 도서산간 제외 무료배송" />
             </div>
 
-            {/* 추가 혜택 — 토글 다중 선택 */}
+            {/* 추가 혜택 — 토글 다중 선택 (2열 그리드) */}
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">추가 혜택 (여러 개 선택 가능)</label>
-              <div id="extraBenefitToggles" style="display:grid;gap:8px">
+              <div id="extraBenefitToggles" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">
                 {[
-                  { value: '첫 구매 10% 추가 할인', label: '첫 구매 10% 추가 할인', tag: '[자동 발급]', tagColor: '#2563eb' },
-                  { value: '적립금 1,000원 즉시 지급', label: '적립금 1,000원 즉시 지급', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
-                  { value: '생일 쿠폰 자동 발급', label: '생일 쿠폰 자동 발급', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
-                  { value: '회원 등급별 추가 할인', label: '회원 등급별 추가 할인', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
-                  { value: '신상품 알림 우선 발송', label: '신상품 알림 우선 발송', tag: '[쇼핑몰 설정]', tagColor: '#f59e0b' },
+                  { value: '첫 구매 10% 추가 할인', label: '첫 구매 10% 할인', tag: '자동', tagColor: '#2563eb' },
+                  { value: '적립금 1,000원 즉시 지급', label: '적립금 1,000원', tag: '쇼핑몰', tagColor: '#f59e0b' },
+                  { value: '생일 쿠폰 자동 발급', label: '생일 쿠폰', tag: '쇼핑몰', tagColor: '#f59e0b' },
+                  { value: '회원 등급별 추가 할인', label: '등급별 할인', tag: '쇼핑몰', tagColor: '#f59e0b' },
+                  { value: '신상품 알림 우선 발송', label: '신상품 알림', tag: '쇼핑몰', tagColor: '#f59e0b' },
                 ].map(item => (
-                  <label class="provider-toggle" style="padding:8px 0;border-bottom:1px solid #f1f5f9">
-                    <span class="toggle">
+                  <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
+                    <span class="toggle" style="flex-shrink:0">
                       <input type="checkbox" name="extraBenefit" value={item.value} />
                       <span class="toggle-slider"></span>
                     </span>
-                    <span style="font-size:13px">{item.label}</span>
-                    <span style={`font-size:11px;color:${item.tagColor};font-weight:600;margin-left:auto`}>{item.tag}</span>
+                    <span>{item.label}</span>
+                    <span style={`font-size:10px;color:${item.tagColor};font-weight:600`}>{item.tag}</span>
                   </label>
                 ))}
-                <label class="provider-toggle" style="padding:8px 0">
-                  <span class="toggle">
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
+                  <span class="toggle" style="flex-shrink:0">
                     <input type="checkbox" id="extraBenefitCustomToggle" />
                     <span class="toggle-slider"></span>
                   </span>
-                  <span style="font-size:13px">직접 입력</span>
+                  <span>직접 입력</span>
                 </label>
               </div>
               <input type="text" id="idExtraBenefitCustom" style="display:none;margin-top:6px" placeholder="예) VIP 전용 시크릿 세일 초대" />
