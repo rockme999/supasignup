@@ -203,12 +203,20 @@ export const WIDGET_JS = `(function() {
       .then(function(config) {
         self.config = config;
         self.baseUrl = config.base_url || self.getApiBase();
+
+        // 소셜 로그인 렌더링 (기존)
         if (config.providers && config.providers.length > 0) {
           if (self.pageType === 'myshop') {
             self.renderLinkWidget();
           } else {
             self.render();
           }
+        }
+
+        // Plus 기능 활성화
+        if (config.plan === 'plus') {
+          self.initMiniBanner(config);
+          self.initExitPopup(config);
         }
       })
       .catch(function(err) {
@@ -672,277 +680,202 @@ export const WIDGET_JS = `(function() {
     return null;
   };
 
-  // ─── [TEST] 상품 상세 BUY 버튼 오버레이 뱃지 ─────────────────
-  // TODO: 테스트 완료 후 삭제 (TEST_CODE_TRACKER.md 참조)
-  function initBuyBadge() {
-    // 모바일 플로팅 버튼 (#orderFixArea) 우선, 없으면 본문 버튼
-    var fixArea = document.getElementById('orderFixArea');
-    var buyBtn = null;
-    if (fixArea) {
-      buyBtn = fixArea.querySelector('a.btnSubmit');
+  // ─── Plus: 이벤트 추적 ────────────────────────────────────────
+  BGWidget.prototype.trackEvent = function(eventType, eventData) {
+    if (!this.config) return;
+    var url = this.baseUrl + '/api/widget/event';
+    var payload = JSON.stringify({
+      client_id: this.config.client_id,
+      event_type: eventType,
+      event_data: eventData,
+      page_url: window.location.href
+    });
+    // Beacon API 사용 (페이지 이탈 시에도 전송 보장)
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(function() {});
     }
-    if (!buyBtn) {
-      var buySpan = document.getElementById('actionBuy');
-      buyBtn = buySpan ? buySpan.closest('a') : null;
-    }
-    if (!buyBtn) return;
+  };
 
-    var btnPos = window.getComputedStyle(buyBtn).position;
-    if (btnPos === 'static') buyBtn.style.position = 'relative';
-    buyBtn.style.overflow = 'visible';
+  // ─── Plus: 미니배너 ───────────────────────────────────────────
+  BGWidget.prototype.initMiniBanner = function(config) {
+    // 로그인/가입 페이지에서만 표시
+    if (this.pageType !== 'login') return;
 
-    var badge = document.createElement('div');
-    badge.id = 'bg-buy-badge';
-    var s = badge.style;
-    s.position = 'absolute';
-    s.left = '-2px';
-    s.top = '-6px';
-    s.padding = '0px 4px';
-    s.lineHeight = '14px';
-    s.height = '14px';
-    s.borderRadius = '7px';
-    s.background = '#ef4444';
-    s.color = '#ffffff';
-    s.fontSize = '8px';
-    s.fontWeight = '700';
-    s.whiteSpace = 'nowrap';
-    s.zIndex = '10';
-    s.pointerEvents = 'none';
-    s.boxShadow = '0 1px 3px rgba(0,0,0,0.25)';
-    s.transition = 'opacity 0.4s ease';
-    s.letterSpacing = '-0.3px';
-    s.boxSizing = 'border-box';
-    badge.textContent = '3,000\\uC6D0 \\uD560\\uC778';
-    buyBtn.appendChild(badge);
+    var self = this;
+    var banner = document.createElement('div');
+    banner.className = 'bg-mini-banner';
 
-    var vis = true;
-    setInterval(function() {
-      vis = !vis;
-      badge.style.opacity = vis ? '1' : '0';
-    }, 700);
-  }
-
-  // ─── [TEST] 배송비 옆 무료배송쿠폰 뱃지 ──────────────────────
-  function initShippingBadge() {
-    var delvPrice = document.querySelector('.delv_price_B');
-    if (!delvPrice) return;
-
-    var badge = document.createElement('span');
-    badge.id = 'bg-ship-badge';
-    var s = badge.style;
-    s.display = 'inline-block';
-    s.marginLeft = '6px';
-    s.padding = '1px 6px';
-    s.borderRadius = '3px';
-    s.background = '#2563eb';
-    s.color = '#fff';
-    s.fontSize = '10px';
-    s.fontWeight = '700';
-    s.verticalAlign = 'middle';
-    s.lineHeight = '16px';
-    s.whiteSpace = 'nowrap';
-    s.animation = 'bg-pulse 2s ease-in-out infinite';
-    badge.textContent = '\\uD68C\\uC6D0\\uAC00\\uC785 \\uC2DC \\uBB34\\uB8CC\\uBC30\\uC1A1\\uCFE0\\uD3F0';  // 회원가입 시 무료배송쿠폰
-
-    delvPrice.appendChild(badge);
-
-    // pulse 애니메이션 CSS 주입
-    if (!document.getElementById('bg-test-css')) {
-      var css = document.createElement('style');
-      css.id = 'bg-test-css';
-      css.textContent = '@keyframes bg-pulse{0%,100%{opacity:1}50%{opacity:0.4}} @keyframes bg-countup{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}';
-      document.head.appendChild(css);
-    }
-  }
-
-  // ─── [TEST] 상품명 옆 "오늘 N개 판매" 카운트업 뱃지 ──────────
-  function initSalesBadge() {
-    var h1 = document.querySelector('.headingArea h1');
-    if (!h1) return;
-
-    var badge = document.createElement('span');
-    badge.id = 'bg-sales-badge';
-    var s = badge.style;
-    s.display = 'inline-block';
-    s.marginLeft = '8px';
-    s.padding = '2px 8px';
+    var s = banner.style;
+    s.width = '100%';
+    s.padding = '12px 16px';
+    s.marginBottom = '12px';
     s.borderRadius = '10px';
-    s.background = '#f97316';
-    s.color = '#fff';
-    s.fontSize = '11px';
-    s.fontWeight = '700';
-    s.verticalAlign = 'middle';
-    s.lineHeight = '16px';
-    s.whiteSpace = 'nowrap';
+    s.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    s.color = '#ffffff';
+    s.fontSize = '14px';
+    s.fontWeight = '600';
+    s.textAlign = 'center';
+    s.cursor = 'pointer';
+    s.display = 'flex';
+    s.alignItems = 'center';
+    s.justifyContent = 'center';
+    s.gap = '8px';
+    s.boxSizing = 'border-box';
 
-    h1.appendChild(badge);
+    var icon = document.createElement('span');
+    icon.textContent = '\\u26A1'; // ⚡
+    icon.style.fontSize = '16px';
 
-    // 87에서 시작해서 카운트업
-    var count = 87;
-    badge.textContent = '\\uC624\\uB298 ' + count + '\\uAC1C \\uD310\\uB9E4';  // 오늘 87개 판매
+    var text = document.createElement('span');
+    text.textContent = '\\uD68C\\uC6D0\\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD\\uC744 \\uBC1B\\uC73C\\uC138\\uC694!'; // 회원가입하면 특별 혜택을 받으세요!
 
-    setInterval(function() {
-      count += Math.floor(Math.random() * 3) + 1;  // 1~3씩 증가
-      badge.textContent = '\\uC624\\uB298 ' + count + '\\uAC1C \\uD310\\uB9E4';
-      badge.style.animation = 'none';
-      badge.offsetHeight;  // reflow
-      badge.style.animation = 'bg-countup 0.3s ease';
-    }, 3000 + Math.random() * 2000);  // 3~5초 간격
-  }
+    banner.appendChild(icon);
+    banner.appendChild(text);
 
-  // ─── [TEST] 판매가 -3,000원 할인 카운트다운 효과 ──────────────
-  function initPriceEffect() {
-    var priceEl = document.getElementById('span_product_price_text');
-    if (!priceEl) return;
+    banner.addEventListener('click', function() {
+      self.trackEvent('banner_click', { page: self.pageType });
+      var joinUrl = window.location.pathname.indexOf('/login') !== -1
+        ? window.location.pathname.replace('/login', '/join')
+        : '/member/join.html';
+      window.location.href = joinUrl;
+    });
 
-    var priceText = priceEl.textContent || '';
-    var priceNum = parseInt(priceText.replace(/[^0-9]/g, ''), 10);
-    if (!priceNum) return;
-
-    // 할인가 표시 요소 삽입
-    var wrapper = priceEl.parentNode;
-    var discountEl = document.createElement('span');
-    discountEl.id = 'bg-price-discount';
-    var ds = discountEl.style;
-    ds.display = 'block';
-    ds.marginTop = '2px';
-    ds.fontSize = '13px';
-    ds.fontWeight = '800';
-    ds.color = '#ef4444';
-    ds.letterSpacing = '-0.5px';
-    wrapper.appendChild(discountEl);
-
-    var label = document.createElement('span');
-    label.style.fontSize = '10px';
-    label.style.color = '#ef4444';
-    label.style.fontWeight = '600';
-    label.textContent = '\\uD68C\\uC6D0\\uAC00 ';  // 회원가
-    discountEl.appendChild(label);
-
-    var numSpan = document.createElement('span');
-    discountEl.appendChild(numSpan);
-
-    // 원래 가격에서 3000 빼기 카운트다운
-    var targetPrice = priceNum - 3000;
-    var currentPrice = priceNum;
-    var step = 100;
-    var interval = 30;
-
-    function formatPrice(n) {
-      return n.toLocaleString() + '\\uC6D0';  // 원
+    // 위젯 컨테이너 위에 삽입
+    var widgetContainer = document.querySelector('.bg-widget');
+    if (widgetContainer && widgetContainer.parentNode) {
+      widgetContainer.parentNode.insertBefore(banner, widgetContainer);
+      self.trackEvent('banner_show', { page: self.pageType });
     }
+  };
 
-    numSpan.textContent = formatPrice(currentPrice);
+  // ─── Plus: 이탈 감지 팝업 ────────────────────────────────────
+  BGWidget.prototype.initExitPopup = function(config) {
+    var self = this;
 
-    // 1초 후 카운트다운 시작
-    setTimeout(function() {
-      var timer = setInterval(function() {
-        currentPrice -= step;
-        if (currentPrice <= targetPrice) {
-          currentPrice = targetPrice;
-          clearInterval(timer);
-          // 완료 후 강조
-          numSpan.style.fontSize = '14px';
-          var saving = document.createElement('span');
-          saving.style.fontSize = '9px';
-          saving.style.color = '#666';
-          saving.style.marginLeft = '4px';
-          saving.textContent = '(-3,000\\uC6D0)';
-          discountEl.appendChild(saving);
+    // 하루 1회 제한 (localStorage)
+    var popupKey = 'bg_exit_popup_shown';
+    try {
+      var lastShown = localStorage.getItem(popupKey);
+      if (lastShown) {
+        var dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+        if (parseInt(lastShown, 10) > dayAgo) return; // 24시간 내 이미 표시
+      }
+    } catch(e) {}
+
+    // 마이페이지(이미 회원)에서는 표시 안 함
+    if (this.pageType === 'myshop') return;
+
+    var shown = false;
+
+    function showPopup() {
+      if (shown) return;
+      shown = true;
+      try { localStorage.setItem(popupKey, String(Date.now())); } catch(e) {}
+
+      // 오버레이
+      var overlay = document.createElement('div');
+      overlay.className = 'bg-modal-overlay';
+
+      // 모달
+      var modal = document.createElement('div');
+      modal.className = 'bg-modal';
+
+      // 닫기 버튼
+      var closeBtn = document.createElement('button');
+      closeBtn.className = 'bg-modal-close';
+      closeBtn.textContent = '\\u2715'; // ✕
+      closeBtn.addEventListener('click', function() {
+        overlay.remove();
+        self.trackEvent('popup_close', {});
+      });
+
+      // 제목
+      var title = document.createElement('h3');
+      title.textContent = '\\uC7A0\\uAE10\\uB9CC\\uC694!'; // 잠깐만요!
+      title.style.fontSize = '20px';
+      title.style.fontWeight = '700';
+      title.style.marginBottom = '8px';
+      title.style.textAlign = 'center';
+
+      // 본문
+      var body = document.createElement('p');
+      body.textContent = '\\uC9C0\\uAE08 \\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD\\uC744 \\uB4DC\\uB824\\uC694!'; // 지금 가입하면 특별 혜택을 드려요!
+      body.style.fontSize = '14px';
+      body.style.color = '#666';
+      body.style.textAlign = 'center';
+      body.style.marginBottom = '16px';
+
+      // CTA 버튼
+      var ctaBtn = document.createElement('button');
+      ctaBtn.textContent = '\\uD61C\\uD0DD \\uBC1B\\uACE0 \\uAC00\\uC785\\uD558\\uAE30'; // 혜택 받고 가입하기
+      var cs = ctaBtn.style;
+      cs.display = 'block';
+      cs.width = '100%';
+      cs.padding = '14px';
+      cs.border = 'none';
+      cs.borderRadius = '10px';
+      cs.background = '#2563eb';
+      cs.color = '#fff';
+      cs.fontSize = '16px';
+      cs.fontWeight = '700';
+      cs.cursor = 'pointer';
+      ctaBtn.addEventListener('click', function() {
+        overlay.remove();
+        self.trackEvent('popup_signup', {});
+        window.location.href = '/member/join.html';
+      });
+
+      modal.appendChild(closeBtn);
+      modal.appendChild(title);
+      modal.appendChild(body);
+      modal.appendChild(ctaBtn);
+      overlay.appendChild(modal);
+
+      // 오버레이 클릭으로 닫기
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          overlay.remove();
+          self.trackEvent('popup_close', {});
         }
-        numSpan.textContent = formatPrice(currentPrice);
-      }, interval);
-    }, 1000);
-  }
+      });
 
-  // ─── [TEST] 옵션 재고 카운트다운 + 품절 강조 ──────────────────
-  function initOptionStock() {
-    var sel = document.getElementById('product_option_id1');
-    if (!sel) return;
-
-    // 재고 있는 옵션 개수 세기 (품절 아닌 것)
-    var opts = sel.querySelectorAll('optgroup option');
-    var available = 0;
-    for (var i = 0; i < opts.length; i++) {
-      if (opts[i].textContent.indexOf('\\uD488\\uC808') === -1 && !opts[i].disabled) {  // 품절
-        available++;
-      }
+      document.body.appendChild(overlay);
+      self.trackEvent('popup_show', {});
     }
 
-    // select 옆에 재고 뱃지 추가
-    var wrapper = sel.parentNode;
-    var badge = document.createElement('div');
-    badge.id = 'bg-stock-badge';
-    var bs = badge.style;
-    bs.marginTop = '6px';
-    bs.padding = '4px 10px';
-    bs.borderRadius = '4px';
-    bs.background = '#fef2f2';
-    bs.border = '1px solid #fecaca';
-    bs.fontSize = '12px';
-    bs.fontWeight = '600';
-    bs.color = '#dc2626';
-    bs.display = 'flex';
-    bs.alignItems = 'center';
-    bs.gap = '6px';
-
-    var dot = document.createElement('span');
-    dot.style.width = '6px';
-    dot.style.height = '6px';
-    dot.style.borderRadius = '50%';
-    dot.style.background = '#ef4444';
-    dot.style.display = 'inline-block';
-    dot.style.animation = 'bg-pulse 1s ease-in-out infinite';
-
-    var txt = document.createElement('span');
-
-    badge.appendChild(dot);
-    badge.appendChild(txt);
-    wrapper.appendChild(badge);
-
-    // 재고 카운트다운 (가상)
-    var stock = available > 0 ? 3 : 0;
-    function updateStock() {
-      if (stock <= 0) {
-        txt.textContent = '\\uC7AC\\uACE0 \\uC18C\\uC9C4! \\uC785\\uACE0 \\uB300\\uAE30 \\uC911';  // 재고 소진! 입고 대기 중
-        dot.style.background = '#9ca3af';
-      } else if (stock === 1) {
-        txt.textContent = '\\uB9C8\\uC9C0\\uB9C9 1\\uAC1C \\uB0A8\\uC74C!';  // 마지막 1개 남음!
-        badge.style.background = '#fef2f2';
-        badge.style.borderColor = '#ef4444';
-        txt.style.fontWeight = '800';
-      } else {
-        txt.textContent = '\\uC7AC\\uACE0 ' + stock + '\\uAC1C \\uB0A8\\uC74C';  // 재고 N개 남음
-      }
+    // PC: mouseout (상단으로 마우스가 나갈 때)
+    if (!/Mobi|Android/i.test(navigator.userAgent)) {
+      document.addEventListener('mouseout', function(e) {
+        if (e.clientY <= 0) showPopup();
+      });
+    } else {
+      // 모바일: 빠른 scroll-up 패턴 감지
+      var lastScrollY = window.scrollY;
+      var scrollUpCount = 0;
+      window.addEventListener('scroll', function() {
+        var currentY = window.scrollY;
+        if (currentY < lastScrollY && lastScrollY - currentY > 50) {
+          scrollUpCount++;
+          if (scrollUpCount >= 3) showPopup(); // 3번 이상 급격한 스크롤업
+        } else {
+          scrollUpCount = 0;
+        }
+        lastScrollY = currentY;
+      }, { passive: true });
     }
-    updateStock();
-
-    // 일정 간격으로 카운트다운 (3 → 2 → 1 → 소진)
-    setInterval(function() {
-      if (stock > 0) {
-        stock--;
-        updateStock();
-      }
-    }, 8000);  // 8초 간격
-  }
+  };
 
   // ─── Initialize ──────────────────────────────────────────────
 
+  var widget = new BGWidget();
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-      new BGWidget().init();
-      initBuyBadge();
-      initShippingBadge();
-      initSalesBadge();
-      initPriceEffect();
-      initOptionStock();
+      widget.init();
     });
   } else {
-    new BGWidget().init();
-    initBuyBadge();
-    initShippingBadge();
-    initSalesBadge();
-    initPriceEffect();
-    initOptionStock();
+    widget.init();
   }
 })();`;

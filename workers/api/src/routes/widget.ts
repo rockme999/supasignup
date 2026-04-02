@@ -59,6 +59,11 @@ widget.get('/config', async (c) => {
     sso_callback_uri: ssoCallbackUri,
     sso_type: ssoType,
     style,
+    plan: shop.plan,
+    banner_config: null,
+    popup_config: null,
+    escalation_config: null,
+    kakao_channel_id: null,
   };
 
   // Cache in KV
@@ -67,6 +72,58 @@ widget.get('/config', async (c) => {
   });
 
   return c.json(config);
+});
+
+// ─── POST /event ─────────────────────────────────────────────
+widget.post('/event', async (c) => {
+  const body = await c.req.json<{
+    client_id: string;
+    event_type: string;
+    event_data?: Record<string, unknown>;
+    page_url?: string;
+  }>();
+
+  if (!body.client_id || !body.event_type) {
+    return c.json({ error: 'missing_params' }, 400);
+  }
+
+  // 유효한 이벤트 타입만 허용
+  const validTypes = [
+    'banner_click',
+    'banner_show',
+    'popup_show',
+    'popup_close',
+    'popup_signup',
+    'escalation_show',
+    'signup_complete',
+  ];
+  if (!validTypes.includes(body.event_type)) {
+    return c.json({ error: 'invalid_event_type' }, 400);
+  }
+
+  // shop 조회
+  const shop = await getShopByClientId(c.env.DB, body.client_id);
+  if (!shop) {
+    return c.json({ error: 'invalid_client_id' }, 404);
+  }
+
+  // funnel_events 테이블이 준비될 때까지 KV에 임시 저장 (30일 보존)
+  const eventKey = `event:${shop.shop_id}:${Date.now()}`;
+  c.executionCtx.waitUntil(
+    c.env.KV.put(
+      eventKey,
+      JSON.stringify({
+        shop_id: shop.shop_id,
+        event_type: body.event_type,
+        event_data: body.event_data || {},
+        page_url: body.page_url || '',
+        created_at: new Date().toISOString(),
+      }),
+      { expirationTtl: 86400 * 30 },
+    ),
+  );
+
+  return c.json({ ok: true });
 });
 
 // ─── GET /hint ───────────────────────────────────────────────
