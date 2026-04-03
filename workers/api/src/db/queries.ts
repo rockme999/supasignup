@@ -130,12 +130,13 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'coupon_config',
   'platform_access_token',
   'platform_refresh_token',
+  'shop_identity',
 ]);
 
 export async function updateShop(
   db: D1Database,
   shopId: string,
-  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token'>>,
+  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity'>>,
 ): Promise<void> {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -207,26 +208,15 @@ export async function upsertUser(
   userInfo: OAuthUserInfo,
   encryptionKey: string,
 ): Promise<User> {
-  // Prepare encrypted/hashed PII
-  const encryptedEmail = userInfo.email
-    ? await encrypt(userInfo.email, encryptionKey)
-    : null;
-  const emailHash = userInfo.email
-    ? await sha256(userInfo.email.toLowerCase())
-    : null;
-  const encryptedName = userInfo.name
-    ? await encrypt(userInfo.name, encryptionKey)
-    : null;
-  const encryptedRawData = await encrypt(
-    JSON.stringify(userInfo.rawData),
-    encryptionKey,
-  );
-  const encryptedPhone = userInfo.phone
-    ? await encrypt(userInfo.phone, encryptionKey)
-    : null;
-  const encryptedBirthday = userInfo.birthday
-    ? await encrypt(userInfo.birthday, encryptionKey)
-    : null;
+  // Prepare encrypted/hashed PII (전체 병렬 처리)
+  const [encryptedEmail, emailHash, encryptedName, encryptedRawData, encryptedPhone, encryptedBirthday] = await Promise.all([
+    userInfo.email ? encrypt(userInfo.email, encryptionKey) : null,
+    userInfo.email ? sha256(userInfo.email.toLowerCase()) : null,
+    userInfo.name ? encrypt(userInfo.name, encryptionKey) : null,
+    encrypt(JSON.stringify(userInfo.rawData), encryptionKey),
+    userInfo.phone ? encrypt(userInfo.phone, encryptionKey) : null,
+    userInfo.birthday ? encrypt(userInfo.birthday, encryptionKey) : null,
+  ]);
   const gender = userInfo.gender ?? null;
 
   // 1. Look up by provider + provider_uid (same provider, same account)
@@ -236,12 +226,12 @@ export async function upsertUser(
     .first<User>();
 
   if (existingByProvider) {
-    // Update existing user
-    await db
+    // Update existing user (RETURNING * eliminates extra SELECT)
+    const updated = await db
       .prepare(
         `UPDATE users SET email = ?, email_hash = ?, name = ?, profile_image = ?,
          raw_data = ?, phone = ?, birthday = ?, gender = ?, updated_at = datetime('now')
-         WHERE user_id = ?`,
+         WHERE user_id = ? RETURNING *`,
       )
       .bind(
         encryptedEmail,
@@ -254,14 +244,11 @@ export async function upsertUser(
         gender,
         existingByProvider.user_id,
       )
-      .run();
+      .first<User>();
 
     await addUserProvider(db, existingByProvider.user_id, userInfo.provider, userInfo.providerUid);
 
-    return (await db
-      .prepare('SELECT * FROM users WHERE user_id = ?')
-      .bind(existingByProvider.user_id)
-      .first<User>())!;
+    return updated!;
   }
 
   // 2. Account linking: look up by email_hash (same email, different provider)
@@ -271,12 +258,12 @@ export async function upsertUser(
       // Link new provider to existing user (auto-linking)
       await addUserProvider(db, existingByEmail.user_id, userInfo.provider, userInfo.providerUid);
 
-      // Update user info with latest data from new provider
-      await db
+      // Update user info with latest data from new provider (RETURNING * eliminates extra SELECT)
+      const updated = await db
         .prepare(
           `UPDATE users SET email = ?, email_hash = ?, name = ?, profile_image = ?,
            raw_data = ?, phone = ?, birthday = ?, gender = ?, updated_at = datetime('now')
-           WHERE user_id = ?`,
+           WHERE user_id = ? RETURNING *`,
         )
         .bind(
           encryptedEmail,
@@ -289,21 +276,18 @@ export async function upsertUser(
           gender,
           existingByEmail.user_id,
         )
-        .run();
+        .first<User>();
 
-      return (await db
-        .prepare('SELECT * FROM users WHERE user_id = ?')
-        .bind(existingByEmail.user_id)
-        .first<User>())!;
+      return updated!;
     }
   }
 
-  // 3. Create new user
+  // 3. Create new user (RETURNING * eliminates extra SELECT)
   const userId = generateId();
-  await db
+  const newUser = await db
     .prepare(
       `INSERT INTO users (user_id, provider, provider_uid, email, email_hash, name, profile_image, raw_data, phone, birthday, gender)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
     )
     .bind(
       userId,
@@ -318,14 +302,11 @@ export async function upsertUser(
       encryptedBirthday,
       gender,
     )
-    .run();
+    .first<User>();
 
   await addUserProvider(db, userId, userInfo.provider, userInfo.providerUid);
 
-  return (await db
-    .prepare('SELECT * FROM users WHERE user_id = ?')
-    .bind(userId)
-    .first<User>())!;
+  return newUser!;
 }
 
 export async function getUserById(
@@ -357,15 +338,31 @@ export async function createShopUser(
   userId: string,
 ): Promise<ShopUser> {
   const id = generateId();
-  await db
-    .prepare('INSERT INTO shop_users (id, shop_id, user_id) VALUES (?, ?, ?)')
+  const shopUser = await db
+    .prepare('INSERT INTO shop_users (id, shop_id, user_id) VALUES (?, ?, ?) RETURNING *')
+    .bind(id, shopId, userId)
+    .first<ShopUser>();
+
+  return shopUser!;
+}
+
+/**
+ * Insert shop_user if not exists, return action type.
+ * Uses INSERT OR IGNORE + UNIQUE(shop_id, user_id) to avoid SELECT+INSERT round-trip.
+ */
+export async function ensureShopUser(
+  db: D1Database,
+  shopId: string,
+  userId: string,
+): Promise<'signup' | 'login'> {
+  const id = generateId();
+  const result = await db
+    .prepare('INSERT OR IGNORE INTO shop_users (id, shop_id, user_id) VALUES (?, ?, ?)')
     .bind(id, shopId, userId)
     .run();
 
-  return (await db
-    .prepare('SELECT * FROM shop_users WHERE id = ?')
-    .bind(id)
-    .first<ShopUser>())!;
+  // changes === 1 means new row inserted (signup), 0 means already existed (login)
+  return (result.meta?.changes ?? 0) > 0 ? 'signup' : 'login';
 }
 
 // ─── Billing / monthly count ─────────────────────────────────

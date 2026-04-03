@@ -60,60 +60,62 @@ stats.get('/stats', async (c) => {
   if (dateParam) baseParams.push(dateParam);
   if (shopIdFilter) baseParams.push(shopIdFilter);
 
-  // Total signups / logins
-  const totalResult = await c.env.DB
-    .prepare(
-      `SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN action = 'signup' THEN 1 ELSE 0 END) as signups,
-        SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins
-       FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL${dateFilter}${shopFilter}`,
-    )
-    .bind(...baseParams)
-    .first<{ total: number; signups: number; logins: number }>();
-
-  // Today's signups (always today regardless of filter)
+  // Today / month params
   const todayParams: (string | null)[] = [ownerId, today];
   if (shopIdFilter) todayParams.push(shopIdFilter);
-  const todayResult = await c.env.DB
-    .prepare(
-      `SELECT COUNT(*) as cnt FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
-    )
-    .bind(...todayParams)
-    .first<{ cnt: number }>();
-
-  // This month's signups (always current month regardless of filter)
   const monthParams: (string | null)[] = [ownerId, `${yearMonth}-01`];
   if (shopIdFilter) monthParams.push(shopIdFilter);
-  const monthResult = await c.env.DB
-    .prepare(
-      `SELECT COUNT(*) as cnt FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL
-       AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
-    )
-    .bind(...monthParams)
-    .first<{ cnt: number }>();
-
-  // Per-provider breakdown
   const providerParams: (string | null)[] = [ownerId];
   if (dateParam) providerParams.push(dateParam);
   if (shopIdFilter) providerParams.push(shopIdFilter);
-  const providerResult = await c.env.DB
-    .prepare(
-      `SELECT ls.provider, COUNT(*) as cnt
-       FROM login_stats ls
-       JOIN shops s ON ls.shop_id = s.shop_id
-       WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'${dateFilter}${shopFilter}
-       GROUP BY ls.provider`,
-    )
-    .bind(...providerParams)
-    .all<{ provider: string; cnt: number }>();
+
+  // 4 independent queries → parallel execution
+  const [totalResult, todayResult, monthResult, providerResult] = await Promise.all([
+    // Total signups / logins
+    c.env.DB
+      .prepare(
+        `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN action = 'signup' THEN 1 ELSE 0 END) as signups,
+          SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins
+         FROM login_stats ls
+         JOIN shops s ON ls.shop_id = s.shop_id
+         WHERE s.owner_id = ? AND s.deleted_at IS NULL${dateFilter}${shopFilter}`,
+      )
+      .bind(...baseParams)
+      .first<{ total: number; signups: number; logins: number }>(),
+    // Today's signups (always today regardless of filter)
+    c.env.DB
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM login_stats ls
+         JOIN shops s ON ls.shop_id = s.shop_id
+         WHERE s.owner_id = ? AND s.deleted_at IS NULL
+         AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
+      )
+      .bind(...todayParams)
+      .first<{ cnt: number }>(),
+    // This month's signups (always current month regardless of filter)
+    c.env.DB
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM login_stats ls
+         JOIN shops s ON ls.shop_id = s.shop_id
+         WHERE s.owner_id = ? AND s.deleted_at IS NULL
+         AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
+      )
+      .bind(...monthParams)
+      .first<{ cnt: number }>(),
+    // Per-provider breakdown
+    c.env.DB
+      .prepare(
+        `SELECT ls.provider, COUNT(*) as cnt
+         FROM login_stats ls
+         JOIN shops s ON ls.shop_id = s.shop_id
+         WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'${dateFilter}${shopFilter}
+         GROUP BY ls.provider`,
+      )
+      .bind(...providerParams)
+      .all<{ provider: string; cnt: number }>(),
+  ]);
 
   const providerStats: Record<string, number> = {};
   for (const row of providerResult.results ?? []) {

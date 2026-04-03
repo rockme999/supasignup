@@ -1,0 +1,29 @@
+📅 2026-04-03 14:09:27 KST | label=after | url=https://bg.suparain.kr | runs=5
+────────────────────────────────────────────
+[1;36m▸ Health check (baseline)[0m
+health                               avg= 155ms  min= 133ms  max= 168ms  status=200  size=34
+
+[1;36m▸ buttons.js — 초회 (200 full response)[0m
+buttons.js [200]                     avg= 162ms  min= 137ms  max= 193ms  status=200  size=46523
+
+[1;36m▸ buttons.js — ETag 가져오기[0m
+  ETag="bg--bsllkv"
+buttons.js [304 ETag]                avg= 154ms  min= 140ms  max= 168ms  status=304  size=0
+
+[1;36m▸ widget/config — invalid client_id (DB lookup only)[0m
+widget/config [404]                  avg= 221ms  min= 203ms  max= 248ms  status=404  size=29
+
+[1;36m▸ widget/config — real client_id (suparain999)[0m
+widget/config [200]                  avg= 206ms  min= 197ms  max= 219ms  status=404  size=29
+
+[1;36m▸ widget/hint — real request (Origin: suparain999)[0m
+widget/hint [200]                    avg= 197ms  min= 172ms  max= 220ms  status=404  size=29
+
+  ℹ 대시보드 API 측정 생략 (BG_TEST_TOKEN 미설정)
+  토큰 발급 방법:
+    1. 카페24 어드민 > 번개가입 앱 실행
+    2. 브라우저 DevTools > Application > Cookies > bg_token 값 복사
+    3. export BG_TEST_TOKEN="복사한토큰"
+
+────────────────────────────────────────────
+✅ 측정 완료

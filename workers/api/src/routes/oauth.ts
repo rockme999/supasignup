@@ -26,8 +26,7 @@ import {
 import {
   getShopByClientId,
   getShopById,
-  getShopUser,
-  createShopUser,
+  ensureShopUser,
   upsertUser,
   recordStat,
   isOverFreeLimit,
@@ -73,22 +72,9 @@ oauth.get('/authorize', async (c) => {
     return c.json({ error: 'invalid_redirect_uri', message: 'redirect_uri is not registered' }, 400);
   }
 
-  // redirect_uri에서 sso_type 자동 감지 (sso / sso1 / sso2)
-  const ssoMatch = redirectUri.match(/\/Oauth2ClientCallback\/(sso[12]?)\//i);
-  if (ssoMatch) {
-    const detectedSsoType = ssoMatch[1].toLowerCase();
-    if (detectedSsoType !== shop.sso_type) {
-      // 비동기로 DB + KV 캐시 업데이트 (응답 차단하지 않음)
-      c.executionCtx.waitUntil(
-        Promise.all([
-          c.env.DB.prepare("UPDATE shops SET sso_type = ?, updated_at = datetime('now') WHERE shop_id = ?")
-            .bind(detectedSsoType, shop.shop_id)
-            .run(),
-          c.env.KV.delete(`widget_config:${shop.client_id}`),
-        ])
-      );
-    }
-  }
+  // sso_type 자동 감지는 제거됨.
+  // SSO 슬롯 확정은 대시보드 "설정 확인" 버튼(POST /shops/:id/verify-sso) 또는
+  // 카페24 앱 실행 시 백그라운드 프로빙(probeSsoType)에서 처리.
 
   // If no provider specified, check KV hint (set by widget before Cafe24 SSO trigger)
   const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
@@ -147,10 +133,14 @@ oauth.get('/authorize', async (c) => {
     return c.redirect(`${c.env.BASE_URL}/oauth/telegram-login?session=${telegramSessionId}`);
   }
 
-  await Promise.all([
-    c.env.KV.put(`oauth_session:${socialState}`, JSON.stringify(session), { expirationTtl: SESSION_TTL }),
-    c.env.KV.put(`pkce:${socialState}`, codeVerifier, { expirationTtl: SESSION_TTL }),
-  ]);
+  // waitUntil로 비동기화: 사용자가 소셜 로그인하는 데 최소 수 초 소요,
+  // KV.put은 ~30ms이므로 콜백 전에 충분히 완료됨
+  c.executionCtx.waitUntil(
+    Promise.all([
+      c.env.KV.put(`oauth_session:${socialState}`, JSON.stringify(session), { expirationTtl: SESSION_TTL }),
+      c.env.KV.put(`pkce:${socialState}`, codeVerifier, { expirationTtl: SESSION_TTL }),
+    ])
+  );
   const tKv = performance.now();
 
   // Build social OAuth URL and redirect
@@ -224,30 +214,21 @@ oauth.get('/callback/:provider', async (c) => {
   const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);
   const tUpsert = performance.now();
 
-  // Check if this is a new signup or returning login
-  const existingShopUser = await getShopUser(c.env.DB, session.shop_id, user.user_id);
-  const tShopUser = performance.now();
-  let action: 'signup' | 'login';
-
-  if (existingShopUser) {
-    action = 'login';
-  } else {
-    await createShopUser(c.env.DB, session.shop_id, user.user_id);
-    action = 'signup';
-  }
-  const tCreateShopUser = performance.now();
-
-  // Generate authorization code for Cafe24 — must complete before redirect
+  // ensureShopUser + auth_code 생성을 병렬 실행 (서로 의존성 없음)
   const authCode = generateSecret(16);
   const authCodeData: AuthCodeData = {
     user_id: user.user_id,
     shop_id: session.shop_id,
   };
 
-  await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), {
-    expirationTtl: AUTH_CODE_TTL,
-  });
-  const tAuthCode = performance.now();
+  const [action] = await Promise.all([
+    ensureShopUser(c.env.DB, session.shop_id, user.user_id),
+    c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), {
+      expirationTtl: AUTH_CODE_TTL,
+    }),
+  ]);
+  const tShopUser = performance.now();
+  const tAuthCode = tShopUser;
 
   // Redirect back with auth code and original state
   const redirectUrl = new URL(session.redirect_uri);
@@ -271,7 +252,7 @@ oauth.get('/callback/:provider', async (c) => {
   );
 
   const tTotal = performance.now();
-  console.log(`[Phase B] callback/${provider} | action=${action} | kvSession=${(tSession - t0).toFixed(1)}ms | tokenExchange=${(tTokenExchange - tSession).toFixed(1)}ms | userInfo=${(tUserInfo - tTokenExchange).toFixed(1)}ms | upsertUser=${(tUpsert - tUserInfo).toFixed(1)}ms | getShopUser=${(tShopUser - tUpsert).toFixed(1)}ms | createShopUser=${(tCreateShopUser - tShopUser).toFixed(1)}ms | kvAuthCode=${(tAuthCode - tCreateShopUser).toFixed(1)}ms | total=${(tTotal - t0).toFixed(1)}ms`);
+  console.log(`[Phase B] callback/${provider} | action=${action} | kvSession=${(tSession - t0).toFixed(1)}ms | tokenExchange=${(tTokenExchange - tSession).toFixed(1)}ms | userInfo=${(tUserInfo - tTokenExchange).toFixed(1)}ms | upsertUser=${(tUpsert - tUserInfo).toFixed(1)}ms | ensureShopUser+kvAuthCode=${(tShopUser - tUpsert).toFixed(1)}ms | total=${(tTotal - t0).toFixed(1)}ms`);
 
   return c.redirect(redirectUrl.toString());
 });
@@ -345,27 +326,19 @@ oauth.post('/callback/apple', async (c) => {
   // Upsert user in D1 (PII encrypted)
   const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);
 
-  // Check if this is a new signup or returning login
-  const existingShopUser = await getShopUser(c.env.DB, session.shop_id, user.user_id);
-  let action: 'signup' | 'login';
-
-  if (existingShopUser) {
-    action = 'login';
-  } else {
-    await createShopUser(c.env.DB, session.shop_id, user.user_id);
-    action = 'signup';
-  }
-
-  // Generate authorization code for Cafe24 — must complete before redirect
+  // ensureShopUser + auth_code 생성을 병렬 실행
   const authCode = generateSecret(16);
   const authCodeData: AuthCodeData = {
     user_id: user.user_id,
     shop_id: session.shop_id,
   };
 
-  await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), {
-    expirationTtl: AUTH_CODE_TTL,
-  });
+  const [action] = await Promise.all([
+    ensureShopUser(c.env.DB, session.shop_id, user.user_id),
+    c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), {
+      expirationTtl: AUTH_CODE_TTL,
+    }),
+  ]);
 
   // Redirect back with auth code and original state
   const redirectUrl = new URL(session.redirect_uri);
@@ -516,21 +489,13 @@ oauth.post('/callback/telegram', async (c) => {
   // Upsert user
   const user = await upsertUser(c.env.DB, userInfo, c.env.ENCRYPTION_KEY);
 
-  // Check/create shop_user
-  const existingShopUser = await getShopUser(c.env.DB, shop.shop_id, user.user_id);
-  let action: 'signup' | 'login';
-
-  if (existingShopUser) {
-    action = 'login';
-  } else {
-    await createShopUser(c.env.DB, shop.shop_id, user.user_id);
-    action = 'signup';
-  }
-
-  // Generate auth code — must complete before response
+  // ensureShopUser + auth_code 생성을 병렬 실행
   const authCode = generateSecret(16);
   const authCodeData: AuthCodeData = { user_id: user.user_id, shop_id: shop.shop_id };
-  await c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), { expirationTtl: AUTH_CODE_TTL });
+  const [action] = await Promise.all([
+    ensureShopUser(c.env.DB, shop.shop_id, user.user_id),
+    c.env.KV.put(`auth_code:${authCode}`, JSON.stringify(authCodeData), { expirationTtl: AUTH_CODE_TTL }),
+  ]);
 
   // Build redirect URL
   const redirectUrl = new URL(session.redirect_uri);
@@ -562,17 +527,18 @@ oauth.post('/token', async (c) => {
     return c.json({ error: 'invalid_request', message: 'grant_type=authorization_code, code, client_id, client_secret required' }, 400);
   }
 
-  // Verify client credentials
-  const shop = await getShopByClientId(c.env.DB, clientId);
+  // Shop 조회 + auth_code 조회를 병렬 실행 (서로 독립적)
+  const [shop, authCodeJson] = await Promise.all([
+    getShopByClientId(c.env.DB, clientId),
+    c.env.KV.get(`auth_code:${code}`),
+  ]);
   const tShop = performance.now();
+
   if (!shop || !(await timingSafeEqual(shop.client_secret, clientSecret))) {
     return c.json({ error: 'invalid_client' }, 401);
   }
   const tVerify = performance.now();
-
-  // Look up auth code (one-time use)
-  const authCodeJson = await c.env.KV.get(`auth_code:${code}`);
-  const tGetCode = performance.now();
+  const tGetCode = tShop; // 병렬 실행이므로 동일 시점
   if (!authCodeJson) {
     return c.json({ error: 'invalid_grant', message: 'Authorization code expired or already used' }, 400);
   }

@@ -76,6 +76,19 @@ app.get('/health', (c) => {
 const WIDGET_ETAG = `"bg-${Array.from(new TextEncoder().encode(WIDGET_JS)).reduce((h, b) => ((h << 5) - h + b) | 0, 0).toString(36)}"`;
 
 app.get('/widget/buttons.js', (c) => {
+  // If-None-Match → 304 (변경 없으면 본문 전송 생략)
+  const ifNoneMatch = c.req.header('If-None-Match');
+  if (ifNoneMatch === WIDGET_ETAG) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        'ETag': WIDGET_ETAG,
+        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
   // BASE_URL을 JS에 런타임 주입
   const js = WIDGET_JS.replace(
     "var __MY_BASE_URL__ = '';",
@@ -84,7 +97,8 @@ app.get('/widget/buttons.js', (c) => {
 
   return c.body(js, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
-    'Cache-Control': 'no-cache',
+    'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+    'ETag': WIDGET_ETAG,
     'Access-Control-Allow-Origin': '*',
   });
 });
@@ -137,26 +151,6 @@ app.get('/widget/test-events.js', (c) => {
     'Cache-Control': 'no-cache, no-store',
     'Access-Control-Allow-Origin': '*',
   });
-});
-
-// ── 소셜 연동 완료 페이지 (팝업에서 표시) ──────────────────
-app.get('/link/complete', (c) => {
-  return c.html(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>연동 완료</title>
-<style>
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8fafc}
-  .done{text-align:center;padding:40px}
-  .icon{font-size:48px;margin-bottom:16px}
-  h2{color:#333;margin-bottom:8px}
-  p{color:#666;font-size:14px}
-</style></head>
-<body><div class="done">
-  <div class="icon">\\u2705</div>
-  <h2>소셜 계정 연동 완료</h2>
-  <p>이 창은 자동으로 닫힙니다.</p>
-</div>
-<script>setTimeout(function(){window.close()},1500)</script>
-</body></html>`);
 });
 
 // ── Mount routes ─────────────────────────────────────────────

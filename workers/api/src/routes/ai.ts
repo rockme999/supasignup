@@ -30,7 +30,7 @@ const ai = new Hono<AiEnv>();
 ai.use('*', authMiddleware);
 
 // ─── Workers AI 호출 헬퍼 ─────────────────────────────────────
-async function callAI(
+export async function callAI(
   env: Env,
   messages: Array<{ role: string; content: string }>
 ): Promise<string> {
@@ -331,50 +331,108 @@ ai.post('/briefing', async (c) => {
     return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
   }
 
-  // 최근 7일 통계 조회
-  const statsRows = await c.env.DB.prepare(`
-    SELECT
-      provider,
-      action,
-      COUNT(*) AS cnt
-    FROM login_stats
-    WHERE shop_id = ?
-      AND created_at >= datetime('now', '-7 days')
-    GROUP BY provider, action
-    ORDER BY cnt DESC
-  `).bind(body.shop_id).all();
+  // 최근 7일 통계 + 이전 7일 통계 (비교용)
+  const [statsRows, prevStatsRows] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT provider, action, COUNT(*) AS cnt
+      FROM login_stats
+      WHERE shop_id = ? AND created_at >= datetime('now', '-7 days')
+      GROUP BY provider, action ORDER BY cnt DESC
+    `).bind(body.shop_id).all(),
+    c.env.DB.prepare(`
+      SELECT provider, action, COUNT(*) AS cnt
+      FROM login_stats
+      WHERE shop_id = ? AND created_at >= datetime('now', '-14 days') AND created_at < datetime('now', '-7 days')
+      GROUP BY provider, action ORDER BY cnt DESC
+    `).bind(body.shop_id).all(),
+  ]);
 
   const stats = statsRows.results as Array<{ provider: string; action: string; cnt: number }>;
+  const prevStats = prevStatsRows.results as Array<{ provider: string; action: string; cnt: number }>;
 
-  // 통계 요약 텍스트 생성
   const statSummary = stats.length > 0
     ? stats.map(r => `${r.provider} ${r.action}: ${r.cnt}건`).join(', ')
     : '최근 7일 데이터 없음';
+  const prevStatSummary = prevStats.length > 0
+    ? prevStats.map(r => `${r.provider} ${r.action}: ${r.cnt}건`).join(', ')
+    : '이전 7일 데이터 없음';
 
-  // 쇼핑몰 정체성 파싱
+  // 쇼핑몰 정체성 + 회원혜택 전체 파싱
   let identityText = '정보 없음';
+  let benefitsText = '설정된 혜택 없음';
   if (shop.shop_identity) {
     try {
       const id = JSON.parse(shop.shop_identity as string) as Record<string, unknown>;
-      identityText = `업종: ${id.industry ?? ''}, 타겟: ${id.target ?? ''}, 톤: ${id.tone ?? ''}`;
+      identityText = `업종: ${id.industry ?? '미설정'}, 타겟: ${id.target ?? '미설정'}, 톤앤매너: ${id.tone ?? '미설정'}, 키워드: ${Array.isArray(id.keywords) ? (id.keywords as string[]).join(', ') : '없음'}, 소개: ${id.summary ?? '없음'}`;
+      const benefits: string[] = [];
+      if (id.coupon_benefit) benefits.push(`쿠폰: ${id.coupon_benefit}`);
+      if (id.free_shipping) benefits.push(`무료배송: ${id.free_shipping}`);
+      if (Array.isArray(id.extra_benefits) && (id.extra_benefits as string[]).length > 0) benefits.push(`추가혜택: ${(id.extra_benefits as string[]).join(', ')}`);
+      if (benefits.length > 0) benefitsText = benefits.join(' / ');
     } catch {
-      identityText = String(shop.shop_identity).slice(0, 200);
+      identityText = String(shop.shop_identity).slice(0, 300);
     }
+  }
+
+  // 쿠폰 설정 파싱
+  let couponText = '쿠폰 미설정';
+  if (shop.coupon_config) {
+    try {
+      const cc = JSON.parse(shop.coupon_config as string) as { enabled: boolean; coupons: Array<{ coupon_name?: string; discount_amount?: number }> };
+      if (cc.enabled && cc.coupons?.length > 0) {
+        couponText = cc.coupons.map(c => `${c.coupon_name ?? '쿠폰'}${c.discount_amount ? ` ${c.discount_amount}원` : ''}`).join(', ');
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 이전 보고서 참조 (최신 1건)
+  const prevBriefing = await c.env.DB.prepare(
+    `SELECT performance, strategy, actions, created_at FROM ai_briefings
+     WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(body.shop_id).first<{ performance: string; strategy: string; actions: string; created_at: string }>();
+
+  let prevBriefingText = '이전 보고서 없음 (첫 보고서)';
+  if (prevBriefing) {
+    let prevActions: string[] = [];
+    try { prevActions = JSON.parse(prevBriefing.actions); } catch { /* ignore */ }
+    prevBriefingText = `[${prevBriefing.created_at}] 성과: ${prevBriefing.performance} / 전략: ${prevBriefing.strategy} / 액션: ${prevActions.join(', ')}`;
   }
 
   const shopName = String(shop.shop_name ?? '쇼핑몰');
 
-  const prompt = `당신은 한국 이커머스 전문 마케터입니다. 아래 데이터를 기반으로 쇼핑몰 운영자에게 도움이 되는 주간 브리핑을 작성하세요.
+  const prompt = `당신은 "번개가입" 앱의 AI 어드바이저입니다. 번개가입은 카페24 쇼핑몰에 소셜 로그인(구글, 카카오, 네이버 등)을 통한 1클릭 회원가입 기능을 제공하는 서비스입니다.
 
-쇼핑몰: ${shopName}
-쇼핑몰 정보: ${identityText}
-최근 7일 소셜 로그인/가입 통계: ${statSummary}
+아래 데이터를 기반으로 쇼핑몰 운영자에게 주간 브리핑을 작성하세요.
+
+■ 쇼핑몰 기본 정보
+- 이름: ${shopName}
+- ${identityText}
+
+■ 회원가입 혜택 설정
+- ${benefitsText}
+- 쿠폰 발급: ${couponText}
+
+■ 이번 주 소셜 로그인/가입 통계 (최근 7일)
+${statSummary}
+
+■ 지난 주 통계 (이전 7일, 비교용)
+${prevStatSummary}
+
+■ 이전 보고서
+${prevBriefingText}
+
+■ 작성 규칙
+1. "데이터 기반 분석"과 "AI 의견/제안"을 명확히 구분하세요.
+2. 번개가입 앱의 범위(소셜 로그인, 회원가입 전환, 쿠폰 발급) 안에서 실행 가능한 액션만 제안하세요.
+3. 이전 보고서가 있으면 변화 추이를 언급하세요.
+4. 통계가 없으면 "데이터 부족"이라 쓰고, 억지로 분석하지 마세요.
 
 반드시 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "performance": "지난주 성과 요약 (2-3줄)",
-  "strategy": "이번 주 전략 제안 (2-3줄)",
-  "actions": ["추천 액션 1", "추천 액션 2", "추천 액션 3"]
+  "performance": "지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)",
+  "strategy": "이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)",
+  "actions": ["실행 가능한 액션 1", "실행 가능한 액션 2", "실행 가능한 액션 3"],
+  "insight": "AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)"
 }`;
 
   let rawBriefing = '';
@@ -389,7 +447,7 @@ ai.post('/briefing', async (c) => {
   }
 
   // AI 응답에서 JSON 추출 및 구조화
-  let parsed: { performance: string; strategy: string; actions: string[] } | null = null;
+  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string } | null = null;
   try {
     const jsonMatch = rawBriefing.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -400,13 +458,28 @@ ai.post('/briefing', async (c) => {
   }
 
   if (!parsed || !parsed.performance) {
-    // 파싱 실패 시 전체 텍스트를 performance에 넣고 기본 구조 반환
     parsed = {
       performance: rawBriefing.trim(),
       strategy: '',
       actions: [],
+      insight: '',
     };
   }
+
+  // DB에 브리핑 저장
+  const briefingId = crypto.randomUUID();
+  await c.env.DB.prepare(
+    `INSERT INTO ai_briefings (id, shop_id, performance, strategy, actions, insight, stats_json, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'manual')`
+  ).bind(
+    briefingId,
+    body.shop_id,
+    parsed.performance,
+    parsed.strategy,
+    JSON.stringify(parsed.actions),
+    parsed.insight ?? null,
+    JSON.stringify(stats),
+  ).run();
 
   return c.json({
     success: true,

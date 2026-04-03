@@ -11,6 +11,25 @@ import { DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
 import { getShopByClientId, isOverFreeLimit } from '../db/queries';
 
 const WIDGET_CONFIG_TTL = 300; // 5 minutes KV cache
+const EDGE_CACHE_TTL = 300;   // 5 minutes edge cache (s-maxage)
+
+/** 에지 캐시에 저장할 Response 생성 (브라우저 캐시 방지 + CORS 포함) */
+function buildCacheResponse(body: string): Response {
+  return new Response(body, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': `no-store, s-maxage=${EDGE_CACHE_TTL}`,
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
+
+/** 에지 캐시 무효화 (대시보드에서 설정 변경 시 호출) */
+export async function purgeWidgetConfigCache(clientId: string, baseUrl: string): Promise<void> {
+  const cache = caches.default;
+  const url = `${baseUrl}/api/widget/config?client_id=${clientId}`;
+  await cache.delete(new Request(url));
+}
 
 const widget = new Hono<{ Bindings: Env }>();
 
@@ -21,11 +40,31 @@ widget.get('/config', async (c) => {
     return c.json({ error: 'missing_client_id' }, 400);
   }
 
-  // Check KV cache first
+  // 1차: CF Cache API (에지 캐시, 같은 PoP에서 ~1ms)
+  const cache = caches.default;
+  const cacheUrl = new URL(c.req.url);
+  const cacheRequest = new Request(cacheUrl.toString());
+  const edgeCached = await cache.match(cacheRequest);
+  if (edgeCached) {
+    // 에지 캐시에 저장된 Response를 그대로 반환
+    // 저장 시 no-store + CORS 헤더 포함되어 있으므로 안전
+    return new Response(edgeCached.body, {
+      status: edgeCached.status,
+      headers: edgeCached.headers,
+    });
+  }
+
+  // 2차: KV cache (글로벌, ~50ms)
   const cacheKey = `widget_config:${clientId}`;
   const cached = await c.env.KV.get(cacheKey);
   if (cached) {
-    return c.json(JSON.parse(cached));
+    // KV 히트 시 에지 캐시에도 저장 (다음 요청부터 에지에서 바로 응답)
+    c.executionCtx.waitUntil(
+      cache.put(cacheRequest, buildCacheResponse(cached))
+    );
+    return c.json(JSON.parse(cached), 200, {
+      'Cache-Control': 'no-store',
+    });
   }
 
   // Look up shop
@@ -34,7 +73,8 @@ widget.get('/config', async (c) => {
     return c.json({ error: 'invalid_client_id' }, 404);
   }
 
-  // Check billing limit
+  // Check billing limit (병렬화 불가: shop 결과가 필요하므로 순차 실행)
+  // 단, free 플랜이 아니면 D1 쿼리 자체를 건너뜀 (isOverFreeLimit 내부 early return)
   const overLimit = await isOverFreeLimit(c.env.DB, shop);
 
   const providers: ProviderName[] = overLimit
@@ -67,12 +107,18 @@ widget.get('/config', async (c) => {
     kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
   };
 
-  // Cache in KV
-  await c.env.KV.put(cacheKey, JSON.stringify(config), {
-    expirationTtl: WIDGET_CONFIG_TTL,
-  });
+  // Cache in KV + 에지 캐시 (waitUntil로 비동기화 — 응답 블로킹 없음)
+  const configJson = JSON.stringify(config);
+  c.executionCtx.waitUntil(
+    Promise.all([
+      c.env.KV.put(cacheKey, configJson, { expirationTtl: WIDGET_CONFIG_TTL }),
+      cache.put(cacheRequest, buildCacheResponse(configJson)),
+    ])
+  );
 
-  return c.json(config);
+  return c.json(config, 200, {
+    'Cache-Control': 'no-store',
+  });
 });
 
 // ─── POST /event ─────────────────────────────────────────────
@@ -143,6 +189,10 @@ widget.post('/event', async (c) => {
 // ─── GET /hint ───────────────────────────────────────────────
 // Store provider hint in KV so authorize can auto-select provider
 // Called by widget before triggering Cafe24 SSO (cross-domain cookie won't work)
+//
+// 성능 최적화: D1 쿼리 대신 widget_config KV 캐시로 Origin 검증.
+// widget/config는 위젯 로딩 시 hint보다 항상 먼저 호출되므로 캐시가 존재함.
+// 캐시 미스 시에만 D1 fallback.
 widget.get('/hint', async (c) => {
   const clientId = c.req.query('client_id');
   const provider = c.req.query('provider');
@@ -150,27 +200,41 @@ widget.get('/hint', async (c) => {
     return c.json({ error: 'missing_params' }, 400);
   }
 
-  // Validate request origin against shop's mall_id to prevent unauthorized hint injection
-  const shop = await getShopByClientId(c.env.DB, clientId);
-  if (!shop) {
-    return c.json({ error: 'invalid_client_id' }, 404);
+  // Origin 검증: KV 캐시 → D1 fallback
+  const originHeader = c.req.header('Origin') ?? c.req.header('Referer') ?? '';
+  let isValidOrigin = false;
+
+  // KV 캐시에서 mall_id 추출 시도 (D1 쿼리 회피)
+  const cacheKey = `widget_config:${clientId}`;
+  const cached = await c.env.KV.get(cacheKey);
+
+  if (cached) {
+    const config = JSON.parse(cached);
+    // sso_callback_uri에서 mall_id 추출: https://{mall_id}.cafe24.com/...
+    if (config.sso_callback_uri) {
+      const match = config.sso_callback_uri.match(/https:\/\/([^.]+)\.cafe24\.com/);
+      if (match) isValidOrigin = originHeader.includes(match[1]);
+    }
   }
 
-  // Check Origin or Referer header to verify request comes from shop's domain
-  const originHeader = c.req.header('Origin') ?? c.req.header('Referer') ?? '';
-  const mallId = shop.mall_id;
+  // KV 캐시 미스 또는 mall_id 매칭 실패 → D1 fallback (커스텀 도메인 대응)
+  if (!isValidOrigin) {
+    const shop = await getShopByClientId(c.env.DB, clientId);
+    if (!shop) {
+      return c.json({ error: 'invalid_client_id' }, 404);
+    }
 
-  let isValidOrigin = mallId ? originHeader.includes(mallId) : false;
-
-  // Also allow shop_url hostname match as fallback
-  if (!isValidOrigin && shop.shop_url) {
-    try {
-      const shopHostname = new URL(
-        shop.shop_url.startsWith('http') ? shop.shop_url : `https://${shop.shop_url}`,
-      ).hostname;
-      isValidOrigin = originHeader.includes(shopHostname);
-    } catch {
-      // Ignore invalid shop_url
+    if (shop.mall_id && originHeader.includes(shop.mall_id)) {
+      isValidOrigin = true;
+    } else if (shop.shop_url) {
+      try {
+        const shopHostname = new URL(
+          shop.shop_url.startsWith('http') ? shop.shop_url : `https://${shop.shop_url}`,
+        ).hostname;
+        isValidOrigin = originHeader.includes(shopHostname);
+      } catch {
+        // Ignore invalid shop_url
+      }
     }
   }
 
@@ -178,15 +242,10 @@ widget.get('/hint', async (c) => {
     return c.json({ error: 'forbidden' }, 403);
   }
 
+  // KV PUT을 await로 블로킹 — hint가 KV에 확실히 쓰인 후 응답
+  // 위젯이 응답을 받아야 MemberAction.snsLogin()을 호출하므로,
+  // hint가 KV에 없으면 authorize가 이전 프로바이더를 사용하게 됨
   await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
-
-  // Verify KV write is readable (eventual consistency safeguard)
-  const verified = await c.env.KV.get(`provider_hint:${clientId}`);
-  if (verified !== provider) {
-    // Retry once if not yet consistent
-    await new Promise((r) => setTimeout(r, 50));
-    await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
-  }
 
   return c.json({ ok: true });
 });

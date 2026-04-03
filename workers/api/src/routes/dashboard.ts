@@ -28,6 +28,8 @@ import {
   softDeleteShop,
   getMonthlySignupCount,
 } from '../db/queries';
+import { purgeWidgetConfigCache } from './widget';
+import { syncBenefitsToCoupons } from '../services/coupon';
 
 const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
 const COOKIE_MAX_AGE = 86400; // 24 hours
@@ -167,13 +169,14 @@ dashboard.get('/shops/:id', async (c) => {
   const ownerId = c.get('ownerId');
   const shopId = c.req.param('id');
 
-  const shop = await getShopById(c.env.DB, shopId);
+  // Parallel: shop lookup + monthly count (both only need shopId)
+  const [shop, monthlyCount] = await Promise.all([
+    getShopById(c.env.DB, shopId),
+    getMonthlySignupCount(c.env.DB, shopId),
+  ]);
   if (!shop || shop.owner_id !== ownerId) {
     return c.json({ error: 'not_found' }, 404);
   }
-
-  // Add monthly count
-  const monthlyCount = await getMonthlySignupCount(c.env.DB, shopId);
 
   return c.json({
     shop: { ...shop, client_secret: maskSecret(shop.client_secret) },
@@ -194,7 +197,7 @@ dashboard.put('/shops/:id', async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
 
   // Prevent direct modification of protected fields
-  const allowed = ['shop_name', 'shop_url', 'allowed_redirect_uris', 'sso_configured', 'sso_type'];
+  const allowed = ['shop_name', 'shop_url', 'allowed_redirect_uris', 'sso_configured', 'sso_type', 'shop_identity'];
   const updates: Record<string, unknown> = {};
 
   for (const key of allowed) {
@@ -214,6 +217,17 @@ dashboard.put('/shops/:id', async (c) => {
   }
 
   await updateShop(c.env.DB, shopId, updates);
+
+  // shop_identity가 변경된 경우 백그라운드에서 쿠폰 동기화
+  if ('shop_identity' in updates) {
+    const updatedShop = { ...shop, shop_identity: updates.shop_identity as string | null };
+    c.executionCtx.waitUntil(
+      syncBenefitsToCoupons(c.env, updatedShop).catch((err) =>
+        console.error(`[CouponSync] 백그라운드 동기화 오류: mall=${shop.mall_id}`, err),
+      ),
+    );
+  }
+
   return c.json({ ok: true });
 });
 
@@ -259,8 +273,11 @@ dashboard.put('/shops/:id/providers', async (c) => {
     enabled_providers: JSON.stringify(providers),
   });
 
-  // Invalidate widget config cache
-  await c.env.KV.delete(`widget_config:${shop.client_id}`);
+  // Invalidate widget config cache (KV + 에지)
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
 
   return c.json({ ok: true, providers });
 });
@@ -327,8 +344,11 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     widget_style: JSON.stringify(newStyle),
   });
 
-  // Invalidate widget config cache
-  await c.env.KV.delete(`widget_config:${shop.client_id}`);
+  // Invalidate widget config cache (KV + 에지)
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
 
   return c.json({ ok: true, style: newStyle });
 });
@@ -549,11 +569,142 @@ dashboard.get('/inquiries/:id', authMiddleware, async (c) => {
   return c.json({ inquiry });
 });
 
+// ─── POST /shops/:id/verify-sso ─────────────────────────────
+// SSO 슬롯 프로빙: sso~sso5를 모두 시도하여 우리 앱의 SSO 엔트리를 확정
+dashboard.post('/shops/:id/verify-sso', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await c.env.DB
+    .prepare('SELECT * FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
+    .bind(shopId, ownerId)
+    .first();
+
+  if (!shop) return c.json({ error: 'not_found' }, 404);
+
+  const mallId = shop.mall_id as string;
+  const baseUrl = c.env.BASE_URL;
+  const ssoTypes = ['sso', 'sso1', 'sso2', 'sso3', 'sso4', 'sso5'];
+
+  // 각 SSO 슬롯을 병렬로 프로빙
+  const results = await Promise.all(
+    ssoTypes.map(async (type) => {
+      try {
+        const probeUrl = `https://${mallId}.cafe24.com/Api/Member/Oauth2ClientLogin/${type}/?return_url=/member/login.html`;
+        const resp = await fetch(probeUrl, { redirect: 'manual' });
+        const location = resp.headers.get('location') || '';
+
+        // 우리 BASE_URL로 리다이렉트되고 client_id가 포함되어 있으면 우리 앱의 SSO
+        const isOurs = location.includes(baseUrl) && location.includes('client_id=');
+        // 등록은 되어있지만 우리 앱이 아닌 경우 (다른 URL로 리다이렉트)
+        const isOther = resp.status === 302 && location.startsWith('http') && !location.includes(baseUrl);
+        // 미등록 (상대 URL이거나 빈 location)
+        const isEmpty = resp.status === 302 && !location.startsWith('http');
+
+        return {
+          type,
+          status: resp.status,
+          is_ours: isOurs,
+          is_other: isOther,
+          is_empty: isEmpty,
+          redirect_url: isOurs ? location.split('?')[0] : undefined,
+          has_client_id: isOurs ? location.includes(`client_id=${shop.client_id}`) : false,
+        };
+      } catch {
+        return { type, status: 0, is_ours: false, is_other: false, is_empty: false, has_client_id: false };
+      }
+    })
+  );
+
+  // 우리 앱의 SSO 슬롯 찾기
+  const ourSso = results.find((r) => r.is_ours);
+
+  if (ourSso) {
+    const detectedType = ourSso.type;
+    const currentType = (shop.sso_type as string) || 'sso';
+
+    // sso_type 업데이트 + 캐시 삭제 (KV + 에지)
+    if (detectedType !== currentType) {
+      await Promise.all([
+        c.env.DB.prepare("UPDATE shops SET sso_type = ?, sso_configured = 1, updated_at = datetime('now') WHERE shop_id = ?")
+          .bind(detectedType, shopId)
+          .run(),
+        c.env.KV.delete(`widget_config:${shop.client_id as string}`),
+        purgeWidgetConfigCache(shop.client_id as string, c.env.BASE_URL),
+      ]);
+    } else if (!(shop.sso_configured as number)) {
+      await c.env.DB.prepare("UPDATE shops SET sso_configured = 1, updated_at = datetime('now') WHERE shop_id = ?")
+        .bind(shopId)
+        .run();
+    }
+
+    return c.json({
+      ok: true,
+      detected_sso_type: detectedType,
+      previous_sso_type: currentType,
+      changed: detectedType !== currentType,
+      has_client_id: ourSso.has_client_id,
+      message: detectedType !== currentType
+        ? `SSO 슬롯이 ${detectedType}로 확인되어 자동 변경되었습니다.`
+        : `SSO 설정이 정상입니다. (${detectedType})`,
+      slots: results.map((r) => ({
+        type: r.type,
+        status: r.is_ours ? 'ours' : r.is_other ? 'other' : r.is_empty ? 'empty' : 'unknown',
+      })),
+    });
+  }
+
+  return c.json({
+    ok: false,
+    message: '번개가입 SSO 설정을 찾을 수 없습니다. 카페24 관리자에서 SSO를 먼저 등록해주세요.',
+    slots: results.map((r) => ({
+      type: r.type,
+      status: r.is_ours ? 'ours' : r.is_other ? 'other' : r.is_empty ? 'empty' : 'unknown',
+    })),
+  }, 404);
+});
+
 // ─── Helper ──────────────────────────────────────────────────
 
 function maskSecret(secret: string): string {
   if (secret.length <= 8) return '****';
   return secret.slice(0, 4) + '****' + secret.slice(-4);
+}
+
+/**
+ * SSO 슬롯 프로빙 (백그라운드용).
+ * cafe24 callback에서 waitUntil로 호출.
+ */
+export async function probeSsoType(
+  env: Env,
+  shop: { shop_id: string; mall_id: string; client_id: string; sso_type?: string },
+): Promise<void> {
+  const ssoTypes = ['sso', 'sso1', 'sso2', 'sso3', 'sso4', 'sso5'];
+
+  const results = await Promise.all(
+    ssoTypes.map(async (type) => {
+      try {
+        const url = `https://${shop.mall_id}.cafe24.com/Api/Member/Oauth2ClientLogin/${type}/?return_url=/member/login.html`;
+        const resp = await fetch(url, { redirect: 'manual' });
+        const location = resp.headers.get('location') || '';
+        return { type, isOurs: location.includes(env.BASE_URL) && location.includes('client_id=') };
+      } catch {
+        return { type, isOurs: false };
+      }
+    })
+  );
+
+  const detected = results.find((r) => r.isOurs);
+  if (detected && detected.type !== (shop.sso_type || 'sso')) {
+    await Promise.all([
+      env.DB.prepare("UPDATE shops SET sso_type = ?, sso_configured = 1, updated_at = datetime('now') WHERE shop_id = ?")
+        .bind(detected.type, shop.shop_id)
+        .run(),
+      env.KV.delete(`widget_config:${shop.client_id}`),
+      purgeWidgetConfigCache(shop.client_id, env.BASE_URL),
+    ]);
+    console.info(`[SSO Probe] ${shop.mall_id}: sso_type updated to ${detected.type}`);
+  }
 }
 
 export default dashboard;

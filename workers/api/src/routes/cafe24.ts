@@ -15,6 +15,7 @@ import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
 import { encrypt } from '@supasignup/bg-core';
 import { issueCouponOnSignup } from '../services/coupon';
+import { probeSsoType } from './dashboard';
 
 // 카페24 회원 가입 이벤트
 const MEMBER_JOINED = 90083;
@@ -258,6 +259,16 @@ cafe24.get('/callback', async (c) => {
       })()
     );
   }
+
+  // 백그라운드 SSO 슬롯 프로빙 (앱 실행 시마다 자동 감지)
+  c.executionCtx.waitUntil(
+    probeSsoType(c.env, {
+      shop_id: shop.shop_id,
+      mall_id: shop.mall_id,
+      client_id: shop.client_id,
+      sso_type: shop.sso_type,
+    }).catch((err) => console.error('[SSO Probe] failed:', err))
+  );
 
   // Auto-login: issue JWT cookie for the owner so they can access the dashboard
   const token = await createToken(shop.owner_id, c.env.JWT_SECRET);

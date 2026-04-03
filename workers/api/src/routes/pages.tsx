@@ -536,7 +536,8 @@ pages.get('/dashboard/settings/coupon', async (c) => {
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
 
-  let couponConfig: { enabled: boolean; coupon_no: string; coupon_name?: string; multi_coupon: boolean } | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let couponConfig: any = null;
   if (shop.coupon_config) {
     try { couponConfig = JSON.parse(shop.coupon_config); } catch { /* ignore */ }
   }
@@ -616,8 +617,14 @@ pages.get('/dashboard/ai-reports', async (c) => {
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
 
+  // 최신 브리핑 조회 (최대 8건)
+  const briefings = await c.env.DB.prepare(
+    `SELECT id, performance, strategy, actions, insight, source, created_at
+     FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 8`
+  ).bind(shop.shop_id).all<{ id: string; performance: string; strategy: string; actions: string; insight: string | null; source: string; created_at: string }>();
+
   return c.html(
-    <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} />
+    <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} briefings={briefings.results ?? []} />
   );
 });
 
@@ -1119,7 +1126,7 @@ pages.get('/admin/inquiries', async (c) => {
 pages.get('/admin/ai-reports', async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT s.shop_id, s.shop_name, s.mall_id, s.plan, s.shop_identity,
-            ab.id as briefing_id, ab.briefing_type, ab.summary,
+            ab.id as briefing_id, ab.source as briefing_type, ab.performance as summary,
             ab.created_at as briefing_created_at
      FROM shops s
      LEFT JOIN ai_briefings ab ON ab.shop_id = s.shop_id

@@ -10,6 +10,10 @@
 export const WIDGET_JS = `(function() {
   'use strict';
 
+  // 중복 실행 방지 — 카페24 ScriptTag 로더가 동일 스크립트를 2회 로딩하는 경우 대응
+  if (window.__BG_WIDGET_LOADED__) return;
+  window.__BG_WIDGET_LOADED__ = true;
+
   // ─── 서버에서 주입된 BASE_URL (런타임에 치환됨) ─────────────
   var __MY_BASE_URL__ = '';
 
@@ -91,20 +95,7 @@ export const WIDGET_JS = `(function() {
     '.bg-btn-highlight-icon{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6}',
     '.bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
     '.bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
-    '.bg-link-widget{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:20px auto;padding:20px;max-width:480px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}',
-    '.bg-link-title{font-size:15px;font-weight:600;color:#333;margin-bottom:16px;display:flex;align-items:center;gap:6px}',
-    '.bg-link-row{display:flex;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px}',
-    '.bg-link-row .bg-btn-icon{margin-right:10px}',
-    '.bg-link-name{flex:1;font-size:14px;font-weight:500;color:#333}',
-    '.bg-link-badge{font-size:12px;padding:2px 10px;border-radius:12px;font-weight:500}',
-    '.bg-link-badge.linked{background:#dcfce7;color:#16a34a}',
-    '.bg-link-badge.unlinked{background:#f1f5f9;color:#64748b;cursor:pointer;transition:all .15s}',
-    '.bg-link-badge.unlinked:hover{background:#3b82f6;color:#fff}',
-    '.bg-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center}',
-    '.bg-modal{background:#fff;border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}',
-    '.bg-modal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:4px 8px}',
-    '.bg-modal-close:hover{color:#333}',
-    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}.bg-modal{padding:16px;margin:8px}}'
+    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}'
   ].join('\\n');
 
   // ─── BGWidget Class ──────────────────────────────────────────
@@ -155,19 +146,50 @@ export const WIDGET_JS = `(function() {
       // Private browsing mode - graceful fallback
     }
 
+    // SSO 팝업에서 돌아온 경우 → 부모에 알리고 자동 닫기
+    if (window.opener && window.name === 'bg_sso_popup') {
+      try { window.opener.postMessage('bg_sso_complete', '*'); } catch(e) {}
+      setTimeout(function() { window.close(); }, 500);
+      return;
+    }
+
     // Detect page type
     this.pageType = this.detectPageType();
 
-    // 로그인/가입 페이지 또는 마이페이지에서만 위젯 표시
-    // 그 외 페이지에서는 아무것도 렌더링하지 않음
-    if (this.pageType === 'login' || this.pageType === 'myshop') {
+    // 로그인/가입 페이지에서만 위젯 표시
+    if (this.pageType === 'login') {
+      // 이전 페이지 저장 (로그인/가입/동의 페이지가 아닌 마지막 페이지)
+      this.saveReturnUrl();
       this.loadConfig(clientId);
     }
   };
 
+  // 로그인/가입/동의 페이지가 아닌 이전 페이지를 저장
+  BGWidget.prototype.saveReturnUrl = function() {
+    try {
+      var ref = document.referrer;
+      if (!ref) return;
+      var refPath = new URL(ref).pathname.toLowerCase();
+      // 로그인/가입/동의 페이지는 저장하지 않음
+      var skipPages = ['/member/login', '/member/join', '/member/agreement', '/member/modify'];
+      for (var i = 0; i < skipPages.length; i++) {
+        if (refPath.indexOf(skipPages[i]) >= 0) return;
+      }
+      localStorage.setItem('bg_return_url', new URL(ref).pathname + new URL(ref).search);
+    } catch(e) {}
+  };
+
+  // 저장된 복귀 URL 반환 (없으면 메인 페이지)
+  BGWidget.prototype.getReturnUrl = function() {
+    try {
+      var saved = localStorage.getItem('bg_return_url');
+      if (saved && saved !== '/') return saved;
+    } catch(e) {}
+    return '/index.html';
+  };
+
   BGWidget.prototype.detectPageType = function() {
     var path = window.location.pathname.toLowerCase();
-    if (path.indexOf('/myshop') === 0) return 'myshop';
     if (path.indexOf('/member/login') >= 0 || path.indexOf('/member/join') >= 0) return 'login';
     return 'other';
   };
@@ -204,17 +226,13 @@ export const WIDGET_JS = `(function() {
         self.config = config;
         self.baseUrl = config.base_url || self.getApiBase();
 
-        // 소셜 로그인 렌더링 (기존)
+        // 소셜 로그인 렌더링
         if (config.providers && config.providers.length > 0) {
-          if (self.pageType === 'myshop') {
-            self.renderLinkWidget();
-          } else {
-            self.render();
-          }
+          self.render();
         }
 
         // Plus 기능 활성화
-        if (config.plan === 'plus') {
+        if (config.plan !== 'free') {
           self.initMiniBanner(config);
           self.initExitPopup(config);
           self.initEscalation(config);
@@ -462,18 +480,54 @@ export const WIDGET_JS = `(function() {
     var config = this.config;
     if (!config) return;
 
-    // For Cafe24: store provider hint in KV, then trigger native SSO flow
-    // Use fetch + waitUntil pattern to ensure hint is stored before SSO trigger
-    if (config.sso_callback_uri && typeof MemberAction !== 'undefined' && MemberAction.snsLogin) {
-      var hintUrl = this.baseUrl + '/api/widget/hint?client_id=' + encodeURIComponent(config.client_id) + '&provider=' + encodeURIComponent(provider);
-      var returnUrl = encodeURIComponent(window.location.pathname || '/index.html');
-      // Save last provider to localStorage for smart button (Cafe24 SSO doesn't pass bg_provider back)
-      try { localStorage.setItem('bg_last_provider', provider); } catch (e) {}
-      fetch(hintUrl, { mode: 'cors' }).then(function() {
-        MemberAction.snsLogin(config.sso_type || 'sso', returnUrl);
-      }).catch(function() {
-        MemberAction.snsLogin(config.sso_type || 'sso', returnUrl);
-      });
+    // For Cafe24: store provider hint in KV, then trigger SSO flow
+    var hintUrl = this.baseUrl + '/api/widget/hint?client_id=' + encodeURIComponent(config.client_id) + '&provider=' + encodeURIComponent(provider);
+    // Save last provider to localStorage for smart button (Cafe24 SSO doesn't pass bg_provider back)
+    try { localStorage.setItem('bg_last_provider', provider); } catch (e) {}
+
+    if (config.sso_callback_uri) {
+      var ssoType = config.sso_type || 'sso';
+
+      // sso_callback_uri에서 mall_id 추출
+      var mallMatch = config.sso_callback_uri.match(new RegExp('https://([^.]+)\\.cafe24\\.com'));
+      var mallId = mallMatch ? mallMatch[1] : null;
+
+      // 로그인/가입 전에 있던 페이지로 복귀 (상품 페이지, 메인 등)
+      var returnUrl = encodeURIComponent(this.getReturnUrl());
+
+      if (typeof MemberAction !== 'undefined' && MemberAction.snsLogin) {
+        // login 페이지: MemberAction 사용 가능 → 네이티브 SSO 플로우
+        fetch(hintUrl, { mode: 'cors' }).then(function() {
+          MemberAction.snsLogin(ssoType, returnUrl);
+        }).catch(function() {
+          MemberAction.snsLogin(ssoType, returnUrl);
+        });
+      } else if (mallId) {
+        // join 페이지 등: 팝업으로 SSO 실행
+        var popupReturnUrl = encodeURIComponent('/member/login.html');
+        var ssoUrl = 'https://' + mallId + '.cafe24.com/Api/Member/Oauth2ClientLogin/' + ssoType + '/?return_url=' + popupReturnUrl;
+        var savedReturnUrl = this.getReturnUrl();
+        fetch(hintUrl, { mode: 'cors' }).then(function() {
+          var popup = window.open(ssoUrl, 'bg_sso_popup', 'width=520,height=700,scrollbars=yes');
+          // 팝업 완료 메시지 수신 → 이전 페이지로 이동
+          window.addEventListener('message', function handler(e) {
+            if (e.data === 'bg_sso_complete') {
+              window.removeEventListener('message', handler);
+              window.location.href = savedReturnUrl;
+            }
+          });
+          // 팝업이 닫힌 경우에도 이전 페이지로 이동
+          var pollClosed = setInterval(function() {
+            if (!popup || popup.closed) {
+              clearInterval(pollClosed);
+              window.location.href = savedReturnUrl;
+            }
+          }, 1000);
+        }).catch(function() {
+          // hint 실패 시 메인 윈도우에서 직접 SSO (return_url은 이전 페이지)
+          window.location.href = 'https://' + mallId + '.cafe24.com/Api/Member/Oauth2ClientLogin/' + ssoType + '/?return_url=' + returnUrl;
+        });
+      }
       return;
     }
 
@@ -491,173 +545,6 @@ export const WIDGET_JS = `(function() {
     var arr = new Uint8Array(16);
     crypto.getRandomValues(arr);
     return Array.from(arr, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-  };
-
-  // ─── 마이페이지: 소셜 연동 메뉴 + 팝업 ─────────────────
-  BGWidget.prototype.renderLinkWidget = function() {
-    var self = this;
-    if (document.querySelector('#bg-link-menu')) return;
-
-    // "회원 정보 수정" 링크를 찾아서 그 뒤에 메뉴 삽입
-    var menuLinks = document.querySelectorAll('#myshopMain a, .xans-myshop-main a');
-    var modifyItem = null;
-    for (var i = 0; i < menuLinks.length; i++) {
-      if (menuLinks[i].getAttribute('href') === '/member/modify.html') {
-        modifyItem = menuLinks[i].closest('li');
-        break;
-      }
-    }
-    if (!modifyItem) return;
-
-    // 메뉴 아이템 생성
-    var menuItem = document.createElement('li');
-    menuItem.id = 'bg-link-menu';
-    var menuLink = document.createElement('a');
-    menuLink.href = '#none';
-    menuLink.textContent = '소셜 계정 연동 ⚡';
-    menuLink.addEventListener('click', function(e) {
-      e.preventDefault();
-      self.openLinkPopup();
-    });
-    menuItem.appendChild(menuLink);
-
-    // "회원 정보 수정" 다음에 삽입
-    modifyItem.parentNode.insertBefore(menuItem, modifyItem.nextSibling);
-  };
-
-  BGWidget.prototype.openLinkPopup = function() {
-    var self = this;
-    var config = this.config;
-    if (!config) return;
-
-    // 이미 열려있으면 무시
-    if (document.querySelector('.bg-modal-overlay')) return;
-
-    // 오버레이
-    var overlay = document.createElement('div');
-    overlay.className = 'bg-modal-overlay';
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) overlay.remove();
-    });
-
-    // 모달
-    var modal = document.createElement('div');
-    modal.className = 'bg-modal';
-
-    // 닫기 버튼
-    var closeBtn = document.createElement('button');
-    closeBtn.className = 'bg-modal-close';
-    closeBtn.textContent = '\\u2715';
-    closeBtn.addEventListener('click', function() { overlay.remove(); });
-    modal.appendChild(closeBtn);
-
-    // 제목
-    var title = document.createElement('div');
-    title.className = 'bg-link-title';
-    title.textContent = '\\u26A1 소셜 계정 연동';
-    modal.appendChild(title);
-
-    // 연동 상태
-    var linkedProviders = [];
-    try {
-      var stored = localStorage.getItem('bg_linked_providers');
-      if (stored) linkedProviders = JSON.parse(stored);
-    } catch (e) {}
-    var lastProvider = null;
-    try { lastProvider = localStorage.getItem('bg_last_provider'); } catch (e) {}
-    if (lastProvider && linkedProviders.indexOf(lastProvider) === -1) {
-      linkedProviders.push(lastProvider);
-      try { localStorage.setItem('bg_linked_providers', JSON.stringify(linkedProviders)); } catch (e) {}
-    }
-
-    // 프로바이더 목록
-    var providers = config.providers;
-    for (var i = 0; i < providers.length; i++) {
-      var p = providers[i];
-      var info = PROVIDERS[p];
-      if (!info) continue;
-
-      var row = document.createElement('div');
-      row.className = 'bg-link-row';
-
-      var icon = document.createElement('span');
-      icon.className = 'bg-btn-icon';
-      icon.innerHTML = info.icon;
-      var paths = icon.querySelectorAll('path');
-      var iconFill = (info.bgColor === '#f2f2f2' || info.bgColor === '#FFFFFF' || info.bgColor === '#ffffff') ? '#4285F4' : info.color;
-      for (var pi = 0; pi < paths.length; pi++) {
-        var currentFill = paths[pi].getAttribute('fill');
-        if (currentFill === '#fff' || currentFill === '#FFFFFF' || currentFill === '#ffffff') {
-          paths[pi].setAttribute('fill', iconFill);
-        }
-      }
-      row.appendChild(icon);
-
-      var name = document.createElement('span');
-      name.className = 'bg-link-name';
-      name.textContent = info.name;
-      row.appendChild(name);
-
-      var badge = document.createElement('span');
-      badge.className = 'bg-link-badge';
-      if (linkedProviders.indexOf(p) >= 0) {
-        badge.classList.add('linked');
-        badge.textContent = '연동됨';
-      } else {
-        badge.classList.add('unlinked');
-        badge.textContent = '연동하기';
-        badge.setAttribute('data-provider', p);
-        badge.addEventListener('click', function() {
-          var prov = this.getAttribute('data-provider');
-          overlay.remove();
-          self.startLinkAuth(prov);
-        });
-      }
-      row.appendChild(badge);
-      modal.appendChild(row);
-    }
-
-    // powered by
-    var powered = document.createElement('div');
-    powered.style.cssText = 'text-align:center;margin-top:16px;font-size:11px;color:#aaa';
-    powered.textContent = 'powered by 번개가입';
-    modal.appendChild(powered);
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  };
-
-  BGWidget.prototype.startLinkAuth = function(provider) {
-    var config = this.config;
-    if (!config) return;
-
-    // 팝업 윈도우로 OAuth 플로우 실행
-    var authUrl = this.baseUrl + '/oauth/authorize'
-      + '?client_id=' + encodeURIComponent(config.client_id)
-      + '&redirect_uri=' + encodeURIComponent(this.baseUrl + '/link/complete')
-      + '&provider=' + encodeURIComponent(provider)
-      + '&response_type=code'
-      + '&state=' + encodeURIComponent(this.generateState());
-
-    var popup = window.open(authUrl, 'bg_link', 'width=500,height=600,scrollbars=yes');
-
-    // 팝업 닫힘 감지 → 연동 상태 갱신
-    var checkInterval = setInterval(function() {
-      if (!popup || popup.closed) {
-        clearInterval(checkInterval);
-        // 연동 프로바이더 목록 업데이트
-        try {
-          localStorage.setItem('bg_last_provider', provider);
-          var linked = JSON.parse(localStorage.getItem('bg_linked_providers') || '[]');
-          if (linked.indexOf(provider) === -1) {
-            linked.push(provider);
-            localStorage.setItem('bg_linked_providers', JSON.stringify(linked));
-          }
-        } catch (e) {}
-        // 페이지 새로고침하여 연동 상태 반영
-        window.location.reload();
-      }
-    }, 500);
   };
 
   BGWidget.prototype.findLoginPage = function() {
@@ -768,8 +655,8 @@ export const WIDGET_JS = `(function() {
       }
     } catch(e) {}
 
-    // 마이페이지(이미 회원)에서는 표시 안 함
-    if (this.pageType === 'myshop') return;
+    // 로그인/가입 페이지가 아니면 표시 안 함
+    if (this.pageType !== 'login') return;
 
     var shown = false;
 
@@ -780,15 +667,15 @@ export const WIDGET_JS = `(function() {
 
       // 오버레이
       var overlay = document.createElement('div');
-      overlay.className = 'bg-modal-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center';
 
       // 모달
       var modal = document.createElement('div');
-      modal.className = 'bg-modal';
+      modal.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative';
 
       // 닫기 버튼
       var closeBtn = document.createElement('button');
-      closeBtn.className = 'bg-modal-close';
+      closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:4px 8px';
       closeBtn.textContent = '\\u2715'; // ✕
       closeBtn.addEventListener('click', function() {
         overlay.remove();

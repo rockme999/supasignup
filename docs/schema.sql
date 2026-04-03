@@ -10,6 +10,7 @@
 --   2026-04-02: shops.kakao_channel_id 추가 (Plus: 카카오 채널), shops.shop_identity 추가 (Plus: AI 정체성 분석)
 --   2026-04-02: funnel_events 테이블 추가 (퍼널 이벤트 D1 영구저장)
 --   2026-04-02: inquiries 테이블 추가 (1:1 문의 게시판)
+--   2026-04-03: ai_briefings 테이블 추가 (AI 주간 브리핑 저장)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -199,3 +200,19 @@ CREATE INDEX IF NOT EXISTS idx_inquiries_shop_id   ON inquiries(shop_id);
 CREATE INDEX IF NOT EXISTS idx_inquiries_owner_id  ON inquiries(owner_id);
 CREATE INDEX IF NOT EXISTS idx_inquiries_status    ON inquiries(status);
 CREATE INDEX IF NOT EXISTS idx_inquiries_created_at ON inquiries(created_at);
+
+-- ============================================================
+-- 11. ai_briefings - AI 주간 브리핑 저장
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ai_briefings (
+  id          TEXT PRIMARY KEY,
+  shop_id     TEXT NOT NULL REFERENCES shops(shop_id),
+  performance TEXT NOT NULL,
+  strategy    TEXT NOT NULL,
+  actions     TEXT NOT NULL,
+  stats_json  TEXT,
+  source      TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'scheduled')),
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_briefings_shop_created ON ai_briefings(shop_id, created_at DESC);

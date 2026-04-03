@@ -353,7 +353,7 @@ export const HomePage: FC<{
           </a>
           <a href="/dashboard/settings/coupon" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">🎟️</span>
-            <span style="font-size:13px;font-weight:600">쿠폰 설정{shop.coupon_enabled ? ' ✓' : ''}</span>
+            <span style="font-size:13px;font-weight:600">쿠폰 현황{shop.coupon_enabled ? ' ✓' : ''}</span>
           </a>
           <a href="/dashboard/stats" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">📊</span>
@@ -513,9 +513,79 @@ export const SsoGuidePage: FC<{
       </ol>
     </div>
 
+    <div class="card" style="margin-top:16px; border:2px solid #2563eb">
+      <h2 style="color:#2563eb">SSO 설정 확인</h2>
+      <p style="font-size:14px; color:#475569; margin-bottom:16px">
+        카페24에서 SSO 등록을 완료한 후 아래 버튼을 클릭하면, 번개가입이 자동으로 SSO 슬롯(sso~sso5)을 감지하고 설정을 확정합니다.
+      </p>
+      <button
+        id="btn-verify-sso"
+        onclick={`verifySso('${shop.shop_id}')`}
+        class="btn btn-primary"
+        style="font-size:15px; padding:10px 28px"
+      >
+        설정 확인
+      </button>
+      <div id="sso-verify-result" style="margin-top:16px; display:none"></div>
+    </div>
+
     <div style="margin-top:16px">
       <a href="/dashboard" class="btn btn-outline btn-sm">대시보드로 돌아가기</a>
     </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+function verifySso(shopId) {
+  var btn = document.getElementById('btn-verify-sso');
+  var result = document.getElementById('sso-verify-result');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  result.style.display = 'none';
+
+  fetch('/api/dashboard/shops/' + shopId + '/verify-sso', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.textContent = '설정 확인';
+    result.style.display = 'block';
+
+    if (data.ok) {
+      var slotHtml = (data.slots || []).map(function(s) {
+        var color = s.status === 'ours' ? '#22c55e' : s.status === 'other' ? '#f59e0b' : '#94a3b8';
+        var label = s.status === 'ours' ? '번개가입' : s.status === 'other' ? '다른 앱' : '미등록';
+        return '<span style="display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '">' + s.type + ': ' + label + '</span>';
+      }).join('');
+
+      result.innerHTML =
+        '<div style="padding:16px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac">' +
+        '<div style="font-size:15px;font-weight:600;color:#16a34a;margin-bottom:8px">\\u2705 ' + data.message + '</div>' +
+        (data.changed ? '<div style="font-size:13px;color:#475569;margin-bottom:8px">' + data.previous_sso_type + ' \\u2192 ' + data.detected_sso_type + '로 자동 변경됨</div>' : '') +
+        '<div style="margin-top:8px">' + slotHtml + '</div>' +
+        '</div>';
+    } else {
+      var slotHtml2 = (data.slots || []).map(function(s) {
+        var color = s.status === 'other' ? '#f59e0b' : '#94a3b8';
+        var label = s.status === 'other' ? '다른 앱' : '미등록';
+        return '<span style="display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '">' + s.type + ': ' + label + '</span>';
+      }).join('');
+
+      result.innerHTML =
+        '<div style="padding:16px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5">' +
+        '<div style="font-size:15px;font-weight:600;color:#dc2626;margin-bottom:8px">\\u274C ' + data.message + '</div>' +
+        '<div style="margin-top:8px">' + slotHtml2 + '</div>' +
+        '</div>';
+    }
+  })
+  .catch(function(err) {
+    btn.disabled = false;
+    btn.textContent = '설정 확인';
+    result.style.display = 'block';
+    result.innerHTML = '<div style="padding:16px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626">오류가 발생했습니다: ' + err.message + '</div>';
+  });
+}
+    `}} />
   </Layout>
 );
 
@@ -2884,7 +2954,8 @@ export const LandingPage: FC = () => (
 export const AiReportsPage: FC<{
   shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
   isCafe24?: boolean;
-}> = ({ shop, isCafe24 }) => {
+  briefings?: Array<{ id: string; performance: string; strategy: string; actions: string; insight?: string; source: string; created_at: string }>;
+}> = ({ shop, isCafe24, briefings }) => {
   const isPlus = shop.plan !== 'free';
 
   return (
@@ -2931,11 +3002,66 @@ export const AiReportsPage: FC<{
             </div>
 
             {/* AI 추천 액션 */}
-            <div class="card">
+            <div class="card" style="margin-bottom:16px">
               <h2 style="margin-bottom:12px;font-size:16px;color:#1e293b">AI 추천 액션</h2>
               <div id="briefingActions" style="font-size:14px;color:#374151;line-height:1.7"></div>
             </div>
+
+            {/* AI 의견 (앱 범위 밖 참고사항) */}
+            <div id="briefingInsightCard" class="card" style="display:none;border-left:3px solid #94a3b8;background:#f8fafc">
+              <h2 style="margin-bottom:8px;font-size:14px;color:#64748b">💡 AI 참고 의견 <span style="font-weight:400;font-size:12px">(번개가입 범위 밖)</span></h2>
+              <div id="briefingInsight" style="font-size:13px;color:#64748b;line-height:1.6;white-space:pre-wrap"></div>
+            </div>
           </div>
+
+          {/* 저장된 브리핑 이력 */}
+          {briefings && briefings.length > 0 && (
+            <div style="margin-top:24px">
+              <h2 style="font-size:16px;color:#1e293b;margin-bottom:12px">이전 보고서</h2>
+              {briefings.map((b, idx) => {
+                let actions: string[] = [];
+                try { actions = JSON.parse(b.actions); } catch { /* ignore */ }
+                const isLatest = idx === 0;
+                return (
+                  <details class="card" style="margin-bottom:12px" open={isLatest}>
+                    <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;list-style:none">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:13px;color:#64748b">{b.created_at?.replace('T', ' ').slice(0, 16)} UTC</span>
+                        <span class={`badge ${b.source === 'scheduled' ? 'badge-blue' : 'badge-gray'}`} style="font-size:11px">
+                          {b.source === 'scheduled' ? '자동' : '수동'}
+                        </span>
+                        {isLatest && <span class="badge badge-green" style="font-size:11px">최신</span>}
+                      </div>
+                      <span style="font-size:12px;color:#94a3b8">▼ 펼치기</span>
+                    </summary>
+                    <div style="margin-top:12px">
+                      <div style="font-size:14px;color:#374151;margin-bottom:10px;line-height:1.6">
+                        <strong style="color:#1e293b">📊 성과:</strong> {b.performance}
+                      </div>
+                      {b.strategy && (
+                        <div style="font-size:14px;color:#374151;margin-bottom:10px;line-height:1.6">
+                          <strong style="color:#1e293b">🎯 전략:</strong> {b.strategy}
+                        </div>
+                      )}
+                      {actions.length > 0 && (
+                        <div style="font-size:14px;color:#374151;margin-bottom:10px;line-height:1.6">
+                          <strong style="color:#1e293b">✅ 액션:</strong>
+                          {actions.map((a, i) => (
+                            <div style="margin-left:20px;margin-top:4px">{i + 1}. {a}</div>
+                          ))}
+                        </div>
+                      )}
+                      {b.insight && (
+                        <div style="font-size:13px;color:#64748b;margin-top:8px;padding:8px 12px;background:#f8fafc;border-left:3px solid #94a3b8;border-radius:4px;line-height:1.5">
+                          💡 <strong>AI 참고 의견:</strong> {b.insight}
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          )}
 
           <script dangerouslySetInnerHTML={{__html: `
             (function() {
@@ -2974,9 +3100,21 @@ export const AiReportsPage: FC<{
                       actionsEl.textContent = b.actions || '-';
                     }
 
+                    // AI 의견 표시
+                    var insightCard = document.getElementById('briefingInsightCard');
+                    var insightEl = document.getElementById('briefingInsight');
+                    if (b.insight && b.insight.trim()) {
+                      insightEl.textContent = b.insight;
+                      insightCard.style.display = 'block';
+                    } else {
+                      insightCard.style.display = 'none';
+                    }
+
                     loadingEl.style.display = 'none';
                     resultEl.style.display = 'block';
                     showToast('success', 'AI 브리핑이 생성되었습니다.');
+                    // 2초 후 페이지 새로고침 (이력에 반영)
+                    setTimeout(function() { location.reload(); }, 2000);
                   } else {
                     loadingEl.style.display = 'none';
                     showToast('error', data.message || 'AI 브리핑 생성에 실패했습니다.');
@@ -3109,8 +3247,8 @@ export const GeneralSettingsPage: FC<{
         <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-top:16px;max-width:560px">
           <h3 style="font-size:15px;margin-bottom:8px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI가 이 혜택을 강조하여 가입 유도 카피를 생성합니다</span></h3>
           <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
-            <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 번개가입이 자동 처리 &nbsp;|&nbsp;
-            <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정 필요
+            <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 혜택을 저장하면 카페24에 쿠폰이 자동 생성되고, 가입 시 회원에게 자동 발급됩니다. &nbsp;|&nbsp;
+            <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정이 필요합니다. (AI 문구 생성에만 활용)
           </p>
           <div style="display:grid;gap:20px">
             {/* 가입 쿠폰 — 라디오 단일 선택 */}
@@ -3396,123 +3534,91 @@ export const GeneralSettingsPage: FC<{
 
 // ─── Login Design Page (삭제됨 — ProvidersPage에 통합) ───────
 
-// ─── Coupon Settings Page ────────────────────────────────────
+// ─── Coupon Status Page (읽기 전용) ─────────────────────────
 
-type CouponConfig2 = {
-  enabled: boolean;
-  coupon_no: string;
+type CouponItemDisplay = {
+  coupon_no: number;
   coupon_name?: string;
+  benefit_type?: string;   // 'D' = 정액, 'R' = 정률
+  discount_amount?: number;
+  discount_rate?: number;
+  benefit_text?: string;
+  expire_days?: number;
+};
+
+type CouponConfigDisplay = {
+  enabled: boolean;
+  coupons: CouponItemDisplay[];
   multi_coupon: boolean;
 };
 
 export const CouponSettingsPage: FC<{
   shop: { shop_id: string; shop_name: string; plan: string };
-  couponConfig: CouponConfig2 | null;
+  couponConfig: CouponConfigDisplay | null;
   isCafe24?: boolean;
 }> = ({ shop, couponConfig, isCafe24 }) => {
-  const isPlus = shop.plan !== 'free';
-  const cc = couponConfig ?? { enabled: false, coupon_no: '', coupon_name: '', multi_coupon: false };
+  const coupons = couponConfig?.coupons ?? [];
 
   return (
-    <Layout title="쿠폰 설정" loggedIn currentPath="/dashboard/settings/coupon" isCafe24={isCafe24}>
-      <h1>쿠폰 설정</h1>
-      <p style="font-size:14px;color:#64748b;margin-bottom:24px">신규 가입 시 자동으로 지급할 쿠폰을 설정합니다.</p>
+    <Layout title="쿠폰 현황" loggedIn currentPath="/dashboard/settings/coupon" isCafe24={isCafe24}>
+      <h1>쿠폰 현황</h1>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">가입 시 자동 발급되는 쿠폰 목록입니다.</p>
 
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">쿠폰 설정</h2>
-          <div class="provider-toggle" style="border:none;padding:0;margin-bottom:0">
-            <label class="toggle">
-              <input type="checkbox" id="couponEnabled" checked={cc.enabled} />
-              <span class="toggle-slider"></span>
-            </label>
-            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">쿠폰 활성화</span>
-          </div>
+          <h2 style="margin-bottom:0">자동 생성된 쿠폰</h2>
+          {couponConfig?.enabled
+            ? <span class="badge badge-green">발급 활성화</span>
+            : <span class="badge badge-gray">발급 비활성화</span>}
         </div>
 
-        <div id="couponFields" style={cc.enabled ? '' : 'display:none'}>
-          <div class="form-group">
-            <label style="font-size:13px;font-weight:600;color:#475569">쿠폰 번호 (coupon_no)</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="text" id="couponNo" value={cc.coupon_no} placeholder="카페24 쿠폰 번호 입력" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" />
-            </div>
-            <p id="couponNameDisplay" style={`font-size:12px;margin-top:4px;${cc.coupon_name ? 'color:#22c55e' : 'color:#94a3b8'}`}>
-              {cc.coupon_name || ''}
-            </p>
-          </div>
-
-          <div class="provider-toggle" style="border:none;padding:0;margin-top:12px">
-            <label class="toggle">
-              <input type="checkbox" id="multiCoupon" checked={cc.multi_coupon} disabled={!isPlus} />
-              <span class="toggle-slider" style={isPlus ? '' : 'cursor:not-allowed;opacity:0.5'}></span>
-            </label>
-            <span style="font-size:13px;font-weight:600;color:#475569;margin-left:8px">멀티 쿠폰</span>
-            {!isPlus && <span class="badge badge-gray" style="margin-left:8px">Plus 전용</span>}
-            <span style="font-size:12px;color:#94a3b8;margin-left:8px">신규 가입 시 여러 쿠폰 동시 지급</span>
-          </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1e40af">
+          쿠폰은 기본 설정의 회원가입 혜택에서 자동 관리됩니다. 혜택을 저장하면 카페24에 쿠폰이 자동 생성되고 이 목록에 표시됩니다.
+          <a href="/dashboard/settings/general" style="margin-left:8px;font-weight:600;color:#2563eb">기본 설정으로 이동 →</a>
         </div>
 
-        <div style="margin-top:16px;display:flex;justify-content:flex-end">
-          <button id="saveCouponBtn" class="btn btn-primary btn-sm">저장</button>
-        </div>
+        {coupons.length === 0 ? (
+          <div style="text-align:center;padding:40px 0;color:#94a3b8">
+            <p style="font-size:15px;margin-bottom:8px">아직 자동 생성된 쿠폰이 없습니다.</p>
+            <p style="font-size:13px">기본 설정 &gt; 회원가입 혜택에서 쿠폰 혜택을 저장하면 자동으로 생성됩니다.</p>
+          </div>
+        ) : (
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:80px">쿠폰 번호</th>
+                  <th>쿠폰명</th>
+                  <th style="width:120px">할인</th>
+                  <th style="width:100px">유효기간</th>
+                  <th style="width:120px">연결 혜택</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coupons.map((coupon) => (
+                  <tr>
+                    <td><code style="font-size:12px">{coupon.coupon_no}</code></td>
+                    <td style="font-size:13px">{coupon.coupon_name || '-'}</td>
+                    <td style="font-size:13px">
+                      {coupon.benefit_type === 'D' && coupon.discount_amount
+                        ? `${coupon.discount_amount.toLocaleString()}원 할인`
+                        : coupon.benefit_type === 'R' && coupon.discount_rate
+                          ? `${coupon.discount_rate}% 할인`
+                          : '-'}
+                    </td>
+                    <td style="font-size:13px">
+                      {coupon.expire_days ? `발급일 +${coupon.expire_days}일` : '-'}
+                    </td>
+                    <td style="font-size:12px;color:#64748b">
+                      {coupon.benefit_text || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      <script dangerouslySetInnerHTML={{__html: `
-        (function() {
-          var shopId = '${shop.shop_id}';
-          var isPlus = ${JSON.stringify(isPlus)};
-
-          var enabledToggle = document.getElementById('couponEnabled');
-          var couponFields = document.getElementById('couponFields');
-          var multiCouponToggle = document.getElementById('multiCoupon');
-
-          enabledToggle.addEventListener('change', function() {
-            couponFields.style.display = this.checked ? '' : 'none';
-          });
-
-          if (!isPlus) {
-            multiCouponToggle.addEventListener('click', function(e) {
-              e.preventDefault();
-              showToast('warn', '멀티 쿠폰은 Plus 플랜에서만 사용할 수 있습니다.');
-            });
-          }
-
-          document.getElementById('saveCouponBtn').addEventListener('click', async function() {
-            var btn = this;
-            var couponNo = document.getElementById('couponNo').value.trim();
-            var enabled = enabledToggle.checked;
-            var multiCoupon = multiCouponToggle.checked && isPlus;
-
-            if (enabled && !couponNo) {
-              showToast('warn', '쿠폰 번호를 입력해주세요.');
-              return;
-            }
-
-            var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon', {
-              enabled: enabled,
-              coupon_no: couponNo,
-              multi_coupon: multiCoupon,
-            }, btn);
-
-            if (resp.ok) {
-              var data = await resp.json();
-              var nameEl = document.getElementById('couponNameDisplay');
-              if (nameEl) {
-                if (data.coupon_name) {
-                  nameEl.textContent = data.coupon_name;
-                  nameEl.style.color = '#22c55e';
-                } else {
-                  nameEl.textContent = '';
-                }
-              }
-              showToast('success', '쿠폰 설정이 저장되었습니다.');
-            } else {
-              var err = await resp.json();
-              showToast('error', err.error || '저장 중 오류가 발생했습니다.');
-            }
-          });
-        })();
-      `}} />
     </Layout>
   );
 };
@@ -3523,17 +3629,186 @@ export const BannerSettingsPage: FC<{
   shop: { plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  // shop이 null이면 Plus가 아님 (null일 때 true가 되는 버그 수정)
-  const isPlus = shop?.plan === 'plus';
+  // shop이 null이면 Plus가 아님, free가 아닌 모든 플랜(monthly, yearly)이 Plus
+  const isPlus = shop != null && shop.plan !== 'free';
   return (
     <Layout title="미니배너" loggedIn currentPath="/dashboard/settings/banner" isCafe24={isCafe24}>
       <h1>미니배너</h1>
       {!isPlus
         ? <PlusLockOverlay feature="미니배너" />
         : (
-          <div class="card">
-            <h2>미니배너 설정</h2>
-            <p style="font-size:14px;color:#64748b">미니배너 설정 기능은 준비 중입니다.</p>
+          <div>
+            <div class="card">
+              <h2>미니배너 설정</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:20px">로그인 페이지 상단에 회원가입 유도 배너가 표시됩니다.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+                {/* 설정 영역 */}
+                <div>
+                  <div class="form-group" style="margin-bottom:16px">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
+                      <span>배너 활성화</span>
+                      <span style="font-size:12px;color:#64748b;font-weight:400">(위젯 설치 시 자동 활성화)</span>
+                    </label>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:40px;height:22px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
+                        <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
+                      </div>
+                      <span style="font-size:13px;color:#374151">활성화됨</span>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="bannerText">배너 텍스트</label>
+                    <input
+                      type="text"
+                      id="bannerText"
+                      placeholder="회원가입하면 특별 혜택을 받으세요!"
+                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                    />
+                    <p style="font-size:12px;color:#94a3b8;margin-top:6px">입력한 텍스트가 오른쪽 미리보기에 실시간으로 반영됩니다.</p>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
+                    <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+                      <div class="banner-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">보라-자주</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">검정 심플</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#eff6ff;border:1px solid #bfdbfe;display:flex;align-items:center;justify-content:center">
+                        <span style="color:#1d4ed8;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">밝은 파랑</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">모서리 둥글기</label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <input type="range" min="0" max="20" value="10" id="bannerBorderRadius" style="flex:1" />
+                      <span id="bannerBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">10px</span>
+                    </div>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <button class="banner-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
+                      <button class="banner-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
+                      <button class="banner-icon-btn" data-icon="🎉" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🎉</button>
+                      <button class="banner-icon-btn" data-icon="✨" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">✨</button>
+                      <button class="banner-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
+                    </div>
+                  </div>
+                  <div style="padding:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px">
+                    <p style="font-size:12px;color:#854d0e;margin:0">설정 저장 기능은 곧 지원됩니다. 현재는 미리보기만 제공됩니다.</p>
+                  </div>
+                </div>
+                {/* 미리보기 영역 */}
+                <div>
+                  <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                  <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+                    <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center">로그인 페이지 상단</p>
+                    <div
+                      id="bannerPreview"
+                      style="width:100%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:10px;padding:12px;text-align:center;cursor:pointer"
+                    >
+                      <span style="color:white;font-size:14px;font-weight:600" id="bannerPreviewText">
+                        <span id="bannerPreviewIcon">⚡</span> 회원가입하면 특별 혜택을 받으세요!
+                      </span>
+                    </div>
+                    <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">클릭 시 가입 페이지로 이동</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <script dangerouslySetInnerHTML={{__html: `
+              (function() {
+                var bannerPresets = [
+                  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
+                  { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
+                  { bg: '#111827', color: '#fff', border: 'none' },
+                  { bg: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' },
+                ];
+                var currentBannerPreset = 0;
+                var currentBannerIcon = '⚡';
+
+                function applyBannerPreset(i) {
+                  var p = bannerPresets[i];
+                  var preview = document.getElementById('bannerPreview');
+                  var previewText = document.getElementById('bannerPreviewText');
+                  if (preview) {
+                    preview.style.background = p.bg;
+                    preview.style.border = p.border;
+                  }
+                  if (previewText) {
+                    previewText.style.color = p.color;
+                  }
+                }
+
+                function updateBannerPreviewText() {
+                  var input = document.getElementById('bannerText');
+                  var previewText = document.getElementById('bannerPreviewText');
+                  var iconEl = document.getElementById('bannerPreviewIcon');
+                  if (!previewText) return;
+                  var text = (input && input.value) ? input.value : '회원가입하면 특별 혜택을 받으세요!';
+                  var iconHtml = currentBannerIcon ? currentBannerIcon + ' ' : '';
+                  if (iconEl) iconEl.textContent = currentBannerIcon;
+                  var textNode = previewText.lastChild;
+                  if (textNode && textNode.nodeType === 3) {
+                    textNode.textContent = ' ' + text;
+                  }
+                }
+
+                document.querySelectorAll('.banner-preset-card').forEach(function(card) {
+                  card.addEventListener('click', function() {
+                    var i = parseInt(this.dataset.preset);
+                    currentBannerPreset = i;
+                    applyBannerPreset(i);
+                    document.querySelectorAll('.banner-preset-card').forEach(function(c) {
+                      c.style.border = '2px solid transparent';
+                    });
+                    this.style.border = '3px solid #2563eb';
+                  });
+                });
+
+                var bannerRadiusSlider = document.getElementById('bannerBorderRadius');
+                if (bannerRadiusSlider) {
+                  bannerRadiusSlider.addEventListener('input', function() {
+                    document.getElementById('bannerBorderRadiusValue').textContent = this.value + 'px';
+                    document.getElementById('bannerPreview').style.borderRadius = this.value + 'px';
+                  });
+                }
+
+                document.querySelectorAll('.banner-icon-btn').forEach(function(btn) {
+                  btn.addEventListener('click', function() {
+                    document.querySelectorAll('.banner-icon-btn').forEach(function(b) { b.style.border = '2px solid transparent'; });
+                    this.style.border = '2px solid #2563eb';
+                    currentBannerIcon = this.dataset.icon;
+                    var iconEl = document.getElementById('bannerPreviewIcon');
+                    if (iconEl) iconEl.textContent = currentBannerIcon;
+                  });
+                });
+
+                var bannerTextInput = document.getElementById('bannerText');
+                if (bannerTextInput) {
+                  bannerTextInput.addEventListener('input', function() {
+                    var previewText = document.getElementById('bannerPreviewText');
+                    if (previewText) {
+                      var iconEl = document.getElementById('bannerPreviewIcon');
+                      if (iconEl) iconEl.textContent = currentBannerIcon;
+                      var nodes = previewText.childNodes;
+                      for (var n = 0; n < nodes.length; n++) {
+                        if (nodes[n].nodeType === 3) {
+                          nodes[n].textContent = ' ' + (this.value || '회원가입하면 특별 혜택을 받으세요!');
+                          break;
+                        }
+                      }
+                    }
+                  });
+                }
+              })();
+            `}} />
           </div>
         )
       }
@@ -3547,17 +3822,188 @@ export const PopupSettingsPage: FC<{
   shop: { plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  // shop이 null이면 Plus가 아님 (null일 때 true가 되는 버그 수정)
-  const isPlus = shop?.plan === 'plus';
+  // shop이 null이면 Plus가 아님, free가 아닌 모든 플랜(monthly, yearly)이 Plus
+  const isPlus = shop != null && shop.plan !== 'free';
   return (
     <Layout title="이탈 감지 팝업" loggedIn currentPath="/dashboard/settings/popup" isCafe24={isCafe24}>
       <h1>이탈 감지 팝업</h1>
       {!isPlus
         ? <PlusLockOverlay feature="이탈 감지 팝업" />
         : (
-          <div class="card">
-            <h2>이탈 감지 팝업 설정</h2>
-            <p style="font-size:14px;color:#64748b">이탈 감지 팝업 설정 기능은 준비 중입니다.</p>
+          <div>
+            <div class="card">
+              <h2>이탈 감지 팝업 설정</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:4px">PC: 마우스가 브라우저 밖으로 나갈 때 / 모바일: 급격한 스크롤 업 감지 시 표시됩니다. 하루 1회만 노출.</p>
+              <p style="font-size:13px;color:#64748b;margin-bottom:20px">팝업을 보여준 뒤 가입까지 이어지지 않은 이탈 방문자를 재유도합니다.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+                {/* 설정 영역 */}
+                <div>
+                  <div class="form-group" style="margin-bottom:16px">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
+                      <span>팝업 활성화</span>
+                    </label>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:40px;height:22px;background:#2563eb;border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
+                        <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
+                      </div>
+                      <span style="font-size:13px;color:#374151">활성화됨</span>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom:12px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupTitle">팝업 제목</label>
+                    <input
+                      type="text"
+                      id="popupTitle"
+                      placeholder="잠깐만요!"
+                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                    />
+                  </div>
+                  <div class="form-group" style="margin-bottom:12px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupBody">팝업 본문</label>
+                    <input
+                      type="text"
+                      id="popupBody"
+                      placeholder="지금 가입하면 특별 혜택을 드려요!"
+                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                    />
+                  </div>
+                  <div class="form-group" style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCta">CTA 버튼 텍스트</label>
+                    <input
+                      type="text"
+                      id="popupCta"
+                      placeholder="혜택 받고 가입하기"
+                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                    />
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <div class="popup-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">기본 블루</span>
+                      </div>
+                      <div class="popup-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">그린</span>
+                      </div>
+                      <div class="popup-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ea580c,#f59e0b);display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">오렌지</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">모서리 둥글기</label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <input type="range" min="8" max="24" value="16" id="popupBorderRadius" style="flex:1" />
+                      <span id="popupBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">16px</span>
+                    </div>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <button class="popup-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
+                      <button class="popup-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
+                      <button class="popup-icon-btn" data-icon="🛍️" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🛍️</button>
+                      <button class="popup-icon-btn" data-icon="💝" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">💝</button>
+                      <button class="popup-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
+                    </div>
+                  </div>
+                  <div style="padding:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px">
+                    <p style="font-size:12px;color:#854d0e;margin:0">설정 저장 기능은 곧 지원됩니다. 현재는 미리보기만 제공됩니다.</p>
+                  </div>
+                </div>
+                {/* 미리보기 영역 */}
+                <div>
+                  <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                  <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+                    <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center">이탈 감지 시 표시되는 팝업</p>
+                    <div id="popupPreviewCard" style="background:white;max-width:320px;margin:0 auto;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
+                      <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:#6b7280;line-height:24px;text-align:center">
+                        &#10005;
+                      </div>
+                      <div style="text-align:center;margin-bottom:16px">
+                        <div id="popupPreviewIconBg" style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+                          <span id="popupPreviewIcon" style="color:white;font-size:20px">⚡</span>
+                        </div>
+                        <h3 id="popupPreviewTitle" style="font-size:20px;font-weight:700;margin:0 0 8px;color:#111827">잠깐만요!</h3>
+                        <p id="popupPreviewBody" style="font-size:14px;color:#6b7280;margin:0">지금 가입하면 특별 혜택을 드려요!</p>
+                      </div>
+                      <button
+                        id="popupPreviewCta"
+                        style="width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer"
+                      >
+                        혜택 받고 가입하기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <script dangerouslySetInnerHTML={{__html: `
+              (function() {
+                var popupPresets = [
+                  { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
+                  { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
+                  { ctaBg: '#ea580c', iconBg: 'linear-gradient(135deg, #ea580c, #f59e0b)' },
+                ];
+                var currentPopupPreset = 0;
+                var currentPopupIcon = '⚡';
+
+                function applyPopupPreset(i) {
+                  var p = popupPresets[i];
+                  var ctaBtn = document.getElementById('popupPreviewCta');
+                  var iconBg = document.getElementById('popupPreviewIconBg');
+                  if (ctaBtn) ctaBtn.style.background = p.ctaBg;
+                  if (iconBg) iconBg.style.background = p.iconBg;
+                }
+
+                document.querySelectorAll('.popup-preset-card').forEach(function(card) {
+                  card.addEventListener('click', function() {
+                    var i = parseInt(this.dataset.preset);
+                    currentPopupPreset = i;
+                    applyPopupPreset(i);
+                    document.querySelectorAll('.popup-preset-card').forEach(function(c) {
+                      c.style.border = '2px solid transparent';
+                    });
+                    this.style.border = '3px solid #2563eb';
+                  });
+                });
+
+                var popupRadiusSlider = document.getElementById('popupBorderRadius');
+                if (popupRadiusSlider) {
+                  popupRadiusSlider.addEventListener('input', function() {
+                    document.getElementById('popupBorderRadiusValue').textContent = this.value + 'px';
+                    document.getElementById('popupPreviewCard').style.borderRadius = this.value + 'px';
+                    var ctaBtn = document.getElementById('popupPreviewCta');
+                    if (ctaBtn) ctaBtn.style.borderRadius = Math.max(6, parseInt(this.value) - 6) + 'px';
+                  });
+                }
+
+                document.querySelectorAll('.popup-icon-btn').forEach(function(btn) {
+                  btn.addEventListener('click', function() {
+                    document.querySelectorAll('.popup-icon-btn').forEach(function(b) { b.style.border = '2px solid transparent'; });
+                    this.style.border = '2px solid #2563eb';
+                    currentPopupIcon = this.dataset.icon;
+                    var iconEl = document.getElementById('popupPreviewIcon');
+                    var iconBg = document.getElementById('popupPreviewIconBg');
+                    if (iconEl) iconEl.textContent = currentPopupIcon;
+                    if (iconBg) iconBg.style.display = currentPopupIcon ? 'flex' : 'none';
+                  });
+                });
+
+                function bindPreview(inputId, previewId, defaultText) {
+                  var input = document.getElementById(inputId);
+                  var preview = document.getElementById(previewId);
+                  if (input && preview) {
+                    input.addEventListener('input', function() {
+                      preview.textContent = this.value || defaultText;
+                    });
+                  }
+                }
+                bindPreview('popupTitle', 'popupPreviewTitle', '잠깐만요!');
+                bindPreview('popupBody', 'popupPreviewBody', '지금 가입하면 특별 혜택을 드려요!');
+                bindPreview('popupCta', 'popupPreviewCta', '혜택 받고 가입하기');
+              })();
+            `}} />
           </div>
         )
       }
@@ -3571,17 +4017,193 @@ export const EscalationSettingsPage: FC<{
   shop: { plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  // shop이 null이면 Plus가 아님 (null일 때 true가 되는 버그 수정)
-  const isPlus = shop?.plan === 'plus';
+  // shop이 null이면 Plus가 아님, free가 아닌 모든 플랜(monthly, yearly)이 Plus
+  const isPlus = shop != null && shop.plan !== 'free';
   return (
     <Layout title="에스컬레이션" loggedIn currentPath="/dashboard/settings/escalation" isCafe24={isCafe24}>
       <h1>에스컬레이션</h1>
       {!isPlus
         ? <PlusLockOverlay feature="에스컬레이션" />
         : (
-          <div class="card">
-            <h2>에스컬레이션 설정</h2>
-            <p style="font-size:14px;color:#64748b">에스컬레이션 설정 기능은 준비 중입니다.</p>
+          <div>
+            <div class="card" style="margin-bottom:20px">
+              <h2>에스컬레이션 설정</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:20px">비로그인 방문자의 재방문 횟수에 따라 단계적으로 가입을 유도합니다.</p>
+
+              {/* 2회 방문 — 토스트 */}
+              <div style="margin-bottom:28px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                  <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:#111827;color:white;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0">2</span>
+                  <h3 style="font-size:14px;font-weight:600;margin:0">2회 방문 — 토스트 메시지</h3>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+                  <div>
+                    <div class="form-group" style="margin-bottom:12px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="toastText">토스트 메시지</label>
+                      <input
+                        type="text"
+                        id="toastText"
+                        placeholder="이미 2번째 방문이에요 :)"
+                        style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                      />
+                      <p style="font-size:12px;color:#94a3b8;margin-top:6px">화면 하단에 캡슐형 토스트로 표시됩니다.</p>
+                    </div>
+                    <div style="margin-top:4px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">토스트 스타일</label>
+                      <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <div class="toast-style-card" data-style="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                          <span style="color:white;font-size:9px;font-weight:600">다크</span>
+                        </div>
+                        <div class="toast-style-card" data-style="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #e5e7eb;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+                          <span style="color:#111827;font-size:9px;font-weight:600">라이트</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                    <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px;text-align:center">
+                      <p style="font-size:11px;color:#94a3b8;margin-bottom:16px">화면 하단 토스트</p>
+                      <div style="display:inline-block">
+                        <div
+                          id="toastPreview"
+                          style="background:#111827;color:white;padding:10px 20px;border-radius:999px;font-size:13px;font-weight:500;white-space:nowrap"
+                        >
+                          이미 2번째 방문이에요 :)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:28px" />
+
+              {/* 3회+ 방문 — 플로팅 배너 */}
+              <div style="margin-bottom:16px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                  <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0">3+</span>
+                  <h3 style="font-size:14px;font-weight:600;margin:0">3회 이상 방문 — 플로팅 배너</h3>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+                  <div>
+                    <div class="form-group" style="margin-bottom:12px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="floatingText">배너 텍스트</label>
+                      <input
+                        type="text"
+                        id="floatingText"
+                        placeholder="회원가입하면 특별 혜택!"
+                        style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                      />
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="floatingBtn">버튼 텍스트</label>
+                      <input
+                        type="text"
+                        id="floatingBtn"
+                        placeholder="바로 가입하기"
+                        style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                      />
+                      <p style="font-size:12px;color:#94a3b8;margin-top:6px">화면 하단에 고정된 배너로 표시됩니다.</p>
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">플로팅 배너 프리셋</label>
+                      <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <div class="floating-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center">
+                          <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
+                        </div>
+                        <div class="floating-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                          <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">다크</span>
+                        </div>
+                        <div class="floating-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#2563eb;display:flex;align-items:center;justify-content:center">
+                          <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑 솔리드</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                    <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+                      <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center">화면 하단 고정 배너</p>
+                      <div id="floatingBannerPreview" style="background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                        <span id="floatingTextPreview" style="color:white;font-size:13px;font-weight:600">회원가입하면 특별 혜택!</span>
+                        <button
+                          id="floatingBtnPreview"
+                          style="flex-shrink:0;padding:6px 14px;background:white;color:#2563eb;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"
+                        >
+                          바로 가입하기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="padding:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px">
+                <p style="font-size:12px;color:#854d0e;margin:0">설정 저장 기능은 곧 지원됩니다. 현재는 미리보기만 제공됩니다.</p>
+              </div>
+            </div>
+            <script dangerouslySetInnerHTML={{__html: `
+              (function() {
+                // 플로팅 배너 프리셋
+                var floatingPresets = [
+                  { bg: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', btnColor: '#2563eb' },
+                  { bg: '#111827', color: 'white', btnColor: '#374151' },
+                  { bg: '#2563eb', color: 'white', btnColor: '#1d4ed8' },
+                ];
+
+                document.querySelectorAll('.floating-preset-card').forEach(function(card) {
+                  card.addEventListener('click', function() {
+                    var i = parseInt(this.dataset.preset);
+                    var p = floatingPresets[i];
+                    var banner = document.getElementById('floatingBannerPreview');
+                    var textEl = document.getElementById('floatingTextPreview');
+                    if (banner) banner.style.background = p.bg;
+                    if (textEl) textEl.style.color = p.color;
+                    document.querySelectorAll('.floating-preset-card').forEach(function(c) {
+                      c.style.border = '2px solid transparent';
+                    });
+                    this.style.border = '3px solid #2563eb';
+                  });
+                });
+
+                // 토스트 스타일
+                var toastStyles = [
+                  { bg: '#111827', color: 'white', shadow: 'none' },
+                  { bg: '#ffffff', color: '#111827', shadow: '0 4px 16px rgba(0,0,0,0.12)' },
+                ];
+
+                document.querySelectorAll('.toast-style-card').forEach(function(card) {
+                  card.addEventListener('click', function() {
+                    var i = parseInt(this.dataset.style);
+                    var s = toastStyles[i];
+                    var toast = document.getElementById('toastPreview');
+                    if (toast) {
+                      toast.style.background = s.bg;
+                      toast.style.color = s.color;
+                      toast.style.boxShadow = s.shadow;
+                    }
+                    document.querySelectorAll('.toast-style-card').forEach(function(c) {
+                      c.style.border = '2px solid #e5e7eb';
+                    });
+                    this.style.border = '3px solid #2563eb';
+                  });
+                });
+
+                function bindPreview(inputId, previewId, defaultText) {
+                  var input = document.getElementById(inputId);
+                  var preview = document.getElementById(previewId);
+                  if (input && preview) {
+                    input.addEventListener('input', function() {
+                      preview.textContent = this.value || defaultText;
+                    });
+                  }
+                }
+                bindPreview('toastText', 'toastPreview', '이미 2번째 방문이에요 :)');
+                bindPreview('floatingText', 'floatingTextPreview', '회원가입하면 특별 혜택!');
+                bindPreview('floatingBtn', 'floatingBtnPreview', '바로 가입하기');
+              })();
+            `}} />
           </div>
         )
       }
@@ -3605,29 +4227,54 @@ export const KakaoSettingsPage: FC<{
         : (
           <div class="card">
             <h2>카카오 채널 ID</h2>
-            <p style="font-size:13px;color:#64748b;margin-bottom:16px">신규 가입 시 카카오 채널 추가 유도에 사용됩니다.</p>
-            <div class="form-group" style="max-width:360px">
-              <input
-                type="text"
-                id="kakaoChannelId"
-                value={kakaoChannelId}
-                placeholder="예: @my-shop-kakao"
-                style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"
-              />
+            <p style="font-size:13px;color:#64748b;margin-bottom:20px">신규 가입 시 카카오 채널 추가 유도 버튼에 사용됩니다.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+              {/* 설정 영역 */}
+              <div>
+                <div class="form-group" style="margin-bottom:16px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="kakaoChannelId">카카오 채널 ID</label>
+                  <input
+                    type="text"
+                    id="kakaoChannelId"
+                    value={kakaoChannelId}
+                    placeholder="예: @my-shop-kakao"
+                    style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                  />
+                  <p style="font-size:12px;color:#94a3b8;margin-top:6px">카카오 채널 관리자 페이지에서 확인할 수 있습니다.</p>
+                </div>
+                <button id="saveKakaoBtn" class="btn btn-primary btn-sm">저장</button>
+                <script dangerouslySetInnerHTML={{__html: `
+                  document.getElementById('saveKakaoBtn').addEventListener('click', async function() {
+                    var channelId = document.getElementById('kakaoChannelId').value.trim();
+                    var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
+                    if (resp.ok) {
+                      showToast('success', '카카오 채널 ID가 저장되었습니다.');
+                    } else {
+                      var err = await resp.json();
+                      showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+                    }
+                  });
+                `}} />
+              </div>
+              {/* 미리보기 영역 */}
+              <div>
+                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+                  <p style="font-size:11px;color:#94a3b8;margin-bottom:16px;text-align:center">가입 완료 후 표시되는 버튼</p>
+                  <div style="display:flex;justify-content:center">
+                    <button
+                      style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#FEE500;color:#191919;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;max-width:320px;width:100%;justify-content:center"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M10 2C5.582 2 2 4.896 2 8.444c0 2.26 1.5 4.247 3.765 5.378l-.96 3.585a.25.25 0 00.38.275L9.54 15.03c.152.01.306.016.46.016 4.418 0 8-2.896 8-6.444C18 4.896 14.418 2 10 2z" fill="#191919"/>
+                      </svg>
+                      카카오 채널 추가하고 알림 받기
+                    </button>
+                  </div>
+                  <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">가입 완료 페이지에서 표시됩니다</p>
+                </div>
+              </div>
             </div>
-            <button id="saveKakaoBtn" class="btn btn-primary btn-sm">저장</button>
-            <script dangerouslySetInnerHTML={{__html: `
-              document.getElementById('saveKakaoBtn').addEventListener('click', async function() {
-                var channelId = document.getElementById('kakaoChannelId').value.trim();
-                var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
-                if (resp.ok) {
-                  showToast('success', '카카오 채널 ID가 저장되었습니다.');
-                } else {
-                  var err = await resp.json();
-                  showToast('error', err.error || '저장 중 오류가 발생했습니다.');
-                }
-              });
-            `}} />
           </div>
         )
       }
@@ -3730,14 +4377,14 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
     </div>
 
     <div class="card">
-      <h2>쿠폰 설정</h2>
+      <h2>쿠폰 자동 발급</h2>
       <p style="font-size:14px;color:#64748b;margin-bottom:12px">신규 가입 시 자동으로 쿠폰을 지급할 수 있습니다.</p>
       <ol style="padding-left:20px;font-size:14px;line-height:2">
-        <li>카페24 쇼핑몰 관리자에서 발급할 쿠폰을 먼저 생성합니다.</li>
-        <li>대시보드 &gt; 설정 &gt; 쿠폰 설정에서 쿠폰 번호를 입력합니다.</li>
-        <li>쿠폰 활성화 토글을 켭니다.</li>
+        <li>기본 설정 &gt; 회원가입 혜택에서 쿠폰 혜택을 선택합니다.</li>
+        <li>혜택 저장 버튼을 누르면 카페24에 쿠폰이 자동 생성됩니다.</li>
+        <li>가입 시 회원에게 자동으로 쿠폰이 발급됩니다.</li>
       </ol>
-      <a href="/dashboard/settings/coupon" class="btn btn-outline btn-sm" style="margin-top:12px;display:inline-flex;width:auto">쿠폰 설정 바로가기</a>
+      <a href="/dashboard/settings/coupon" class="btn btn-outline btn-sm" style="margin-top:12px;display:inline-flex;width:auto">쿠폰 현황 바로가기</a>
     </div>
 
     <div class="card">
