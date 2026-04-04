@@ -353,6 +353,97 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   return c.json({ ok: true, style: newStyle });
 });
 
+// ─── GET /shops/:id/banner ──────────────────────────────────
+dashboard.get('/shops/:id/banner', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  // Plus 전용
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const config = shop.banner_config ? JSON.parse(shop.banner_config) : null;
+  return c.json({ ok: true, banner_config: config });
+});
+
+// ─── PUT /shops/:id/banner ──────────────────────────────────
+dashboard.put('/shops/:id/banner', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const body = await c.req.json<{
+    preset: number;
+    text: string;
+    borderRadius: number;
+    icon: string;
+    opacity?: number;
+    bold?: boolean;
+    italic?: boolean;
+    hideForReturning?: boolean;
+    anchorSelector?: string;
+    position: string;
+    animation?: string;
+    fullWidth?: boolean;
+    paddingX?: number;
+    height?: number;
+  }>();
+
+  // Validate
+  if (body.preset < 0 || body.preset > 7) {
+    return c.json({ error: 'invalid_preset' }, 400);
+  }
+  if (body.borderRadius < 0 || body.borderRadius > 30) {
+    return c.json({ error: 'invalid_borderRadius' }, 400);
+  }
+  if (body.text && body.text.length > 30) {
+    return c.json({ error: 'text_too_long' }, 400);
+  }
+
+  const bannerConfig = {
+    preset: body.preset,
+    text: body.text || '번개가입으로 회원 혜택을 받으세요!',
+    borderRadius: body.borderRadius ?? 10,
+    icon: body.icon ?? '⚡',
+    opacity: Math.min(Math.max(body.opacity ?? 90, 30), 100),
+    bold: body.bold === true,
+    italic: body.italic === true,
+    hideForReturning: body.hideForReturning === true,
+    anchorSelector: body.anchorSelector || '#top_nav_box',
+    position: body.position || 'floating',
+    animation: (body.animation === 'slideDown') ? 'slideDown' : 'fadeIn',
+    fullWidth: body.fullWidth !== false,
+    paddingX: Math.min(Math.max(body.paddingX ?? 24, 12), 80),
+    height: Math.min(Math.max(body.height ?? 44, 32), 80),
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    banner_config: JSON.stringify(bannerConfig),
+  });
+
+  // Invalidate widget config cache
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+
+  return c.json({ ok: true, banner_config: bannerConfig });
+});
+
 // ─── GET /shops/:id/setup ────────────────────────────────────
 dashboard.get('/shops/:id/setup', async (c) => {
   const ownerId = c.get('ownerId');

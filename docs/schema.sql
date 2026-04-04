@@ -11,6 +11,7 @@
 --   2026-04-02: funnel_events 테이블 추가 (퍼널 이벤트 D1 영구저장)
 --   2026-04-02: inquiries 테이블 추가 (1:1 문의 게시판)
 --   2026-04-03: ai_briefings 테이블 추가 (AI 주간 브리핑 저장)
+--   2026-04-04: shops.banner_config 추가 (Plus: 미니배너 설정 저장)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS shops (
   coupon_config          TEXT,                         -- JSON: {"enabled":false,"coupons":[...],"multi_coupon":false}
   kakao_channel_id       TEXT,                         -- Plus: 카카오 채널 ID (pf.kakao.com/{id}/friend)
   shop_identity          TEXT,                         -- Plus: AI 분석 쇼핑몰 정체성 JSON {"industry","target","tone","keywords","summary"}
+  banner_config          TEXT,                         -- Plus: 미니배너 설정 JSON {"preset":0,"text":"...","borderRadius":10,"icon":"⚡","position":"floating"}
   deleted_at             TEXT,
   created_at             TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at             TEXT NOT NULL DEFAULT (datetime('now')),

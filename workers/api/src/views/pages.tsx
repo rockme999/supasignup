@@ -3626,11 +3626,24 @@ export const CouponSettingsPage: FC<{
 // ─── Banner Settings Page [Plus] ────────────────────────────
 
 export const BannerSettingsPage: FC<{
-  shop: { plan: string } | null;
+  shop: { plan: string; shop_name?: string | null } | null;
+  shopId?: string;
+  bannerConfig?: { preset: number; text: string; borderRadius: number; icon: string; position: string; fullWidth?: boolean; paddingX?: number; height?: number; animation?: string } | null;
   isCafe24?: boolean;
-}> = ({ shop, isCafe24 }) => {
-  // shop이 null이면 Plus가 아님, free가 아닌 모든 플랜(monthly, yearly)이 Plus
+}> = ({ shop, shopId, bannerConfig, isCafe24 }) => {
   const isPlus = shop != null && shop.plan !== 'free';
+  const bc = bannerConfig || { preset: 0, text: '', borderRadius: 10, icon: '⚡', position: 'floating', fullWidth: true, paddingX: 24, height: 44 };
+  const presetStyles = [
+    { bg: '#ffffff', color: '#111827', border: '1px solid #d1d5db' },
+    { bg: '#f3f4f6', color: '#4b5563', border: '1px solid #d1d5db' },
+    { bg: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' },
+    { bg: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' },
+    { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' },
+    { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
+    { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
+    { bg: '#111827', color: '#fff', border: 'none' },
+  ];
+  const ps = presetStyles[bc.preset] || presetStyles[0];
   return (
     <Layout title="미니배너" loggedIn currentPath="/dashboard/settings/banner" isCafe24={isCafe24}>
       <h1>미니배너</h1>
@@ -3641,9 +3654,45 @@ export const BannerSettingsPage: FC<{
             <div class="card">
               <h2>미니배너 설정</h2>
               <p style="font-size:13px;color:#64748b;margin-bottom:20px">로그인 페이지 상단에 회원가입 유도 배너가 표시됩니다.</p>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-                {/* 설정 영역 */}
-                <div>
+              <div id="bannerSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
+              {/* 미리보기 영역 (상단) */}
+              {/* 미리보기 (모의 네비게이션 + 배너) */}
+              <div style="margin-bottom:20px">
+                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden">
+                  {/* 모의 top_nav_box */}
+                  <div style="background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    <span style="font-size:16px;font-weight:700;color:#111">{shop?.shop_name || '쇼핑몰'}</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  </div>
+                  {/* 배너 미리보기 */}
+                  <div style="text-align:center">
+                    <div
+                      id="bannerPreview"
+                      style={`${(bc.fullWidth !== false) ? 'width:100%' : 'width:fit-content;padding:0 ' + (bc.paddingX || 24) + 'px'};height:30px;margin:0 auto;background:${ps.bg};border:${ps.border};border-radius:${bc.borderRadius}px;opacity:${(bc.opacity != null ? bc.opacity : 90) / 100};display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer`}
+                    >
+                      <span style={`color:${ps.color};font-size:14px;font-weight:${bc.bold ? '600' : '400'};font-style:${bc.italic ? 'italic' : 'normal'}`} id="bannerPreviewText">
+                        <span id="bannerPreviewIcon">{bc.icon || '⚡'}</span> {bc.text || '번개가입으로 회원 혜택을 받으세요!'}
+                      </span>
+                    </div>
+                  </div>
+                  {/* 모의 콘텐츠 */}
+                  <div style="padding:16px;background:#f9fafb;border-top:1px solid #f0f0f0">
+                    <div style="background:#e5e7eb;border-radius:8px;height:120px;display:flex;align-items:center;justify-content:center">
+                      <span style="font-size:12px;color:#9ca3af">페이지 콘텐츠 영역</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 설정 영역 (펼치기/접기) */}
+              <div>
+                <div id="bannerSettingsToggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:16px">
+                  <span style="font-size:14px;font-weight:600;color:#374151">상세 설정</span>
+                  <span id="bannerSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
+                </div>
+                <div id="bannerSettingsBody" style="display:none">
                   <div class="form-group" style="margin-bottom:16px">
                     <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
                       <span>배너 활성화</span>
@@ -3657,81 +3706,178 @@ export const BannerSettingsPage: FC<{
                     </div>
                   </div>
                   <div class="form-group" style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="bannerText">배너 텍스트</label>
-                    <input
-                      type="text"
-                      id="bannerText"
-                      placeholder="회원가입하면 특별 혜택을 받으세요!"
-                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                    />
-                    <p style="font-size:12px;color:#94a3b8;margin-top:6px">입력한 텍스트가 오른쪽 미리보기에 실시간으로 반영됩니다.</p>
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="bannerText">배너 텍스트 (최대 30자)</label>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <input
+                        type="text"
+                        id="bannerText"
+                        value={bc.text || ''}
+                        maxlength="30"
+                        placeholder="번개가입으로 회원 혜택을 받으세요!"
+                        style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                      />
+                      <button id="bannerBoldToggle" style={`width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:800;border:2px solid ${bc.bold ? '#2563eb' : '#d1d5db'};background:${bc.bold ? '#eff6ff' : '#fff'};color:#374151;flex-shrink:0`}>B</button>
+                      <button id="bannerItalicToggle" style={`width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;font-style:italic;border:2px solid ${bc.italic ? '#2563eb' : '#d1d5db'};background:${bc.italic ? '#eff6ff' : '#fff'};color:#374151;flex-shrink:0`}>I</button>
+                    </div>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:6px">
+                      <span id="bannerTextCount">{(bc.text || '').length}</span>/30자
+                    </p>
                   </div>
                   <div style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
                     <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-                      <div class="banner-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">보라-자주</span>
+                      <div class="banner-preset-card" data-preset="0" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 0 ? '3px solid #2563eb' : '1px solid #d1d5db'};overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:#111827;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">화이트</span>
                       </div>
-                      <div class="banner-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
+                      <div class="banner-preset-card" data-preset="1" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 1 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#f3f4f6;display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:#4b5563;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색</span>
                       </div>
-                      <div class="banner-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">검정 심플</span>
-                      </div>
-                      <div class="banner-preset-card" data-preset="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#eff6ff;border:1px solid #bfdbfe;display:flex;align-items:center;justify-content:center">
+                      <div class="banner-preset-card" data-preset="2" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 2 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#eff6ff;display:flex;align-items:center;justify-content:center`}>
                         <span style="color:#1d4ed8;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">밝은 파랑</span>
                       </div>
+                      <div class="banner-preset-card" data-preset="3" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 3 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#f0fdf4;display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:#166534;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">녹색</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="4" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 4 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#fef2f2;display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:#991b1b;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">붉은색</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="5" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 5 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="6" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 6 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">보라-자주</span>
+                      </div>
+                      <div class="banner-preset-card" data-preset="7" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 7 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center`}>
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">검정 심플</span>
+                      </div>
+                    </div>
+                    <p style="font-size:11px;color:#94a3b8;margin-top:6px">화이트/회색은 모노톤, 녹색/붉은색은 포인트 프리셋입니다.</p>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">투명도</label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <input type="range" min="30" max="100" value={String(bc.opacity != null ? bc.opacity : 90)} id="bannerOpacity" style="flex:1" />
+                      <span id="bannerOpacityValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">{bc.opacity != null ? bc.opacity : 90}%</span>
                     </div>
                   </div>
                   <div style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">모서리 둥글기</label>
                     <div style="display:flex;align-items:center;gap:12px">
-                      <input type="range" min="0" max="20" value="10" id="bannerBorderRadius" style="flex:1" />
-                      <span id="bannerBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">10px</span>
+                      <input type="range" min="0" max="20" value={String(bc.borderRadius)} id="bannerBorderRadius" style="flex:1" />
+                      <span id="bannerBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">{bc.borderRadius}px</span>
+                    </div>
+                  </div>
+                  <div style="margin-bottom:16px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                      <span style="font-size:13px;font-weight:600">전체 너비</span>
+                      <div id="bannerFullWidthToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${(bc.fullWidth !== false) ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' : '#d1d5db'}`}>
+                        <div style={`position:absolute;top:2px;${(bc.fullWidth !== false) ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                      </div>
+                    </div>
+                    <div id="bannerPaddingGroup" style={`opacity:${(bc.fullWidth !== false) ? '0.4' : '1'};pointer-events:${(bc.fullWidth !== false) ? 'none' : 'auto'}`}>
+                      <label style="display:block;font-size:12px;color:#64748b;margin-bottom:6px">좌우 여백</label>
+                      <div style="display:flex;align-items:center;gap:12px">
+                        <input type="range" min="12" max="80" value={String(bc.paddingX || 24)} id="bannerPaddingX" style="flex:1" />
+                        <span id="bannerPaddingXValue" style="font-size:13px;min-width:40px;text-align:right;color:#374151">{bc.paddingX || 24}px</span>
+                      </div>
                     </div>
                   </div>
                   <div style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
                     <div style="display:flex;gap:6px;flex-wrap:wrap">
-                      <button class="banner-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
-                      <button class="banner-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
-                      <button class="banner-icon-btn" data-icon="🎉" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🎉</button>
-                      <button class="banner-icon-btn" data-icon="✨" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">✨</button>
-                      <button class="banner-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
+                      <button class="banner-icon-btn" data-icon="⚡" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '⚡' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>⚡</button>
+                      <button class="banner-icon-btn" data-icon="🎁" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '🎁' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>🎁</button>
+                      <button class="banner-icon-btn" data-icon="🎉" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '🎉' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>🎉</button>
+                      <button class="banner-icon-btn" data-icon="✨" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '✨' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>✨</button>
+                      <button class="banner-icon-btn" data-icon="" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280`}>없음</button>
                     </div>
                   </div>
-                  <div style="padding:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px">
-                    <p style="font-size:12px;color:#854d0e;margin:0">설정 저장 기능은 곧 지원됩니다. 현재는 미리보기만 제공됩니다.</p>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">출현 효과</label>
+                    <div style="display:flex;gap:8px">
+                      <label style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${(bc.animation || 'fadeIn') === 'fadeIn' ? '#2563eb' : '#e5e7eb'};background:${(bc.animation || 'fadeIn') === 'fadeIn' ? '#eff6ff' : '#fff'}`}>
+                        <input type="radio" name="bannerAnimation" value="fadeIn" checked={(bc.animation || 'fadeIn') === 'fadeIn'} style="display:none" />
+                        페이드인
+                      </label>
+                      <label style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${bc.animation === 'slideDown' ? '#2563eb' : '#e5e7eb'};background:${bc.animation === 'slideDown' ? '#eff6ff' : '#fff'}`}>
+                        <input type="radio" name="bannerAnimation" value="slideDown" checked={bc.animation === 'slideDown'} style="display:none" />
+                        슬라이드
+                      </label>
+                    </div>
+                    <p style="font-size:11px;color:#94a3b8;margin-top:6px">페이드인: 서서히 나타남 · 슬라이드: 위에서 아래로 내려옴</p>
                   </div>
-                </div>
-                {/* 미리보기 영역 */}
-                <div>
-                  <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                  <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
-                    <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center">로그인 페이지 상단</p>
-                    <div
-                      id="bannerPreview"
-                      style="width:100%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:10px;padding:12px;text-align:center;cursor:pointer"
+                  <div style="margin-bottom:16px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font-size:13px;font-weight:600">이전 로그인 기록 감지 시 표시 안함</span>
+                      <div id="bannerHideReturningToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideForReturning ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' : '#d1d5db'}`}>
+                        <div style={`position:absolute;top:2px;${bc.hideForReturning ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                      </div>
+                    </div>
+                    <p style="font-size:11px;color:#94a3b8;margin-top:6px">켜면 로그인한 이력이 확인되면 방문자에게 배너를 표시하지 않습니다.</p>
+                  </div>
+                  <div class="form-group" style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="bannerAnchor">기준 요소</label>
+                    <input
+                      type="text"
+                      id="bannerAnchor"
+                      value={bc.anchorSelector || '#top_nav_box'}
+                      placeholder="#top_nav_box"
+                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;font-family:monospace"
+                    />
+                    <p style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.6">
+                      배너가 이 요소 아래에 표시됩니다. #아이디 또는 .클래스 형식으로 입력하세요.<br/>
+                      접두사 없이 입력하면 ID → 클래스 순서로 자동 검색합니다. (기본값: #top_nav_box)
+                    </p>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <button
+                      id="bannerSaveBtn"
+                      style="flex:1;padding:10px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer"
                     >
-                      <span style="color:white;font-size:14px;font-weight:600" id="bannerPreviewText">
-                        <span id="bannerPreviewIcon">⚡</span> 회원가입하면 특별 혜택을 받으세요!
-                      </span>
-                    </div>
-                    <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">클릭 시 가입 페이지로 이동</p>
+                      설정 저장
+                    </button>
+                    <button
+                      id="bannerResetBtn"
+                      style="padding:10px 16px;background:#fff;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer"
+                    >
+                      기본값
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
             <script dangerouslySetInnerHTML={{__html: `
               (function() {
+                // 설정 펼치기/접기
+                var settingsToggle = document.getElementById('bannerSettingsToggle');
+                var settingsBody = document.getElementById('bannerSettingsBody');
+                var settingsArrow = document.getElementById('bannerSettingsArrow');
+                var settingsOpen = false;
+                if (settingsToggle && settingsBody) {
+                  settingsToggle.addEventListener('click', function() {
+                    settingsOpen = !settingsOpen;
+                    settingsBody.style.display = settingsOpen ? 'block' : 'none';
+                    settingsArrow.style.transform = settingsOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+                  });
+                }
+
+                var shopId = ${JSON.stringify(shopId || '')};
                 var bannerPresets = [
-                  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
-                  { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
-                  { bg: '#111827', color: '#fff', border: 'none' },
+                  { bg: '#ffffff', color: '#111827', border: '1px solid #d1d5db' },
+                  { bg: '#f3f4f6', color: '#4b5563', border: '1px solid #d1d5db' },
                   { bg: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' },
+                  { bg: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' },
+                  { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' },
+                  { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
+                  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
+                  { bg: '#111827', color: '#fff', border: 'none' },
                 ];
-                var currentBannerPreset = 0;
-                var currentBannerIcon = '⚡';
+                var currentBannerPreset = ${bc.preset};
+                var currentBannerIcon = ${JSON.stringify(bc.icon || '⚡')};
+                var currentAnimation = ${JSON.stringify(bc.animation || 'fadeIn')};
+                var isBold = ${bc.bold ? 'true' : 'false'};
+                var isItalic = ${bc.italic ? 'true' : 'false'};
+                var hideForReturning = ${bc.hideForReturning ? 'true' : 'false'};
 
                 function applyBannerPreset(i) {
                   var p = bannerPresets[i];
@@ -3746,19 +3892,8 @@ export const BannerSettingsPage: FC<{
                   }
                 }
 
-                function updateBannerPreviewText() {
-                  var input = document.getElementById('bannerText');
-                  var previewText = document.getElementById('bannerPreviewText');
-                  var iconEl = document.getElementById('bannerPreviewIcon');
-                  if (!previewText) return;
-                  var text = (input && input.value) ? input.value : '회원가입하면 특별 혜택을 받으세요!';
-                  var iconHtml = currentBannerIcon ? currentBannerIcon + ' ' : '';
-                  if (iconEl) iconEl.textContent = currentBannerIcon;
-                  var textNode = previewText.lastChild;
-                  if (textNode && textNode.nodeType === 3) {
-                    textNode.textContent = ' ' + text;
-                  }
-                }
+                // 초기 프리셋 적용
+                applyBannerPreset(currentBannerPreset);
 
                 document.querySelectorAll('.banner-preset-card').forEach(function(card) {
                   card.addEventListener('click', function() {
@@ -3780,6 +3915,71 @@ export const BannerSettingsPage: FC<{
                   });
                 }
 
+                var bannerOpacitySlider = document.getElementById('bannerOpacity');
+                if (bannerOpacitySlider) {
+                  bannerOpacitySlider.addEventListener('input', function() {
+                    document.getElementById('bannerOpacityValue').textContent = this.value + '%';
+                    var p = document.getElementById('bannerPreview');
+                    if (p) p.style.opacity = (parseInt(this.value) / 100).toString();
+                  });
+                }
+
+                var isFullWidth = ${bc.fullWidth !== false ? 'true' : 'false'};
+                var toggleEl = document.getElementById('bannerFullWidthToggle');
+                var paddingGroup = document.getElementById('bannerPaddingGroup');
+                var preview = document.getElementById('bannerPreview');
+
+                function applyBannerSize() {
+                  if (!preview) return;
+                  if (isFullWidth) {
+                    preview.style.width = '100%';
+                    preview.style.display = 'flex';
+                    preview.style.margin = '0 auto';
+                    preview.style.padding = '0 16px';
+                  } else {
+                    var px = document.getElementById('bannerPaddingX');
+                    var padVal = px ? px.value : 24;
+                    preview.style.width = 'fit-content';
+                    preview.style.display = 'flex';
+                    preview.style.margin = '0 auto';
+                    preview.style.padding = '0 ' + padVal + 'px';
+                  }
+                }
+
+                if (toggleEl) {
+                  toggleEl.addEventListener('click', function() {
+                    isFullWidth = !isFullWidth;
+                    var dot = this.querySelector('div');
+                    if (isFullWidth) {
+                      this.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+                      dot.style.left = 'auto';
+                      dot.style.right = '2px';
+                      paddingGroup.style.opacity = '0.4';
+                      paddingGroup.style.pointerEvents = 'none';
+                      if (preview) { preview.style.width = '100%'; preview.style.display = 'flex'; preview.style.margin = '0 auto'; preview.style.padding = '0 16px'; }
+                    } else {
+                      this.style.background = '#d1d5db';
+                      dot.style.right = 'auto';
+                      dot.style.left = '2px';
+                      paddingGroup.style.opacity = '1';
+                      paddingGroup.style.pointerEvents = 'auto';
+                      applyBannerSize();
+                    }
+                  });
+                }
+
+                var bannerPaddingSlider = document.getElementById('bannerPaddingX');
+                if (bannerPaddingSlider) {
+                  bannerPaddingSlider.addEventListener('input', function() {
+                    document.getElementById('bannerPaddingXValue').textContent = this.value + 'px';
+                    if (preview && !isFullWidth) {
+                      preview.style.padding = '0 ' + this.value + 'px';
+                    }
+                  });
+                }
+
+                applyBannerSize();
+
                 document.querySelectorAll('.banner-icon-btn').forEach(function(btn) {
                   btn.addEventListener('click', function() {
                     document.querySelectorAll('.banner-icon-btn').forEach(function(b) { b.style.border = '2px solid transparent'; });
@@ -3790,9 +3990,87 @@ export const BannerSettingsPage: FC<{
                   });
                 });
 
+                var boldToggle = document.getElementById('bannerBoldToggle');
+                if (boldToggle) {
+                  boldToggle.addEventListener('click', function() {
+                    isBold = !isBold;
+                    this.style.border = '2px solid ' + (isBold ? '#2563eb' : '#d1d5db');
+                    this.style.background = isBold ? '#eff6ff' : '#fff';
+                    var pt = document.getElementById('bannerPreviewText');
+                    if (pt) pt.style.fontWeight = isBold ? '600' : '400';
+                  });
+                }
+
+                var italicToggle = document.getElementById('bannerItalicToggle');
+                if (italicToggle) {
+                  italicToggle.addEventListener('click', function() {
+                    isItalic = !isItalic;
+                    this.style.border = '2px solid ' + (isItalic ? '#2563eb' : '#d1d5db');
+                    this.style.background = isItalic ? '#eff6ff' : '#fff';
+                    var pt = document.getElementById('bannerPreviewText');
+                    if (pt) pt.style.fontStyle = isItalic ? 'italic' : 'normal';
+                  });
+                }
+
+                function playPreviewAnimation(type) {
+                  if (!preview) return;
+                  // 초기화: 숨김
+                  preview.style.transition = 'none';
+                  preview.style.opacity = '0';
+                  if (type === 'slideDown') {
+                    preview.style.transform = 'translateY(-20px)';
+                  } else {
+                    preview.style.transform = 'none';
+                  }
+                  // 강제 리플로우
+                  preview.offsetHeight;
+                  // 애니메이션 시작
+                  if (type === 'slideDown') {
+                    preview.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                    preview.style.opacity = '1';
+                    preview.style.transform = 'translateY(0)';
+                  } else {
+                    preview.style.transition = 'opacity 1s ease';
+                    preview.style.opacity = '1';
+                  }
+                }
+
+                document.querySelectorAll('input[name="bannerAnimation"]').forEach(function(radio) {
+                  radio.parentElement.addEventListener('click', function() {
+                    currentAnimation = radio.value;
+                    document.querySelectorAll('input[name="bannerAnimation"]').forEach(function(r) {
+                      r.parentElement.style.border = '2px solid #e5e7eb';
+                      r.parentElement.style.background = '#fff';
+                    });
+                    radio.parentElement.style.border = '2px solid #2563eb';
+                    radio.parentElement.style.background = '#eff6ff';
+                    radio.checked = true;
+                    playPreviewAnimation(radio.value);
+                  });
+                });
+
+                var hideReturningToggle = document.getElementById('bannerHideReturningToggle');
+                if (hideReturningToggle) {
+                  hideReturningToggle.addEventListener('click', function() {
+                    hideForReturning = !hideForReturning;
+                    var dot = this.querySelector('div');
+                    if (hideForReturning) {
+                      this.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+                      dot.style.left = 'auto';
+                      dot.style.right = '2px';
+                    } else {
+                      this.style.background = '#d1d5db';
+                      dot.style.right = 'auto';
+                      dot.style.left = '2px';
+                    }
+                  });
+                }
+
                 var bannerTextInput = document.getElementById('bannerText');
                 if (bannerTextInput) {
                   bannerTextInput.addEventListener('input', function() {
+                    var counter = document.getElementById('bannerTextCount');
+                    if (counter) counter.textContent = this.value.length;
                     var previewText = document.getElementById('bannerPreviewText');
                     if (previewText) {
                       var iconEl = document.getElementById('bannerPreviewIcon');
@@ -3800,11 +4078,181 @@ export const BannerSettingsPage: FC<{
                       var nodes = previewText.childNodes;
                       for (var n = 0; n < nodes.length; n++) {
                         if (nodes[n].nodeType === 3) {
-                          nodes[n].textContent = ' ' + (this.value || '회원가입하면 특별 혜택을 받으세요!');
+                          nodes[n].textContent = ' ' + (this.value || '번개가입으로 회원 혜택을 받으세요!');
                           break;
                         }
                       }
                     }
+                  });
+                }
+
+                // 저장 버튼
+                var saveBtn = document.getElementById('bannerSaveBtn');
+                if (saveBtn) {
+                  saveBtn.addEventListener('click', function() {
+                    var btn = this;
+                    btn.disabled = true;
+                    btn.textContent = '저장 중...';
+
+                    var textInput = document.getElementById('bannerText');
+                    var radiusSlider = document.getElementById('bannerBorderRadius');
+
+                    var payload = {
+                      preset: currentBannerPreset,
+                      text: (textInput && textInput.value) || '번개가입으로 회원 혜택을 받으세요!',
+                      borderRadius: radiusSlider ? parseInt(radiusSlider.value) : 10,
+                      icon: currentBannerIcon,
+                      opacity: document.getElementById('bannerOpacity') ? parseInt(document.getElementById('bannerOpacity').value) : 90,
+                      bold: isBold,
+                      italic: isItalic,
+                      position: 'floating',
+                      animation: currentAnimation,
+                      anchorSelector: (document.getElementById('bannerAnchor') || {}).value || '#top_nav_box',
+                      hideForReturning: hideForReturning,
+                      fullWidth: isFullWidth,
+                      paddingX: bannerPaddingSlider ? parseInt(bannerPaddingSlider.value) : 24
+                    };
+
+                    fetch('/api/dashboard/shops/' + shopId + '/banner', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(payload),
+                      credentials: 'same-origin'
+                    })
+                    .then(function(resp) { return resp.json(); })
+                    .then(function(data) {
+                      var msgEl = document.getElementById('bannerSaveMsg');
+                      if (data.ok) {
+                        msgEl.style.display = 'block';
+                        msgEl.style.background = '#f0fdf4';
+                        msgEl.style.color = '#166534';
+                        msgEl.style.border = '1px solid #bbf7d0';
+                        msgEl.textContent = '설정이 저장되었습니다.';
+                      } else {
+                        msgEl.style.display = 'block';
+                        msgEl.style.background = '#fef2f2';
+                        msgEl.style.color = '#991b1b';
+                        msgEl.style.border = '1px solid #fecaca';
+                        msgEl.textContent = '저장 실패: ' + (data.error || '알 수 없는 오류');
+                      }
+                      setTimeout(function() { msgEl.style.display = 'none'; }, 3000);
+                    })
+                    .catch(function(err) {
+                      var msgEl = document.getElementById('bannerSaveMsg');
+                      msgEl.style.display = 'block';
+                      msgEl.style.background = '#fef2f2';
+                      msgEl.style.color = '#991b1b';
+                      msgEl.style.border = '1px solid #fecaca';
+                      msgEl.textContent = '네트워크 오류: ' + err.message;
+                      setTimeout(function() { msgEl.style.display = 'none'; }, 3000);
+                    })
+                    .finally(function() {
+                      btn.disabled = false;
+                      btn.textContent = '설정 저장';
+                    });
+                  });
+                }
+
+                // 기본값 되돌리기
+                var resetBtn = document.getElementById('bannerResetBtn');
+                if (resetBtn) {
+                  resetBtn.addEventListener('click', function() {
+                    // 기본값 설정
+                    currentBannerPreset = 0; // 화이트
+                    currentBannerIcon = '⚡';
+                    isBold = false;
+                    isItalic = false;
+                    isFullWidth = false;
+                    currentAnimation = 'fadeIn';
+                    hideForReturning = false;
+
+                    // UI 업데이트 - 프리셋
+                    applyBannerPreset(0);
+                    document.querySelectorAll('.banner-preset-card').forEach(function(c) { c.style.border = '2px solid transparent'; });
+                    var firstCard = document.querySelector('.banner-preset-card[data-preset="0"]');
+                    if (firstCard) firstCard.style.border = '3px solid #2563eb';
+
+                    // 텍스트
+                    var textInput = document.getElementById('bannerText');
+                    if (textInput) { textInput.value = ''; }
+                    var counter = document.getElementById('bannerTextCount');
+                    if (counter) counter.textContent = '0';
+                    var previewText = document.getElementById('bannerPreviewText');
+                    if (previewText) {
+                      var iconEl = document.getElementById('bannerPreviewIcon');
+                      if (iconEl) iconEl.textContent = '⚡';
+                      var nodes = previewText.childNodes;
+                      for (var n = 0; n < nodes.length; n++) {
+                        if (nodes[n].nodeType === 3) { nodes[n].textContent = ' 번개가입으로 회원 혜택을 받으세요!'; break; }
+                      }
+                    }
+
+                    // 볼드/이탤릭
+                    var boldBtn = document.getElementById('bannerBoldToggle');
+                    if (boldBtn) { boldBtn.style.border = '2px solid #d1d5db'; boldBtn.style.background = '#fff'; }
+                    var italicBtn = document.getElementById('bannerItalicToggle');
+                    if (italicBtn) { italicBtn.style.border = '2px solid #d1d5db'; italicBtn.style.background = '#fff'; }
+                    if (previewText) { previewText.style.fontWeight = '400'; previewText.style.fontStyle = 'normal'; }
+
+                    // 투명도
+                    var opacitySlider = document.getElementById('bannerOpacity');
+                    if (opacitySlider) { opacitySlider.value = '90'; }
+                    document.getElementById('bannerOpacityValue').textContent = '90%';
+                    if (preview) preview.style.opacity = '0.9';
+
+                    // 모서리 둥글기
+                    var radiusSlider = document.getElementById('bannerBorderRadius');
+                    if (radiusSlider) { radiusSlider.value = '10'; }
+                    document.getElementById('bannerBorderRadiusValue').textContent = '10px';
+                    if (preview) preview.style.borderRadius = '10px';
+
+                    // 전체 너비 OFF
+                    var toggleEl2 = document.getElementById('bannerFullWidthToggle');
+                    if (toggleEl2) {
+                      toggleEl2.style.background = '#d1d5db';
+                      var dot = toggleEl2.querySelector('div');
+                      if (dot) { dot.style.right = 'auto'; dot.style.left = '2px'; }
+                    }
+                    var paddingGroup2 = document.getElementById('bannerPaddingGroup');
+                    if (paddingGroup2) { paddingGroup2.style.opacity = '1'; paddingGroup2.style.pointerEvents = 'auto'; }
+
+                    // 좌우 여백
+                    var paddingSlider = document.getElementById('bannerPaddingX');
+                    if (paddingSlider) { paddingSlider.value = '20'; }
+                    document.getElementById('bannerPaddingXValue').textContent = '20px';
+
+                    // 아이콘
+                    document.querySelectorAll('.banner-icon-btn').forEach(function(b) { b.style.border = '2px solid transparent'; });
+                    var lightningBtn = document.querySelector('.banner-icon-btn[data-icon="⚡"]');
+                    if (lightningBtn) lightningBtn.style.border = '2px solid #2563eb';
+                    var iconEl2 = document.getElementById('bannerPreviewIcon');
+                    if (iconEl2) iconEl2.textContent = '⚡';
+
+                    // 출현 효과 - 페이드인
+                    document.querySelectorAll('input[name="bannerAnimation"]').forEach(function(r) {
+                      r.parentElement.style.border = '2px solid #e5e7eb';
+                      r.parentElement.style.background = '#fff';
+                      if (r.value === 'fadeIn') {
+                        r.parentElement.style.border = '2px solid #2563eb';
+                        r.parentElement.style.background = '#eff6ff';
+                        r.checked = true;
+                      }
+                    });
+
+                    // 로그인 기록 감지 OFF
+                    var hideToggle = document.getElementById('bannerHideReturningToggle');
+                    if (hideToggle) {
+                      hideToggle.style.background = '#d1d5db';
+                      var dot2 = hideToggle.querySelector('div');
+                      if (dot2) { dot2.style.right = 'auto'; dot2.style.left = '2px'; }
+                    }
+
+                    // 기준 요소
+                    var anchorInput = document.getElementById('bannerAnchor');
+                    if (anchorInput) anchorInput.value = '#top_nav_box';
+
+                    // 미리보기 크기 업데이트
+                    applyBannerSize();
                   });
                 }
               })();

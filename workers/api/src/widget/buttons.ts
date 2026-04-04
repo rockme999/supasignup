@@ -156,12 +156,12 @@ export const WIDGET_JS = `(function() {
     // Detect page type
     this.pageType = this.detectPageType();
 
-    // 로그인/가입 페이지에서만 위젯 표시
+    // 모든 페이지에서 config 로드 (미니배너 등 Plus 기능은 전 페이지 동작)
     if (this.pageType === 'login') {
       // 이전 페이지 저장 (로그인/가입/동의 페이지가 아닌 마지막 페이지)
       this.saveReturnUrl();
-      this.loadConfig(clientId);
     }
+    this.loadConfig(clientId);
   };
 
   // 로그인/가입/동의 페이지가 아닌 이전 페이지를 저장
@@ -192,6 +192,38 @@ export const WIDGET_JS = `(function() {
     var path = window.location.pathname.toLowerCase();
     if (path.indexOf('/member/login') >= 0 || path.indexOf('/member/join') >= 0) return 'login';
     return 'other';
+  };
+
+  // 카페24 로그인 상태 감지 (공통)
+  BGWidget.prototype.isUserLoggedIn = function() {
+    // 방법 1: iscache=F 쿠키 (카페24 로그인 시 설정, 가장 확실)
+    try {
+      if (/(?:^|; ?)iscache=F/.test(document.cookie)) return true;
+    } catch (e) {}
+    // 방법 2: 로그인 상태 레이아웃 요소
+    if (document.querySelector('.xans-layout-statelogon')) return true;
+    // 방법 3: MemberAction 전역 객체 (로그인 페이지에서만 존재)
+    try {
+      if (typeof MemberAction !== 'undefined' && MemberAction.isLogin && MemberAction.isLogin()) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  };
+
+  // 로그인 이력 기록 및 확인
+  BGWidget.prototype.checkLoginHistory = function() {
+    var loggedIn = this.isUserLoggedIn();
+    // 현재 로그인 상태면 이력 기록
+    if (loggedIn) {
+      try { localStorage.setItem('bg_has_logged_in', '1'); } catch (e) {}
+    }
+    return loggedIn;
+  };
+
+  BGWidget.prototype.hasLoginHistory = function() {
+    try { return localStorage.getItem('bg_has_logged_in') === '1'; } catch (e) {}
+    return false;
   };
 
   BGWidget.prototype.saveLastProvider = function() {
@@ -226,15 +258,17 @@ export const WIDGET_JS = `(function() {
         self.config = config;
         self.baseUrl = config.base_url || self.getApiBase();
 
-        // 소셜 로그인 렌더링
-        if (config.providers && config.providers.length > 0) {
+        // 소셜 로그인 렌더링 (로그인/가입 페이지에서만)
+        if (self.pageType === 'login' && config.providers && config.providers.length > 0) {
           self.render();
         }
 
-        // Plus 기능 활성화
+        // Plus 기능 활성화 (미니배너는 모든 페이지, 나머지는 로그인 페이지)
         if (config.plan !== 'free') {
           self.initMiniBanner(config);
-          self.initExitPopup(config);
+          if (self.pageType === 'login') {
+            self.initExitPopup(config);
+          }
           self.initEscalation(config);
           if (config.kakao_channel_id) {
             self.initKakaoChannel(config);
@@ -591,22 +625,62 @@ export const WIDGET_JS = `(function() {
 
   // ─── Plus: 미니배너 ───────────────────────────────────────────
   BGWidget.prototype.initMiniBanner = function(config) {
-    // 로그인/가입 페이지에서만 표시
-    if (this.pageType !== 'login') return;
-
     var self = this;
+
+    // 로그인 이력 기록 (현재 로그인 중이면 localStorage에 저장)
+    self.checkLoginHistory();
+
+    // 로그인한 회원에게는 미니배너 표시 안 함
+    if (self.isUserLoggedIn()) return;
+
+    var bc = config.banner_config || {};
+
+    // 이전 로그인 기록 감지 시 표시 안 함 (설정에서 활성화된 경우)
+    if (bc.hideForReturning && self.hasLoginHistory()) return;
+
+    // 세션당 닫기 (사용자가 X 누르면 세션 동안 안 보임)
+    try {
+      if (sessionStorage.getItem('bg_banner_closed')) return;
+    } catch (e) {}
     var banner = document.createElement('div');
     banner.className = 'bg-mini-banner';
 
+    // 색상 프리셋 (0=밝은파랑, 1=화이트, 2=회색, 3=검정, 4=파랑보라, 5=보라자주, 6=녹색, 7=붉은색)
+    // 0=화이트, 1=회색, 2=밝은파랑, 3=녹색, 4=붉은색, 5=파랑보라, 6=보라자주, 7=검정심플
+    var presets = [
+      { bg: '#ffffff', color: '#111827', border: '1px solid #d1d5db' },
+      { bg: '#f3f4f6', color: '#4b5563', border: '1px solid #d1d5db' },
+      { bg: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' },
+      { bg: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' },
+      { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' },
+      { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
+      { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
+      { bg: '#111827', color: '#fff', border: 'none' },
+    ];
+    var preset = presets[bc.preset || 0] || presets[0];
+
+    var position = bc.position || 'floating';
+
+    var isFullWidth = (bc.fullWidth !== false);
+    var paddingX = (bc.paddingX != null ? bc.paddingX : 24);
+    var heightPx = 30;
+
     var s = banner.style;
-    s.width = '100%';
-    s.padding = '12px 16px';
-    s.marginBottom = '12px';
-    s.borderRadius = '10px';
-    s.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    s.color = '#ffffff';
+    s.height = heightPx + 'px';
+    if (isFullWidth) {
+      s.width = '100%';
+      s.padding = '0 16px';
+    } else {
+      s.width = 'auto';
+      s.maxWidth = 'calc(100vw - 16px)';
+      s.padding = '0 ' + paddingX + 'px';
+    }
+    s.background = preset.bg;
+    s.color = preset.color;
+    s.border = preset.border;
     s.fontSize = '14px';
-    s.fontWeight = '600';
+    s.fontWeight = bc.bold ? '600' : '400';
+    s.fontStyle = bc.italic ? 'italic' : 'normal';
     s.textAlign = 'center';
     s.cursor = 'pointer';
     s.display = 'flex';
@@ -614,31 +688,155 @@ export const WIDGET_JS = `(function() {
     s.justifyContent = 'center';
     s.gap = '8px';
     s.boxSizing = 'border-box';
+    s.whiteSpace = 'nowrap';
+    var bannerOpacity = ((bc.opacity != null ? bc.opacity : 90) / 100);
+    s.opacity = bannerOpacity.toString();
 
+    if (position === 'floating') {
+      // 플로팅: fixed로 body에 부착, 기준 요소 바로 아래
+      var animType = bc.animation || 'fadeIn';
+      var anchorSel = (bc.anchorSelector || '#top_nav_box').trim();
+      var navBox = null;
+      if (anchorSel.charAt(0) === '#' || anchorSel.charAt(0) === '.' || anchorSel.charAt(0) === '[') {
+        // CSS 셀렉터 접두사 있으면 그대로 사용
+        navBox = document.querySelector(anchorSel);
+      } else if (anchorSel.indexOf(' ') >= 0) {
+        // 공백 포함 → 복수 클래스 (예: "titleArea display_tablet_only" → ".titleArea.display_tablet_only")
+        navBox = document.querySelector('.' + anchorSel.split(/\s+/).join('.'));
+      } else {
+        // 접두사 없이 단일 단어 → ID 먼저, 없으면 클래스
+        navBox = document.getElementById(anchorSel) || document.querySelector('.' + anchorSel);
+      }
+      var tabProduct = document.getElementById('tabProduct');
+
+      var isTabSticky = function() {
+        if (!tabProduct || !navBox) return false;
+        var navRect = navBox.getBoundingClientRect();
+        var tabRect = tabProduct.getBoundingClientRect();
+        return tabRect.top <= navRect.bottom + 5;
+      };
+
+      // top_nav_box가 뷰포트 상단에 도달했는지 (스크롤 시작 트리거)
+      var isNavAtTop = function() {
+        if (!navBox) return true;
+        return navBox.getBoundingClientRect().top <= 0;
+      };
+
+      s.position = 'fixed';
+      s.left = isFullWidth ? '0' : '50%';
+      if (!isFullWidth) s.transform = 'translateX(-50%)';
+      s.borderRadius = (bc.borderRadius != null ? bc.borderRadius : 0) + 'px';
+      s.zIndex = '9998';
+
+      // 초기: 숨김 상태
+      s.opacity = '0';
+      s.pointerEvents = 'none';
+      if (animType === 'fadeIn') {
+        s.transition = 'opacity 1s ease';
+      } else {
+        s.transition = 'opacity 0.8s ease, top 0.8s ease';
+      }
+
+      var navBottom = navBox ? navBox.getBoundingClientRect().bottom : 0;
+      s.top = navBottom + 'px';
+
+      var lastState = 'hidden'; // hidden, visible, tab-hidden
+      var updatePos = function() {
+        var tabSticky = isTabSticky();
+        var navAtTop = isNavAtTop();
+
+        if (tabSticky) {
+          // tabProduct가 sticky → 배너 숨김
+          if (lastState !== 'tab-hidden') {
+            banner.style.opacity = '0';
+            banner.style.pointerEvents = 'none';
+            lastState = 'tab-hidden';
+          }
+        } else if (navAtTop) {
+          // nav가 상단에 도달 → 배너 표시
+          var targetTop = navBox ? navBox.getBoundingClientRect().bottom : 0;
+          if (lastState !== 'visible') {
+            if (animType === 'slideDown') {
+              // 슬라이드: nav 위에서 시작 → 아래로 내려옴
+              banner.style.transition = 'none';
+              banner.style.top = (targetTop - heightPx) + 'px';
+              banner.style.opacity = '0';
+              banner.offsetHeight; // 강제 리플로우
+              banner.style.transition = 'opacity 0.8s ease, top 0.8s ease';
+              banner.style.top = targetTop + 'px';
+              banner.style.opacity = bannerOpacity.toString();
+            } else {
+              banner.style.top = targetTop + 'px';
+              banner.style.opacity = bannerOpacity.toString();
+            }
+            banner.style.pointerEvents = 'auto';
+            lastState = 'visible';
+          } else {
+            banner.style.top = targetTop + 'px';
+          }
+        } else {
+          // nav가 아직 상단 아님 → 배너 숨김
+          if (lastState !== 'hidden') {
+            banner.style.opacity = '0';
+            banner.style.pointerEvents = 'none';
+            lastState = 'hidden';
+          }
+        }
+      };
+      updatePos();
+      window.addEventListener('scroll', updatePos, { passive: true });
+      window.addEventListener('resize', updatePos);
+    } else {
+      // 위젯 상단: 소셜 버튼 위에 삽입
+      s.borderRadius = (bc.borderRadius != null ? bc.borderRadius : 10) + 'px';
+      s.marginBottom = '12px';
+    }
+
+    // 아이콘
     var icon = document.createElement('span');
-    icon.textContent = '\\u26A1'; // ⚡
+    icon.textContent = bc.icon || '\\u26A1';
     icon.style.fontSize = '16px';
 
+    // 텍스트
     var text = document.createElement('span');
-    text.textContent = '\\uD68C\\uC6D0\\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD\\uC744 \\uBC1B\\uC73C\\uC138\\uC694!'; // 회원가입하면 특별 혜택을 받으세요!
+    text.textContent = bc.text || '\\uBC88\\uAC1C\\uAC00\\uC785\\uC73C\\uB85C \\uD68C\\uC6D0 \\uD61C\\uD0DD\\uC744 \\uBC1B\\uC73C\\uC138\\uC694!';
 
-    banner.appendChild(icon);
-    banner.appendChild(text);
+    // 닫기 버튼
+    var closeBtn = document.createElement('span');
+    closeBtn.textContent = '\\u00D7'; // ×
+    closeBtn.style.cssText = 'margin-left:auto;font-size:18px;opacity:0.5;cursor:pointer;padding:0 4px;flex-shrink:0';
+    closeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      banner.style.display = 'none';
+      try { sessionStorage.setItem('bg_banner_closed', '1'); } catch (ex) {}
+    });
+
+    // 아이콘+텍스트를 감싸는 컨테이너 (가운데 정렬용)
+    var contentWrap = document.createElement('span');
+    contentWrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin:0 auto';
+    contentWrap.appendChild(icon);
+    contentWrap.appendChild(text);
+
+    banner.appendChild(contentWrap);
+    banner.appendChild(closeBtn);
 
     banner.addEventListener('click', function() {
       self.trackEvent('banner_click', { page: self.pageType });
-      var joinUrl = window.location.pathname.indexOf('/login') !== -1
-        ? window.location.pathname.replace('/login', '/join')
-        : '/member/join.html';
-      window.location.href = joinUrl;
+      window.location.href = '/member/login.html';
     });
 
-    // 위젯 컨테이너 위에 삽입
-    var widgetContainer = document.querySelector('.bg-widget');
-    if (widgetContainer && widgetContainer.parentNode) {
-      widgetContainer.parentNode.insertBefore(banner, widgetContainer);
-      self.trackEvent('banner_show', { page: self.pageType });
+    // DOM 삽입
+    if (position === 'floating') {
+      // body에 직접 부착 (overflow 영향 없음)
+      document.body.appendChild(banner);
+    } else {
+      // 위젯 상단: .bg-widget 바로 위에 삽입 (로그인 페이지에서만 의미 있음)
+      var widgetContainer = document.querySelector('.bg-widget');
+      if (widgetContainer && widgetContainer.parentNode) {
+        widgetContainer.parentNode.insertBefore(banner, widgetContainer);
+      }
     }
+    self.trackEvent('banner_show', { page: self.pageType });
   };
 
   // ─── Plus: 이탈 감지 팝업 ────────────────────────────────────
@@ -833,20 +1031,8 @@ export const WIDGET_JS = `(function() {
   BGWidget.prototype.initEscalation = function(config) {
     var self = this;
 
-    // 카페24 로그인 상태 감지 — 이미 로그인한 회원은 표시 안 함
-    var isLoggedIn = false;
-    // 방법 1: MemberAction 객체 존재 확인 (카페24 전용 전역 객체)
-    try {
-      if (typeof MemberAction !== 'undefined' && MemberAction.isLogin && MemberAction.isLogin()) {
-        isLoggedIn = true;
-      }
-    } catch (e) {}
-    // 방법 2: DOM에서 로그인 여부 확인 (로그아웃 링크 존재 시 로그인 상태)
-    if (!isLoggedIn) {
-      var logoutLink = document.querySelector('a[href*="/member/logout"]');
-      if (logoutLink) isLoggedIn = true;
-    }
-    if (isLoggedIn) return;
+    // 로그인한 회원은 표시 안 함
+    if (self.isUserLoggedIn()) return;
 
     // 방문 횟수 카운트 (localStorage)
     var visitKey = 'bg_visit_count';

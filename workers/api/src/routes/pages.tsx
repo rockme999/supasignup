@@ -53,12 +53,13 @@ function escapeLike(s: string): string {
 async function getOwnerShop(db: D1Database, ownerId: string) {
   return db.prepare(
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
-            enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style
+            enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style, banner_config
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
     coupon_config: string | null;
     kakao_channel_id: string | null;
     widget_style: string | null;
+    banner_config: string | null;
   }>();
 }
 
@@ -557,8 +558,9 @@ pages.get('/dashboard/settings/banner', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
+  const bannerConfig = shop.banner_config ? JSON.parse(shop.banner_config) : null;
   return c.html(
-    <BannerSettingsPage shop={shop} isCafe24={c.get('isCafe24')} />
+    <BannerSettingsPage shop={shop} shopId={shop.shop_id} bannerConfig={bannerConfig} isCafe24={c.get('isCafe24')} />
   );
 });
 

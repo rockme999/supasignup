@@ -100,7 +100,7 @@ widget.get('/config', async (c) => {
     sso_type: ssoType,
     style,
     plan: shop.plan,
-    banner_config: null,      // 향후 추가 예정 (shops 테이블 컬럼 미존재)
+    banner_config: shop.plan !== 'free' && shop.banner_config ? JSON.parse(shop.banner_config) : null,
     popup_config: null,       // 향후 추가 예정 (shops 테이블 컬럼 미존재)
     escalation_config: null,  // 향후 추가 예정 (shops 테이블 컬럼 미존재)
     // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환

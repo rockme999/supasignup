@@ -18,6 +18,7 @@ export interface Shop {
   coupon_config?: string | null; // JSON string (CouponConfig)
   kakao_channel_id?: string | null; // Plus: 카카오 채널 ID
   shop_identity?: string | null; // Plus: AI 분석 쇼핑몰 정체성 JSON
+  banner_config?: string | null; // Plus: 미니배너 설정 JSON
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
