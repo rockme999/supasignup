@@ -263,12 +263,10 @@ export const WIDGET_JS = `(function() {
           self.render();
         }
 
-        // Plus 기능 활성화 (미니배너는 모든 페이지, 나머지는 로그인 페이지)
+        // Plus 기능 활성화
         if (config.plan !== 'free') {
           self.initMiniBanner(config);
-          if (self.pageType === 'login') {
-            self.initExitPopup(config);
-          }
+          self.initExitPopup(config);
           self.initEscalation(config);
           if (config.kakao_channel_id) {
             self.initKakaoChannel(config);
@@ -619,7 +617,7 @@ export const WIDGET_JS = `(function() {
     if (navigator.sendBeacon) {
       navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
     } else {
-      fetch(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(function() {});
+      fetch(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' }, credentials: 'omit', keepalive: true }).catch(function() {});
     }
   };
 
@@ -862,19 +860,44 @@ export const WIDGET_JS = `(function() {
   // ─── Plus: 이탈 감지 팝업 ────────────────────────────────────
   BGWidget.prototype.initExitPopup = function(config) {
     var self = this;
+    var pc = config.popup_config;
 
-    // 하루 1회 제한 (localStorage)
+    // 설정이 없거나 비활성화면 기본 동작 (로그인 페이지 한정, 하드코딩 텍스트)
+    var enabled = pc ? pc.enabled !== false : true;
+    if (!enabled) return;
+
+    var allPages = pc ? pc.allPages === true : false;
+    // allPages가 아니면 로그인/가입 페이지에서만 동작
+    if (!allPages && this.pageType !== 'login') return;
+
+    var popupTitle = pc && pc.title ? pc.title : '\uC7A0\uAE10\uB9CC\uC694!';
+    var popupBody = pc && pc.body ? pc.body : '\uC9C0\uAE08 \uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD\uC744 \uB4DC\uB824\uC694!';
+    var popupCta = pc && pc.ctaText ? pc.ctaText : '\uD61C\uD0DD \uBC1B\uACE0 \uAC00\uC785\uD558\uAE30';
+    var popupIcon = pc ? (pc.icon != null ? pc.icon : '\uD83C\uDF81') : '\uD83C\uDF81';
+    var popupBorderRadius = pc && pc.borderRadius != null ? pc.borderRadius : 16;
+    var popupOpacity = pc && pc.opacity != null ? pc.opacity : 100;
+    var cooldownMs = ((pc && pc.cooldownHours ? pc.cooldownHours : 24)) * 60 * 60 * 1000;
+    var presetIdx = pc && pc.preset != null ? pc.preset : 0;
+    var popupPresets = [
+      { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
+      { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
+      { ctaBg: '#ea580c', iconBg: 'linear-gradient(135deg, #ea580c, #f59e0b)' },
+      { ctaBg: '#6b7280', iconBg: '#6b7280' },
+      { ctaBg: '#111827', iconBg: '#111827' },
+      { ctaBg: '#ec4899', iconBg: 'linear-gradient(135deg, #ec4899, #f43f5e)' },
+      { ctaBg: '#eff6ff', ctaBorder: '2px solid #93c5fd', ctaColor: '#2563eb', iconBg: '#eff6ff', iconBorder: '2px solid #93c5fd', iconColor: '#2563eb' },
+      { ctaBg: 'transparent', ctaBorder: '2px solid #9ca3af', ctaColor: '#6b7280', iconBg: 'transparent', iconBorder: '2px solid #d1d5db', iconColor: '#6b7280' },
+    ];
+    var preset = popupPresets[presetIdx] || popupPresets[0];
+
+    // 쿨다운 체크 (localStorage)
     var popupKey = 'bg_exit_popup_shown';
     try {
       var lastShown = localStorage.getItem(popupKey);
       if (lastShown) {
-        var dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-        if (parseInt(lastShown, 10) > dayAgo) return; // 24시간 내 이미 표시
+        if (parseInt(lastShown, 10) > Date.now() - cooldownMs) return;
       }
     } catch(e) {}
-
-    // 로그인/가입 페이지가 아니면 표시 안 함
-    if (this.pageType !== 'login') return;
 
     var shown = false;
 
@@ -889,51 +912,47 @@ export const WIDGET_JS = `(function() {
 
       // 모달
       var modal = document.createElement('div');
-      modal.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative';
+      modal.style.cssText = 'background:#fff;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;border-radius:' + popupBorderRadius + 'px;opacity:' + (popupOpacity / 100);
 
       // 닫기 버튼
       var closeBtn = document.createElement('button');
       closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:4px 8px';
-      closeBtn.textContent = '\\u2715'; // ✕
+      closeBtn.textContent = '\u2715';
       closeBtn.addEventListener('click', function() {
         overlay.remove();
         self.trackEvent('popup_close', {});
       });
 
+      // 아이콘
+      if (popupIcon) {
+        var iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'width:48px;height:48px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:' + preset.iconBg + ';' + (preset.iconBorder ? 'border:' + preset.iconBorder : '');
+        var iconSpan = document.createElement('span');
+        iconSpan.style.cssText = 'font-size:20px;color:' + (preset.iconColor || 'white');
+        iconSpan.textContent = popupIcon;
+        iconWrap.appendChild(iconSpan);
+        modal.appendChild(iconWrap);
+      }
+
       // 제목
       var title = document.createElement('h3');
-      title.textContent = '\\uC7A0\\uAE10\\uB9CC\\uC694!'; // 잠깐만요!
-      title.style.fontSize = '20px';
-      title.style.fontWeight = '700';
-      title.style.marginBottom = '8px';
-      title.style.textAlign = 'center';
+      title.textContent = popupTitle;
+      title.style.cssText = 'font-size:20px;font-weight:700;margin:0 0 8px;text-align:center;color:#111827';
 
       // 본문
       var body = document.createElement('p');
-      body.textContent = '\\uC9C0\\uAE08 \\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD\\uC744 \\uB4DC\\uB824\\uC694!'; // 지금 가입하면 특별 혜택을 드려요!
-      body.style.fontSize = '14px';
-      body.style.color = '#666';
-      body.style.textAlign = 'center';
-      body.style.marginBottom = '16px';
+      body.innerHTML = popupBody.replace(/\\n/g, '<br>');
+      body.style.cssText = 'font-size:14px;color:#6b7280;text-align:center;margin:0 0 16px';
 
       // CTA 버튼
       var ctaBtn = document.createElement('button');
-      ctaBtn.textContent = '\\uD61C\\uD0DD \\uBC1B\\uACE0 \\uAC00\\uC785\\uD558\\uAE30'; // 혜택 받고 가입하기
-      var cs = ctaBtn.style;
-      cs.display = 'block';
-      cs.width = '100%';
-      cs.padding = '14px';
-      cs.border = 'none';
-      cs.borderRadius = '10px';
-      cs.background = '#2563eb';
-      cs.color = '#fff';
-      cs.fontSize = '16px';
-      cs.fontWeight = '700';
-      cs.cursor = 'pointer';
+      ctaBtn.textContent = popupCta;
+      var ctaR = Math.max(6, popupBorderRadius - 6);
+      ctaBtn.style.cssText = 'display:block;width:100%;padding:14px;border-radius:' + ctaR + 'px;background:' + preset.ctaBg + ';color:' + (preset.ctaColor || '#fff') + ';font-size:16px;font-weight:700;cursor:pointer;border:' + (preset.ctaBorder || 'none');
       ctaBtn.addEventListener('click', function() {
         overlay.remove();
         self.trackEvent('popup_signup', {});
-        window.location.href = '/member/join.html';
+        window.location.href = '/member/login.html';
       });
 
       modal.appendChild(closeBtn);
@@ -967,7 +986,7 @@ export const WIDGET_JS = `(function() {
         var currentY = window.scrollY;
         if (currentY < lastScrollY && lastScrollY - currentY > 50) {
           scrollUpCount++;
-          if (scrollUpCount >= 3) showPopup(); // 3번 이상 급격한 스크롤업
+          if (scrollUpCount >= 3) showPopup();
         } else {
           scrollUpCount = 0;
         }
@@ -1024,7 +1043,7 @@ export const WIDGET_JS = `(function() {
 
     btn.addEventListener('click', function() {
       self.trackEvent('kakao_channel_click', { channel_id: channelId });
-      window.open('https://pf.kakao.com/' + channelId + '/friend', '_blank');
+      window.open('https://pf.kakao.com/' + channelId, '_blank');
     });
 
     // 가입 완료 영역 찾아서 버튼 삽입
@@ -1050,9 +1069,18 @@ export const WIDGET_JS = `(function() {
   // ─── Plus: 재방문 비회원 에스컬레이션 ──────────────────────────
   BGWidget.prototype.initEscalation = function(config) {
     var self = this;
+    var ec = config.escalation_config;
+
+    var enabled = ec ? ec.enabled !== false : true;
+    if (!enabled) return;
+
+    var hideForReturning = ec ? ec.hideForReturning !== false : true;
 
     // 로그인한 회원은 표시 안 함
     if (self.isUserLoggedIn()) return;
+
+    // hideForReturning이면 과거 로그인 이력 체크
+    if (hideForReturning && self.hasLoginHistory()) return;
 
     // 방문 횟수 카운트 (localStorage)
     var visitKey = 'bg_visit_count';
@@ -1065,18 +1093,110 @@ export const WIDGET_JS = `(function() {
       return; // localStorage 사용 불가 — 표시 안 함
     }
 
-    if (visitCount < 2) return; // 첫 방문은 표시 없음
+    var toastEnabled = ec ? ec.toastEnabled !== false : true;
+    var floatingEnabled = ec ? ec.floatingEnabled !== false : true;
+
+    var toastStartVisit = ec && ec.toastStartVisit != null ? ec.toastStartVisit : 2;
+    var toastEndVisit = ec && ec.toastEndVisit != null ? ec.toastEndVisit : 3;
+    var floatingStartVisit = toastEndVisit + 1;
+
+    if (visitCount < toastStartVisit) return; // 설정된 시작 횟수 미만이면 표시 없음
 
     self.trackEvent('escalation_show', { visit_count: visitCount });
 
-    if (visitCount === 2) {
-      // 2회 방문: 부드러운 토스트 안내
-      var toastMsg = (config.escalation_visit2_msg) || '\\uC774\\uBBF8 2\\uBC88\\uC9F8 \\uBC29\\uBB38\\uC774\\uC5D0\\uC694 :)'; // 이미 2번째 방문이에요 :)
-      setTimeout(function() { self.showToast(toastMsg); }, 1500);
+    // 토스트 설정
+    var toastText = ec && ec.toastText ? ec.toastText : '\\uC548\\uB155\\uD558\\uC138\\uC694. {n}\\uBC88\\uC9F8 \\uBC29\\uBB38\\uC744 \\uD658\\uC601\\uD569\\uB2C8\\uB2E4.';
+    var toastStyle = ec && ec.toastStyle != null ? ec.toastStyle : 0;
+    var toastOpacity = ec && ec.toastOpacity != null ? ec.toastOpacity : 96;
+    var toastBorderRadius = ec && ec.toastBorderRadius != null ? ec.toastBorderRadius : 20;
+    var toastAnimation = ec && ec.toastAnimation ? ec.toastAnimation : 'fadeIn';
+    var toastDuration = ec && ec.toastDuration != null ? ec.toastDuration : 3;
+    var toastPersist = ec && ec.toastPersist === true;
 
-    } else {
-      // 3회 이상: 적극적 플로팅 배너
-      var bannerMsg = (config.escalation_visit3_msg) || '\\uD68C\\uC6D0\\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD!'; // 회원가입하면 특별 혜택!
+    // 플로팅 배너 설정
+    var floatingText = ec && ec.floatingText ? ec.floatingText : '\\uD68C\\uC6D0\\uAC00\\uC785\\uD558\\uBA74 \\uD2B9\\uBCC4 \\uD61C\\uD0DD!';
+    var floatingBtnText = ec && ec.floatingBtnText ? ec.floatingBtnText : '\\uBC14\\uB85C \\uAC00\\uC785\\uD558\\uAE30';
+    var floatingPreset = ec && ec.floatingPreset != null ? ec.floatingPreset : 0;
+    var floatingOpacity = ec && ec.floatingOpacity != null ? ec.floatingOpacity : 100;
+    var floatingBorderRadius = ec && ec.floatingBorderRadius != null ? ec.floatingBorderRadius : 0;
+    var floatingAnimation = ec && ec.floatingAnimation ? ec.floatingAnimation : 'fadeIn';
+
+    var floatingPresets = [
+      { bg: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', btnColor: '#2563eb', btnBg: 'white' },
+      { bg: '#111827', color: 'white', btnColor: '#374151', btnBg: 'white' },
+      { bg: 'linear-gradient(135deg, #ec4899, #f43f5e)', color: 'white', btnColor: '#ec4899', btnBg: 'white' },
+      { bg: '#6b7280', color: 'white', btnColor: '#6b7280', btnBg: 'white' },
+      { bg: '#ffffff', color: '#111827', btnColor: 'white', btnBg: '#2563eb', border: '1px solid #e5e7eb' },
+    ];
+
+    var toastStyles = [
+      { bg: 'rgba(30,30,30,.92)', color: '#fff', shadow: '' },
+      { bg: '#ffffff', color: '#111827', shadow: '0 4px 16px rgba(0,0,0,0.12)' },
+      { bg: '#6b7280', color: '#fff', shadow: '' },
+      { bg: '#eff6ff', color: '#2563eb', shadow: '0 2px 8px rgba(37,99,235,0.15)', border: '1px solid #93c5fd' },
+    ];
+
+    if (toastEnabled && visitCount >= toastStartVisit && visitCount <= toastEndVisit) {
+      // 2회 방문: 부드러운 토스트 안내
+      var ts = toastStyles[toastStyle] || toastStyles[0];
+      setTimeout(function() {
+        // 이미 표시 중이면 무시
+        if (document.querySelector('.bg-toast')) return;
+        var toast = document.createElement('div');
+        toast.className = 'bg-toast';
+        var tst = toast.style;
+        tst.position = 'fixed';
+        tst.bottom = '24px';
+        tst.left = '50%';
+        tst.transform = toastAnimation === 'slideUp' ? 'translateX(-50%) translateY(40px)' : 'translateX(-50%) translateY(20px)';
+        tst.background = ts.bg;
+        tst.color = ts.color;
+        if (ts.shadow) tst.boxShadow = ts.shadow;
+        if (ts.border) tst.border = ts.border;
+        tst.padding = '10px 20px';
+        tst.borderRadius = toastBorderRadius + 'px';
+        tst.fontSize = '13px';
+        tst.fontWeight = '500';
+        tst.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+        tst.zIndex = '99999';
+        tst.opacity = '0';
+        tst.transition = 'all 1.6s ease';
+        tst.whiteSpace = 'nowrap';
+        tst.maxWidth = 'calc(100vw - 32px)';
+        tst.boxSizing = 'border-box';
+        tst.textAlign = 'center';
+        tst.opacity = String(toastOpacity / 100);
+        var toastContent = document.createElement('span');
+        toastContent.textContent = toastText.replace('{n}', String(visitCount));
+        toast.appendChild(toastContent);
+        if (toastPersist) {
+          var toastClose = document.createElement('span');
+          toastClose.textContent = '\\u2715';
+          toastClose.style.cssText = 'margin-left:10px;cursor:pointer;opacity:0.6;font-size:12px';
+          toastClose.addEventListener('click', function() {
+            toast.style.opacity = '0';
+            setTimeout(function() { toast.remove(); }, 300);
+          });
+          toast.appendChild(toastClose);
+        }
+        document.body.appendChild(toast);
+        setTimeout(function() {
+          toast.style.opacity = String(toastOpacity / 100);
+          toast.style.transform = 'translateX(-50%) translateY(0)';
+        }, 50);
+        if (!toastPersist) {
+          setTimeout(function() {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(10px)';
+            setTimeout(function() { toast.remove(); }, 300);
+          }, toastDuration * 1000);
+        }
+      }, 1600);
+
+    } else if (floatingEnabled && visitCount >= floatingStartVisit) {
+      // 설정된 횟수 이상: 적극적 플로팅 배너
+      setTimeout(function() {
+      var fp = floatingPresets[floatingPreset] || floatingPresets[0];
 
       var banner = document.createElement('div');
       var bs2 = banner.style;
@@ -1084,28 +1204,32 @@ export const WIDGET_JS = `(function() {
       bs2.bottom = '0';
       bs2.left = '0';
       bs2.right = '0';
-      bs2.background = 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)';
-      bs2.color = '#fff';
+      bs2.background = fp.bg;
+      bs2.color = fp.color;
+      if (fp.border) bs2.border = fp.border;
       bs2.padding = '14px 20px';
       bs2.display = 'flex';
       bs2.alignItems = 'center';
       bs2.justifyContent = 'space-between';
       bs2.zIndex = '99997';
       bs2.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
-      bs2.boxShadow = '0 -4px 20px rgba(0,0,0,.2)';
+      bs2.boxShadow = fp.border ? 'none' : '0 -4px 20px rgba(0,0,0,.2)';
       bs2.gap = '12px';
       bs2.boxSizing = 'border-box';
+      bs2.borderRadius = floatingBorderRadius > 0 ? (floatingBorderRadius + 'px ' + floatingBorderRadius + 'px 0 0') : '0';
+      bs2.opacity = String(floatingOpacity / 100);
 
       var msgSpan = document.createElement('span');
-      msgSpan.textContent = bannerMsg;
+      msgSpan.textContent = floatingText.replace('{n}', String(visitCount));
       msgSpan.style.fontSize = '14px';
       msgSpan.style.fontWeight = '600';
+      msgSpan.style.color = fp.color;
       msgSpan.style.flex = '1';
 
       var joinBtn = document.createElement('button');
       var jbs = joinBtn.style;
-      jbs.background = '#fff';
-      jbs.color = '#2563eb';
+      jbs.background = fp.btnBg || '#fff';
+      jbs.color = fp.btnColor;
       jbs.border = 'none';
       jbs.borderRadius = '20px';
       jbs.padding = '8px 16px';
@@ -1114,7 +1238,7 @@ export const WIDGET_JS = `(function() {
       jbs.cursor = 'pointer';
       jbs.whiteSpace = 'nowrap';
       jbs.flexShrink = '0';
-      joinBtn.textContent = '\\uBC14\\uB85C \\uAC00\\uC785\\uD558\\uAE30'; // 바로 가입하기
+      joinBtn.textContent = floatingBtnText;
 
       var closeBtn2 = document.createElement('button');
       var cbs = closeBtn2.style;
@@ -1142,11 +1266,18 @@ export const WIDGET_JS = `(function() {
       banner.appendChild(joinBtn);
       banner.appendChild(closeBtn2);
 
-      // 약간 지연 후 슬라이드인 효과로 표시
-      banner.style.transform = 'translateY(100%)';
-      banner.style.transition = 'transform .3s ease';
-      document.body.appendChild(banner);
-      setTimeout(function() { banner.style.transform = 'translateY(0)'; }, 300);
+      if (floatingAnimation === 'slideUp') {
+        banner.style.transform = 'translateY(100%)';
+        banner.style.transition = 'transform .3s ease';
+        document.body.appendChild(banner);
+        setTimeout(function() { banner.style.transform = 'translateY(0)'; }, 300);
+      } else {
+        banner.style.opacity = '0';
+        banner.style.transition = 'opacity 1.6s ease';
+        document.body.appendChild(banner);
+        setTimeout(function() { banner.style.opacity = String(floatingOpacity / 100); }, 50);
+      }
+    }, 1600);
     }
   };
 
@@ -1171,7 +1302,7 @@ export const WIDGET_JS = `(function() {
     ts.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
     ts.zIndex = '99999';
     ts.opacity = '0';
-    ts.transition = 'all .3s ease';
+    ts.transition = 'all .8s ease';
     ts.whiteSpace = 'nowrap';
     ts.maxWidth = 'calc(100vw - 32px)';
     ts.boxSizing = 'border-box';

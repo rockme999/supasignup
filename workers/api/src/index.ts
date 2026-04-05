@@ -25,8 +25,10 @@ const app = new Hono<{ Bindings: Env }>();
 
 // ── CORS: Widget routes (public, GET only) ──────────────────
 app.use('/api/widget/*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST'],
+  origin: (origin) => origin || '*',
+  allowMethods: ['GET', 'POST', 'OPTIONS'],
+  allowHeaders: ['Content-Type'],
+  credentials: true,
 }));
 
 // ── CORS: Dashboard routes (restricted origin) ──────────────

@@ -134,8 +134,8 @@ const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/providers', label: '로그인 디자인', icon: <IconPalette /> },
   { path: '/dashboard/settings/coupon', label: '쿠폰 현황', icon: <IconTicket /> },
   { path: '/dashboard/settings/banner', label: '미니배너', icon: <IconFlag />, plus: true },
-  { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
   { path: '/dashboard/settings/escalation', label: '에스컬레이션', icon: <IconTrending />, plus: true },
+  { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
   { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
   { path: '/dashboard/ai-reports', label: 'AI 보고서', icon: <IconSparkle />, plus: true },
 ];

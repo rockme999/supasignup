@@ -101,8 +101,8 @@ widget.get('/config', async (c) => {
     style,
     plan: shop.plan,
     banner_config: shop.plan !== 'free' && shop.banner_config ? JSON.parse(shop.banner_config) : null,
-    popup_config: null,       // 향후 추가 예정 (shops 테이블 컬럼 미존재)
-    escalation_config: null,  // 향후 추가 예정 (shops 테이블 컬럼 미존재)
+    popup_config: shop.plan !== 'free' && shop.popup_config ? JSON.parse(shop.popup_config) : null,
+    escalation_config: shop.plan !== 'free' && shop.escalation_config ? JSON.parse(shop.escalation_config) : null,
     // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
     kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
   };

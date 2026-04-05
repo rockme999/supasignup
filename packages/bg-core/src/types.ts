@@ -19,6 +19,8 @@ export interface Shop {
   kakao_channel_id?: string | null; // Plus: 카카오 채널 ID
   shop_identity?: string | null; // Plus: AI 분석 쇼핑몰 정체성 JSON
   banner_config?: string | null; // Plus: 미니배너 설정 JSON
+  popup_config?: string | null; // Plus: 이탈 감지 팝업 설정 JSON
+  escalation_config?: string | null; // Plus: 에스컬레이션 설정 JSON
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

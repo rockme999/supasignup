@@ -12,6 +12,8 @@
 --   2026-04-02: inquiries 테이블 추가 (1:1 문의 게시판)
 --   2026-04-03: ai_briefings 테이블 추가 (AI 주간 브리핑 저장)
 --   2026-04-04: shops.banner_config 추가 (Plus: 미니배너 설정 저장)
+--   2026-04-05: shops.popup_config 추가 (Plus: 이탈 감지 팝업 설정 저장)
+--   2026-04-05: shops.escalation_config 추가 (Plus: 에스컬레이션 설정 저장)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -51,6 +53,8 @@ CREATE TABLE IF NOT EXISTS shops (
   kakao_channel_id       TEXT,                         -- Plus: 카카오 채널 ID (pf.kakao.com/{id}/friend)
   shop_identity          TEXT,                         -- Plus: AI 분석 쇼핑몰 정체성 JSON {"industry","target","tone","keywords","summary"}
   banner_config          TEXT,                         -- Plus: 미니배너 설정 JSON {"preset":0,"text":"...","borderRadius":10,"icon":"⚡","position":"floating"}
+  popup_config           TEXT,                         -- Plus: 이탈팝업 설정 JSON {"enabled":true,"title":"...","body":"...","ctaText":"...","preset":0,"allPages":false}
+  escalation_config      TEXT,                         -- Plus: 에스컬레이션 설정 JSON
   deleted_at             TEXT,
   created_at             TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at             TEXT NOT NULL DEFAULT (datetime('now')),

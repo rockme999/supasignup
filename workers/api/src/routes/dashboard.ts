@@ -372,6 +372,173 @@ dashboard.get('/shops/:id/banner', async (c) => {
   return c.json({ ok: true, banner_config: config });
 });
 
+// ─── GET /shops/:id/popup ───────────────────────────────────
+dashboard.get('/shops/:id/popup', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const config = shop.popup_config ? JSON.parse(shop.popup_config) : null;
+  return c.json({ ok: true, popup_config: config });
+});
+
+// ─── PUT /shops/:id/popup ───────────────────────────────────
+dashboard.put('/shops/:id/popup', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const body = await c.req.json<{
+    enabled?: boolean;
+    title?: string;
+    body?: string;
+    ctaText?: string;
+    preset?: number;
+    borderRadius?: number;
+    opacity?: number;
+    icon?: string;
+    allPages?: boolean;
+    cooldownHours?: number;
+  }>();
+
+  if (body.title && body.title.length > 20) {
+    return c.json({ error: 'title_too_long' }, 400);
+  }
+  if (body.body && body.body.length > 100) {
+    return c.json({ error: 'body_too_long' }, 400);
+  }
+
+  const popupConfig = {
+    enabled: body.enabled !== false,
+    title: body.title || '잠깐만요!',
+    body: body.body || '지금 가입하면 특별 혜택을 드려요!',
+    ctaText: body.ctaText || '혜택 받고 가입하기',
+    preset: Math.min(Math.max(body.preset ?? 0, 0), 7),
+    borderRadius: Math.min(Math.max(body.borderRadius ?? 16, 8), 24),
+    opacity: Math.min(Math.max(body.opacity ?? 100, 10), 100),
+    icon: body.icon ?? '🎁',
+    allPages: body.allPages === true,
+    cooldownHours: Math.min(Math.max(body.cooldownHours ?? 24, 1), 168),
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    popup_config: JSON.stringify(popupConfig),
+  });
+
+  // Invalidate widget config cache
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+
+  return c.json({ ok: true, popup_config: popupConfig });
+});
+
+// ─── GET /shops/:id/escalation ──────────────────────────────
+dashboard.get('/shops/:id/escalation', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const config = shop.escalation_config ? JSON.parse(shop.escalation_config) : null;
+  return c.json({ ok: true, escalation_config: config });
+});
+
+// ─── PUT /shops/:id/escalation ──────────────────────────────
+dashboard.put('/shops/:id/escalation', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const body = await c.req.json<{
+    enabled?: boolean;
+    hideForReturning?: boolean;
+    toastEnabled?: boolean;
+    toastStartVisit?: number;
+    toastEndVisit?: number;
+    toastText?: string;
+    toastStyle?: number;
+    toastOpacity?: number;
+    toastBorderRadius?: number;
+    toastAnimation?: string;
+    toastDuration?: number;
+    toastPersist?: boolean;
+    floatingEnabled?: boolean;
+    floatingText?: string;
+    floatingBtnText?: string;
+    floatingPreset?: number;
+    floatingOpacity?: number;
+    floatingBorderRadius?: number;
+    floatingAnimation?: string;
+  }>();
+
+  const escalationConfig = {
+    enabled: body.enabled !== false,
+    hideForReturning: body.hideForReturning === true,
+    toastEnabled: body.toastEnabled !== false,
+    toastStartVisit: Math.min(Math.max(body.toastStartVisit ?? 2, 2), 10),
+    toastEndVisit: Math.min(Math.max(body.toastEndVisit ?? 3, 2), 10),
+    toastText: body.toastText || '\uC548\uB155\uD558\uC138\uC694. {n}\uBC88\uC9F8 \uBC29\uBB38\uC744 \uD658\uC601\uD569\uB2C8\uB2E4.',
+    toastStyle: Math.min(Math.max(body.toastStyle ?? 0, 0), 3),
+    toastOpacity: Math.min(Math.max(body.toastOpacity ?? 96, 10), 100),
+    toastBorderRadius: Math.min(Math.max(body.toastBorderRadius ?? 20, 0), 20),
+    toastAnimation: body.toastAnimation === 'slideUp' ? 'slideUp' : 'fadeIn',
+    toastDuration: Math.min(Math.max(body.toastDuration ?? 3, 1), 10),
+    toastPersist: body.toastPersist === true,
+    floatingEnabled: body.floatingEnabled !== false,
+    floatingText: body.floatingText || '\uD68C\uC6D0\uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD!',
+    floatingBtnText: body.floatingBtnText || '\uBC14\uB85C \uAC00\uC785\uD558\uAE30',
+    floatingPreset: Math.min(Math.max(body.floatingPreset ?? 0, 0), 4),
+    floatingOpacity: Math.min(Math.max(body.floatingOpacity ?? 100, 10), 100),
+    floatingBorderRadius: Math.min(Math.max(body.floatingBorderRadius ?? 0, 0), 20),
+    floatingAnimation: body.floatingAnimation === 'slideUp' ? 'slideUp' : 'fadeIn',
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    escalation_config: JSON.stringify(escalationConfig),
+  });
+
+  // Invalidate widget config cache
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+
+  return c.json({ ok: true, escalation_config: escalationConfig });
+});
+
 // ─── PUT /shops/:id/banner ──────────────────────────────────
 dashboard.put('/shops/:id/banner', async (c) => {
   const ownerId = c.get('ownerId');

@@ -3693,16 +3693,53 @@ export const BannerSettingsPage: FC<{
                   <span id="bannerSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
                 </div>
                 <div id="bannerSettingsBody" style="display:none">
-                  <div class="form-group" style="margin-bottom:16px">
-                    <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
-                      <span>배너 활성화</span>
-                      <span style="font-size:12px;color:#64748b;font-weight:400">(위젯 설치 시 자동 활성화)</span>
-                    </label>
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <div style="width:40px;height:22px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
-                        <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
+                  <div style="display:flex;gap:24px;margin-bottom:16px">
+                    <div class="form-group" style="flex:1">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
+                        <span>배너 활성화</span>
+                        <span style="font-size:12px;color:#64748b;font-weight:400">(위젯 설치 시 자동 활성화)</span>
+                      </label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:40px;height:22px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
+                          <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
+                        </div>
+                        <span style="font-size:13px;color:#374151">활성화됨</span>
                       </div>
-                      <span style="font-size:13px;color:#374151">활성화됨</span>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:12px">이전 로그인 기록 감지 시 표시 안함</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div id="bannerHideReturningToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideForReturning ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' : '#d1d5db'}`}>
+                          <div style={`position:absolute;top:2px;${bc.hideForReturning ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                        </div>
+                      </div>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:6px">켜면 로그인 이력이 있는 방문자에게 배너를 표시하지 않습니다.</p>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:24px;margin-bottom:16px">
+                    <div style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button class="banner-icon-btn" data-icon="⚡" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '⚡' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>⚡</button>
+                        <button class="banner-icon-btn" data-icon="🎁" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '🎁' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>🎁</button>
+                        <button class="banner-icon-btn" data-icon="🎉" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '🎉' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>🎉</button>
+                        <button class="banner-icon-btn" data-icon="✨" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '✨' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>✨</button>
+                        <button class="banner-icon-btn" data-icon="" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280`}>없음</button>
+                      </div>
+                    </div>
+                    <div style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">출현 효과</label>
+                      <div style="display:flex;gap:8px">
+                        <label style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${(bc.animation || 'fadeIn') === 'fadeIn' ? '#2563eb' : '#e5e7eb'};background:${(bc.animation || 'fadeIn') === 'fadeIn' ? '#eff6ff' : '#fff'}`}>
+                          <input type="radio" name="bannerAnimation" value="fadeIn" checked={(bc.animation || 'fadeIn') === 'fadeIn'} style="display:none" />
+                          페이드인
+                        </label>
+                        <label style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${bc.animation === 'slideDown' ? '#2563eb' : '#e5e7eb'};background:${bc.animation === 'slideDown' ? '#eff6ff' : '#fff'}`}>
+                          <input type="radio" name="bannerAnimation" value="slideDown" checked={bc.animation === 'slideDown'} style="display:none" />
+                          슬라이드
+                        </label>
+                      </div>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:6px">페이드인: 서서히 나타남 · 슬라이드: 위에서 아래로</p>
                     </div>
                   </div>
                   <div class="form-group" style="margin-bottom:16px">
@@ -3714,7 +3751,7 @@ export const BannerSettingsPage: FC<{
                         value={bc.text || ''}
                         maxlength="30"
                         placeholder="번개가입으로 회원 혜택을 받으세요!"
-                        style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                        style="width:320px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
                       />
                       <button id="bannerBoldToggle" style={`width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:800;border:2px solid ${bc.bold ? '#2563eb' : '#d1d5db'};background:${bc.bold ? '#eff6ff' : '#fff'};color:#374151;flex-shrink:0`}>B</button>
                       <button id="bannerItalicToggle" style={`width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;font-style:italic;border:2px solid ${bc.italic ? '#2563eb' : '#d1d5db'};background:${bc.italic ? '#eff6ff' : '#fff'};color:#374151;flex-shrink:0`}>I</button>
@@ -3781,39 +3818,6 @@ export const BannerSettingsPage: FC<{
                         <span id="bannerPaddingXValue" style="font-size:13px;min-width:40px;text-align:right;color:#374151">{bc.paddingX || 24}px</span>
                       </div>
                     </div>
-                  </div>
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap">
-                      <button class="banner-icon-btn" data-icon="⚡" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '⚡' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>⚡</button>
-                      <button class="banner-icon-btn" data-icon="🎁" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '🎁' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>🎁</button>
-                      <button class="banner-icon-btn" data-icon="🎉" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '🎉' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>🎉</button>
-                      <button class="banner-icon-btn" data-icon="✨" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '✨' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:16px;cursor:pointer`}>✨</button>
-                      <button class="banner-icon-btn" data-icon="" style={`width:36px;height:36px;border-radius:50%;border:2px solid ${bc.icon === '' ? '#2563eb' : 'transparent'};background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280`}>없음</button>
-                    </div>
-                  </div>
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">출현 효과</label>
-                    <div style="display:flex;gap:8px">
-                      <label style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${(bc.animation || 'fadeIn') === 'fadeIn' ? '#2563eb' : '#e5e7eb'};background:${(bc.animation || 'fadeIn') === 'fadeIn' ? '#eff6ff' : '#fff'}`}>
-                        <input type="radio" name="bannerAnimation" value="fadeIn" checked={(bc.animation || 'fadeIn') === 'fadeIn'} style="display:none" />
-                        페이드인
-                      </label>
-                      <label style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${bc.animation === 'slideDown' ? '#2563eb' : '#e5e7eb'};background:${bc.animation === 'slideDown' ? '#eff6ff' : '#fff'}`}>
-                        <input type="radio" name="bannerAnimation" value="slideDown" checked={bc.animation === 'slideDown'} style="display:none" />
-                        슬라이드
-                      </label>
-                    </div>
-                    <p style="font-size:11px;color:#94a3b8;margin-top:6px">페이드인: 서서히 나타남 · 슬라이드: 위에서 아래로 내려옴</p>
-                  </div>
-                  <div style="margin-bottom:16px">
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <span style="font-size:13px;font-weight:600">이전 로그인 기록 감지 시 표시 안함</span>
-                      <div id="bannerHideReturningToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideForReturning ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' : '#d1d5db'}`}>
-                        <div style={`position:absolute;top:2px;${bc.hideForReturning ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
-                      </div>
-                    </div>
-                    <p style="font-size:11px;color:#94a3b8;margin-top:6px">켜면 로그인한 이력이 확인되면 방문자에게 배너를 표시하지 않습니다.</p>
                   </div>
                   <div class="form-group" style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="bannerAnchor">기준 요소</label>
@@ -4267,11 +4271,11 @@ export const BannerSettingsPage: FC<{
 // ─── Popup Settings Page [Plus] ─────────────────────────────
 
 export const PopupSettingsPage: FC<{
-  shop: { plan: string } | null;
+  shop: { shop_id: string; plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  // shop이 null이면 Plus가 아님, free가 아닌 모든 플랜(monthly, yearly)이 Plus
   const isPlus = shop != null && shop.plan !== 'free';
+  const shopId = shop?.shop_id || '';
   return (
     <Layout title="이탈 감지 팝업" loggedIn currentPath="/dashboard/settings/popup" isCafe24={isCafe24}>
       <h1>이탈 감지 팝업</h1>
@@ -4281,48 +4285,86 @@ export const PopupSettingsPage: FC<{
           <div>
             <div class="card">
               <h2>이탈 감지 팝업 설정</h2>
-              <p style="font-size:13px;color:#64748b;margin-bottom:4px">PC: 마우스가 브라우저 밖으로 나갈 때 / 모바일: 급격한 스크롤 업 감지 시 표시됩니다. 하루 1회만 노출.</p>
+              <p style="font-size:13px;color:#64748b;margin-bottom:4px">PC: 마우스가 브라우저 밖으로 나갈 때 / 모바일: 급격한 스크롤 업 감지 시 표시됩니다.</p>
               <p style="font-size:13px;color:#64748b;margin-bottom:20px">팝업을 보여준 뒤 가입까지 이어지지 않은 이탈 방문자를 재유도합니다.</p>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-                {/* 설정 영역 */}
-                <div>
-                  <div class="form-group" style="margin-bottom:16px">
-                    <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
-                      <span>팝업 활성화</span>
-                    </label>
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <div style="width:40px;height:22px;background:#2563eb;border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
-                        <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
+              {/* 미리보기 영역 (상단) */}
+              <div style="margin-bottom:20px">
+                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px;position:relative;overflow:hidden">
+                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;user-select:none">
+                    <div style="font-size:64px;line-height:1;margin-bottom:4px">&#129302;</div>
+                    <p style="font-size:18px;font-weight:700;color:#111827;margin:0">&#51676;&#51088;&#51092;!</p>
+                    <p style="font-size:11px;color:#111827;margin:2px 0 0">(test text)</p>
+                  </div>
+                  <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center;position:relative">이탈 감지 시 표시되는 팝업</p>
+                  <div id="popupPreviewCard" style="background:white;max-width:320px;margin:0 auto;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
+                    <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:#6b7280;line-height:24px;text-align:center">
+                      &#10005;
+                    </div>
+                    <div style="text-align:center;margin-bottom:16px">
+                      <div id="popupPreviewIconBg" style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+                        <span id="popupPreviewIcon" style="color:white;font-size:20px">🎁</span>
                       </div>
-                      <span style="font-size:13px;color:#374151">활성화됨</span>
+                      <h3 id="popupPreviewTitle" style="font-size:20px;font-weight:700;margin:0 0 8px;color:#111827">잠깐만요!</h3>
+                      <p id="popupPreviewBody" style="font-size:14px;color:#6b7280;margin:0">지금 가입하면 특별 혜택을 드려요!</p>
+                    </div>
+                    <button id="popupPreviewCta" style="width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">혜택 받고 가입하기</button>
+                  </div>
+                </div>
+              </div>
+              {/* 설정 영역 (펼치기/접기) */}
+              <div>
+                <div id="popupSettingsToggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:16px">
+                  <span style="font-size:14px;font-weight:600;color:#374151">상세 설정</span>
+                  <span id="popupSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
+                </div>
+                <div id="popupSettingsBody" style="display:none">
+                  <div style="display:flex;gap:24px;margin-bottom:16px">
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">팝업 활성화</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div id="popupEnabledToggle" style="width:40px;height:22px;background:#2563eb;border-radius:11px;position:relative;cursor:pointer">
+                          <div id="popupEnabledKnob" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                        </div>
+                        <span id="popupEnabledLabel" style="font-size:13px;color:#374151">활성화됨</span>
+                      </div>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">노출 범위</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div id="popupAllPagesToggle" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;cursor:pointer">
+                          <div id="popupAllPagesKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                        </div>
+                        <span id="popupAllPagesLabel" style="font-size:13px;color:#374151">모든 페이지에서</span>
+                      </div>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">켜면 모든 페이지에서 비로그인 방문자에게 이탈 감지시 팝업 표시</p>
                     </div>
                   </div>
-                  <div class="form-group" style="margin-bottom:12px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupTitle">팝업 제목</label>
-                    <input
-                      type="text"
-                      id="popupTitle"
-                      placeholder="잠깐만요!"
-                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                    />
-                  </div>
-                  <div class="form-group" style="margin-bottom:12px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupBody">팝업 본문</label>
-                    <input
-                      type="text"
-                      id="popupBody"
-                      placeholder="지금 가입하면 특별 혜택을 드려요!"
-                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                    />
-                  </div>
-                  <div class="form-group" style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCta">CTA 버튼 텍스트</label>
-                    <input
-                      type="text"
-                      id="popupCta"
-                      placeholder="혜택 받고 가입하기"
-                      style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                    />
+                  <div style="display:flex;gap:20px;margin-bottom:16px;max-width:75%">
+                    <div style="flex:1">
+                      <div class="form-group" style="margin-bottom:12px">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupTitle">팝업 제목 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
+                        <input type="text" id="popupTitle" maxlength={20} placeholder="잠깐만요!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                      </div>
+                      <div class="form-group" style="margin-bottom:12px">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupBody">팝업 본문 <span style="font-weight:400;color:#94a3b8">(최대 100자)</span></label>
+                        <textarea id="popupBody" maxlength={100} rows={3} placeholder="지금 가입하면 특별 혜택을 드려요!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCta">버튼 텍스트 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
+                        <input type="text" id="popupCta" maxlength={20} placeholder="혜택 받고 가입하기" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                      </div>
+                    </div>
+                    <div style="flex-shrink:0">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
+                      <div style="display:flex;gap:6px">
+                        <button class="popup-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
+                        <button class="popup-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
+                        <button class="popup-icon-btn" data-icon="🛍️" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🛍️</button>
+                        <button class="popup-icon-btn" data-icon="💝" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">💝</button>
+                        <button class="popup-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
+                      </div>
+                    </div>
                   </div>
                   <div style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
@@ -4336,6 +4378,21 @@ export const PopupSettingsPage: FC<{
                       <div class="popup-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ea580c,#f59e0b);display:flex;align-items:center;justify-content:center">
                         <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">오렌지</span>
                       </div>
+                      <div class="popup-preset-card" data-preset="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#6b7280;display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색</span>
+                      </div>
+                      <div class="popup-preset-card" data-preset="4" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">흑백 심플</span>
+                      </div>
+                      <div class="popup-preset-card" data-preset="5" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ec4899,#f43f5e);display:flex;align-items:center;justify-content:center">
+                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">핑크</span>
+                      </div>
+                      <div class="popup-preset-card" data-preset="6" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #93c5fd;overflow:hidden;background:#eff6ff;display:flex;align-items:center;justify-content:center">
+                        <span style="color:#2563eb;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑 테두리</span>
+                      </div>
+                      <div class="popup-preset-card" data-preset="7" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #d1d5db;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center">
+                        <span style="color:#374151;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색 테두리</span>
+                      </div>
                     </div>
                   </div>
                   <div style="margin-bottom:16px">
@@ -4346,110 +4403,265 @@ export const PopupSettingsPage: FC<{
                     </div>
                   </div>
                   <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap">
-                      <button class="popup-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
-                      <button class="popup-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
-                      <button class="popup-icon-btn" data-icon="🛍️" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🛍️</button>
-                      <button class="popup-icon-btn" data-icon="💝" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">💝</button>
-                      <button class="popup-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">투명도</label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <input type="range" min="10" max="100" value="100" id="popupOpacity" style="flex:1" />
+                      <span id="popupOpacityValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">100%</span>
                     </div>
                   </div>
-                  <div style="padding:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px">
-                    <p style="font-size:12px;color:#854d0e;margin:0">설정 저장 기능은 곧 지원됩니다. 현재는 미리보기만 제공됩니다.</p>
-                  </div>
-                </div>
-                {/* 미리보기 영역 */}
-                <div>
-                  <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                  <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
-                    <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center">이탈 감지 시 표시되는 팝업</p>
-                    <div id="popupPreviewCard" style="background:white;max-width:320px;margin:0 auto;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
-                      <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:#6b7280;line-height:24px;text-align:center">
-                        &#10005;
-                      </div>
-                      <div style="text-align:center;margin-bottom:16px">
-                        <div id="popupPreviewIconBg" style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
-                          <span id="popupPreviewIcon" style="color:white;font-size:20px">⚡</span>
-                        </div>
-                        <h3 id="popupPreviewTitle" style="font-size:20px;font-weight:700;margin:0 0 8px;color:#111827">잠깐만요!</h3>
-                        <p id="popupPreviewBody" style="font-size:14px;color:#6b7280;margin:0">지금 가입하면 특별 혜택을 드려요!</p>
-                      </div>
-                      <button
-                        id="popupPreviewCta"
-                        style="width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer"
-                      >
-                        혜택 받고 가입하기
-                      </button>
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCooldown">재노출 간격 (시간) <span style="font-weight:400;color:#94a3b8">해당 시간에 1회만 노출됩니다.</span></label>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <input type="range" min="1" max="168" value="24" id="popupCooldown" style="flex:1" />
+                      <span id="popupCooldownValue" style="font-size:13px;min-width:48px;text-align:right;color:#374151">24시간</span>
                     </div>
                   </div>
+                  <div style="display:flex;gap:8px">
+                    <button id="popupSaveBtn" style="flex:1;padding:10px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">저장</button>
+                    <button id="popupResetBtn" style="padding:10px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:14px;cursor:pointer">기본값 되돌리기</button>
+                  </div>
+                  <div id="popupSaveStatus" style="display:none;padding:10px 16px;border-radius:8px;margin-top:12px;font-size:13px"></div>
                 </div>
               </div>
             </div>
             <script dangerouslySetInnerHTML={{__html: `
               (function() {
+                var SHOP_ID = '${shopId}';
+                var DEFAULTS = { enabled: true, title: '잠깐만요!', body: '지금 가입하면 특별 혜택을 드려요!', ctaText: '혜택 받고 가입하기', preset: 0, borderRadius: 16, opacity: 100, icon: '🎁', allPages: false, cooldownHours: 24 };
                 var popupPresets = [
                   { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
                   { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
                   { ctaBg: '#ea580c', iconBg: 'linear-gradient(135deg, #ea580c, #f59e0b)' },
+                  { ctaBg: '#6b7280', iconBg: '#6b7280' },
+                  { ctaBg: '#111827', iconBg: '#111827' },
+                  { ctaBg: '#ec4899', iconBg: 'linear-gradient(135deg, #ec4899, #f43f5e)' },
+                  { ctaBg: '#eff6ff', ctaBorder: '2px solid #93c5fd', ctaColor: '#2563eb', iconBg: '#eff6ff', iconBorder: '2px solid #93c5fd', iconColor: '#2563eb' },
+                  { ctaBg: 'transparent', ctaBorder: '2px solid #9ca3af', ctaColor: '#6b7280', iconBg: 'transparent', iconBorder: '2px solid #d1d5db', iconColor: '#6b7280' },
                 ];
-                var currentPopupPreset = 0;
-                var currentPopupIcon = '⚡';
+                var state = Object.assign({}, DEFAULTS);
 
-                function applyPopupPreset(i) {
+                // ── 펼치기/접기 ──
+                var settingsToggle = document.getElementById('popupSettingsToggle');
+                var settingsBody = document.getElementById('popupSettingsBody');
+                var settingsArrow = document.getElementById('popupSettingsArrow');
+                var settingsOpen = false;
+                if (settingsToggle) settingsToggle.addEventListener('click', function() {
+                  settingsOpen = !settingsOpen;
+                  if (settingsBody) settingsBody.style.display = settingsOpen ? 'block' : 'none';
+                  if (settingsArrow) settingsArrow.style.transform = settingsOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+                });
+
+                function showStatus(msg, ok) {
+                  var el = document.getElementById('popupSaveStatus');
+                  el.textContent = msg;
+                  el.style.display = 'block';
+                  el.style.background = ok ? '#dcfce7' : '#fee2e2';
+                  el.style.color = ok ? '#166534' : '#991b1b';
+                  el.style.border = '1px solid ' + (ok ? '#bbf7d0' : '#fecaca');
+                  setTimeout(function() { el.style.display = 'none'; }, 3000);
+                }
+
+                // ── 토글: 활성화 ──
+                var enabledToggle = document.getElementById('popupEnabledToggle');
+                function renderEnabled() {
+                  enabledToggle.style.background = state.enabled ? '#2563eb' : '#d1d5db';
+                  var knob = document.getElementById('popupEnabledKnob');
+                  knob.style.right = state.enabled ? '2px' : 'auto';
+                  knob.style.left = state.enabled ? 'auto' : '2px';
+                  document.getElementById('popupEnabledLabel').textContent = state.enabled ? '활성화됨' : '비활성화';
+                }
+                enabledToggle.addEventListener('click', function() { state.enabled = !state.enabled; renderEnabled(); });
+
+                // ── 토글: 전체 페이지 ──
+                var allPagesToggle = document.getElementById('popupAllPagesToggle');
+                function renderAllPages() {
+                  allPagesToggle.style.background = state.allPages ? '#2563eb' : '#d1d5db';
+                  var knob = document.getElementById('popupAllPagesKnob');
+                  knob.style.right = state.allPages ? '2px' : 'auto';
+                  knob.style.left = state.allPages ? 'auto' : '2px';
+                  document.getElementById('popupAllPagesLabel').textContent = state.allPages ? '모든 페이지에서' : '로그인 페이지만';
+                }
+                allPagesToggle.addEventListener('click', function() { state.allPages = !state.allPages; renderAllPages(); });
+
+                // ── 프리셋 ──
+                function applyPreset(i) {
+                  state.preset = i;
                   var p = popupPresets[i];
                   var ctaBtn = document.getElementById('popupPreviewCta');
                   var iconBg = document.getElementById('popupPreviewIconBg');
-                  if (ctaBtn) ctaBtn.style.background = p.ctaBg;
-                  if (iconBg) iconBg.style.background = p.iconBg;
-                }
-
-                document.querySelectorAll('.popup-preset-card').forEach(function(card) {
-                  card.addEventListener('click', function() {
-                    var i = parseInt(this.dataset.preset);
-                    currentPopupPreset = i;
-                    applyPopupPreset(i);
-                    document.querySelectorAll('.popup-preset-card').forEach(function(c) {
-                      c.style.border = '2px solid transparent';
-                    });
-                    this.style.border = '3px solid #2563eb';
+                  var iconEl = document.getElementById('popupPreviewIcon');
+                  if (ctaBtn) {
+                    ctaBtn.style.background = p.ctaBg;
+                    ctaBtn.style.color = p.ctaColor || '#fff';
+                    ctaBtn.style.border = p.ctaBorder || 'none';
+                  }
+                  if (iconBg) {
+                    iconBg.style.background = p.iconBg;
+                    iconBg.style.border = p.iconBorder || 'none';
+                  }
+                  if (iconEl) iconEl.style.color = p.iconColor || 'white';
+                  document.querySelectorAll('.popup-preset-card').forEach(function(c, idx) {
+                    var defaultBorder = idx === 6 ? '2px solid #93c5fd' : (idx === 7 ? '2px solid #d1d5db' : '2px solid transparent');
+                    c.style.border = idx === i ? '3px solid #2563eb' : defaultBorder;
                   });
+                }
+                document.querySelectorAll('.popup-preset-card').forEach(function(card) {
+                  card.addEventListener('click', function() { applyPreset(parseInt(this.dataset.preset)); });
                 });
 
-                var popupRadiusSlider = document.getElementById('popupBorderRadius');
-                if (popupRadiusSlider) {
-                  popupRadiusSlider.addEventListener('input', function() {
-                    document.getElementById('popupBorderRadiusValue').textContent = this.value + 'px';
-                    document.getElementById('popupPreviewCard').style.borderRadius = this.value + 'px';
-                    var ctaBtn = document.getElementById('popupPreviewCta');
-                    if (ctaBtn) ctaBtn.style.borderRadius = Math.max(6, parseInt(this.value) - 6) + 'px';
-                  });
-                }
+                // ── 모서리 둥글기 ──
+                var radiusSlider = document.getElementById('popupBorderRadius');
+                radiusSlider.addEventListener('input', function() {
+                  state.borderRadius = parseInt(this.value);
+                  document.getElementById('popupBorderRadiusValue').textContent = this.value + 'px';
+                  document.getElementById('popupPreviewCard').style.borderRadius = this.value + 'px';
+                  var ctaBtn = document.getElementById('popupPreviewCta');
+                  if (ctaBtn) ctaBtn.style.borderRadius = Math.max(6, state.borderRadius - 6) + 'px';
+                });
 
+                // ── 투명도 ──
+                var opacitySlider = document.getElementById('popupOpacity');
+                opacitySlider.addEventListener('input', function() {
+                  state.opacity = parseInt(this.value);
+                  document.getElementById('popupOpacityValue').textContent = this.value + '%';
+                  document.getElementById('popupPreviewCard').style.opacity = (state.opacity / 100).toString();
+                });
+
+                // ── 아이콘 ──
                 document.querySelectorAll('.popup-icon-btn').forEach(function(btn) {
                   btn.addEventListener('click', function() {
+                    state.icon = this.dataset.icon;
                     document.querySelectorAll('.popup-icon-btn').forEach(function(b) { b.style.border = '2px solid transparent'; });
                     this.style.border = '2px solid #2563eb';
-                    currentPopupIcon = this.dataset.icon;
-                    var iconEl = document.getElementById('popupPreviewIcon');
-                    var iconBg = document.getElementById('popupPreviewIconBg');
-                    if (iconEl) iconEl.textContent = currentPopupIcon;
-                    if (iconBg) iconBg.style.display = currentPopupIcon ? 'flex' : 'none';
+                    document.getElementById('popupPreviewIcon').textContent = state.icon;
+                    document.getElementById('popupPreviewIconBg').style.display = state.icon ? 'flex' : 'none';
                   });
                 });
 
-                function bindPreview(inputId, previewId, defaultText) {
+                // ── 쿨다운 ──
+                var cooldownSlider = document.getElementById('popupCooldown');
+                function formatCooldown(h) {
+                  if (h <= 24) return h + '시간';
+                  var d = Math.floor(h / 24);
+                  var r = h % 24;
+                  return r > 0 ? d + '일 ' + r + '시간' : d + '일';
+                }
+                cooldownSlider.addEventListener('input', function() {
+                  state.cooldownHours = parseInt(this.value);
+                  document.getElementById('popupCooldownValue').textContent = formatCooldown(state.cooldownHours);
+                });
+
+                // ── 미리보기 바인딩 ──
+                function bindPreview(inputId, previewId, stateKey, defaultText) {
                   var input = document.getElementById(inputId);
                   var preview = document.getElementById(previewId);
                   if (input && preview) {
                     input.addEventListener('input', function() {
-                      preview.textContent = this.value || defaultText;
+                      state[stateKey] = this.value || defaultText;
+                      preview.textContent = state[stateKey];
                     });
                   }
                 }
-                bindPreview('popupTitle', 'popupPreviewTitle', '잠깐만요!');
-                bindPreview('popupBody', 'popupPreviewBody', '지금 가입하면 특별 혜택을 드려요!');
-                bindPreview('popupCta', 'popupPreviewCta', '혜택 받고 가입하기');
+                bindPreview('popupTitle', 'popupPreviewTitle', 'title', DEFAULTS.title);
+                bindPreview('popupCta', 'popupPreviewCta', 'ctaText', DEFAULTS.ctaText);
+                // 본문은 textarea — 줄바꿈을 <br>로 변환하여 미리보기 반영
+                var bodyInput = document.getElementById('popupBody');
+                var bodyPreview = document.getElementById('popupPreviewBody');
+                if (bodyInput && bodyPreview) {
+                  bodyInput.addEventListener('input', function() {
+                    state.body = this.value || DEFAULTS.body;
+                    bodyPreview.innerHTML = (state.body).replace(/\\n/g, '<br>');
+                  });
+                }
+
+                // ── UI에 상태 반영 ──
+                function applyState() {
+                  document.getElementById('popupTitle').value = state.title === DEFAULTS.title ? '' : state.title;
+                  document.getElementById('popupBody').value = state.body === DEFAULTS.body ? '' : state.body;
+                  document.getElementById('popupCta').value = state.ctaText === DEFAULTS.ctaText ? '' : state.ctaText;
+                  document.getElementById('popupPreviewTitle').textContent = state.title;
+                  document.getElementById('popupPreviewBody').innerHTML = state.body.replace(/\\n/g, '<br>');
+                  document.getElementById('popupPreviewCta').textContent = state.ctaText;
+                  radiusSlider.value = state.borderRadius;
+                  document.getElementById('popupBorderRadiusValue').textContent = state.borderRadius + 'px';
+                  document.getElementById('popupPreviewCard').style.borderRadius = state.borderRadius + 'px';
+                  document.getElementById('popupPreviewCta').style.borderRadius = Math.max(6, state.borderRadius - 6) + 'px';
+                  opacitySlider.value = state.opacity;
+                  document.getElementById('popupOpacityValue').textContent = state.opacity + '%';
+                  document.getElementById('popupPreviewCard').style.opacity = (state.opacity / 100).toString();
+                  cooldownSlider.value = state.cooldownHours;
+                  document.getElementById('popupCooldownValue').textContent = formatCooldown(state.cooldownHours);
+                  applyPreset(state.preset);
+                  // 아이콘
+                  document.querySelectorAll('.popup-icon-btn').forEach(function(b) {
+                    b.style.border = b.dataset.icon === state.icon ? '2px solid #2563eb' : '2px solid transparent';
+                  });
+                  document.getElementById('popupPreviewIcon').textContent = state.icon;
+                  document.getElementById('popupPreviewIconBg').style.display = state.icon ? 'flex' : 'none';
+                  renderEnabled();
+                  renderAllPages();
+                }
+
+                // ── 저장 ──
+                document.getElementById('popupSaveBtn').addEventListener('click', function() {
+                  var btn = this;
+                  btn.disabled = true;
+                  btn.textContent = '저장 중...';
+                  fetch('/api/dashboard/shops/' + SHOP_ID + '/popup', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      enabled: state.enabled,
+                      title: state.title,
+                      body: state.body,
+                      ctaText: state.ctaText,
+                      preset: state.preset,
+                      borderRadius: state.borderRadius,
+                      opacity: state.opacity,
+                      icon: state.icon,
+                      allPages: state.allPages,
+                      cooldownHours: state.cooldownHours,
+                    })
+                  })
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    if (data.ok) {
+                      showStatus('저장되었습니다.', true);
+                    } else {
+                      showStatus('저장 실패: ' + (data.error || '알 수 없는 오류'), false);
+                    }
+                  })
+                  .catch(function() { showStatus('네트워크 오류', false); })
+                  .finally(function() { btn.disabled = false; btn.textContent = '저장'; });
+                });
+
+                // ── 기본값 되돌리기 ──
+                document.getElementById('popupResetBtn').addEventListener('click', function() {
+                  state = Object.assign({}, DEFAULTS);
+                  applyState();
+                  showStatus('기본값으로 되돌렸습니다. 저장 버튼을 눌러 적용하세요.', true);
+                });
+
+                // ── 초기 로드 ──
+                fetch('/api/dashboard/shops/' + SHOP_ID + '/popup')
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    if (data.ok && data.popup_config) {
+                      var c = data.popup_config;
+                      state.enabled = c.enabled !== false;
+                      state.title = c.title || DEFAULTS.title;
+                      state.body = c.body || DEFAULTS.body;
+                      state.ctaText = c.ctaText || DEFAULTS.ctaText;
+                      state.preset = c.preset != null ? c.preset : DEFAULTS.preset;
+                      state.borderRadius = c.borderRadius != null ? c.borderRadius : DEFAULTS.borderRadius;
+                      state.opacity = c.opacity != null ? c.opacity : DEFAULTS.opacity;
+                      state.icon = c.icon != null ? c.icon : DEFAULTS.icon;
+                      state.allPages = c.allPages === true;
+                      state.cooldownHours = c.cooldownHours || DEFAULTS.cooldownHours;
+                    }
+                    applyState();
+                  })
+                  .catch(function() { applyState(); });
               })();
             `}} />
           </div>
@@ -4462,11 +4674,11 @@ export const PopupSettingsPage: FC<{
 // ─── Escalation Settings Page [Plus] ────────────────────────
 
 export const EscalationSettingsPage: FC<{
-  shop: { plan: string } | null;
+  shop: { shop_id: string; plan: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, isCafe24 }) => {
-  // shop이 null이면 Plus가 아님, free가 아닌 모든 플랜(monthly, yearly)이 Plus
   const isPlus = shop != null && shop.plan !== 'free';
+  const shopId = shop?.shop_id || '';
   return (
     <Layout title="에스컬레이션" loggedIn currentPath="/dashboard/settings/escalation" isCafe24={isCafe24}>
       <h1>에스컬레이션</h1>
@@ -4474,182 +4686,729 @@ export const EscalationSettingsPage: FC<{
         ? <PlusLockOverlay feature="에스컬레이션" />
         : (
           <div>
-            <div class="card" style="margin-bottom:20px">
+            <div class="card">
               <h2>에스컬레이션 설정</h2>
-              <p style="font-size:13px;color:#64748b;margin-bottom:20px">비로그인 방문자의 재방문 횟수에 따라 단계적으로 가입을 유도합니다.</p>
+              <p style="font-size:13px;color:#64748b;margin-bottom:4px">비로그인 방문자의 재방문 횟수에 따라 단계적으로 가입을 유도합니다.</p>
+              <p style="font-size:13px;color:#64748b;margin-bottom:20px">방문 횟수에 따라 토스트 메시지 → 플로팅 배너로 단계적 유도합니다.</p>
 
-              {/* 2회 방문 — 토스트 */}
-              <div style="margin-bottom:28px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-                  <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:#111827;color:white;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0">2</span>
-                  <h3 style="font-size:14px;font-weight:600;margin:0">2회 방문 — 토스트 메시지</h3>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-                  <div>
-                    <div class="form-group" style="margin-bottom:12px">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="toastText">토스트 메시지</label>
-                      <input
-                        type="text"
-                        id="toastText"
-                        placeholder="이미 2번째 방문이에요 :)"
-                        style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                      />
-                      <p style="font-size:12px;color:#94a3b8;margin-top:6px">화면 하단에 캡슐형 토스트로 표시됩니다.</p>
+              {/* 미리보기 (상단 항상 표시) */}
+              <div style="margin-bottom:20px">
+                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  {/* 토스트 미리보기 */}
+                  <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:20px;text-align:center">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+                      <span id="toastBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;background:#111827;color:white;border-radius:10px;font-size:10px;font-weight:700;flex-shrink:0">2~3</span>
+                      <p id="toastLabel" style="font-size:11px;color:#94a3b8;margin:0">2~3회 방문 — 화면 하단 토스트</p>
                     </div>
-                    <div style="margin-top:4px">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">토스트 스타일</label>
-                      <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <div class="toast-style-card" data-style="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
-                          <span style="color:white;font-size:9px;font-weight:600">다크</span>
-                        </div>
-                        <div class="toast-style-card" data-style="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #e5e7eb;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-                          <span style="color:#111827;font-size:9px;font-weight:600">라이트</span>
-                        </div>
+                    <div style="display:inline-block">
+                      <div id="toastPreview" style="background:#111827;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;white-space:nowrap">
+                        이미 2번째 방문이에요 :)
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                    <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px;text-align:center">
-                      <p style="font-size:11px;color:#94a3b8;margin-bottom:16px">화면 하단 토스트</p>
-                      <div style="display:inline-block">
-                        <div
-                          id="toastPreview"
-                          style="background:#111827;color:white;padding:10px 20px;border-radius:999px;font-size:13px;font-weight:500;white-space:nowrap"
-                        >
-                          이미 2번째 방문이에요 :)
-                        </div>
-                      </div>
+                  {/* 플로팅 배너 미리보기 */}
+                  <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:20px">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+                      <span id="floatingBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;border-radius:10px;font-size:10px;font-weight:700;flex-shrink:0">4+</span>
+                      <p id="floatingLabel" style="font-size:11px;color:#94a3b8;margin:0">4회 이상 방문 — 화면 하단 고정 배너</p>
+                    </div>
+                    <div id="floatingBannerPreview" style="background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);border-radius:0px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                      <span id="floatingTextPreview" style="color:white;font-size:13px;font-weight:600">회원가입하면 특별 혜택!</span>
+                      <button id="floatingBtnPreview" style="flex-shrink:0;padding:6px 14px;background:white;color:#2563eb;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+                        바로 가입하기
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:28px" />
-
-              {/* 3회+ 방문 — 플로팅 배너 */}
-              <div style="margin-bottom:16px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-                  <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0">3+</span>
-                  <h3 style="font-size:14px;font-weight:600;margin:0">3회 이상 방문 — 플로팅 배너</h3>
+              {/* 설정 영역 (펼치기/접기) */}
+              <div>
+                <div id="escalationSettingsToggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:16px">
+                  <span style="font-size:14px;font-weight:600;color:#374151">상세 설정</span>
+                  <span id="escalationSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-                  <div>
-                    <div class="form-group" style="margin-bottom:12px">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="floatingText">배너 텍스트</label>
-                      <input
-                        type="text"
-                        id="floatingText"
-                        placeholder="회원가입하면 특별 혜택!"
-                        style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                      />
-                    </div>
-                    <div class="form-group" style="margin-bottom:16px">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="floatingBtn">버튼 텍스트</label>
-                      <input
-                        type="text"
-                        id="floatingBtn"
-                        placeholder="바로 가입하기"
-                        style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                      />
-                      <p style="font-size:12px;color:#94a3b8;margin-top:6px">화면 하단에 고정된 배너로 표시됩니다.</p>
-                    </div>
-                    <div>
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">플로팅 배너 프리셋</label>
-                      <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <div class="floating-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center">
-                          <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
+                <div id="escalationSettingsBody" style="display:none">
+                  {/* 첫 줄: 토글들 */}
+                  <div style="display:flex;gap:24px;margin-bottom:16px">
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">에스컬레이션 활성화</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div id="escEnabledToggle" style="width:40px;height:22px;background:#2563eb;border-radius:11px;position:relative;cursor:pointer">
+                          <div id="escEnabledKnob" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
                         </div>
-                        <div class="floating-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
-                          <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">다크</span>
+                        <span id="escEnabledLabel" style="font-size:13px;color:#374151">활성화됨</span>
+                      </div>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">이전 로그인 기록 있으면 표시 안함</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div id="escHideToggle" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;cursor:pointer">
+                          <div id="escHideKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
                         </div>
-                        <div class="floating-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#2563eb;display:flex;align-items:center;justify-content:center">
-                          <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑 솔리드</span>
+                        <span id="escHideLabel" style="font-size:13px;color:#374151">로그인 기록 무시</span>
+                      </div>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">켜면 과거에 로그인한 이력이 있는 방문자에게는 표시 안 함</p>
+                    </div>
+                  </div>
+
+                  {/* 방문 횟수 설정 */}
+                  <div style="display:flex;gap:24px;margin-bottom:16px">
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">토스트 메시지 표시 <span style="font-weight:400;color:#94a3b8">(시작~끝 방문 횟수)</span></label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <input type="number" id="escToastStart" min="2" max="10" value="2" style="width:60px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center" />
+                        <span style="font-size:13px;color:#64748b">~</span>
+                        <input type="number" id="escToastEnd" min="2" max="10" value="3" style="width:60px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center" />
+                        <span style="font-size:13px;color:#64748b">회 방문</span>
+                      </div>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">플로팅 배너 표시 <span style="font-weight:400;color:#94a3b8">(자동 계산)</span></label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <span id="escFloatingStartDisplay" style="display:inline-block;width:60px;padding:8px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center;color:#6b7280">4</span>
+                        <span style="font-size:13px;color:#64748b">회 이상 방문</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:20px" />
+
+                  {/* 토스트 섹션 */}
+                  <div style="margin-bottom:20px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                      <span id="toastSectionBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;background:#111827;color:white;border-radius:12px;font-size:11px;font-weight:700;flex-shrink:0">2~3</span>
+                      <h3 style="font-size:14px;font-weight:600;margin:0">토스트 메시지</h3>
+                      <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+                        <div id="toastEnabledToggle" style="width:36px;height:20px;background:#2563eb;border-radius:10px;position:relative;cursor:pointer">
+                          <div id="toastEnabledKnob" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                        </div>
+                        <span id="toastEnabledLabel" style="font-size:12px;color:#374151">{"\uC0AC\uC6A9"}</span>
+                      </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:14px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="toastText">토스트 메시지 <span style="font-weight:400;color:#94a3b8">(최대 30자)</span></label>
+                      <input type="text" id="toastText" maxlength={30} placeholder={"안녕하세요. {n}번째 방문을 환영합니다."} style="width:320px;max-width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">{"  {n} 을 입력하면 실제 방문 횟수로 대치됩니다. 예: \"이미 {n}번째 방문이에요\" → \"이미 3번째 방문이에요\""}</p>
+                    </div>
+                    <div style="display:flex;gap:24px;margin-bottom:14px">
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">토스트 스타일</label>
+                        <div style="display:flex;gap:8px">
+                          <div class="esc-toast-style-card" data-style="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                            <span style="color:white;font-size:9px;font-weight:600">다크</span>
+                          </div>
+                          <div class="esc-toast-style-card" data-style="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #e5e7eb;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+                            <span style="color:#111827;font-size:9px;font-weight:600">라이트</span>
+                          </div>
+                          <div class="esc-toast-style-card" data-style="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#6b7280;display:flex;align-items:center;justify-content:center">
+                            <span style="color:white;font-size:9px;font-weight:600">회색</span>
+                          </div>
+                          <div class="esc-toast-style-card" data-style="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #93c5fd;overflow:hidden;background:#eff6ff;display:flex;align-items:center;justify-content:center">
+                            <span style="color:#2563eb;font-size:9px;font-weight:600">밝은 파랑</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">출현 효과</label>
+                        <div style="display:flex;gap:8px">
+                          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid #2563eb;background:#eff6ff" class="toast-anim-label">
+                            <input type="radio" name="toastAnim" value="fadeIn" checked style="display:none" /> 페이드인
+                          </label>
+                          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid #e5e7eb;background:#fff" class="toast-anim-label">
+                            <input type="radio" name="toastAnim" value="slideUp" style="display:none" /> 슬라이드업
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:24px">
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">투명도</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <input type="range" min="10" max="100" value="96" id="toastOpacity" style="flex:1" />
+                          <span id="toastOpacityValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">96%</span>
+                        </div>
+                      </div>
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">모서리 둥글기</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <input type="range" min="0" max="20" value="20" id="toastBorderRadius" style="flex:1" />
+                          <span id="toastBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">20px</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:24px;margin-top:14px">
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">표시 시간</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <input type="range" min="1" max="10" value="3" id="toastDuration" style="flex:1" />
+                          <span id="toastDurationValue" style="font-size:13px;min-width:28px;text-align:right;color:#374151">3초</span>
+                        </div>
+                      </div>
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">계속 표시</label>
+                        <div style="display:flex;align-items:center;gap:8px">
+                          <div id="toastPersistToggle" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;cursor:pointer">
+                            <div id="toastPersistKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                          </div>
+                          <span id="toastPersistLabel" style="font-size:13px;color:#374151">자동 사라짐</span>
+                        </div>
+                        <p style="font-size:11px;color:#94a3b8;margin-top:4px">켜면 닫기 버튼을 누를 때까지 유지</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:20px" />
+
+                  {/* 플로팅 배너 섹션 */}
+                  <div style="margin-bottom:20px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                      <span id="floatingSectionBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;border-radius:12px;font-size:11px;font-weight:700;flex-shrink:0">4+</span>
+                      <h3 style="font-size:14px;font-weight:600;margin:0">플로팅 배너</h3>
+                      <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+                        <div id="floatingEnabledToggle" style="width:36px;height:20px;background:#2563eb;border-radius:10px;position:relative;cursor:pointer">
+                          <div id="floatingEnabledKnob" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                        </div>
+                        <span id="floatingEnabledLabel" style="font-size:12px;color:#374151">{"\uC0AC\uC6A9"}</span>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+                      <div style="flex:1;min-width:200px">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="floatingText">배너 텍스트 <span style="font-weight:400;color:#94a3b8">(최대 30자)</span></label>
+                        <input type="text" id="floatingText" maxlength={30} placeholder="회원가입하면 특별 혜택!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                        <p style="font-size:11px;color:#94a3b8;margin-top:4px">{"토스트와 동일하게 {n}으로 방문 횟수 표시 가능"}</p>
+                      </div>
+                      <div style="flex:1;min-width:200px">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="floatingBtnText">버튼 텍스트 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
+                        <input type="text" id="floatingBtnText" maxlength={20} placeholder="바로 가입하기" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:24px;margin-bottom:14px">
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">플로팅 배너 프리셋</label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                          <div class="esc-floating-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center">
+                            <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
+                          </div>
+                          <div class="esc-floating-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                            <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">다크</span>
+                          </div>
+                          <div class="esc-floating-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ec4899,#f43f5e);display:flex;align-items:center;justify-content:center">
+                            <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">핑크</span>
+                          </div>
+                          <div class="esc-floating-preset-card" data-preset="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#6b7280;display:flex;align-items:center;justify-content:center">
+                            <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색</span>
+                          </div>
+                          <div class="esc-floating-preset-card" data-preset="4" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #e5e7eb;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center">
+                            <span style="color:#111827;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">라이트</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">출현 효과</label>
+                        <div style="display:flex;gap:8px">
+                          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid #2563eb;background:#eff6ff" class="floating-anim-label">
+                            <input type="radio" name="floatingAnim" value="fadeIn" checked style="display:none" /> 페이드인
+                          </label>
+                          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid #e5e7eb;background:#fff" class="floating-anim-label">
+                            <input type="radio" name="floatingAnim" value="slideUp" style="display:none" /> 슬라이드업
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:24px">
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">투명도</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <input type="range" min="10" max="100" value="96" id="floatingOpacity" style="flex:1" />
+                          <span id="floatingOpacityValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">100%</span>
+                        </div>
+                      </div>
+                      <div style="flex:1">
+                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">모서리 둥글기</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <input type="range" min="0" max="20" value="0" id="floatingBorderRadius" style="flex:1" />
+                          <span id="floatingBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">0px</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                    <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
-                      <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center">화면 하단 고정 배너</p>
-                      <div id="floatingBannerPreview" style="background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-                        <span id="floatingTextPreview" style="color:white;font-size:13px;font-weight:600">회원가입하면 특별 혜택!</span>
-                        <button
-                          id="floatingBtnPreview"
-                          style="flex-shrink:0;padding:6px 14px;background:white;color:#2563eb;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"
-                        >
-                          바로 가입하기
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <div style="padding:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px">
-                <p style="font-size:12px;color:#854d0e;margin:0">설정 저장 기능은 곧 지원됩니다. 현재는 미리보기만 제공됩니다.</p>
+                  {/* 저장 버튼 */}
+                  <div style="display:flex;gap:8px">
+                    <button id="escSaveBtn" style="flex:1;padding:10px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">저장</button>
+                    <button id="escResetBtn" style="padding:10px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:14px;cursor:pointer">기본값 되돌리기</button>
+                  </div>
+                  <div id="escSaveStatus" style="display:none;padding:10px 16px;border-radius:8px;margin-top:12px;font-size:13px"></div>
+                </div>
               </div>
             </div>
             <script dangerouslySetInnerHTML={{__html: `
               (function() {
-                // 플로팅 배너 프리셋
+                var SHOP_ID = '${shopId}';
+                var DEFAULTS = {
+                  enabled: true,
+                  hideForReturning: true,
+                  toastEnabled: true,
+                  floatingEnabled: true,
+                  toastStartVisit: 2,
+                  toastEndVisit: 3,
+                  toastText: '\uC548\uB155\uD558\uC138\uC694. {n}\uBC88\uC9F8 \uBC29\uBB38\uC744 \uD658\uC601\uD569\uB2C8\uB2E4.',
+                  toastStyle: 0,
+                  toastOpacity: 96,
+                  toastBorderRadius: 20,
+                  toastAnimation: 'fadeIn',
+                  toastDuration: 3,
+                  toastPersist: false,
+                  floatingText: '\uD68C\uC6D0\uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD!',
+                  floatingBtnText: '\uBC14\uB85C \uAC00\uC785\uD558\uAE30',
+                  floatingPreset: 0,
+                  floatingOpacity: 100,
+                  floatingBorderRadius: 0,
+                  floatingAnimation: 'slideUp',
+                };
                 var floatingPresets = [
-                  { bg: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', btnColor: '#2563eb' },
-                  { bg: '#111827', color: 'white', btnColor: '#374151' },
-                  { bg: '#2563eb', color: 'white', btnColor: '#1d4ed8' },
+                  { bg: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', btnColor: '#2563eb', btnBg: 'white' },
+                  { bg: '#111827', color: 'white', btnColor: '#374151', btnBg: 'white' },
+                  { bg: 'linear-gradient(135deg, #ec4899, #f43f5e)', color: 'white', btnColor: '#ec4899', btnBg: 'white' },
+                  { bg: '#6b7280', color: 'white', btnColor: '#6b7280', btnBg: 'white' },
+                  { bg: '#ffffff', color: '#111827', btnColor: 'white', btnBg: '#2563eb', border: '1px solid #e5e7eb' },
                 ];
-
-                document.querySelectorAll('.floating-preset-card').forEach(function(card) {
-                  card.addEventListener('click', function() {
-                    var i = parseInt(this.dataset.preset);
-                    var p = floatingPresets[i];
-                    var banner = document.getElementById('floatingBannerPreview');
-                    var textEl = document.getElementById('floatingTextPreview');
-                    if (banner) banner.style.background = p.bg;
-                    if (textEl) textEl.style.color = p.color;
-                    document.querySelectorAll('.floating-preset-card').forEach(function(c) {
-                      c.style.border = '2px solid transparent';
-                    });
-                    this.style.border = '3px solid #2563eb';
-                  });
-                });
-
-                // 토스트 스타일
                 var toastStyles = [
-                  { bg: '#111827', color: 'white', shadow: 'none' },
+                  { bg: 'rgba(30,30,30,.92)', color: '#fff', shadow: 'none' },
                   { bg: '#ffffff', color: '#111827', shadow: '0 4px 16px rgba(0,0,0,0.12)' },
+                  { bg: '#6b7280', color: '#fff', shadow: 'none' },
+                  { bg: '#eff6ff', color: '#2563eb', shadow: '0 2px 8px rgba(37,99,235,0.15)', border: '1px solid #93c5fd' },
                 ];
+                var state = Object.assign({}, DEFAULTS);
 
-                document.querySelectorAll('.toast-style-card').forEach(function(card) {
-                  card.addEventListener('click', function() {
-                    var i = parseInt(this.dataset.style);
-                    var s = toastStyles[i];
-                    var toast = document.getElementById('toastPreview');
-                    if (toast) {
-                      toast.style.background = s.bg;
-                      toast.style.color = s.color;
-                      toast.style.boxShadow = s.shadow;
+                // ── 펼치기/접기 ──
+                var settingsToggle = document.getElementById('escalationSettingsToggle');
+                var settingsBody = document.getElementById('escalationSettingsBody');
+                var settingsArrow = document.getElementById('escalationSettingsArrow');
+                var settingsOpen = false;
+                if (settingsToggle) settingsToggle.addEventListener('click', function() {
+                  settingsOpen = !settingsOpen;
+                  if (settingsBody) settingsBody.style.display = settingsOpen ? 'block' : 'none';
+                  if (settingsArrow) settingsArrow.style.transform = settingsOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+                });
+
+                // ── 방문 횟수 설정 ──
+                function updateVisitLabels() {
+                  var s = state.toastStartVisit;
+                  var e = state.toastEndVisit;
+                  var f = e + 1;
+                  var range = s === e ? s : s + '~' + e;
+                  var tb = document.getElementById('toastBadge'); if (tb) tb.textContent = range;
+                  var tl = document.getElementById('toastLabel'); if (tl) tl.textContent = range + '\uD68C \uBC29\uBB38 \u2014 \uD654\uBA74 \uD558\uB2E8 \uD1A0\uC2A4\uD2B8';
+                  var fb = document.getElementById('floatingBadge'); if (fb) fb.textContent = f + '+';
+                  var fl = document.getElementById('floatingLabel'); if (fl) fl.textContent = f + '\uD68C \uC774\uC0C1 \uBC29\uBB38 \u2014 \uD654\uBA74 \uD558\uB2E8 \uACE0\uC815 \uBC30\uB108';
+                  var tsb = document.getElementById('toastSectionBadge'); if (tsb) tsb.textContent = range;
+                  var fsb = document.getElementById('floatingSectionBadge'); if (fsb) fsb.textContent = f + '+';
+                  var fsd = document.getElementById('escFloatingStartDisplay'); if (fsd) fsd.textContent = f;
+                  if (typeof updateToastPreviewText === 'function') updateToastPreviewText();
+                  if (typeof updateFloatingPreviewText === 'function') updateFloatingPreviewText();
+                }
+                var toastStartInput = document.getElementById('escToastStart');
+                var toastEndInput = document.getElementById('escToastEnd');
+                if (toastStartInput) toastStartInput.addEventListener('input', function() {
+                  state.toastStartVisit = Math.max(2, parseInt(this.value) || 2);
+                  if (state.toastEndVisit < state.toastStartVisit) {
+                    state.toastEndVisit = state.toastStartVisit;
+                    if (toastEndInput) toastEndInput.value = state.toastEndVisit;
+                  }
+                  updateVisitLabels();
+                });
+                if (toastEndInput) toastEndInput.addEventListener('input', function() {
+                  state.toastEndVisit = Math.max(state.toastStartVisit, parseInt(this.value) || state.toastStartVisit);
+                  updateVisitLabels();
+                });
+
+                function showStatus(msg, ok) {
+                  var el = document.getElementById('escSaveStatus');
+                  if (!el) return;
+                  el.textContent = msg;
+                  el.style.display = 'block';
+                  el.style.background = ok ? '#dcfce7' : '#fee2e2';
+                  el.style.color = ok ? '#166534' : '#991b1b';
+                  el.style.border = '1px solid ' + (ok ? '#bbf7d0' : '#fecaca');
+                  setTimeout(function() { el.style.display = 'none'; }, 3000);
+                }
+
+                // ── 토글: 활성화 ──
+                function renderEnabled() {
+                  var t = document.getElementById('escEnabledToggle');
+                  var k = document.getElementById('escEnabledKnob');
+                  var l = document.getElementById('escEnabledLabel');
+                  if (!t) return;
+                  t.style.background = state.enabled ? '#2563eb' : '#d1d5db';
+                  if (k) { k.style.right = state.enabled ? '2px' : 'auto'; k.style.left = state.enabled ? 'auto' : '2px'; }
+                  if (l) l.textContent = state.enabled ? '\ud65c\uc131\ud654\ub428' : '\ube44\ud65c\uc131\ud654';
+                }
+                var enabledToggle = document.getElementById('escEnabledToggle');
+                if (enabledToggle) enabledToggle.addEventListener('click', function() { state.enabled = !state.enabled; renderEnabled(); });
+
+                // ── 토글: hideForReturning ──
+                function renderHide() {
+                  var t = document.getElementById('escHideToggle');
+                  var k = document.getElementById('escHideKnob');
+                  var l = document.getElementById('escHideLabel');
+                  if (!t) return;
+                  t.style.background = state.hideForReturning ? '#2563eb' : '#d1d5db';
+                  if (k) { k.style.right = state.hideForReturning ? '2px' : 'auto'; k.style.left = state.hideForReturning ? 'auto' : '2px'; }
+                  if (l) l.textContent = state.hideForReturning ? '\ub85c\uadf8\uc778 \uae30\ub85d \uc788\uc73c\uba74 \uc228\uae40' : '\ub85c\uadf8\uc778 \uae30\ub85d \ubb34\uc2dc';
+                }
+                var hideToggle = document.getElementById('escHideToggle');
+                if (hideToggle) hideToggle.addEventListener('click', function() { state.hideForReturning = !state.hideForReturning; renderHide(); });
+
+                // ── 프리셋 ──
+                function applyFloatingPreset(i) {
+                  state.floatingPreset = i;
+                  var p = floatingPresets[i];
+                  var banner = document.getElementById('floatingBannerPreview');
+                  var textEl = document.getElementById('floatingTextPreview');
+                  var btnEl = document.getElementById('floatingBtnPreview');
+                  if (banner) { banner.style.background = p.bg; banner.style.border = p.border || 'none'; }
+                  if (textEl) textEl.style.color = p.color;
+                  if (btnEl) { btnEl.style.color = p.btnColor; btnEl.style.background = p.btnBg || 'white'; }
+                  document.querySelectorAll('.esc-floating-preset-card').forEach(function(c, idx) {
+                    c.style.border = idx === i ? '3px solid #2563eb' : '2px solid transparent';
+                  });
+                }
+                document.querySelectorAll('.esc-floating-preset-card').forEach(function(card) {
+                  card.addEventListener('click', function() { applyFloatingPreset(parseInt(this.dataset.preset)); });
+                });
+
+                // ── 토스트 스타일 ──
+                function applyToastStyle(i) {
+                  state.toastStyle = i;
+                  var s = toastStyles[i];
+                  var toast = document.getElementById('toastPreview');
+                  if (toast) {
+                    toast.style.background = s.bg;
+                    toast.style.color = s.color;
+                    toast.style.boxShadow = s.shadow || 'none';
+                    toast.style.border = s.border || 'none';
+                  }
+                  document.querySelectorAll('.esc-toast-style-card').forEach(function(c, idx) {
+                    c.style.border = idx === i ? '3px solid #2563eb' : '2px solid #e5e7eb';
+                  });
+                }
+                document.querySelectorAll('.esc-toast-style-card').forEach(function(card) {
+                  card.addEventListener('click', function() { applyToastStyle(parseInt(this.dataset.style)); });
+                });
+
+                // ── 출현 효과 미리보기 재생 ──
+                function replayToastPreview() {
+                  var toast = document.getElementById('toastPreview');
+                  if (!toast) return;
+                  toast.style.transition = 'none';
+                  toast.style.opacity = '0';
+                  toast.style.transform = state.toastAnimation === 'slideUp' ? 'translateY(20px)' : 'none';
+                  toast.offsetHeight;
+                  toast.style.transition = 'all 1.6s ease';
+                  toast.style.opacity = String(state.toastOpacity / 100);
+                  toast.style.transform = 'translateY(0)';
+                }
+                function replayFloatingPreview() {
+                  var banner = document.getElementById('floatingBannerPreview');
+                  if (!banner) return;
+                  banner.style.transition = 'none';
+                  banner.style.opacity = '0';
+                  banner.style.transform = state.floatingAnimation === 'slideUp' ? 'translateY(20px)' : 'none';
+                  banner.offsetHeight;
+                  banner.style.transition = 'all 1.6s ease';
+                  banner.style.opacity = String(state.floatingOpacity / 100);
+                  banner.style.transform = 'translateY(0)';
+                }
+                function renderToastAnimLabels() {
+                  document.querySelectorAll('.toast-anim-label').forEach(function(lbl) {
+                    var r = lbl.querySelector('input[type="radio"]');
+                    if (!r) return;
+                    if (r.value === state.toastAnimation) {
+                      lbl.style.border = '2px solid #2563eb';
+                      lbl.style.background = '#eff6ff';
+                    } else {
+                      lbl.style.border = '2px solid #e5e7eb';
+                      lbl.style.background = '#fff';
                     }
-                    document.querySelectorAll('.toast-style-card').forEach(function(c) {
-                      c.style.border = '2px solid #e5e7eb';
-                    });
-                    this.style.border = '3px solid #2563eb';
+                  });
+                }
+                function renderFloatingAnimLabels() {
+                  document.querySelectorAll('.floating-anim-label').forEach(function(lbl) {
+                    var r = lbl.querySelector('input[type="radio"]');
+                    if (!r) return;
+                    if (r.value === state.floatingAnimation) {
+                      lbl.style.border = '2px solid #2563eb';
+                      lbl.style.background = '#eff6ff';
+                    } else {
+                      lbl.style.border = '2px solid #e5e7eb';
+                      lbl.style.background = '#fff';
+                    }
+                  });
+                }
+                // ── 출현 효과 라디오 ──
+                document.querySelectorAll('input[name="toastAnim"]').forEach(function(r) {
+                  r.addEventListener('change', function() {
+                    if (this.checked) {
+                      state.toastAnimation = this.value;
+                      renderToastAnimLabels();
+                      replayToastPreview();
+                    }
+                  });
+                });
+                document.querySelectorAll('input[name="floatingAnim"]').forEach(function(r) {
+                  r.addEventListener('change', function() {
+                    if (this.checked) {
+                      state.floatingAnimation = this.value;
+                      renderFloatingAnimLabels();
+                      replayFloatingPreview();
+                    }
                   });
                 });
 
-                function bindPreview(inputId, previewId, defaultText) {
-                  var input = document.getElementById(inputId);
-                  var preview = document.getElementById(previewId);
-                  if (input && preview) {
-                    input.addEventListener('input', function() {
-                      preview.textContent = this.value || defaultText;
-                    });
+                // ── 슬라이더 ──
+                var toastOpacitySlider = document.getElementById('toastOpacity');
+                if (toastOpacitySlider) toastOpacitySlider.addEventListener('input', function() {
+                  state.toastOpacity = parseInt(this.value);
+                  document.getElementById('toastOpacityValue').textContent = this.value + '%';
+                  var toast = document.getElementById('toastPreview');
+                  if (toast) toast.style.opacity = (state.toastOpacity / 100).toString();
+                });
+
+                var toastRadiusSlider = document.getElementById('toastBorderRadius');
+                if (toastRadiusSlider) toastRadiusSlider.addEventListener('input', function() {
+                  state.toastBorderRadius = parseInt(this.value);
+                  document.getElementById('toastBorderRadiusValue').textContent = this.value + 'px';
+                  var toast = document.getElementById('toastPreview');
+                  if (toast) toast.style.borderRadius = this.value + 'px';
+                });
+
+                var toastDurationSlider = document.getElementById('toastDuration');
+                if (toastDurationSlider) toastDurationSlider.addEventListener('input', function() {
+                  state.toastDuration = parseInt(this.value);
+                  document.getElementById('toastDurationValue').textContent = this.value + '\uCD08';
+                });
+
+                // ── 토글: 계속 표시 ──
+                function renderPersist() {
+                  var t = document.getElementById('toastPersistToggle');
+                  var k = document.getElementById('toastPersistKnob');
+                  var l = document.getElementById('toastPersistLabel');
+                  if (!t) return;
+                  t.style.background = state.toastPersist ? '#2563eb' : '#d1d5db';
+                  if (k) { k.style.right = state.toastPersist ? '2px' : 'auto'; k.style.left = state.toastPersist ? 'auto' : '2px'; }
+                  if (l) l.textContent = state.toastPersist ? '\uACC4\uC18D \uD45C\uC2DC' : '\uC790\uB3D9 \uC0AC\uB77C\uC9D0';
+                  if (toastDurationSlider) {
+                    toastDurationSlider.disabled = state.toastPersist;
+                    toastDurationSlider.parentElement.style.opacity = state.toastPersist ? '0.4' : '1';
                   }
                 }
-                bindPreview('toastText', 'toastPreview', '이미 2번째 방문이에요 :)');
-                bindPreview('floatingText', 'floatingTextPreview', '회원가입하면 특별 혜택!');
-                bindPreview('floatingBtn', 'floatingBtnPreview', '바로 가입하기');
+                var persistToggle = document.getElementById('toastPersistToggle');
+                if (persistToggle) persistToggle.addEventListener('click', function() { state.toastPersist = !state.toastPersist; renderPersist(); });
+
+                function renderToastEnabled() {
+                  var t = document.getElementById('toastEnabledToggle');
+                  var k = document.getElementById('toastEnabledKnob');
+                  var l = document.getElementById('toastEnabledLabel');
+                  if (!t) return;
+                  t.style.background = state.toastEnabled ? '#2563eb' : '#d1d5db';
+                  if (k) { k.style.right = state.toastEnabled ? '2px' : 'auto'; k.style.left = state.toastEnabled ? 'auto' : '2px'; }
+                  if (l) l.textContent = state.toastEnabled ? '\uC0AC\uC6A9' : '\uC0AC\uC6A9\uC548\uD568';
+                }
+                var toastEnabledToggle = document.getElementById('toastEnabledToggle');
+                if (toastEnabledToggle) toastEnabledToggle.addEventListener('click', function() { state.toastEnabled = !state.toastEnabled; renderToastEnabled(); });
+
+                function renderFloatingEnabled() {
+                  var t = document.getElementById('floatingEnabledToggle');
+                  var k = document.getElementById('floatingEnabledKnob');
+                  var l = document.getElementById('floatingEnabledLabel');
+                  if (!t) return;
+                  t.style.background = state.floatingEnabled ? '#2563eb' : '#d1d5db';
+                  if (k) { k.style.right = state.floatingEnabled ? '2px' : 'auto'; k.style.left = state.floatingEnabled ? 'auto' : '2px'; }
+                  if (l) l.textContent = state.floatingEnabled ? '\uC0AC\uC6A9' : '\uC0AC\uC6A9\uC548\uD568';
+                }
+                var floatingEnabledToggle = document.getElementById('floatingEnabledToggle');
+                if (floatingEnabledToggle) floatingEnabledToggle.addEventListener('click', function() { state.floatingEnabled = !state.floatingEnabled; renderFloatingEnabled(); });
+
+                var floatingOpacitySlider = document.getElementById('floatingOpacity');
+                if (floatingOpacitySlider) floatingOpacitySlider.addEventListener('input', function() {
+                  state.floatingOpacity = parseInt(this.value);
+                  document.getElementById('floatingOpacityValue').textContent = this.value + '%';
+                  var banner = document.getElementById('floatingBannerPreview');
+                  if (banner) banner.style.opacity = (state.floatingOpacity / 100).toString();
+                });
+
+                var floatingRadiusSlider = document.getElementById('floatingBorderRadius');
+                if (floatingRadiusSlider) floatingRadiusSlider.addEventListener('input', function() {
+                  state.floatingBorderRadius = parseInt(this.value);
+                  document.getElementById('floatingBorderRadiusValue').textContent = this.value + 'px';
+                  var banner = document.getElementById('floatingBannerPreview');
+                  if (banner) banner.style.borderRadius = this.value + 'px';
+                });
+
+                // ── 미리보기 바인딩 ({n} 치환 포함) ──
+                function previewWithN(text, visitNum) {
+                  return text.replace(/\\{n\\}/g, String(visitNum));
+                }
+                function updateToastPreviewText() {
+                  var preview = document.getElementById('toastPreview');
+                  if (preview) preview.textContent = previewWithN(state.toastText, state.toastStartVisit);
+                }
+                function updateFloatingPreviewText() {
+                  var preview = document.getElementById('floatingTextPreview');
+                  if (preview) preview.textContent = previewWithN(state.floatingText, state.toastEndVisit + 1);
+                }
+                var toastTextInput = document.getElementById('toastText');
+                if (toastTextInput) toastTextInput.addEventListener('input', function() {
+                  state.toastText = this.value || DEFAULTS.toastText;
+                  updateToastPreviewText();
+                });
+                var floatingTextInput = document.getElementById('floatingText');
+                if (floatingTextInput) floatingTextInput.addEventListener('input', function() {
+                  state.floatingText = this.value || DEFAULTS.floatingText;
+                  updateFloatingPreviewText();
+                });
+                var floatingBtnTextInput = document.getElementById('floatingBtnText');
+                var floatingBtnPreview = document.getElementById('floatingBtnPreview');
+                if (floatingBtnTextInput && floatingBtnPreview) floatingBtnTextInput.addEventListener('input', function() {
+                  state.floatingBtnText = this.value || DEFAULTS.floatingBtnText;
+                  floatingBtnPreview.textContent = state.floatingBtnText;
+                });
+
+                // ── UI에 상태 반영 ──
+                function applyState() {
+                  var toastInput = document.getElementById('toastText');
+                  if (toastInput) toastInput.value = state.toastText === DEFAULTS.toastText ? '' : state.toastText;
+                  updateToastPreviewText();
+
+                  var floatingInput = document.getElementById('floatingText');
+                  if (floatingInput) floatingInput.value = state.floatingText === DEFAULTS.floatingText ? '' : state.floatingText;
+                  updateFloatingPreviewText();
+
+                  var floatingBtnInput = document.getElementById('floatingBtnText');
+                  if (floatingBtnInput) floatingBtnInput.value = state.floatingBtnText === DEFAULTS.floatingBtnText ? '' : state.floatingBtnText;
+                  var floatingBtnPrev = document.getElementById('floatingBtnPreview');
+                  if (floatingBtnPrev) floatingBtnPrev.textContent = state.floatingBtnText;
+
+                  if (toastOpacitySlider) { toastOpacitySlider.value = state.toastOpacity; document.getElementById('toastOpacityValue').textContent = state.toastOpacity + '%'; }
+                  var toastPrevEl = document.getElementById('toastPreview');
+                  if (toastPrevEl) toastPrevEl.style.opacity = (state.toastOpacity / 100).toString();
+
+                  if (toastRadiusSlider) { toastRadiusSlider.value = state.toastBorderRadius; document.getElementById('toastBorderRadiusValue').textContent = state.toastBorderRadius + 'px'; }
+                  var toastPrevEl2 = document.getElementById('toastPreview');
+                  if (toastPrevEl2) toastPrevEl2.style.borderRadius = state.toastBorderRadius + 'px';
+
+                  if (floatingOpacitySlider) { floatingOpacitySlider.value = state.floatingOpacity; document.getElementById('floatingOpacityValue').textContent = state.floatingOpacity + '%'; }
+                  var bannerPrevEl = document.getElementById('floatingBannerPreview');
+                  if (bannerPrevEl) bannerPrevEl.style.opacity = (state.floatingOpacity / 100).toString();
+
+                  if (floatingRadiusSlider) { floatingRadiusSlider.value = state.floatingBorderRadius; document.getElementById('floatingBorderRadiusValue').textContent = state.floatingBorderRadius + 'px'; }
+                  var bannerPrevEl2 = document.getElementById('floatingBannerPreview');
+                  if (bannerPrevEl2) bannerPrevEl2.style.borderRadius = state.floatingBorderRadius + 'px';
+
+                  applyFloatingPreset(state.floatingPreset);
+                  applyToastStyle(state.toastStyle);
+
+                  document.querySelectorAll('input[name="toastAnim"]').forEach(function(r) { r.checked = r.value === state.toastAnimation; });
+                  document.querySelectorAll('input[name="floatingAnim"]').forEach(function(r) { r.checked = r.value === state.floatingAnimation; });
+                  renderToastAnimLabels();
+                  renderFloatingAnimLabels();
+
+                  if (toastStartInput) toastStartInput.value = state.toastStartVisit;
+                  if (toastEndInput) toastEndInput.value = state.toastEndVisit;
+                  updateVisitLabels();
+
+                  if (toastDurationSlider) { toastDurationSlider.value = state.toastDuration; document.getElementById('toastDurationValue').textContent = state.toastDuration + '\uCD08'; }
+
+                  renderEnabled();
+                  renderHide();
+                  renderPersist();
+                  renderToastEnabled();
+                  renderFloatingEnabled();
+                }
+
+                // ── 저장 ──
+                var saveBtn = document.getElementById('escSaveBtn');
+                if (saveBtn) saveBtn.addEventListener('click', function() {
+                  var btn = this;
+                  btn.disabled = true;
+                  btn.textContent = '\uc800\uc7a5 \uc911...';
+                  fetch('/api/dashboard/shops/' + SHOP_ID + '/escalation', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      enabled: state.enabled,
+                      hideForReturning: state.hideForReturning,
+                      toastEnabled: state.toastEnabled,
+                      toastStartVisit: state.toastStartVisit,
+                      toastEndVisit: state.toastEndVisit,
+                      toastText: state.toastText,
+                      toastStyle: state.toastStyle,
+                      toastOpacity: state.toastOpacity,
+                      toastBorderRadius: state.toastBorderRadius,
+                      toastAnimation: state.toastAnimation,
+                      toastDuration: state.toastDuration,
+                      toastPersist: state.toastPersist,
+                      floatingEnabled: state.floatingEnabled,
+                      floatingText: state.floatingText,
+                      floatingBtnText: state.floatingBtnText,
+                      floatingPreset: state.floatingPreset,
+                      floatingOpacity: state.floatingOpacity,
+                      floatingBorderRadius: state.floatingBorderRadius,
+                      floatingAnimation: state.floatingAnimation,
+                    })
+                  })
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    if (data.ok) {
+                      showStatus('\uc800\uc7a5\ub418\uc5c8\uc2b5\ub2c8\ub2e4.', true);
+                    } else {
+                      showStatus('\uc800\uc7a5 \uc2e4\ud328: ' + (data.error || '\uc54c \uc218 \uc5c6\ub294 \uc624\ub958'), false);
+                    }
+                  })
+                  .catch(function() { showStatus('\ub124\ud2b8\uc6cc\ud06c \uc624\ub958', false); })
+                  .finally(function() { btn.disabled = false; btn.textContent = '\uc800\uc7a5'; });
+                });
+
+                // ── 기본값 되돌리기 ──
+                var resetBtn = document.getElementById('escResetBtn');
+                if (resetBtn) resetBtn.addEventListener('click', function() {
+                  state = Object.assign({}, DEFAULTS);
+                  applyState();
+                  showStatus('\uae30\ubcf8\uac12\uc73c\ub85c \ub418\ub3cc\ub838\uc2b5\ub2c8\ub2e4. \uc800\uc7a5 \ubc84\ud2bc\uc744 \ub220\ub7ec \uc801\uc6a9\ud558\uc138\uc694.', true);
+                });
+
+                // ── 초기 로드 ──
+                fetch('/api/dashboard/shops/' + SHOP_ID + '/escalation')
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    if (data.ok && data.escalation_config) {
+                      var c = data.escalation_config;
+                      state.enabled = c.enabled !== false;
+                      state.hideForReturning = c.hideForReturning === true;
+                      state.toastEnabled = c.toastEnabled !== false;
+                      state.floatingEnabled = c.floatingEnabled !== false;
+                      state.toastStartVisit = c.toastStartVisit != null ? c.toastStartVisit : DEFAULTS.toastStartVisit;
+                      state.toastEndVisit = c.toastEndVisit != null ? c.toastEndVisit : DEFAULTS.toastEndVisit;
+                      state.toastText = c.toastText || DEFAULTS.toastText;
+                      state.toastStyle = c.toastStyle != null ? c.toastStyle : DEFAULTS.toastStyle;
+                      state.toastOpacity = c.toastOpacity != null ? c.toastOpacity : DEFAULTS.toastOpacity;
+                      state.toastBorderRadius = c.toastBorderRadius != null ? c.toastBorderRadius : DEFAULTS.toastBorderRadius;
+                      state.toastAnimation = c.toastAnimation || DEFAULTS.toastAnimation;
+                      state.toastDuration = c.toastDuration != null ? c.toastDuration : DEFAULTS.toastDuration;
+                      state.toastPersist = c.toastPersist === true;
+                      state.floatingText = c.floatingText || DEFAULTS.floatingText;
+                      state.floatingBtnText = c.floatingBtnText || DEFAULTS.floatingBtnText;
+                      state.floatingPreset = c.floatingPreset != null ? c.floatingPreset : DEFAULTS.floatingPreset;
+                      state.floatingOpacity = c.floatingOpacity != null ? c.floatingOpacity : DEFAULTS.floatingOpacity;
+                      state.floatingBorderRadius = c.floatingBorderRadius != null ? c.floatingBorderRadius : DEFAULTS.floatingBorderRadius;
+                      state.floatingAnimation = c.floatingAnimation || DEFAULTS.floatingAnimation;
+                    }
+                    applyState();
+                  })
+                  .catch(function() { applyState(); });
               })();
             `}} />
           </div>
@@ -4676,53 +5435,62 @@ export const KakaoSettingsPage: FC<{
           <div class="card">
             <h2>카카오 채널 ID</h2>
             <p style="font-size:13px;color:#64748b;margin-bottom:20px">신규 가입 시 카카오 채널 추가 유도 버튼에 사용됩니다.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-              {/* 설정 영역 */}
-              <div>
-                <div class="form-group" style="margin-bottom:16px">
-                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="kakaoChannelId">카카오 채널 ID</label>
-                  <input
-                    type="text"
-                    id="kakaoChannelId"
-                    value={kakaoChannelId}
-                    placeholder="예: @my-shop-kakao"
-                    style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                  />
-                  <p style="font-size:12px;color:#94a3b8;margin-top:6px">카카오 채널 관리자 페이지에서 확인할 수 있습니다.</p>
+            {/* 미리보기 영역 (상단) */}
+            <div style="margin-bottom:20px">
+              <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+              <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+                <p style="font-size:11px;color:#94a3b8;margin-bottom:16px;text-align:center">가입 완료 후 표시되는 버튼</p>
+                <div style="display:flex;justify-content:center">
+                  <button
+                    id="kakaoPreviewBtn"
+                    style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#FEE500;color:#191919;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;max-width:320px;width:100%;justify-content:center"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M10 2C5.582 2 2 4.896 2 8.444c0 2.26 1.5 4.247 3.765 5.378l-.96 3.585a.25.25 0 00.38.275L9.54 15.03c.152.01.306.016.46.016 4.418 0 8-2.896 8-6.444C18 4.896 14.418 2 10 2z" fill="#191919"/>
+                    </svg>
+                    카카오 채널 추가하고 알림 받기
+                  </button>
                 </div>
-                <button id="saveKakaoBtn" class="btn btn-primary btn-sm">저장</button>
-                <script dangerouslySetInnerHTML={{__html: `
-                  document.getElementById('saveKakaoBtn').addEventListener('click', async function() {
-                    var channelId = document.getElementById('kakaoChannelId').value.trim();
-                    var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
-                    if (resp.ok) {
-                      showToast('success', '카카오 채널 ID가 저장되었습니다.');
-                    } else {
-                      var err = await resp.json();
-                      showToast('error', err.error || '저장 중 오류가 발생했습니다.');
-                    }
-                  });
-                `}} />
-              </div>
-              {/* 미리보기 영역 */}
-              <div>
-                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
-                  <p style="font-size:11px;color:#94a3b8;margin-bottom:16px;text-align:center">가입 완료 후 표시되는 버튼</p>
-                  <div style="display:flex;justify-content:center">
-                    <button
-                      style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#FEE500;color:#191919;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;max-width:320px;width:100%;justify-content:center"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M10 2C5.582 2 2 4.896 2 8.444c0 2.26 1.5 4.247 3.765 5.378l-.96 3.585a.25.25 0 00.38.275L9.54 15.03c.152.01.306.016.46.016 4.418 0 8-2.896 8-6.444C18 4.896 14.418 2 10 2z" fill="#191919"/>
-                      </svg>
-                      카카오 채널 추가하고 알림 받기
-                    </button>
-                  </div>
-                  <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">가입 완료 페이지에서 표시됩니다</p>
-                </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">가입 완료 페이지에서 표시됩니다</p>
               </div>
             </div>
+            {/* 설정 영역 */}
+            <div>
+              <div class="form-group" style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="kakaoChannelId">카카오 채널 ID</label>
+                <input
+                  type="text"
+                  id="kakaoChannelId"
+                  value={kakaoChannelId}
+                  placeholder="예: _xAbCdE"
+                  style="max-width:320px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+                />
+                <p style="font-size:12px;color:#94a3b8;margin-top:6px">카카오 채널 프로필 URL(pf.kakao.com/<strong>_xAbCdE</strong>)에서 밑줄로 시작하는 ID를 입력하세요.</p>
+              </div>
+              <button id="saveKakaoBtn" class="btn btn-primary btn-sm">저장</button>
+              <script dangerouslySetInnerHTML={{__html: `
+                document.getElementById('saveKakaoBtn').addEventListener('click', async function() {
+                  var channelId = document.getElementById('kakaoChannelId').value.trim();
+                  var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
+                  if (resp.ok) {
+                    showToast('success', '카카오 채널 ID가 저장되었습니다.');
+                  } else {
+                    var err = await resp.json();
+                    showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+                  }
+                });
+              `}} />
+            </div>
+            <script dangerouslySetInnerHTML={{__html: `
+              document.getElementById('kakaoPreviewBtn').addEventListener('click', function() {
+                var channelId = document.getElementById('kakaoChannelId').value.trim();
+                if (channelId) {
+                  window.open('https://pf.kakao.com/' + channelId, '_blank');
+                } else {
+                  alert('카카오 채널 ID를 먼저 입력해주세요.');
+                }
+              });
+            `}} />
           </div>
         )
       }
