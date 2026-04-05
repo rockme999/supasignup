@@ -696,30 +696,41 @@ export const WIDGET_JS = `(function() {
       // 플로팅: fixed로 body에 부착, 기준 요소 바로 아래
       var animType = bc.animation || 'fadeIn';
       var anchorSel = (bc.anchorSelector || '#top_nav_box').trim();
-      var navBox = null;
-      if (anchorSel.charAt(0) === '#' || anchorSel.charAt(0) === '.' || anchorSel.charAt(0) === '[') {
-        // CSS 셀렉터 접두사 있으면 그대로 사용
-        navBox = document.querySelector(anchorSel);
-      } else if (anchorSel.indexOf(' ') >= 0) {
-        // 공백 포함 → 복수 클래스 (예: "titleArea display_tablet_only" → ".titleArea.display_tablet_only")
-        navBox = document.querySelector('.' + anchorSel.split(/\s+/).join('.'));
-      } else {
-        // 접두사 없이 단일 단어 → ID 먼저, 없으면 클래스
-        navBox = document.getElementById(anchorSel) || document.querySelector('.' + anchorSel);
+      // 셀렉터를 정규화 (한 번만 계산)
+      var resolvedSel = anchorSel;
+      if (anchorSel.charAt(0) === '.' && anchorSel.indexOf(' ') >= 0) {
+        resolvedSel = anchorSel.split(/\s+/).join('.');
+      } else if (anchorSel.charAt(0) !== '#' && anchorSel.charAt(0) !== '.' && anchorSel.charAt(0) !== '[') {
+        if (anchorSel.indexOf(' ') >= 0) {
+          resolvedSel = '.' + anchorSel.split(/\s+/).join('.');
+        }
       }
+
+      var findNavBox = function() {
+        if (resolvedSel.charAt(0) === '#' || resolvedSel.charAt(0) === '.' || resolvedSel.charAt(0) === '[') {
+          return document.querySelector(resolvedSel);
+        }
+        return document.getElementById(resolvedSel) || document.querySelector('.' + resolvedSel);
+      };
+
+      var navBox = findNavBox();
       var tabProduct = document.getElementById('tabProduct');
 
       var isTabSticky = function() {
+        // 기준 요소 자체가 tabProduct면 충돌 방지
+        if (navBox && tabProduct && navBox === tabProduct) return false;
         if (!tabProduct || !navBox) return false;
         var navRect = navBox.getBoundingClientRect();
         var tabRect = tabProduct.getBoundingClientRect();
         return tabRect.top <= navRect.bottom + 5;
       };
 
-      // top_nav_box가 뷰포트 상단에 도달했는지 (스크롤 시작 트리거)
-      var isNavAtTop = function() {
-        if (!navBox) return true;
-        return navBox.getBoundingClientRect().top <= 0;
+      // 기준 요소가 뷰포트에 보이는지
+      var isNavVisible = function() {
+        if (!navBox) return false; // 기준 요소 못 찾으면 숨김
+        var rect = navBox.getBoundingClientRect();
+        var vh = window.innerHeight;
+        return rect.bottom > 0 && rect.top < vh * 0.5;
       };
 
       s.position = 'fixed';
@@ -737,13 +748,19 @@ export const WIDGET_JS = `(function() {
         s.transition = 'opacity 0.8s ease, top 0.8s ease';
       }
 
-      var navBottom = navBox ? navBox.getBoundingClientRect().bottom : 0;
-      s.top = navBottom + 'px';
+      // 초기 top은 0 (뷰포트 기준 재계산은 updatePos에서 수행)
+      s.top = '0px';
 
       var lastState = 'hidden'; // hidden, visible, tab-hidden
       var updatePos = function() {
+        // 기준 요소가 DOM에 없거나 분리(orphaned)되었으면 재탐색
+        if (!navBox || !document.body.contains(navBox)) {
+          navBox = findNavBox();
+          if (!navBox) return;
+          tabProduct = document.getElementById('tabProduct');
+        }
         var tabSticky = isTabSticky();
-        var navAtTop = isNavAtTop();
+        var navVisible = isNavVisible();
 
         if (tabSticky) {
           // tabProduct가 sticky → 배너 숨김
@@ -752,8 +769,8 @@ export const WIDGET_JS = `(function() {
             banner.style.pointerEvents = 'none';
             lastState = 'tab-hidden';
           }
-        } else if (navAtTop) {
-          // nav가 상단에 도달 → 배너 표시
+        } else if (navVisible) {
+          // 기준 요소가 뷰포트에 보임 → 배너 표시
           var targetTop = navBox ? navBox.getBoundingClientRect().bottom : 0;
           if (lastState !== 'visible') {
             if (animType === 'slideDown') {
@@ -775,7 +792,7 @@ export const WIDGET_JS = `(function() {
             banner.style.top = targetTop + 'px';
           }
         } else {
-          // nav가 아직 상단 아님 → 배너 숨김
+          // 기준 요소가 뷰포트 밖 → 배너 숨김
           if (lastState !== 'hidden') {
             banner.style.opacity = '0';
             banner.style.pointerEvents = 'none';
@@ -783,9 +800,12 @@ export const WIDGET_JS = `(function() {
           }
         }
       };
-      updatePos();
-      window.addEventListener('scroll', updatePos, { passive: true });
-      window.addEventListener('resize', updatePos);
+      // 페이지 로드 후 딜레이를 줘서 출현 효과(fadeIn/slideDown)가 보이도록
+      setTimeout(function() {
+        updatePos();
+        window.addEventListener('scroll', updatePos, { passive: true });
+        window.addEventListener('resize', updatePos);
+      }, 800);
     } else {
       // 위젯 상단: 소셜 버튼 위에 삽입
       s.borderRadius = (bc.borderRadius != null ? bc.borderRadius : 10) + 'px';
