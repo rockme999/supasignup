@@ -3168,42 +3168,11 @@ export const GeneralSettingsPage: FC<{
   <Layout title="기본 설정" loggedIn currentPath="/dashboard/settings/general" isCafe24={isCafe24}>
     <h1>기본 설정</h1>
 
-    {shop && (
-      <div class="card">
-        <h2>쇼핑몰 정보</h2>
-        <div style="overflow-x:auto">
-          <table>
-            <tbody>
-              <tr><th style="width:140px">쇼핑몰명</th><td>{shop.shop_name || '-'}</td></tr>
-              <tr><th>Mall ID</th><td><code>{shop.mall_id}</code></td></tr>
-              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td></tr>
-              <tr><th>SSO 연동</th><td>
-                {shop.sso_configured
-                  ? <span class="badge badge-green">완료</span>
-                  : <span class="badge badge-yellow">미완료</span>}
-                {!shop.sso_configured && (
-                  <a href="/dashboard/settings/sso-guide" style="font-size:13px;margin-left:8px">설정 가이드 →</a>
-                )}
-              </td></tr>
-              <tr><th>Shop ID</th><td><code style="font-size:12px;color:#64748b">{shop.shop_id}</code></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )}
-
-    {shop && (
+    {shop && (<>
       <div class="card">
         <h2>쇼핑몰 정체성 (AI 분석)</h2>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1e40af">
           <strong>AI가 이 정보를 활용합니다</strong> — 쇼핑몰 정체성과 혜택 정보를 기반으로 AI가 <strong>미니배너, 이탈 감지 팝업, 재방문 에스컬레이션</strong> 등의 가입 유도 카피를 자동 생성하고, <strong>주간 AI 브리핑</strong>에서 맞춤 전략을 제안합니다.
-        </div>
-
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button id="analyzeBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id}>AI 자동 분석하기</button>
-          <button id="editIdentityBtn" class="btn btn-outline btn-sm" style="display:none">수정</button>
-          <button id="saveIdentityBtn" class="btn btn-primary btn-sm" style="display:none">저장</button>
-          <button id="cancelEditBtn" class="btn btn-outline btn-sm" style="display:none">취소</button>
         </div>
 
         {/* AI 분석 결과 읽기 전용 표시 */}
@@ -3215,6 +3184,13 @@ export const GeneralSettingsPage: FC<{
             <div><strong>한 줄 소개:</strong> <span id="roSummary">-</span></div>
             <div><strong>키워드:</strong> <span id="roKeywords">-</span></div>
           </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button id="analyzeBtn" class="btn btn-primary btn-sm" data-shop-id={shop.shop_id} style="display:none">AI 자동 분석하기</button>
+          <button id="editIdentityBtn" class="btn btn-outline btn-sm" style="display:none">수정</button>
+          <button id="saveIdentityBtn" class="btn btn-primary btn-sm" style="display:none">저장</button>
+          <button id="cancelEditBtn" class="btn btn-outline btn-sm" style="display:none">취소</button>
         </div>
 
         {/* 수정 모드 폼 (기본 숨김) */}
@@ -3243,9 +3219,12 @@ export const GeneralSettingsPage: FC<{
           </div>
         </div>
 
-        {/* 회원 가입 혜택 (항상 표시) */}
-        <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-top:16px;max-width:560px">
-          <h3 style="font-size:15px;margin-bottom:8px">회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI가 이 혜택을 강조하여 가입 유도 카피를 생성합니다</span></h3>
+      </div>
+
+      <div class="card">
+        {/* 회원 가입 혜택 */}
+        <div style="max-width:560px">
+          <h2>회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI가 이 혜택을 강조하여 가입 유도 카피를 생성합니다</span></h2>
           <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
             <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 혜택을 저장하면 카페24에 쿠폰이 자동 생성되고, 가입 시 회원에게 자동 발급됩니다. &nbsp;|&nbsp;
             <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정이 필요합니다. (AI 문구 생성에만 활용)
@@ -3330,7 +3309,9 @@ export const GeneralSettingsPage: FC<{
           </div>
           <button id="saveBenefitsBtn" class="btn btn-primary btn-sm" style="margin-top:16px">혜택 저장</button>
         </div>
+      </div>
 
+      <div style="display:none">
         <script dangerouslySetInnerHTML={{__html: `
           (function() {
             var shopId = document.getElementById('analyzeBtn').dataset.shopId;
@@ -3427,7 +3408,7 @@ export const GeneralSettingsPage: FC<{
               cancelBtn.style.display = 'inline-flex';
             }
 
-            // 기존 데이터 로드
+            // 기존 데이터 로드 (없으면 자동 분석 트리거)
             fetch('/api/ai/identity?shop_id=' + shopId, { credentials: 'same-origin' })
               .then(function(r) { return r.json(); })
               .then(function(d) {
@@ -3437,6 +3418,9 @@ export const GeneralSettingsPage: FC<{
                   setRadioValue('couponBenefit', d.identity.coupon_benefit || '');
                   setRadioValue('freeShipping', d.identity.free_shipping || '');
                   setExtraBenefits(d.identity.extra_benefits || []);
+                } else {
+                  // shop_identity가 비어있으면 자동으로 AI 분석 시작
+                  analyzeBtn.click();
                 }
               }).catch(function() {});
 
@@ -3521,7 +3505,29 @@ export const GeneralSettingsPage: FC<{
           })();
         `}} />
       </div>
-    )}
+
+      <div class="card">
+        <h2>쇼핑몰 정보</h2>
+        <div style="overflow-x:auto">
+          <table>
+            <tbody>
+              <tr><th style="width:140px">쇼핑몰명</th><td>{shop.shop_name || '-'}</td></tr>
+              <tr><th>Mall ID</th><td><code>{shop.mall_id}</code></td></tr>
+              <tr><th>플랜</th><td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td></tr>
+              <tr><th>SSO 연동</th><td>
+                {shop.sso_configured
+                  ? <span class="badge badge-green">완료</span>
+                  : <span class="badge badge-yellow">미완료</span>}
+                {!shop.sso_configured && (
+                  <a href="/dashboard/settings/sso-guide" style="font-size:13px;margin-left:8px">설정 가이드 →</a>
+                )}
+              </td></tr>
+              <tr><th>Shop ID</th><td><code style="font-size:12px;color:#64748b">{shop.shop_id}</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>)}
 
     {!shop && (
       <div class="alert alert-info" style="margin-bottom:16px">

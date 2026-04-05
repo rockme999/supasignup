@@ -37,8 +37,8 @@ export async function callAI(
   // Workers AI 바인딩이 사용 가능한 경우 직접 호출
   if (env.AI) {
     try {
-      // Kimi K2.5 우선, 실패 시 Llama 3.3 fallback
-      const models = ['@cf/moonshotai/kimi-k2.5', '@cf/meta/llama-3.3-70b-instruct-fp8-fast'];
+      // Kimi K2.5 우선, 실패 시 Gemma 4 fallback
+      const models = ['@cf/moonshotai/kimi-k2.5', '@cf/google/gemma-4-26b-a4b-it'];
       let result: AiTextResponse | null = null;
       let usedModel = '';
       for (const model of models) {

@@ -227,38 +227,8 @@ cafe24.get('/callback', async (c) => {
   }
 
   // AI 쇼핑몰 정체성 자동 분석 (백그라운드)
-  if (shop.shop_url || shop.mall_id) {
-    c.executionCtx.waitUntil(
-      (async () => {
-        try {
-          const shopUrl = shop.shop_url || `https://${shop.mall_id}.cafe24.com`;
-          const htmlResp = await fetch(shopUrl, { signal: AbortSignal.timeout(5000) });
-          if (!htmlResp.ok) return;
-          const html = await htmlResp.text();
-          const snippet = html.substring(0, 6000);
-
-          const prompt = `다음 쇼핑몰 HTML을 분석하여 JSON으로 응답하세요:\n${snippet}\n\n반드시 다음 JSON 형식으로만 응답:\n{"industry":"업종","target":"타겟 고객","tone":"톤앤매너","keywords":["키워드1","키워드2"],"summary":"한 줄 요약"}`;
-
-          const aiResp = await c.env.AI.run('@cf/moonshotai/kimi-k2.5', {
-            messages: [
-              { role: 'system', content: 'You are a Korean e-commerce analyst. Always respond in JSON only.' },
-              { role: 'user', content: prompt },
-            ],
-          });
-
-          const text = typeof aiResp === 'string' ? aiResp : aiResp?.response ?? '';
-          if (text) {
-            await c.env.DB.prepare("UPDATE shops SET shop_identity = ?, updated_at = datetime('now') WHERE shop_id = ?")
-              .bind(text.trim(), shop.shop_id)
-              .run();
-            console.info(`[AI Identity] 자동 분석 완료: mall=${shop.mall_id}`);
-          }
-        } catch (err) {
-          console.error(`[AI Identity] 자동 분석 실패: mall=${shop.mall_id}`, err);
-        }
-      })()
-    );
-  }
+  // 대시보드 기본 설정 페이지 진입 시 shop_identity가 없으면 자동 트리거됨
+  // 콜백에서의 waitUntil AI 분석은 Cloudflare Workers 환경에서 안정적이지 않아 제거
 
   // 백그라운드 SSO 슬롯 프로빙 (앱 실행 시마다 자동 감지)
   c.executionCtx.waitUntil(
