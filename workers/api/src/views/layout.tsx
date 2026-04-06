@@ -179,82 +179,198 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <title>{title} - 번개가입</title>
       <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+        :root {
+          --color-primary: #2563EB;
+          --color-primary-light: #EFF6FF;
+          --color-primary-hover: #1D4ED8;
+          --color-bg: #F8FAFC;
+          --color-sidebar-bg: #FFFFFF;
+          --color-sidebar-border: #E2E8F0;
+          --color-text: #1E293B;
+          --color-text-secondary: #64748B;
+          --color-card-bg: #FFFFFF;
+          --color-card-border: #E2E8F0;
+          --color-success: #059669;
+          --color-warning: #F59E0B;
+          --color-danger: #EF4444;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
         a { color: #2563eb; text-decoration: none; }
         a:hover { text-decoration: underline; }
+        h1 { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
+        h2 { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 12px; }
 
         .app { display: flex; min-height: 100vh; }
-        .sidebar { width: 240px; background: #1e293b; color: #e2e8f0; padding: 20px 0; flex-shrink: 0; }
-        .sidebar-logo { padding: 0 20px 20px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #334155; margin-bottom: 12px; }
-        .sidebar-logo span { color: #fbbf24; }
-        .sidebar nav a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #94a3b8; font-size: 14px; transition: background 0.15s; }
-        .sidebar nav a:hover, .sidebar nav a.active { background: #334155; color: #f1f5f9; text-decoration: none; }
-        .sidebar-footer { padding: 16px 20px; border-top: 1px solid #334155; margin-top: auto; }
+
+        /* ── Sidebar ─────────────────────────────── */
+        .sidebar {
+          width: 240px;
+          background: #ffffff;
+          border-right: 1px solid #e2e8f0;
+          color: #64748b;
+          padding: 20px 0;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+        }
+        .sidebar-logo {
+          padding: 0 20px 16px;
+          font-size: 18px;
+          font-weight: 700;
+          border-bottom: 1px solid #f1f5f9;
+          margin-bottom: 12px;
+          color: #1e293b;
+        }
+        .sidebar-logo span { color: #1e293b; }
+        .sidebar nav { flex: 1; }
+        .sidebar nav a {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 12px;
+          margin: 2px 8px;
+          color: #475569;
+          font-size: 14px;
+          border-radius: 8px;
+          transition: all 0.15s;
+        }
+        .sidebar nav a:hover { background: #f1f5f9; color: #1e293b; text-decoration: none; }
+        .sidebar nav a.active {
+          background: #eff6ff;
+          color: #2563eb;
+          font-weight: 600;
+          border-left: 3px solid #2563eb;
+          padding-left: 9px;
+        }
+        .sidebar nav a svg { opacity: 0.7; }
+        .sidebar nav a.active svg { opacity: 1; color: #2563eb; }
+        .sidebar-footer {
+          border-top: 1px solid #f1f5f9;
+          padding: 12px 20px;
+          margin-top: auto;
+        }
         .sidebar-footer a { color: #94a3b8; font-size: 13px; }
 
-        .main { flex: 1; padding: 32px; max-width: 960px; }
-        .main h1 { font-size: 24px; margin-bottom: 24px; }
+        /* ── Main content ────────────────────────── */
+        .main { flex: 1; padding: 24px; max-width: 960px; background: #f8fafc; }
+        .main h1 { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
 
-        .auth-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f5f5; }
-        .auth-card { background: #fff; border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        /* ── Auth pages ──────────────────────────── */
+        .auth-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; }
+        .auth-card { background: #fff; border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; border: 1px solid #e2e8f0; }
         .auth-card h1 { text-align: center; margin-bottom: 8px; }
         .auth-card p.sub { text-align: center; color: #64748b; margin-bottom: 24px; font-size: 14px; }
 
+        /* ── Form ────────────────────────────────── */
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #475569; }
         .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-        .btn-primary { background: #2563eb; color: #fff; width: 100%; }
+        /* ── Buttons ─────────────────────────────── */
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px 16px;
+          border: none;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .btn-primary { background: #2563eb; color: #fff; width: auto; }
         .btn-primary:hover { background: #1d4ed8; }
-        .btn-sm { padding: 6px 14px; font-size: 13px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
         .btn-danger { background: #ef4444; color: #fff; }
         .btn-danger:hover { background: #dc2626; }
-        .btn-outline { background: transparent; border: 1px solid #d1d5db; color: #475569; }
-        .btn-outline:hover { background: #f8fafc; }
+        .btn-outline { background: transparent; border: 1px solid #d1d5db; color: #374151; }
+        .btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
 
-        .card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-        .card h2 { font-size: 18px; margin-bottom: 16px; }
+        /* ── Cards ───────────────────────────────── */
+        .card {
+          background: #ffffff;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          box-shadow: none;
+          padding: 24px;
+          margin-bottom: 16px;
+        }
+        .card h2 { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 12px; }
 
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-        th { font-weight: 600; color: #64748b; font-size: 12px; text-transform: uppercase; }
+        /* ── Table ───────────────────────────────── */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th {
+          text-align: left;
+          padding: 10px 12px;
+          background: #f8fafc;
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #374151; }
+        tr:hover { background: #f8fafc; }
 
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .badge-green { background: #dcfce7; color: #166534; }
-        .badge-yellow { background: #fef9c3; color: #854d0e; }
-        .badge-red { background: #fee2e2; color: #991b1b; }
-        .badge-gray { background: #f1f5f9; color: #475569; }
+        /* ── Badges ──────────────────────────────── */
+        .badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+        }
+        .badge-green { background: #ecfdf5; color: #059669; }
+        .badge-yellow { background: #fffbeb; color: #d97706; }
+        .badge-red { background: #fef2f2; color: #ef4444; }
+        .badge-gray { background: #f1f5f9; color: #64748b; }
+        .badge-blue { background: #eff6ff; color: #2563eb; }
 
+        /* ── Alerts ──────────────────────────────── */
         .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
         .alert-info { background: #dbeafe; color: #1e40af; }
         .alert-warn { background: #fef3c7; color: #92400e; }
         .alert-error { background: #fee2e2; color: #991b1b; }
 
+        /* ── Toggle switch ───────────────────────── */
         .provider-toggle { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
         .provider-toggle:last-child { border-bottom: none; }
         .toggle { position: relative; display: inline-block; width: 28px; height: 16px; flex-shrink: 0; }
         .toggle input { display: none; }
-        .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 16px; cursor: pointer; transition: 0.3s; }
+        .toggle-slider { position: absolute; inset: 0; background: #d1d5db; border-radius: 16px; cursor: pointer; transition: 0.3s; }
         .toggle-slider::before { content: ''; position: absolute; height: 12px; width: 12px; left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .toggle input:checked + .toggle-slider { background: #4caf50; }
+        .toggle input:checked + .toggle-slider { background: #2563eb; }
         .toggle input:checked + .toggle-slider::before { transform: translateX(12px); }
 
-        .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; overflow-x: auto; position: relative; }
+        /* ── Code block ──────────────────────────── */
+        .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: 'SF Mono', Monaco, 'Fira Code', monospace; font-size: 13px; overflow-x: auto; position: relative; }
         .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; color: #e2e8f0; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
         .copy-btn:hover { background: #475569; }
 
+        /* ── Stat cards ──────────────────────────── */
         .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-        .stat-card .label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 600; }
-        .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+        .stat-card {
+          background: #ffffff;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          padding: 20px;
+        }
+        .stat-card .label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1e293b; margin-top: 4px; }
 
+        /* ── Empty state ─────────────────────────── */
         .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
         .empty-state p { font-size: 15px; margin-bottom: 16px; }
 
-        /* Progress bar */
+        /* ── Progress bar ────────────────────────── */
         .progress-bar { background: #e5e7eb; border-radius: 8px; height: 24px; overflow: hidden; position: relative; }
         .progress-bar-fill { height: 100%; border-radius: 8px; transition: width 0.3s; display: flex; align-items: center; padding: 0 8px; }
         .progress-bar-label { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
@@ -262,26 +378,26 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .progress-bar-name { font-size: 13px; font-weight: 600; min-width: 64px; }
         .progress-bar-value { font-size: 12px; color: #64748b; min-width: 60px; text-align: right; }
 
-        /* SVG Chart */
-        .chart-container { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px; }
+        /* ── Chart container ─────────────────────── */
+        .chart-container { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 16px; }
         .chart-container h3 { font-size: 16px; margin-bottom: 16px; }
 
-        /* Filter controls */
+        /* ── Filter controls ─────────────────────── */
         .filter-bar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
         .filter-bar select, .filter-bar input[type="date"] { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; }
         .filter-bar select:focus, .filter-bar input[type="date"]:focus { outline: none; border-color: #2563eb; }
 
-        /* Tab navigation */
+        /* ── Tab navigation ──────────────────────── */
         .tab-nav { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; gap: 0; }
         .tab-nav a { padding: 10px 20px; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
         .tab-nav a:hover { color: #1e293b; text-decoration: none; }
         .tab-nav a.active { color: #2563eb; border-bottom-color: #2563eb; }
 
-        /* Alert banner with action button */
+        /* ── Alert banner ────────────────────────── */
         .alert-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
         .alert-banner .btn { flex-shrink: 0; }
 
-        /* Plan cards */
+        /* ── Plan cards ──────────────────────────── */
         .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
         .plan-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; text-align: center; transition: border-color 0.15s; }
         .plan-card.current { border-color: #2563eb; background: #eff6ff; }
@@ -292,7 +408,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .plan-card ul li { padding: 4px 0; }
         .plan-card ul li::before { content: '✓ '; color: #22c55e; font-weight: 700; }
 
-        /* Provider colors */
+        /* ── Provider colors ─────────────────────── */
         .provider-google { background: #4285f4; }
         .provider-kakao { background: #fee500; }
         .provider-naver { background: #03c75a; }
@@ -302,12 +418,12 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .provider-telegram { background: #26a5e4; }
         .provider-tiktok { background: #000000; }
 
-        /* Provider preview */
+        /* ── Provider preview ────────────────────── */
         .preview-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 32px; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
         .preview-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; border: none; cursor: default; }
         .preview-btn.kakao-btn { color: #191919; }
 
-        /* Widget customization */
+        /* ── Widget customization ────────────────── */
         .preset-card { border:2px solid #e5e7eb; border-radius:8px; padding:12px 8px; text-align:center; cursor:pointer; background:#fff; transition:all 0.2s; font-size:12px; }
         .preset-card:hover { border-color:#93c5fd; }
         .preset-card.active { border-color:#2563eb; background:#eff6ff; }
@@ -325,21 +441,36 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           .preset-grid-2x2 { grid-template-columns: repeat(2, 1fr) !important; }
         }
 
-        /* Mobile hamburger menu */
-        .mobile-header { display: none; align-items: center; justify-content: space-between; padding: 12px 16px; background: #1e293b; color: #e2e8f0; }
-        .mobile-logo { font-size: 16px; font-weight: 700; }
-        .mobile-logo span { color: #fbbf24; }
+        /* ── Mobile header & drawer ──────────────── */
+        .mobile-header {
+          display: none;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
+          color: #1e293b;
+        }
+        .mobile-logo { font-size: 16px; font-weight: 700; color: #1e293b; }
+        .mobile-logo span { color: #1e293b; }
         .hamburger { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
-        .hamburger span { display: block; width: 22px; height: 2px; background: #e2e8f0; border-radius: 2px; transition: all 0.2s; }
-        .mobile-nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+        .hamburger span { display: block; width: 22px; height: 2px; background: #64748b; border-radius: 2px; transition: all 0.2s; }
+        .mobile-nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 100; }
         .mobile-nav-overlay.open { display: block; }
-        .mobile-nav-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #1e293b; z-index: 101; transform: translateX(-100%); transition: transform 0.25s ease; padding: 20px 0; }
+        .mobile-nav-drawer {
+          position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
+          background: #ffffff;
+          border-right: 1px solid #e2e8f0;
+          z-index: 101; transform: translateX(-100%); transition: transform 0.25s ease; padding: 20px 0;
+          display: flex; flex-direction: column;
+        }
         .mobile-nav-drawer.open { transform: translateX(0); }
-        .mobile-nav-drawer .sidebar-logo { padding: 0 20px 20px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #334155; margin-bottom: 12px; }
-        .mobile-nav-drawer .sidebar-logo span { color: #fbbf24; }
-        .mobile-nav-drawer nav a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #94a3b8; font-size: 14px; }
-        .mobile-nav-drawer nav a:hover, .mobile-nav-drawer nav a.active { background: #334155; color: #f1f5f9; text-decoration: none; }
-        .mobile-nav-drawer .sidebar-footer { padding: 16px 20px; border-top: 1px solid #334155; margin-top: auto; }
+        .mobile-nav-drawer .sidebar-logo { padding: 0 20px 16px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; color: #1e293b; }
+        .mobile-nav-drawer .sidebar-logo span { color: #1e293b; }
+        .mobile-nav-drawer nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin: 2px 8px; color: #475569; font-size: 14px; border-radius: 8px; transition: all 0.15s; }
+        .mobile-nav-drawer nav a:hover { background: #f1f5f9; color: #1e293b; text-decoration: none; }
+        .mobile-nav-drawer nav a.active { background: #eff6ff; color: #2563eb; font-weight: 600; border-left: 3px solid #2563eb; padding-left: 9px; }
+        .mobile-nav-drawer .sidebar-footer { border-top: 1px solid #f1f5f9; padding: 12px 20px; margin-top: auto; }
         .mobile-nav-drawer .sidebar-footer a { color: #94a3b8; font-size: 13px; }
 
         @media (max-width: 768px) {
@@ -354,16 +485,17 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           .provider-layout { grid-template-columns: 1fr !important; }
         }
 
-        /* Nav section label */
+        /* ── Nav section label ───────────────────── */
         .nav-section-label {
-          padding: 16px 20px 4px;
-          font-size: 11px;
+          padding: 16px 20px 6px;
+          font-size: 10px;
           font-weight: 700;
-          color: #64748b;
+          color: #94a3b8;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.08em;
         }
-        /* Plus badge */
+
+        /* ── Plus badge ──────────────────────────── */
         .nav-plus-badge {
           font-size: 10px;
           padding: 1px 6px;
@@ -375,7 +507,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           flex-shrink: 0;
         }
 
-        /* Site footer */
+        /* ── Site footer ─────────────────────────── */
         .site-footer {
           margin-top: 48px;
           padding: 24px 0;
@@ -387,7 +519,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .site-footer a { color: #94a3b8; }
         .site-footer a:hover { color: #64748b; text-decoration: underline; }
 
-        /* Toast notification */
+        /* ── Toast notification ──────────────────── */
         .toast-container {
           position: fixed;
           top: 20px;
@@ -402,7 +534,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           border-radius: 8px;
           font-size: 14px;
           font-weight: 500;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
           animation: toast-in 0.3s ease;
           max-width: 360px;
           display: flex;
@@ -422,7 +554,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         <div class="app">
           {/* Mobile header (visible only on small screens) */}
           <div class="mobile-header">
-            <div class="mobile-logo">⚡ <span>번개가입</span></div>
+            <div class="mobile-logo">⚡ 번개가입</div>
             <button class="hamburger" id="hamburger-btn" aria-label="메뉴 열기">
               <span></span>
               <span></span>
@@ -433,7 +565,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           {/* Mobile nav overlay + drawer */}
           <div class="mobile-nav-overlay" id="mobile-nav-overlay"></div>
           <div class="mobile-nav-drawer" id="mobile-nav-drawer">
-            <div class="sidebar-logo">⚡ <span>{isAdmin ? '번개가입 관리자' : '번개가입'}</span></div>
+            <div class="sidebar-logo">⚡ {isAdmin ? '번개가입 관리자' : '번개가입'}</div>
             <nav>
               {isAdmin ? (
                 <>
@@ -464,7 +596,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           </div>
 
           <aside class="sidebar">
-            <div class="sidebar-logo">⚡ <span>{isAdmin ? '번개가입 관리자' : '번개가입'}</span></div>
+            <div class="sidebar-logo">⚡ {isAdmin ? '번개가입 관리자' : '번개가입'}</div>
             <nav>
               {isAdmin ? (
                 <>
@@ -487,6 +619,14 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
                 </>
               )}
             </nav>
+            {!isAdmin && (
+              <div style="padding:0 8px;margin:8px 0 4px">
+                <div style="padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534;line-height:1.5">
+                  <strong>Coming Soon</strong><br />
+                  AI 쇼핑몰 운영 자동화 — <strong>오팀장</strong>이 곧 찾아옵니다
+                </div>
+              </div>
+            )}
             <div class="sidebar-footer">
               {isAdmin
                 ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>
