@@ -98,6 +98,74 @@ export const WIDGET_JS = `(function() {
     '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}'
   ].join('\\n');
 
+  // ─── 메타데이터 수집 헬퍼 ─────────────────────────────────────
+  function bgDetectDevice() {
+    var ua = navigator.userAgent;
+    if (/iPad|Android(?!.*Mobile)/i.test(ua)) return 'tablet';
+    if (/iPhone|iPod|Android/i.test(ua)) return 'mobile';
+    return 'desktop';
+  }
+
+  function bgDetectOS() {
+    var ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+    if (/Windows/i.test(ua)) return 'windows';
+    if (/Mac/i.test(ua)) return 'mac';
+    if (/Linux/i.test(ua)) return 'linux';
+    return 'other';
+  }
+
+  function bgDetectBrowser() {
+    var ua = navigator.userAgent;
+    if (/Edg\\//i.test(ua)) return 'edge';
+    if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'chrome';
+    if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'safari';
+    if (/Firefox/i.test(ua)) return 'firefox';
+    return 'other';
+  }
+
+  // 방문자 식별자 (localStorage 기반 익명 ID, 실패 시 세션 단위 ID)
+  var bgVisitorId = 'v_' + Math.random().toString(36).substr(2, 12);
+  try {
+    var stored = localStorage.getItem('bg_visitor_id');
+    if (stored) {
+      bgVisitorId = stored;
+    } else {
+      localStorage.setItem('bg_visitor_id', bgVisitorId);
+    }
+  } catch (e) {
+    // Private browsing / localStorage 미지원 → 세션 단위 ID 사용
+  }
+
+  // 방문 횟수 (localStorage 기반, 세션 시작 시 +1)
+  var bgVisitCount = 1;
+  try {
+    var vc = parseInt(localStorage.getItem('bg_visit_count') || '0');
+    // 세션 내 중복 증가 방지
+    if (!sessionStorage.getItem('bg_visit_counted')) {
+      vc++;
+      localStorage.setItem('bg_visit_count', String(vc));
+      sessionStorage.setItem('bg_visit_counted', '1');
+    }
+    bgVisitCount = vc;
+  } catch (e) {}
+
+  // 세션 페이지 카운트
+  var bgSessionPages = 1;
+  try {
+    bgSessionPages = parseInt(sessionStorage.getItem('bg_session_pages') || '0') + 1;
+    sessionStorage.setItem('bg_session_pages', String(bgSessionPages));
+  } catch (e) {}
+
+  // referrer 도메인만 추출 (프라이버시)
+  var bgReferrerDomain = '';
+  try {
+    if (document.referrer) {
+      bgReferrerDomain = new URL(document.referrer).hostname;
+    }
+  } catch (e) {}
+
   // ─── BGWidget Class ──────────────────────────────────────────
 
   function BGWidget() {
@@ -191,6 +259,9 @@ export const WIDGET_JS = `(function() {
   BGWidget.prototype.detectPageType = function() {
     var path = window.location.pathname.toLowerCase();
     if (path.indexOf('/member/login') >= 0 || path.indexOf('/member/join') >= 0) return 'login';
+    if (path === '/' || path === '/index.html') return 'main';
+    if (/\\/products?\\//.test(path) || /\\/goods\\//.test(path)) return 'product';
+    if (/\\/category\\//.test(path)) return 'category';
     return 'other';
   };
 
@@ -261,6 +332,11 @@ export const WIDGET_JS = `(function() {
         // 소셜 로그인 렌더링 (로그인/가입 페이지에서만)
         if (self.pageType === 'login' && config.providers && config.providers.length > 0) {
           self.render();
+        }
+
+        // page_view 이벤트 (비회원만, config 로드 후 1회 전송)
+        if (!self.isUserLoggedIn()) {
+          self.trackEvent('page_view', {});
         }
 
         // Plus 기능 활성화
@@ -512,8 +588,11 @@ export const WIDGET_JS = `(function() {
     var config = this.config;
     if (!config) return;
 
+    // OAuth 시작 이벤트 추적 (이탈률 계산용)
+    this.trackEvent('oauth_start', { provider: provider });
+
     // For Cafe24: store provider hint in KV, then trigger SSO flow
-    var hintUrl = this.baseUrl + '/api/widget/hint?client_id=' + encodeURIComponent(config.client_id) + '&provider=' + encodeURIComponent(provider);
+    var hintUrl = this.baseUrl + '/api/widget/hint?client_id=' + encodeURIComponent(config.client_id) + '&provider=' + encodeURIComponent(provider) + '&visitor_id=' + encodeURIComponent(bgVisitorId) + '&device=' + encodeURIComponent(bgDetectDevice());
     // Save last provider to localStorage for smart button (Cafe24 SSO doesn't pass bg_provider back)
     try { localStorage.setItem('bg_last_provider', provider); } catch (e) {}
 
@@ -606,11 +685,26 @@ export const WIDGET_JS = `(function() {
   // ─── Plus: 이벤트 추적 ────────────────────────────────────────
   BGWidget.prototype.trackEvent = function(eventType, eventData) {
     if (!this.config) return;
+    // 공통 메타데이터 자동 추가
+    var meta = {
+      device: bgDetectDevice(),
+      os: bgDetectOS(),
+      browser: bgDetectBrowser(),
+      referrer: bgReferrerDomain,
+      visitor_id: bgVisitorId,
+      visit_count: bgVisitCount,
+      page_type: this.pageType || 'other',
+      session_page_count: bgSessionPages
+    };
+    var merged = {};
+    for (var k in meta) { if (meta.hasOwnProperty(k)) merged[k] = meta[k]; }
+    if (eventData) { for (var j in eventData) { if (eventData.hasOwnProperty(j)) merged[j] = eventData[j]; } }
+
     var url = this.baseUrl + '/api/widget/event';
     var payload = JSON.stringify({
       client_id: this.config.client_id,
       event_type: eventType,
-      event_data: eventData,
+      event_data: merged,
       page_url: window.location.href
     });
     // Beacon API 사용 (페이지 이탈 시에도 전송 보장)
@@ -1082,16 +1176,8 @@ export const WIDGET_JS = `(function() {
     // hideForReturning이면 과거 로그인 이력 체크
     if (hideForReturning && self.hasLoginHistory()) return;
 
-    // 방문 횟수 카운트 (localStorage)
-    var visitKey = 'bg_visit_count';
-    var visitCount = 1;
-    try {
-      var stored = localStorage.getItem(visitKey);
-      visitCount = stored ? (parseInt(stored, 10) + 1) : 1;
-      localStorage.setItem(visitKey, String(visitCount));
-    } catch (e) {
-      return; // localStorage 사용 불가 — 표시 안 함
-    }
+    // 방문 횟수 — 전역 bgVisitCount 사용 (이중 증가 방지)
+    var visitCount = bgVisitCount;
 
     var toastEnabled = ec ? ec.toastEnabled !== false : true;
     var floatingEnabled = ec ? ec.floatingEnabled !== false : true;

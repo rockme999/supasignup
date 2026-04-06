@@ -123,6 +123,8 @@ export interface OAuthSession {
   provider: ProviderName;
   cafe24_state: string;
   social_state: string;
+  visitor_id?: string;
+  device?: string;
 }
 
 export interface AuthCodeData {

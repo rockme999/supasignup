@@ -1,7 +1,8 @@
 # 번개가입 통계 시스템 확장 설계서
 
 > 작성일: 2026-04-06 KST
-> 상태: 설계 단계 (미구현)
+> 최종 수정: 2026-04-06 KST — Phase 1~4 구현 완료
+> 상태: 전체 구현 완료
 
 ## 1. 현재 상태
 
@@ -27,6 +28,8 @@
 | `kakao_channel_show` | 카카오 채널 노출 | ❌ 누락 |
 | `kakao_channel_click` | 카카오 채널 클릭 | ❌ 누락 |
 | `signup_complete` | 가입 완료 | ✅ |
+| `oauth_start` | 소셜 로그인 버튼 클릭 | ❌ 미구현 |
+| `page_view` | 페이지 조회 | ❌ 미구현 |
 
 ### 수집하지 않는 정보 (추가 필요)
 
@@ -34,6 +37,7 @@
 - Referrer (유입 경로)
 - 방문자 식별자 (가입 전 행동 추적용)
 - 페이지 조회 이벤트 (상품 페이지 조회 수)
+- OAuth 시작 이벤트 (이탈률 계산용)
 
 ---
 
@@ -54,6 +58,7 @@
 | `kakao_channel_show` | 카카오 채널 노출 | 이미 전송 중, API만 허용 추가 |
 | `kakao_channel_click` | 카카오 채널 클릭 | 이미 전송 중, API만 허용 추가 |
 | `page_view` | 페이지 조회 | 위젯에 추가 필요 |
+| `oauth_start` | 소셜 로그인 버튼 클릭 | 위젯에 추가 필요 |
 
 #### event_data 확장
 
@@ -133,6 +138,10 @@ BGWidget.prototype.trackEvent = function(eventType, eventData) {
 
 // 6. page_view 이벤트 자동 전송 (초기화 시 1회)
 this.trackEvent('page_view', {});
+
+// 7. oauth_start 이벤트 (소셜 로그인 버튼 클릭 시)
+// 각 프로바이더 버튼의 onclick에 추가
+this.trackEvent('oauth_start', { provider: 'kakao' });
 ```
 
 ---
@@ -149,6 +158,27 @@ this.trackEvent('page_view', {});
 | 에스컬레이션 배너 | `escalation_show` (visit≥4) | `escalation_click` | click / show × 100 |
 | 카카오 채널 | `kakao_channel_show` | `kakao_channel_click` | click / show × 100 |
 
+#### A-2. OAuth 이탈률 (OAuth Drop-off Rate)
+
+| 프로바이더 | 산출 방법 | 의미 |
+|-----------|----------|------|
+| **프로바이더별 이탈률** | 1 - (signup_complete / oauth_start) × 100 (provider별) | 인증 시작 후 완료하지 않은 비율 |
+| **전체 OAuth 완료율** | signup_complete / oauth_start × 100 | 전체 소셜 로그인 완료율 |
+
+- `oauth_start` 이벤트에 `{ provider: "kakao" }` 를 포함하여 프로바이더별 분석
+- 이탈률이 높은 프로바이더 → 설정 오류 또는 UX 문제 진단 가능
+- 예시 인사이트: "Apple은 이탈률 40%, 다른 프로바이더는 10% 미만 → Apple 연동 점검 필요"
+
+#### A-3. 프로바이더 × 디바이스 교차 분석
+
+| 지표 | 산출 방법 | 의미 |
+|------|----------|------|
+| **디바이스별 선호 프로바이더** | login_stats JOIN funnel_events(device) by visitor_id | 모바일: 카카오/네이버, PC: 구글 등 패턴 발견 |
+| **디바이스별 전환율** | device별 signup_complete / banner_show × 100 | 모바일 vs PC 전환율 비교 |
+
+- Phase 2 쿼리에서 구현 (Phase 1의 device 메타데이터 수집이 선행 조건)
+- 디바이스별 프로바이더 노출 순서 최적화의 근거
+
 #### B. 가입까지의 노력 (Effort-to-Signup)
 
 | 지표 | 산출 방법 | 의미 |
@@ -158,6 +188,7 @@ this.trackEvent('page_view', {});
 | **가입 트리거 분포** | signup_complete 직전 이벤트 종류별 비율 | 배너/팝업/에스컬레이션 중 어디서 가입했는가 |
 | **가입 전 상품 조회 수** | page_type='product'인 page_view 수 (visitor_id별) | 상품을 몇 개 봐야 가입하는가 |
 | **1회 방문 가입률** | visit_count=1인 signup 비율 | 첫 방문에 가입하는 비율 |
+| **첫 상호작용→가입 소요시간** | visitor_id 기준 첫 page_view ~ signup_complete 시간 차이 | 가입까지 평균 며칠/몇 시간 걸리는가 |
 
 #### C. 유입 분석
 
@@ -181,7 +212,9 @@ this.trackEvent('page_view', {});
 | **수치 카드** | 노출수/클릭수/전환율 | 홈 + 통계 |
 | **라인 차트** | 일자별 노출/클릭 추이 | 통계 |
 | **도넛 차트** | 유입 경로 분포 | 통계 |
-| **히트맵** | 시간대별 가입 분포 (요일 × 시간) | 통계 (선택) |
+| **히트맵** | 시간대별 가입 분포 (요일 × 시간) | 통계 |
+| **수치 카드** | OAuth 시작/완료/이탈률 (프로바이더별) | 통계 |
+| **교차 막대** | 프로바이더 × 디바이스 가입 분포 | 통계 |
 
 ---
 
@@ -224,6 +257,20 @@ this.trackEvent('page_view', {});
 │ 배너노출 → 클릭 → 팝업 → 가입 → 완료  │
 │ 각 단계 전환율 %                      │
 └───────────────────────────────────────┘
+┌─ OAuth 이탈 분석 ────────────────────┐
+│ 카카오: 5% | 네이버: 8% | 구글: 12%  │
+│ Apple: 35% | Facebook: 15%           │
+│ → Apple 연동 점검 필요 알림           │
+└───────────────────────────────────────┘
+┌─ 프로바이더 × 디바이스 ─────────────┐
+│ [교차 막대 차트]                      │
+│ 모바일: 카카오 60% 네이버 25% ...     │
+│ PC: 구글 45% 카카오 30% ...           │
+└───────────────────────────────────────┘
+┌─ 시간대별 가입 패턴 (히트맵) ────────┐
+│ [요일 × 시간 히트맵]                  │
+│ 토요일 오후 2~4시 피크               │
+└───────────────────────────────────────┘
 ┌─ 첫 방문 페이지 분포 ────────────────┐
 │ 메인: 40% | 상품: 45% | 카테고리: 10% │
 └───────────────────────────────────────┘
@@ -234,24 +281,33 @@ this.trackEvent('page_view', {});
 ## 3. 구현 순서
 
 ### Phase 1: 이벤트 수집 확장 (위젯 + API)
-1. widget.ts API 허용 이벤트 4종 추가 (escalation_click 등)
-2. widget.ts에 `page_view` 이벤트 추가
-3. 위젯 trackEvent에 공통 메타데이터 추가 (device, os, referrer, visitor_id 등)
-4. API 엔드포인트에서 확장된 event_data 수용
+1. API 허용 이벤트 6종 추가 (escalation_click, escalation_dismiss, kakao_channel_show, kakao_channel_click, page_view, oauth_start)
+2. 위젯 trackEvent에 공통 메타데이터 추가 (device, os, browser, referrer, visitor_id, visit_count, page_type, session_page_count)
+3. 위젯에 `page_view` 이벤트 자동 전송 (초기화 시 1회)
+4. 위젯에 `oauth_start` 이벤트 전송 (소셜 로그인 버튼 클릭 시, provider 포함)
+5. API 엔드포인트에서 확장된 event_data 수용
+6. docs/schema.sql 이벤트 타입 주석 업데이트
 
 ### Phase 2: 통계 쿼리 + API
 1. 노출/클릭/전환율 집계 쿼리
-2. 가입까지의 노력 집계 쿼리 (visitor_id 기반)
-3. 디바이스/유입경로/첫 방문 페이지 분포 쿼리
-4. 통계 API 엔드포인트 추가 또는 기존 확장
+2. OAuth 이탈률 집계 쿼리 (oauth_start vs signup_complete, 프로바이더별)
+3. 가입까지의 노력 집계 쿼리 (visitor_id 기반)
+4. 첫 상호작용→가입 소요시간 쿼리 (visitor_id 기준)
+5. 디바이스/유입경로/첫 방문 페이지 분포 쿼리
+6. 프로바이더 × 디바이스 교차 분석 쿼리
+7. 시간대별 가입 패턴 쿼리 (요일 × 시간)
+8. 통계 API 엔드포인트 추가 또는 기존 확장
 
 ### Phase 3: 통계 페이지 UI 전면 개편
 1. 파이 차트 컴포넌트 (CSS/SVG 기반)
 2. 퍼널 차트 개선
 3. 노출/클릭/전환율 카드
-4. 가입까지의 노력 섹션
-5. 디바이스/유입경로/첫 방문 분석 섹션
-6. 기간 필터 연동
+4. OAuth 이탈률 카드 (프로바이더별)
+5. 가입까지의 노력 섹션
+6. 프로바이더 × 디바이스 교차 분석 차트
+7. 시간대별 가입 히트맵 (요일 × 시간)
+8. 디바이스/유입경로/첫 방문 분석 섹션
+9. 기간 필터 연동
 
 ### Phase 4: 홈 대시보드 개선
 1. 핵심 지표 카드에 전환율 추가

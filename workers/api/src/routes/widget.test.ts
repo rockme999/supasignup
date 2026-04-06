@@ -182,9 +182,9 @@ describe('GET /widget/buttons.js', () => {
     const dynamicInnerHTML = WIDGET_JS.match(/\.innerHTML\s*=\s*[^'"`]/g);
     // The only innerHTML usage should be for hardcoded SVG icons
     expect(WIDGET_JS).toContain('.innerHTML = info.icon');
-    // innerHTML usage: hardcoded SVG icon insert + hover restore (data-icon-html save/restore)
+    // innerHTML usage: hardcoded SVG icon insert + hover restore + kakao channel icon (data-icon-html save/restore)
     const allInnerHTML = WIDGET_JS.match(/\.innerHTML/g) || [];
-    expect(allInnerHTML.length).toBeLessThanOrEqual(4);
+    expect(allInnerHTML.length).toBeLessThanOrEqual(6);
   });
 
   it('contains all 4 provider definitions', () => {

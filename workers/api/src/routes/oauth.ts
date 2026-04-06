@@ -39,6 +39,30 @@ const SESSION_TTL = 600; // 10 minutes
 const AUTH_CODE_TTL = 300; // 5 minutes
 const ACCESS_TOKEN_TTL = 7200; // 2 hours
 
+/** signup 시 funnel_events에 signup_complete 이벤트 기록 (통계용) */
+async function recordFunnelSignup(
+  db: D1Database,
+  shopId: string,
+  provider: string,
+  action: string,
+  visitorId?: string,
+  device?: string,
+): Promise<void> {
+  if (action !== 'signup') return;
+  const eventData: Record<string, string> = { provider };
+  if (visitorId) eventData.visitor_id = visitorId;
+  if (device) eventData.device = device;
+  await db.prepare(
+    'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url) VALUES (?, ?, ?, ?, ?)',
+  ).bind(
+    generateId(),
+    shopId,
+    'signup_complete',
+    JSON.stringify(eventData),
+    '',
+  ).run();
+}
+
 const oauth = new Hono<{ Bindings: Env }>();
 
 // ─── GET /authorize ──────────────────────────────────────────
@@ -78,13 +102,26 @@ oauth.get('/authorize', async (c) => {
 
   // If no provider specified, check KV hint (set by widget before Cafe24 SSO trigger)
   const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
+  let hintVisitorId = '';
+  let hintDevice = '';
   if (!provider) {
     // Check KV for provider hint (cross-domain safe, set via /api/widget/hint)
-    const hintProvider = await c.env.KV.get(`provider_hint:${clientId}`) as ProviderName | null;
+    const hintRaw = await c.env.KV.get(`provider_hint:${clientId}`);
     const tHint = performance.now();
     console.log(`[Phase A] KV hint: ${(tHint - tShop).toFixed(1)}ms`);
+    // hint는 JSON { provider, visitor_id, device } 또는 레거시 문자열
+    let hintProvider: ProviderName | null = null;
+    if (hintRaw) {
+      try {
+        const hint = JSON.parse(hintRaw);
+        hintProvider = hint.provider;
+        hintVisitorId = hint.visitor_id || '';
+        hintDevice = hint.device || '';
+      } catch {
+        hintProvider = hintRaw as ProviderName; // 레거시 문자열 호환
+      }
+    }
     if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
-      // Don't delete hint — Cafe24 may call authorize multiple times; let TTL (60s) handle cleanup
       provider = hintProvider;
     } else {
       // No hint found — show provider selection page
@@ -113,13 +150,15 @@ oauth.get('/authorize', async (c) => {
   // Generate separate state for social provider
   const socialState = generateSecret(16);
 
-  // Store OAuth session in KV
+  // Store OAuth session in KV (visitor_id/device from widget hint)
   const session: OAuthSession = {
     shop_id: shop.shop_id,
     redirect_uri: redirectUri,
     provider,
     cafe24_state: cafe24State,
     social_state: socialState,
+    visitor_id: hintVisitorId || undefined,
+    device: hintDevice || undefined,
   };
 
   if (overLimit) {
@@ -239,10 +278,11 @@ oauth.get('/callback/:provider', async (c) => {
     redirectUrl.searchParams.set('bg_provider', provider);
   }
 
-  // Defer non-critical work to after response (recordStat + KV cleanup)
+  // Defer non-critical work to after response (recordStat + funnel + KV cleanup)
   c.executionCtx.waitUntil(
     Promise.all([
       recordStat(c.env.DB, session.shop_id, user.user_id, provider, action).catch(() => {}),
+      recordFunnelSignup(c.env.DB, session.shop_id, provider, action, session.visitor_id, session.device).catch(() => {}),
       c.env.KV.delete(`oauth_session:${state}`).catch(() => {}),
       c.env.KV.delete(`pkce:${state}`).catch(() => {}),
     ]).then(() => {
@@ -353,6 +393,7 @@ oauth.post('/callback/apple', async (c) => {
   c.executionCtx.waitUntil(
     Promise.all([
       recordStat(c.env.DB, session.shop_id, user.user_id, provider, action).catch(() => {}),
+      recordFunnelSignup(c.env.DB, session.shop_id, provider, action, session.visitor_id, session.device).catch(() => {}),
       c.env.KV.delete(`oauth_session:${state}`).catch(() => {}),
       c.env.KV.delete(`pkce:${state}`).catch(() => {}),
     ])
@@ -508,7 +549,10 @@ oauth.post('/callback/telegram', async (c) => {
 
   // Defer non-critical work to after response
   c.executionCtx.waitUntil(
-    recordStat(c.env.DB, shop.shop_id, user.user_id, 'telegram', action).catch(() => {})
+    Promise.all([
+      recordStat(c.env.DB, shop.shop_id, user.user_id, 'telegram', action).catch(() => {}),
+      recordFunnelSignup(c.env.DB, shop.shop_id, 'telegram', action).catch(() => {}),
+    ])
   );
 
   return c.json({ redirect_url: redirectUrl.toString() });

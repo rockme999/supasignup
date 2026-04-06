@@ -123,11 +123,11 @@ widget.get('/config', async (c) => {
 
 // ─── POST /event ─────────────────────────────────────────────
 widget.post('/event', async (c) => {
-  // IP 기반 rate limit: 1분당 최대 30건
+  // IP 기반 rate limit: 1분당 최대 60건 (page_view 추가로 상향)
   const ip = c.req.header('cf-connecting-ip') || 'unknown';
   const rateKey = `rate:event:${ip}`;
   const current = await c.env.KV.get(rateKey);
-  if (current && parseInt(current) >= 30) {
+  if (current && parseInt(current) >= 60) {
     return c.json({ error: 'rate_limit_exceeded' }, 429);
   }
 
@@ -148,7 +148,7 @@ widget.post('/event', async (c) => {
     return c.json({ error: 'missing_params' }, 400);
   }
 
-  // 유효한 이벤트 타입만 허용
+  // 유효한 이벤트 타입만 허용 (13종)
   const validTypes = [
     'banner_click',
     'banner_show',
@@ -156,6 +156,12 @@ widget.post('/event', async (c) => {
     'popup_close',
     'popup_signup',
     'escalation_show',
+    'escalation_click',
+    'escalation_dismiss',
+    'kakao_channel_show',
+    'kakao_channel_click',
+    'page_view',
+    'oauth_start',
     'signup_complete',
   ];
   if (!validTypes.includes(body.event_type)) {
@@ -242,10 +248,14 @@ widget.get('/hint', async (c) => {
     return c.json({ error: 'forbidden' }, 403);
   }
 
+  // visitor_id/device도 함께 저장 (funnel_events signup_complete 기록용)
+  const visitorId = c.req.query('visitor_id') || '';
+  const device = c.req.query('device') || '';
+
   // KV PUT을 await로 블로킹 — hint가 KV에 확실히 쓰인 후 응답
   // 위젯이 응답을 받아야 MemberAction.snsLogin()을 호출하므로,
   // hint가 KV에 없으면 authorize가 이전 프로바이더를 사용하게 됨
-  await c.env.KV.put(`provider_hint:${clientId}`, provider, { expirationTtl: 60 });
+  await c.env.KV.put(`provider_hint:${clientId}`, JSON.stringify({ provider, visitor_id: visitorId, device }), { expirationTtl: 120 });
 
   return c.json({ ok: true });
 });

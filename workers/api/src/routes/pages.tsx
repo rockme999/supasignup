@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
 import { verifyToken } from '../services/jwt';
+import { buildSinceExpr } from '../db/stats-utils';
 import { hashPassword, verifyPassword } from '../services/password';
 import {
   LoginPage,
@@ -215,7 +216,7 @@ pages.get('/dashboard', async (c) => {
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
   const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 
-  const [totalResult, todayResult, monthResult, providerResult, billingResult] = await Promise.all([
+  const [totalResult, todayResult, monthResult, providerResult, billingResult, funnelResult] = await Promise.all([
     c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
@@ -247,6 +248,14 @@ pages.get('/dashboard', async (c) => {
        AND created_at >= ? AND created_at < ?`,
     ).bind(shop.shop_id, `${billingMonth}-01`, nextMonthFirst)
      .first<{ monthly_signups: number }>(),
+
+    // 퍼널 요약 (최근 7일, 홈 대시보드용)
+    c.env.DB.prepare(
+      `SELECT event_type, COUNT(*) as cnt
+       FROM funnel_events
+       WHERE shop_id = ? AND created_at >= datetime('now', '-7 days')
+       GROUP BY event_type`,
+    ).bind(shop.shop_id).all<{ event_type: string; cnt: number }>(),
   ]);
 
   const byProvider: Record<string, number> = {};
@@ -257,6 +266,12 @@ pages.get('/dashboard', async (c) => {
   let couponEnabled = false;
   if (shop.coupon_config) {
     try { couponEnabled = JSON.parse(shop.coupon_config)?.enabled === true; } catch { /* ignore */ }
+  }
+
+  // 퍼널 요약 계산
+  const funnelCounts: Record<string, number> = {};
+  for (const row of funnelResult.results ?? []) {
+    funnelCounts[row.event_type] = row.cnt;
   }
 
   return c.html(
@@ -277,6 +292,7 @@ pages.get('/dashboard', async (c) => {
         month_signups: monthResult?.cnt ?? 0,
         by_provider: byProvider,
       }}
+      funnelSummary={funnelCounts}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -286,8 +302,15 @@ pages.get('/dashboard', async (c) => {
 
 pages.get('/dashboard/stats', async (c) => {
   const ownerId = c.get('ownerId');
-  const shopIdFilter = c.req.query('shop_id') || null;
   const period = c.req.query('period') || '';
+
+  // 쇼핑몰 목록을 먼저 조회하여, shop_id 미지정 시 자동 선택
+  const shopsResult = await c.env.DB.prepare(
+    'SELECT shop_id, shop_name, plan FROM shops WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at',
+  ).bind(ownerId).all<{ shop_id: string; shop_name: string; plan: string }>();
+  const shops = shopsResult.results ?? [];
+  const shopIdFilter = c.req.query('shop_id') || (shops.length > 0 ? shops[0].shop_id : null);
+  const currentShopPlan = shops.find(s => s.shop_id === shopIdFilter)?.plan || 'free';
 
   // Build date filter
   let dateFilter = '';
@@ -336,20 +359,13 @@ pages.get('/dashboard/stats', async (c) => {
   const dailyParams: string[] = [ownerId, sinceDateStr];
   if (shopIdFilter) dailyParams.push(shopIdFilter);
 
-  // Funnel data (only when a specific shop is selected)
-  let funnelData: { event_type: string; cnt: number }[] = [];
-  if (shopIdFilter) {
-    const funnelResult = await c.env.DB.prepare(
-      `SELECT event_type, COUNT(*) as cnt
-       FROM funnel_events
-       WHERE shop_id = ? AND created_at > datetime('now', '-7 days')
-       GROUP BY event_type`,
-    ).bind(shopIdFilter).all<{ event_type: string; cnt: number }>();
-    funnelData = funnelResult.results ?? [];
-  }
+  // buildSinceExpr는 공통 유틸에서 import
+
+  const funnelPeriod = period || '7d';
+  const sinceExpr = buildSinceExpr(funnelPeriod);
 
   // All queries in parallel
-  const [totalResult, todayResult, monthResult, providerResult, dailyResult, shopsResult] = await Promise.all([
+  const [totalResult, todayResult, monthResult, providerResult, dailyResult] = await Promise.all([
     c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
@@ -391,15 +407,320 @@ pages.get('/dashboard/stats', async (c) => {
        GROUP BY day, ls.action
        ORDER BY day`,
     ).bind(...dailyParams).all<{ day: string; action: string; cnt: number }>(),
-
-    c.env.DB.prepare(
-      'SELECT shop_id, shop_name FROM shops WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at',
-    ).bind(ownerId).all<{ shop_id: string; shop_name: string }>(),
   ]);
 
   const byProvider: Record<string, number> = {};
   for (const row of providerResult.results ?? []) {
     byProvider[row.provider] = row.cnt;
+  }
+
+  // shop 선택 시 추가 통계 데이터 병렬 조회
+  let funnelData: { event_type: string; cnt: number }[] = [];
+  let oauthDropoff: {
+    total_oauth_start: number;
+    total_signup_complete: number;
+    overall_completion_rate: number;
+    overall_dropoff_rate: number;
+    providers: Array<{
+      provider: string;
+      oauth_start: number;
+      signup_complete: number;
+      completion_rate: number;
+      dropoff_rate: number;
+    }>;
+  } | undefined;
+  let effort: {
+    avg_visit_count: number | null;
+    avg_session_pages: number | null;
+    avg_product_views: number | null;
+    avg_hours_to_signup: number | null;
+    total_signups: number;
+    first_visit_signups: number;
+    first_visit_rate: number;
+    trigger_distribution: Record<string, number>;
+  } | undefined;
+  let distribution: {
+    device: Array<{ device: string; count: number }>;
+    referrer: {
+      categories: Record<string, number>;
+      top_domains: Array<{ domain: string; count: number }>;
+    };
+    first_visit_page: Array<{ page_type: string; count: number }>;
+    provider_by_device: Array<{ provider: string; device: string; count: number }>;
+  } | undefined;
+  let hourly: {
+    heatmap: number[][];
+    day_names: string[];
+    peak: { day: string; hour: number; count: number; label: string };
+  } | undefined;
+
+  if (shopIdFilter) {
+    // 배치 1: 퍼널 + OAuth 이탈 + effort 기본 (4개)
+    const [funnelRaw, dropoffStartRaw, dropoffCompleteRaw, effortRaw] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT event_type, COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND created_at >= ${sinceExpr}
+         GROUP BY event_type`,
+      ).bind(shopIdFilter).all<{ event_type: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT json_extract(event_data, '$.provider') as provider, COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'oauth_start' AND created_at >= ${sinceExpr}
+         GROUP BY provider`,
+      ).bind(shopIdFilter).all<{ provider: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT json_extract(event_data, '$.provider') as provider, COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}
+         AND json_extract(event_data, '$.provider') IS NOT NULL
+         GROUP BY provider`,
+      ).bind(shopIdFilter).all<{ provider: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT
+           AVG(CAST(json_extract(event_data, '$.visit_count') AS REAL)) as avg_visit_count,
+           AVG(CAST(json_extract(event_data, '$.session_page_count') AS REAL)) as avg_session_pages,
+           COUNT(*) as total_signups,
+           SUM(CASE WHEN CAST(json_extract(event_data, '$.visit_count') AS INTEGER) = 1 THEN 1 ELSE 0 END) as first_visit_signups
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}`,
+      ).bind(shopIdFilter).first<{
+        avg_visit_count: number | null;
+        avg_session_pages: number | null;
+        total_signups: number;
+        first_visit_signups: number;
+      }>(),
+    ]);
+
+    // 배치 2: effort 상세 + distribution 디바이스/유입 (4개)
+    const [triggerRaw, pageViewRaw, timeRaw, deviceRaw] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT trigger_type, COUNT(*) as cnt FROM (
+           SELECT vid,
+             CASE
+               WHEN last_click = 'banner_click' THEN 'banner'
+               WHEN last_click = 'popup_signup' THEN 'popup'
+               WHEN last_click = 'escalation_click' THEN 'escalation'
+               WHEN last_click = 'kakao_channel_click' THEN 'kakao_channel'
+               ELSE 'direct'
+             END as trigger_type
+           FROM (
+             SELECT json_extract(event_data, '$.visitor_id') as vid,
+               (SELECT f2.event_type FROM funnel_events f2
+                WHERE f2.shop_id = ? AND json_extract(f2.event_data, '$.visitor_id') = json_extract(f1.event_data, '$.visitor_id')
+                AND f2.event_type IN ('banner_click', 'popup_signup', 'escalation_click', 'kakao_channel_click')
+                AND f2.created_at <= f1.created_at
+                ORDER BY f2.created_at DESC LIMIT 1
+               ) as last_click
+             FROM funnel_events f1
+             WHERE f1.shop_id = ? AND f1.event_type = 'signup_complete'
+             AND f1.created_at >= ${sinceExpr}
+             AND json_extract(f1.event_data, '$.visitor_id') IS NOT NULL
+             AND json_extract(f1.event_data, '$.visitor_id') != ''
+           )
+         )
+         GROUP BY trigger_type`,
+      ).bind(shopIdFilter, shopIdFilter).all<{ trigger_type: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT AVG(pv_cnt) as avg_product_views FROM (
+           SELECT vid, SUM(is_product_pv) as pv_cnt FROM (
+             SELECT json_extract(event_data, '$.visitor_id') as vid,
+                    event_type,
+                    CASE WHEN event_type = 'page_view' AND json_extract(event_data, '$.page_type') = 'product' THEN 1 ELSE 0 END as is_product_pv
+             FROM funnel_events
+             WHERE shop_id = ? AND event_type IN ('page_view', 'signup_complete')
+             AND created_at >= ${sinceExpr}
+             AND json_extract(event_data, '$.visitor_id') IS NOT NULL
+             AND json_extract(event_data, '$.visitor_id') != ''
+           )
+           GROUP BY vid
+           HAVING SUM(CASE WHEN event_type = 'signup_complete' THEN 1 ELSE 0 END) > 0
+         )`,
+      ).bind(shopIdFilter).first<{ avg_product_views: number | null }>(),
+
+      c.env.DB.prepare(
+        `SELECT AVG(
+           MAX(0, julianday(signup_time) - julianday(first_time))
+         ) * 24 as avg_hours_to_signup
+         FROM (
+           SELECT
+             json_extract(event_data, '$.visitor_id') as vid,
+             MIN(created_at) as first_time,
+             MAX(CASE WHEN event_type = 'signup_complete' THEN created_at END) as signup_time
+           FROM funnel_events
+           WHERE shop_id = ? AND created_at >= ${sinceExpr}
+           AND json_extract(event_data, '$.visitor_id') IS NOT NULL
+           GROUP BY vid
+           HAVING signup_time IS NOT NULL
+         )`,
+      ).bind(shopIdFilter).first<{ avg_hours_to_signup: number | null }>(),
+
+      c.env.DB.prepare(
+        `SELECT json_extract(event_data, '$.device') as device, COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}
+         GROUP BY device ORDER BY cnt DESC`,
+      ).bind(shopIdFilter).all<{ device: string; cnt: number }>(),
+    ]);
+
+    // 배치 3: distribution 나머지 + hourly (4개)
+    const [referrerRaw, pageTypeRaw, providerDeviceRaw, hourlyRaw] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT json_extract(event_data, '$.referrer') as referrer, COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'page_view'
+         AND CAST(json_extract(event_data, '$.visit_count') AS INTEGER) = 1
+         AND created_at >= ${sinceExpr}
+         AND json_extract(event_data, '$.referrer') != ''
+         GROUP BY referrer ORDER BY cnt DESC LIMIT 20`,
+      ).bind(shopIdFilter).all<{ referrer: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT json_extract(event_data, '$.page_type') as page_type, COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'page_view'
+         AND CAST(json_extract(event_data, '$.visit_count') AS INTEGER) = 1
+         AND created_at >= ${sinceExpr}
+         GROUP BY page_type ORDER BY cnt DESC`,
+      ).bind(shopIdFilter).all<{ page_type: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT json_extract(event_data, '$.provider') as provider,
+                json_extract(event_data, '$.device') as device,
+                COUNT(*) as cnt
+         FROM funnel_events
+         WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}
+         AND json_extract(event_data, '$.provider') IS NOT NULL
+         GROUP BY provider, device ORDER BY cnt DESC`,
+      ).bind(shopIdFilter).all<{ provider: string; device: string; cnt: number }>(),
+
+      c.env.DB.prepare(
+        `SELECT
+           CAST(strftime('%w', datetime(created_at, '+9 hours')) AS INTEGER) as dow,
+           CAST(strftime('%H', datetime(created_at, '+9 hours')) AS INTEGER) as hour,
+           COUNT(*) as cnt
+         FROM login_stats
+         WHERE shop_id = ? AND action = 'signup' AND created_at >= ${buildSinceExpr('30d')}
+         GROUP BY dow, hour
+         ORDER BY dow, hour`,
+      ).bind(shopIdFilter).all<{ dow: number; hour: number; cnt: number }>(),
+    ]);
+
+    // 퍼널 데이터
+    funnelData = funnelRaw.results ?? [];
+
+    // OAuth 이탈 집계
+    const starts: Record<string, number> = {};
+    for (const row of dropoffStartRaw.results ?? []) {
+      if (row.provider) starts[row.provider] = row.cnt;
+    }
+    const completes: Record<string, number> = {};
+    for (const row of dropoffCompleteRaw.results ?? []) {
+      if (row.provider) completes[row.provider] = row.cnt;
+    }
+    const allProviders = new Set([...Object.keys(starts), ...Object.keys(completes)]);
+    let totalStart = 0, totalComplete = 0;
+    const dropoffProviders: Array<{
+      provider: string;
+      oauth_start: number;
+      signup_complete: number;
+      completion_rate: number;
+      dropoff_rate: number;
+    }> = [];
+    for (const p of allProviders) {
+      const s = starts[p] ?? 0;
+      const comp = completes[p] ?? 0;
+      totalStart += s;
+      totalComplete += comp;
+      dropoffProviders.push({
+        provider: p,
+        oauth_start: s,
+        signup_complete: comp,
+        completion_rate: s > 0 ? Math.round((comp / s) * 100) : 0,
+        dropoff_rate: s > 0 ? Math.round(((s - comp) / s) * 100) : 0,
+      });
+    }
+    dropoffProviders.sort((a, b) => b.dropoff_rate - a.dropoff_rate);
+    oauthDropoff = {
+      total_oauth_start: totalStart,
+      total_signup_complete: totalComplete,
+      overall_completion_rate: totalStart > 0 ? Math.round((totalComplete / totalStart) * 100) : 0,
+      overall_dropoff_rate: totalStart > 0 ? Math.round(((totalStart - totalComplete) / totalStart) * 100) : 0,
+      providers: dropoffProviders,
+    };
+
+    // effort 집계
+    const effortTotalSignups = effortRaw?.total_signups ?? 0;
+    const effortFirstVisit = effortRaw?.first_visit_signups ?? 0;
+    effort = {
+      avg_visit_count: effortRaw?.avg_visit_count ? Math.round(effortRaw.avg_visit_count * 10) / 10 : null,
+      avg_session_pages: effortRaw?.avg_session_pages ? Math.round(effortRaw.avg_session_pages * 10) / 10 : null,
+      avg_product_views: pageViewRaw?.avg_product_views ? Math.round(pageViewRaw.avg_product_views * 10) / 10 : null,
+      avg_hours_to_signup: timeRaw?.avg_hours_to_signup ? Math.round(timeRaw.avg_hours_to_signup * 10) / 10 : null,
+      total_signups: effortTotalSignups,
+      first_visit_signups: effortFirstVisit,
+      first_visit_rate: effortTotalSignups > 0 ? Math.round((effortFirstVisit / effortTotalSignups) * 100) : 0,
+      trigger_distribution: Object.fromEntries(
+        (triggerRaw.results ?? []).map(r => [r.trigger_type, r.cnt])
+      ),
+    };
+
+    // distribution 집계
+    const referrerCategories: Record<string, number> = { search: 0, social: 0, direct: 0, other: 0 };
+    for (const row of referrerRaw.results ?? []) {
+      const r = (row.referrer || '').toLowerCase();
+      if (/naver|google|daum|bing|yahoo/.test(r)) {
+        referrerCategories.search += row.cnt;
+      } else if (/instagram|facebook|twitter|tiktok|kakao|band/.test(r)) {
+        referrerCategories.social += row.cnt;
+      } else {
+        referrerCategories.other += row.cnt;
+      }
+    }
+    distribution = {
+      device: (deviceRaw.results ?? []).map(r => ({ device: r.device || 'unknown', count: r.cnt })),
+      referrer: {
+        categories: referrerCategories,
+        top_domains: (referrerRaw.results ?? []).map(r => ({ domain: r.referrer || 'unknown', count: r.cnt })),
+      },
+      first_visit_page: (pageTypeRaw.results ?? []).map(r => ({ page_type: r.page_type || 'unknown', count: r.cnt })),
+      provider_by_device: (providerDeviceRaw.results ?? []).map(r => ({
+        provider: r.provider,
+        device: r.device || 'unknown',
+        count: r.cnt,
+      })),
+    };
+
+    // hourly 집계
+    const heatmap: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    for (const row of hourlyRaw.results ?? []) {
+      heatmap[row.dow][row.hour] = row.cnt;
+    }
+    let peakDow = 0, peakHour = 0, peakCount = 0;
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        if (heatmap[d][h] > peakCount) {
+          peakCount = heatmap[d][h];
+          peakDow = d;
+          peakHour = h;
+        }
+      }
+    }
+    hourly = {
+      heatmap,
+      day_names: dayNames,
+      peak: {
+        day: dayNames[peakDow],
+        hour: peakHour,
+        count: peakCount,
+        label: `${dayNames[peakDow]}요일 ${peakHour}시`,
+      },
+    };
   }
 
   return c.html(
@@ -412,10 +733,15 @@ pages.get('/dashboard/stats', async (c) => {
         by_provider: byProvider,
       }}
       daily={dailyResult.results ?? []}
-      shops={shopsResult.results ?? []}
+      shops={shops}
       currentShopId={shopIdFilter}
       currentPeriod={period}
+      plan={currentShopPlan}
       funnelData={funnelData}
+      oauthDropoff={oauthDropoff}
+      effort={effort}
+      distribution={distribution}
+      hourly={hourly}
       isCafe24={c.get('isCafe24')}
     />
   );

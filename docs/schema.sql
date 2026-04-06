@@ -16,6 +16,7 @@
 --   2026-04-05: shops.escalation_config 추가 (Plus: 에스컬레이션 설정 저장)
 --   2026-04-06: coupon_issues 테이블 추가 (쿠폰 발급 히스토리)
 --   2026-04-06: shops.ai_suggested_copy 추가 (AI 브리핑 시 생성된 추천 문구 JSON 저장)
+--   2026-04-06: funnel_events event_type 13종 확장 + shop_id/event_type/created_at 복합 인덱스 추가
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -179,7 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE TABLE IF NOT EXISTS funnel_events (
   id         TEXT PRIMARY KEY,
   shop_id    TEXT NOT NULL REFERENCES shops(shop_id),
-  event_type TEXT NOT NULL,           -- banner_show | banner_click | popup_show | popup_signup | signup_complete | popup_close | escalation_show
+  event_type TEXT NOT NULL,           -- 13종: banner_show | banner_click | popup_show | popup_close | popup_signup | escalation_show | escalation_click | escalation_dismiss | kakao_channel_show | kakao_channel_click | page_view | oauth_start | signup_complete
   event_data TEXT,                    -- JSON payload
   page_url   TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -188,6 +189,7 @@ CREATE TABLE IF NOT EXISTS funnel_events (
 CREATE INDEX IF NOT EXISTS idx_funnel_events_shop_id    ON funnel_events(shop_id);
 CREATE INDEX IF NOT EXISTS idx_funnel_events_created_at ON funnel_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_funnel_events_type       ON funnel_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_funnel_shop_type_date    ON funnel_events(shop_id, event_type, created_at);
 
 -- ============================================================
 -- 10. inquiries - 1:1 문의 게시판
