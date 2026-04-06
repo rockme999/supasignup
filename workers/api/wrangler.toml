@@ -32,6 +32,17 @@ id = "fe38c181822b4729850b53ab839339b5"
 [ai]
 binding = "AI"
 
+# Queues (프로덕션)
+[[queues.producers]]
+queue = "bg-briefing-queue"
+binding = "BRIEFING_QUEUE"
+
+[[queues.consumers]]
+queue = "bg-briefing-queue"
+max_batch_size = 5
+max_retries = 2
+dead_letter_queue = "bg-briefing-dlq"
+
 # ══════════════════════════════════════════════════════════════
 # 스테이징 (개발) — npx wrangler deploy --env dev
 # ══════════════════════════════════════════════════════════════
@@ -65,6 +76,16 @@ id = "d3bc6faec4274bd3bacca408d4bf4277"
 # Workers AI (스테이징)
 [env.dev.ai]
 binding = "AI"
+
+# Queues (스테이징)
+[[env.dev.queues.producers]]
+queue = "bg-briefing-queue-dev"
+binding = "BRIEFING_QUEUE"
+
+[[env.dev.queues.consumers]]
+queue = "bg-briefing-queue-dev"
+max_batch_size = 5
+max_retries = 2
 
 # ══════════════════════════════════════════════════════════════
 # Secrets (wrangler secret put 으로 등록):

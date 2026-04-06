@@ -608,6 +608,19 @@ admin.get('/monitoring', async (c) => {
   }
 });
 
+// ─── POST /test-briefing-queue — Queue 테스트 (관리자 전용) ──
+admin.post('/test-briefing-queue', async (c) => {
+  const { shop_id } = await c.req.json<{ shop_id: string }>();
+  if (!shop_id) return c.json({ error: 'shop_id required' }, 400);
+
+  const shop = await c.env.DB.prepare('SELECT shop_id, shop_name FROM shops WHERE shop_id = ?')
+    .bind(shop_id).first<{ shop_id: string; shop_name: string }>();
+  if (!shop) return c.json({ error: 'not_found' }, 404);
+
+  await c.env.BRIEFING_QUEUE.send({ shop_id: shop.shop_id, shop_name: shop.shop_name });
+  return c.json({ ok: true, message: `Queued briefing for ${shop.shop_name}` });
+});
+
 // ─── GET /audit-log — 감사 로그 ─────────────────────────────
 admin.get('/audit-log', async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);

@@ -3356,18 +3356,43 @@ export const AiReportsPage: FC<{
           <div style="font-size:40px;margin-bottom:16px">🔒</div>
           <h2 style="margin-bottom:8px">Plus 전용 기능</h2>
           <p style="font-size:14px;color:#64748b;margin-bottom:20px">AI 주간 브리핑은 Plus 플랜에서만 사용할 수 있습니다.</p>
-          <a href="/dashboard/billing" class="btn btn-primary">Plus 업그레이드</a>
+          <a href="/dashboard/billing" class="btn btn-primary" style="width:auto">Plus 업그레이드</a>
         </div>
       ) : (
         <div>
-          {(!briefings || briefings.length === 0) && (
+          {(!briefings || briefings.length === 0) ? (
             <div class="card" style="margin-bottom:16px">
-              <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
                 <div>
-                  <h2 style="margin-bottom:4px">브리핑 생성</h2>
-                  <p style="font-size:13px;color:#94a3b8">아직 브리핑이 없습니다. 수동으로 첫 브리핑을 생성하거나, 매주 월요일 자동 생성됩니다.</p>
+                  <h2 style="margin-bottom:4px">첫 브리핑 생성</h2>
+                  <p style="font-size:13px;color:#94a3b8">아직 브리핑이 없습니다. 첫 브리핑을 생성해보세요.</p>
                 </div>
                 <button id="generateBriefingBtn" class="btn btn-primary btn-sm" style="white-space:nowrap;width:auto" data-shop-id={shop.shop_id}>브리핑 생성하기</button>
+              </div>
+              <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px;font-size:13px;color:#0c4a6e;line-height:1.7">
+                <strong style="display:block;margin-bottom:8px">AI 주간 브리핑 안내</strong>
+                <p style="margin-bottom:8px">매주 <strong>월요일 오전 9시(KST)</strong>에 AI가 자동으로 주간 보고서를 생성합니다.</p>
+                <p style="margin-bottom:8px"><strong>참고 자료:</strong> 쇼핑몰 정체성(업종·타겟·톤앤매너), 최근 7일 소셜 로그인/가입 통계, 프로바이더별 분포, 이전 보고서 내용, 현재 설정된 쿠폰·배너·팝업 문구</p>
+                <p style="margin-bottom:8px"><strong>생성 내용:</strong> 지난주 성과 분석, 이번 주 전략 제안, 실행 가능한 액션 3가지, 미니배너·팝업·에스컬레이션용 추천 마케팅 문구 7종</p>
+                <p><strong>활용 방법:</strong> 생성된 보고서를 읽고, AI 추천 문구는 각 설정 페이지(미니배너·팝업·에스컬레이션)에서 "AI 추천" 영역에 표시됩니다. 적용 버튼으로 바로 반영하거나, 기본 설정에서 "AI 추천 문구 자동 적용" 토글을 켜면 매주 자동으로 문구가 업데이트됩니다.</p>
+              </div>
+            </div>
+          ) : (
+            <div class="card" style="margin-bottom:16px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:20px">📅</span>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:#1e293b">브리핑 일정</div>
+                  <div style="font-size:13px;color:#64748b">
+                    다음 자동 브리핑: <strong style="color:#2563eb">{(() => {
+                      const now = new Date();
+                      const day = now.getUTCDay();
+                      const daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : 8 - day;
+                      const next = new Date(now.getTime() + daysUntilMonday * 24 * 60 * 60 * 1000);
+                      return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')} (월) 09:00 KST`;
+                    })()}</strong>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -3458,6 +3483,7 @@ export const AiReportsPage: FC<{
               var loadingEl = document.getElementById('briefingLoading');
               var resultEl = document.getElementById('briefingResult');
 
+              if (!btn) return; // 브리핑 있으면 버튼 없음
               btn.addEventListener('click', async function() {
                 btn.disabled = true;
                 btn.textContent = '생성 중...';

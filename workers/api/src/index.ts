@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from '@supasignup/bg-core';
-import { handleScheduled } from './services/scheduled';
+import { handleScheduled, generateBriefingForShop } from './services/scheduled';
 
 import oauthRoutes from './routes/oauth';
 import widgetRoutes from './routes/widget';
@@ -173,5 +173,17 @@ export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(handleScheduled(env));
+  },
+  async queue(batch: MessageBatch<{ shop_id: string; shop_name: string }>, env: Env): Promise<void> {
+    for (const msg of batch.messages) {
+      try {
+        await generateBriefingForShop(env, msg.body.shop_id);
+        msg.ack();
+        console.log(`[Queue] Briefing completed: ${msg.body.shop_name} (${msg.body.shop_id})`);
+      } catch (err) {
+        console.error(`[Queue] Briefing failed: ${msg.body.shop_name} (${msg.body.shop_id})`, err);
+        msg.retry();
+      }
+    }
   },
 };

@@ -210,6 +210,7 @@ export interface Env {
   CF_ACCOUNT_ID: string; // Cloudflare Account ID (AI REST API fallback + Analytics용)
   CF_AI_TOKEN: string; // Cloudflare AI API Token
   CF_API_TOKEN: string; // Cloudflare API Token (Analytics GraphQL용)
+  BRIEFING_QUEUE: Queue; // Cloudflare Queue — 주간 브리핑 비동기 처리
 }
 
 // Billing
