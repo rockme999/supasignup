@@ -25,7 +25,9 @@ import {
   KakaoSettingsPage,
   AiSettingsPage,
   AiReportsPage,
+  QuickStartPage,
   GuidePage,
+  FaqPage,
   InquiriesPage,
   InquiryDetailPage,
   PrivacyPage,
@@ -638,12 +640,28 @@ pages.get('/dashboard/ai-reports', async (c) => {
   );
 });
 
+// ─── QuickStart ──────────────────────────────────────────────
+
+pages.get('/dashboard/quickstart', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  return c.html(
+    <QuickStartPage shop={shop ? { sso_configured: shop.sso_configured, plan: shop.plan } : null} isCafe24={c.get('isCafe24')} />
+  );
+});
+
 // ─── Guide ───────────────────────────────────────────────────
 
 pages.get('/dashboard/guide', (c) => {
   return c.html(
     <GuidePage isCafe24={c.get('isCafe24')} />
   );
+});
+
+// ─── FAQ ─────────────────────────────────────────────────────
+
+pages.get('/dashboard/faq', (c) => {
+  return c.html(<FaqPage isCafe24={c.get('isCafe24')} />);
 });
 
 // ─── Inquiries ───────────────────────────────────────────────

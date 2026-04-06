@@ -142,7 +142,9 @@ const settingNavItems: NavItem[] = [
 
 const etcNavItems: NavItem[] = [
   { path: '/dashboard/billing', label: '플랜 & 결제', icon: <IconCreditCard /> },
+  { path: '/dashboard/quickstart', label: '퀵스타트', icon: <IconSparkle /> },
   { path: '/dashboard/guide', label: '사용 가이드', icon: <IconHelp /> },
+  { path: '/dashboard/faq', label: 'FAQ', icon: <IconClipboard /> },
   { path: '/dashboard/inquiries', label: '문의하기', icon: <IconChat /> },
 ];
 
@@ -492,6 +494,9 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
             </div>
           </aside>
           <main class="main">
+            {/* 홍보 배너 영역 */}
+            {!isAdmin && <div id="promoBannerArea" style="margin-bottom:16px"></div>}
+
             {children}
             <footer class="site-footer" style="display:flex;gap:16px;align-items:center">
               <a href="/privacy">개인정보처리방침</a>
@@ -525,6 +530,38 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           }
           btn.addEventListener('click', openNav);
           overlay.addEventListener('click', closeNav);
+        })();
+
+        // 홍보 배너 로드
+        (function() {
+          var area = document.getElementById('promoBannerArea');
+          if (!area) return;
+
+          fetch('/api/dashboard/promo-banner', { credentials: 'same-origin' })
+            .then(function(r) {
+              if (!r.ok) return '';
+              return r.text();
+            })
+            .then(function(html) {
+              if (!html || !html.trim()) return;
+              area.innerHTML = html;
+
+              // 닫기 버튼 이벤트 바인딩
+              var closeBtn = area.querySelector('[data-dismiss-banner]');
+              if (closeBtn) {
+                var bannerId = closeBtn.dataset.dismissBanner || 'default';
+                // 이미 닫은 배너인지 확인
+                if (localStorage.getItem('promo_banner_dismissed_' + bannerId)) {
+                  area.style.display = 'none';
+                  return;
+                }
+                closeBtn.addEventListener('click', function() {
+                  localStorage.setItem('promo_banner_dismissed_' + bannerId, '1');
+                  area.style.display = 'none';
+                });
+              }
+            })
+            .catch(function() {});
         })();
 
         // Copy button handler

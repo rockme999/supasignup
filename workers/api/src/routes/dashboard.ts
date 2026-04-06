@@ -1069,6 +1069,33 @@ dashboard.get('/shops/:id/ai-copy', async (c) => {
   }
 });
 
+// ─── GET /promo-banner — 홍보 배너 프록시 ────────────────────
+dashboard.get('/promo-banner', async (c) => {
+  try {
+    const resp = await fetch('https://sm.suparain.kr/api/v1/banners/active/html?app=supasignup', {
+      headers: { 'Accept': 'text/html' },
+    });
+
+    if (!resp.ok) {
+      return new Response('', { status: 204 });
+    }
+
+    const html = await resp.text();
+    if (!html.trim()) {
+      return new Response('', { status: 204 });
+    }
+
+    return new Response(html, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=300', // 5분 캐시
+      },
+    });
+  } catch {
+    return new Response('', { status: 204 });
+  }
+});
+
 /**
  * SSO 슬롯 프로빙 (백그라운드용).
  * cafe24 callback에서 waitUntil로 호출.
