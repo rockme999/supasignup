@@ -506,7 +506,7 @@ dashboard.put('/shops/:id/escalation', async (c) => {
     toastOpacity: Math.min(Math.max(body.toastOpacity ?? 96, 10), 100),
     toastBorderRadius: Math.min(Math.max(body.toastBorderRadius ?? 20, 0), 20),
     toastAnimation: body.toastAnimation === 'slideUp' ? 'slideUp' : 'fadeIn',
-    toastDuration: Math.min(Math.max(body.toastDuration ?? 3, 1), 10),
+    toastDuration: Math.min(Math.max(body.toastDuration ?? 5, 1), 10),
     toastPersist: body.toastPersist === true,
     floatingEnabled: body.floatingEnabled !== false,
     floatingText: body.floatingText || '\uD68C\uC6D0\uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD!',
@@ -1046,6 +1046,28 @@ function maskSecret(secret: string): string {
   if (secret.length <= 8) return '****';
   return secret.slice(0, 4) + '****' + secret.slice(-4);
 }
+
+// ─── GET /shops/:id/ai-copy — AI 추천 문구 조회 ─────────────
+dashboard.get('/shops/:id/ai-copy', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  const rawCopy = (shop as unknown as Record<string, unknown>).ai_suggested_copy;
+  if (!rawCopy) {
+    return c.json({ copy: null });
+  }
+
+  try {
+    return c.json({ copy: JSON.parse(String(rawCopy)) });
+  } catch {
+    return c.json({ copy: null });
+  }
+});
 
 /**
  * SSO 슬롯 프로빙 (백그라운드용).

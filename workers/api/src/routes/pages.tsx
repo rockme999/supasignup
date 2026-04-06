@@ -35,7 +35,6 @@ import {
   AdminShopsPage,
   AdminSubscriptionsPage,
   AdminMonitoringPage,
-  AdminOwnersPage,
   AdminInquiriesPage,
   AdminAiReportsPage,
   AdminAiReportDetailPage,
@@ -984,55 +983,60 @@ pages.get('/supadmin/logout', (c) => {
 
 // GET /admin — 관리자 홈
 pages.get('/supadmin', async (c) => {
-  // 플랜별 쇼핑몰 수
-  const planCounts = await c.env.DB.prepare(
-    `SELECT
-      COUNT(*) as total,
-      SUM(CASE WHEN plan = 'free' THEN 1 ELSE 0 END) as free_count,
-      SUM(CASE WHEN plan = 'monthly' THEN 1 ELSE 0 END) as monthly_count,
-      SUM(CASE WHEN plan = 'yearly' THEN 1 ELSE 0 END) as yearly_count
-    FROM shops WHERE deleted_at IS NULL`
-  ).first<{ total: number; free_count: number; monthly_count: number; yearly_count: number }>();
+  // 6개 쿼리 병렬 실행
+  const [planCounts, providerResult, dailySignups, topShops, pendingInquiries, pendingCount] =
+    await Promise.all([
+      // 플랜별 쇼핑몰 수
+      c.env.DB.prepare(
+        `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN plan = 'free' THEN 1 ELSE 0 END) as free_count,
+          SUM(CASE WHEN plan = 'monthly' THEN 1 ELSE 0 END) as monthly_count,
+          SUM(CASE WHEN plan = 'yearly' THEN 1 ELSE 0 END) as yearly_count
+        FROM shops WHERE deleted_at IS NULL`,
+      ).first<{ total: number; free_count: number; monthly_count: number; yearly_count: number }>(),
 
-  // 프로바이더별 가입 분포 (전체)
-  const providerResult = await c.env.DB.prepare(
-    `SELECT provider, COUNT(*) as cnt FROM login_stats WHERE action = 'signup' GROUP BY provider ORDER BY cnt DESC`
-  ).all<{ provider: string; cnt: number }>();
+      // 프로바이더별 가입 분포 (전체)
+      c.env.DB.prepare(
+        `SELECT provider, COUNT(*) as cnt FROM login_stats WHERE action = 'signup' GROUP BY provider ORDER BY cnt DESC`,
+      ).all<{ provider: string; cnt: number }>(),
 
-  // 일자별 가입 추이 (최근 14일)
-  const dailySignups = await c.env.DB.prepare(
-    `SELECT DATE(created_at) as date, COUNT(*) as cnt
-     FROM login_stats WHERE action = 'signup' AND created_at >= datetime('now', '-14 days')
-     GROUP BY DATE(created_at) ORDER BY date ASC`
-  ).all<{ date: string; cnt: number }>();
+      // 일자별 가입 추이 (최근 14일)
+      c.env.DB.prepare(
+        `SELECT DATE(created_at) as date, COUNT(*) as cnt
+         FROM login_stats WHERE action = 'signup' AND created_at >= datetime('now', '-14 days')
+         GROUP BY DATE(created_at) ORDER BY date ASC`,
+      ).all<{ date: string; cnt: number }>(),
 
-  // 상위 10개 쇼핑몰 (총 회원수 기준)
-  const topShops = await c.env.DB.prepare(
-    `SELECT s.shop_name, s.mall_id, s.plan,
-      COUNT(*) as total_signups,
-      SUM(CASE WHEN ls.created_at >= datetime('now', 'start of month') THEN 1 ELSE 0 END) as monthly_signups,
-      SUM(CASE WHEN DATE(ls.created_at) = DATE('now') THEN 1 ELSE 0 END) as daily_signups
-    FROM login_stats ls
-    JOIN shops s ON ls.shop_id = s.shop_id
-    WHERE ls.action = 'signup' AND s.deleted_at IS NULL
-    GROUP BY ls.shop_id
-    ORDER BY total_signups DESC
-    LIMIT 10`
-  ).all<{ shop_name: string; mall_id: string; plan: string; total_signups: number; monthly_signups: number; daily_signups: number }>();
+      // 상위 10개 쇼핑몰 (총 회원수 기준)
+      c.env.DB.prepare(
+        `SELECT s.shop_name, s.mall_id, s.plan,
+          COUNT(*) as total_signups,
+          SUM(CASE WHEN ls.created_at >= datetime('now', 'start of month') THEN 1 ELSE 0 END) as monthly_signups,
+          SUM(CASE WHEN DATE(ls.created_at) = DATE('now') THEN 1 ELSE 0 END) as daily_signups
+        FROM login_stats ls
+        JOIN shops s ON ls.shop_id = s.shop_id
+        WHERE ls.action = 'signup' AND s.deleted_at IS NULL
+        GROUP BY ls.shop_id
+        ORDER BY total_signups DESC
+        LIMIT 10`,
+      ).all<{ shop_name: string; mall_id: string; plan: string; total_signups: number; monthly_signups: number; daily_signups: number }>(),
 
-  // 미답변 문의 (최근 10건)
-  const pendingInquiries = await c.env.DB.prepare(
-    `SELECT i.id, i.title, i.created_at, o.email as owner_email, s.shop_name
-     FROM inquiries i
-     JOIN owners o ON i.owner_id = o.owner_id
-     JOIN shops s ON i.shop_id = s.shop_id
-     WHERE i.status = 'pending'
-     ORDER BY i.created_at DESC LIMIT 10`
-  ).all<{ id: string; title: string; created_at: string; owner_email: string; shop_name: string }>();
+      // 미답변 문의 (최근 10건)
+      c.env.DB.prepare(
+        `SELECT i.id, i.title, i.created_at, o.email as owner_email, s.shop_name
+         FROM inquiries i
+         JOIN owners o ON i.owner_id = o.owner_id
+         JOIN shops s ON i.shop_id = s.shop_id
+         WHERE i.status = 'pending'
+         ORDER BY i.created_at DESC LIMIT 10`,
+      ).all<{ id: string; title: string; created_at: string; owner_email: string; shop_name: string }>(),
 
-  const pendingCount = await c.env.DB.prepare(
-    "SELECT COUNT(*) as cnt FROM inquiries WHERE status = 'pending'"
-  ).first<{ cnt: number }>();
+      // 미답변 문의 수
+      c.env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM inquiries WHERE status = 'pending'",
+      ).first<{ cnt: number }>(),
+    ]);
 
   return c.html(
     <AdminHomePage

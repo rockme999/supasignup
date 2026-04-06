@@ -12,6 +12,8 @@
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { authMiddleware } from '../middleware/auth';
+import { applyAiCopyToConfigs } from '../services/ai-copy';
+import type { AiCopy } from '../services/ai-copy';
 
 // AI 응답 인터페이스 (Cloudflare Workers AI)
 interface AiTextResponse {
@@ -378,10 +380,16 @@ ai.post('/briefing', async (c) => {
   let couponText = '쿠폰 미설정';
   if (shop.coupon_config) {
     try {
-      const cc = JSON.parse(shop.coupon_config as string) as { enabled: boolean; coupons: Array<{ coupon_name?: string; discount_amount?: number }> };
-      if (cc.enabled && cc.coupons?.length > 0) {
-        couponText = cc.coupons.map(c => `${c.coupon_name ?? '쿠폰'}${c.discount_amount ? ` ${c.discount_amount}원` : ''}`).join(', ');
-      }
+      const cc = JSON.parse(shop.coupon_config as string) as {
+        shipping: { enabled: boolean; expire_days: number };
+        amount: { enabled: boolean; expire_days: number; discount_amount: number; min_order: number };
+        rate: { enabled: boolean; expire_days: number; discount_rate: number; min_order: number };
+      };
+      const couponParts: string[] = [];
+      if (cc.shipping?.enabled) couponParts.push(`무료배송 쿠폰 (${cc.shipping.expire_days}일)`);
+      if (cc.amount?.enabled) couponParts.push(`${cc.amount.discount_amount.toLocaleString()}원 할인 쿠폰 (${cc.amount.expire_days}일${cc.amount.min_order > 0 ? `, 최소 ${cc.amount.min_order.toLocaleString()}원` : ''})`);
+      if (cc.rate?.enabled) couponParts.push(`${cc.rate.discount_rate}% 할인 쿠폰 (${cc.rate.expire_days}일${cc.rate.min_order > 0 ? `, 최소 ${cc.rate.min_order.toLocaleString()}원` : ''})`);
+      couponText = couponParts.length > 0 ? couponParts.join(', ') : '쿠폰 미설정';
     } catch { /* ignore */ }
   }
 
@@ -426,14 +434,19 @@ ${prevBriefingText}
 2. 번개가입 앱의 범위(소셜 로그인, 회원가입 전환, 쿠폰 발급) 안에서 실행 가능한 액션만 제안하세요.
 3. 이전 보고서가 있으면 변화 추이를 언급하세요.
 4. 통계가 없으면 "데이터 부족"이라 쓰고, 억지로 분석하지 마세요.
+5. 금기어: "1초 가입", "1초가입" — 경쟁사 서비스명이므로 절대 사용 금지. 우리 서비스명은 "번개가입"입니다.
+
+■ 추가로, 이 쇼핑몰의 정체성과 혜택에 맞는 마케팅 문구를 생성해주세요:
+  - banner: 미니배너에 표시할 한 줄 문구 (30자 이내, 가입 유도)
+  - toast: 재방문 고객에게 보여줄 토스트 메시지 (30자 이내, {n}은 방문횟수로 치환됨)
+  - floating: 플로팅 배너 문구 (30자 이내, 가입 혜택 강조)
+  - floatingBtn: 플로팅 배너 버튼 텍스트 (20자 이내)
+  - popupTitle: 이탈 감지 팝업 제목 (20자 이내, 주의를 끄는 문구)
+  - popupBody: 이탈 감지 팝업 본문 (100자 이내, 혜택과 긴급성 강조)
+  - popupCta: 팝업 CTA 버튼 텍스트 (20자 이내)
 
 반드시 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
-{
-  "performance": "지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)",
-  "strategy": "이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)",
-  "actions": ["실행 가능한 액션 1", "실행 가능한 액션 2", "실행 가능한 액션 3"],
-  "insight": "AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)"
-}`;
+{"performance":"지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)","strategy":"이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)","actions":["실행 가능한 액션 1","실행 가능한 액션 2","실행 가능한 액션 3"],"insight":"AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
 
   let rawBriefing = '';
   try {
@@ -447,7 +460,7 @@ ${prevBriefingText}
   }
 
   // AI 응답에서 JSON 추출 및 구조화
-  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string } | null = null;
+  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string; copy?: AiCopy } | null = null;
   try {
     const jsonMatch = rawBriefing.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -480,6 +493,31 @@ ${prevBriefingText}
     parsed.insight ?? null,
     JSON.stringify(stats),
   ).run();
+
+  // AI 추천 문구 저장 + 자동 적용 처리
+  if (parsed.copy) {
+    const shopId = body.shop_id!;
+    await c.env.DB.prepare(
+      "UPDATE shops SET ai_suggested_copy = ?, updated_at = datetime('now') WHERE shop_id = ?"
+    ).bind(JSON.stringify(parsed.copy), shopId).run();
+
+    // 자동 적용이 켜져 있으면 각 config에 copy 반영
+    let identity: Record<string, unknown> = {};
+    try { identity = JSON.parse(String(shop.shop_identity ?? '{}')); } catch { /* ignore */ }
+    if (identity.auto_apply_ai_copy) {
+      await applyAiCopyToConfigs(
+        c.env,
+        {
+          shop_id: shopId,
+          client_id: String(shop.client_id),
+          banner_config: shop.banner_config as string | null | undefined,
+          popup_config: shop.popup_config as string | null | undefined,
+          escalation_config: shop.escalation_config as string | null | undefined,
+        },
+        parsed.copy as AiCopy,
+      );
+    }
+  }
 
   return c.json({
     success: true,

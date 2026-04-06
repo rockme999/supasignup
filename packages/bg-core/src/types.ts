@@ -12,7 +12,7 @@ export interface Shop {
   platform_access_token: string | null;
   platform_refresh_token: string | null;
   allowed_redirect_uris: string | null; // JSON array string
-  plan: 'free' | 'plus';
+  plan: 'free' | 'monthly' | 'yearly';
   sso_configured: number; // 0 or 1
   widget_style: string | null; // JSON string
   coupon_config?: string | null; // JSON string (CouponConfig)

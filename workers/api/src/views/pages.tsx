@@ -3360,17 +3360,17 @@ export const AiReportsPage: FC<{
         </div>
       ) : (
         <div>
-          <div class="card" style="margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <h2 style="margin-bottom:4px">브리핑 생성</h2>
-                <p style="font-size:13px;color:#94a3b8">최근 7일 데이터를 기반으로 AI가 분석 리포트를 생성합니다.</p>
+          {(!briefings || briefings.length === 0) && (
+            <div class="card" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <h2 style="margin-bottom:4px">브리핑 생성</h2>
+                  <p style="font-size:13px;color:#94a3b8">아직 브리핑이 없습니다. 수동으로 첫 브리핑을 생성하거나, 매주 월요일 자동 생성됩니다.</p>
+                </div>
+                <button id="generateBriefingBtn" class="btn btn-primary btn-sm" style="white-space:nowrap;width:auto" data-shop-id={shop.shop_id}>브리핑 생성하기</button>
               </div>
-              <button id="generateBriefingBtn" class="btn btn-primary" data-shop-id={shop.shop_id}>
-                브리핑 생성하기
-              </button>
             </div>
-          </div>
+          )}
 
           <div id="briefingLoading" style="display:none;text-align:center;padding:32px;color:#64748b;font-size:14px">
             AI가 분석 중입니다. 잠시 기다려주세요...
@@ -3736,6 +3736,14 @@ export const GeneralSettingsPage: FC<{
             <div><strong>한 줄 소개:</strong> <span id="roSummary">-</span></div>
             <div><strong>키워드:</strong> <span id="roKeywords">-</span></div>
           </div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+            <label class="toggle" style="flex-shrink:0">
+              <input type="checkbox" id="autoApplyAiCopy" />
+              <span class="toggle-slider"></span>
+            </label>
+            <label for="autoApplyAiCopy" style="font-size:13px;color:#475569;cursor:pointer">AI 추천 문구 자동 적용</label>
+            <span style="font-size:11px;color:#94a3b8">AI 보고서 생성 시 미니배너·팝업·에스컬레이션 문구를 자동으로 업데이트합니다</span>
+          </div>
         </div>
 
         <div style="display:flex;gap:8px;margin-bottom:16px">
@@ -3789,18 +3797,37 @@ export const GeneralSettingsPage: FC<{
             var roFields = { industry: document.getElementById('roIndustry'), target: document.getElementById('roTarget'), tone: document.getElementById('roTone'), summary: document.getElementById('roSummary'), keywords: document.getElementById('roKeywords') };
             var editFields = { industry: document.getElementById('idIndustry'), target: document.getElementById('idTarget'), tone: document.getElementById('idTone'), summary: document.getElementById('idSummary'), keywords: document.getElementById('idKeywords') };
 
+            var autoApplyCheckbox = document.getElementById('autoApplyAiCopy');
+
             function showReadonly(id) {
               roFields.industry.textContent = id.industry || '-';
               roFields.target.textContent = id.target || id.target_audience || '-';
               roFields.tone.textContent = id.tone || '-';
               roFields.summary.textContent = id.summary || '-';
               roFields.keywords.textContent = Array.isArray(id.keywords) ? id.keywords.join(', ') : (id.keywords || '-');
+              if (autoApplyCheckbox) autoApplyCheckbox.checked = !!id.auto_apply_ai_copy;
               readonlyEl.style.display = 'block';
               editForm.style.display = 'none';
               editBtn.style.display = 'inline-flex';
               saveBtn.style.display = 'none';
               cancelBtn.style.display = 'none';
               analyzeBtn.textContent = 'AI 다시 분석하기';
+            }
+
+            if (autoApplyCheckbox) {
+              autoApplyCheckbox.addEventListener('change', async function() {
+                var currentIdentity = {
+                  industry: roFields.industry.textContent !== '-' ? roFields.industry.textContent : '',
+                  target: roFields.target.textContent !== '-' ? roFields.target.textContent : '',
+                  tone: roFields.tone.textContent !== '-' ? roFields.tone.textContent : '',
+                  summary: roFields.summary.textContent !== '-' ? roFields.summary.textContent : '',
+                  keywords: roFields.keywords.textContent !== '-' ? roFields.keywords.textContent.split(', ').filter(Boolean) : [],
+                  auto_apply_ai_copy: this.checked,
+                };
+                try {
+                  await apiCall('PUT', '/api/dashboard/shops/' + shopId, { shop_identity: JSON.stringify(currentIdentity) });
+                } catch(e) {}
+              });
             }
 
             function enterEditMode() {
@@ -3876,6 +3903,7 @@ export const GeneralSettingsPage: FC<{
                 tone: editFields.tone.value.trim(),
                 summary: editFields.summary.value.trim(),
                 keywords: editFields.keywords.value.split(',').map(function(k) { return k.trim(); }).filter(Boolean),
+                auto_apply_ai_copy: autoApplyCheckbox ? autoApplyCheckbox.checked : false,
               };
               saveBtn.disabled = true; saveBtn.textContent = '저장 중...';
               try {
@@ -4451,6 +4479,13 @@ export const BannerSettingsPage: FC<{
                     <p style="font-size:12px;color:#94a3b8;margin-top:6px">
                       <span id="bannerTextCount">{(bc.text || '').length}</span>/30자
                     </p>
+                    <div id="aiBannerSuggestion" style="display:none;margin-top:8px;padding:8px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#1e40af;font-weight:600">AI 추천</span>
+                        <button id="applyBannerCopy" type="button" style="padding:2px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer">적용</button>
+                      </div>
+                      <div id="aiBannerCopyText" style="color:#1e40af;margin-top:4px"></div>
+                    </div>
                   </div>
                   <div style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
@@ -4951,6 +4986,37 @@ export const BannerSettingsPage: FC<{
                     applyBannerSize();
                   });
                 }
+
+                // AI 추천 문구 로드
+                (async function() {
+                  try {
+                    if (!shopId) return;
+                    var resp = await fetch('/api/dashboard/shops/' + shopId + '/ai-copy', { credentials: 'same-origin' });
+                    if (!resp.ok) return;
+                    var data = await resp.json();
+                    var copy = data.copy;
+                    if (!copy || !copy.banner) return;
+                    document.getElementById('aiBannerCopyText').textContent = copy.banner;
+                    document.getElementById('aiBannerSuggestion').style.display = 'block';
+                    document.getElementById('applyBannerCopy').addEventListener('click', function() {
+                      var textInput = document.getElementById('bannerText');
+                      if (textInput) {
+                        textInput.value = copy.banner;
+                        textInput.dispatchEvent(new Event('input'));
+                        // 미리보기 텍스트 업데이트
+                        var previewText = document.getElementById('bannerPreviewText');
+                        if (previewText) {
+                          var nodes = previewText.childNodes;
+                          for (var n = 0; n < nodes.length; n++) {
+                            if (nodes[n].nodeType === 3) { nodes[n].textContent = ' ' + copy.banner; break; }
+                          }
+                        }
+                        var counter = document.getElementById('bannerTextCount');
+                        if (counter) counter.textContent = copy.banner.length;
+                      }
+                    });
+                  } catch(e) {}
+                })();
               })();
             `}} />
           </div>
@@ -5045,6 +5111,17 @@ export const PopupSettingsPage: FC<{
                       <div class="form-group">
                         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCta">버튼 텍스트 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
                         <input type="text" id="popupCta" maxlength={20} placeholder="혜택 받고 가입하기" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                      </div>
+                      <div id="aiPopupSuggestion" style="display:none;margin-top:12px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                          <span style="color:#1e40af;font-weight:600">AI 추천 문구</span>
+                          <button id="applyPopupCopy" type="button" style="padding:2px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer">적용</button>
+                        </div>
+                        <div style="display:grid;gap:4px;color:#1e40af">
+                          <div>제목: <span id="aiPopupTitle"></span></div>
+                          <div>본문: <span id="aiPopupBody"></span></div>
+                          <div>버튼: <span id="aiPopupCta"></span></div>
+                        </div>
                       </div>
                     </div>
                     <div style="flex-shrink:0">
@@ -5354,6 +5431,26 @@ export const PopupSettingsPage: FC<{
                     applyState();
                   })
                   .catch(function() { applyState(); });
+
+                // AI 추천 문구 로드
+                (async function() {
+                  try {
+                    var resp = await fetch('/api/dashboard/shops/' + SHOP_ID + '/ai-copy', { credentials: 'same-origin' });
+                    if (!resp.ok) return;
+                    var data = await resp.json();
+                    var copy = data.copy;
+                    if (!copy || (!copy.popupTitle && !copy.popupBody && !copy.popupCta)) return;
+                    if (copy.popupTitle) document.getElementById('aiPopupTitle').textContent = copy.popupTitle;
+                    if (copy.popupBody) document.getElementById('aiPopupBody').textContent = copy.popupBody;
+                    if (copy.popupCta) document.getElementById('aiPopupCta').textContent = copy.popupCta;
+                    document.getElementById('aiPopupSuggestion').style.display = 'block';
+                    document.getElementById('applyPopupCopy').addEventListener('click', function() {
+                      if (copy.popupTitle) { document.getElementById('popupTitle').value = copy.popupTitle; state.title = copy.popupTitle; document.getElementById('popupPreviewTitle').textContent = copy.popupTitle; }
+                      if (copy.popupBody) { document.getElementById('popupBody').value = copy.popupBody; state.body = copy.popupBody; document.getElementById('popupPreviewBody').innerHTML = copy.popupBody.replace(/\\n/g, '<br>'); }
+                      if (copy.popupCta) { document.getElementById('popupCta').value = copy.popupCta; state.ctaText = copy.popupCta; document.getElementById('popupPreviewCta').textContent = copy.popupCta; }
+                    });
+                  } catch(e) {}
+                })();
               })();
             `}} />
           </div>
@@ -5483,6 +5580,17 @@ export const EscalationSettingsPage: FC<{
                       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="toastText">토스트 메시지 <span style="font-weight:400;color:#94a3b8">(최대 30자)</span></label>
                       <input type="text" id="toastText" maxlength={30} placeholder={"안녕하세요. {n}번째 방문을 환영합니다."} style="width:320px;max-width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
                       <p style="font-size:11px;color:#94a3b8;margin-top:4px">{"  {n} 을 입력하면 실제 방문 횟수로 대치됩니다. 예: \"이미 {n}번째 방문이에요\" → \"이미 3번째 방문이에요\""}</p>
+                    </div>
+                    <div id="aiEscalationSuggestion" style="display:none;margin-bottom:14px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="color:#1e40af;font-weight:600">AI 추천 문구</span>
+                        <button id="applyEscalationCopy" type="button" style="padding:2px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer">적용</button>
+                      </div>
+                      <div style="display:grid;gap:4px;color:#1e40af">
+                        <div>토스트: <span id="aiToastText"></span></div>
+                        <div>배너: <span id="aiFloatingText"></span></div>
+                        <div>버튼: <span id="aiFloatingBtnText"></span></div>
+                      </div>
                     </div>
                     <div style="display:flex;gap:24px;margin-bottom:14px">
                       <div style="flex:1">
@@ -6101,6 +6209,39 @@ export const EscalationSettingsPage: FC<{
                     applyState();
                   })
                   .catch(function() { applyState(); });
+
+                // AI 추천 문구 로드
+                (async function() {
+                  try {
+                    var resp = await fetch('/api/dashboard/shops/' + SHOP_ID + '/ai-copy', { credentials: 'same-origin' });
+                    if (!resp.ok) return;
+                    var data = await resp.json();
+                    var copy = data.copy;
+                    if (!copy || (!copy.toast && !copy.floating && !copy.floatingBtn)) return;
+                    if (copy.toast) document.getElementById('aiToastText').textContent = copy.toast;
+                    if (copy.floating) document.getElementById('aiFloatingText').textContent = copy.floating;
+                    if (copy.floatingBtn) document.getElementById('aiFloatingBtnText').textContent = copy.floatingBtn;
+                    document.getElementById('aiEscalationSuggestion').style.display = 'block';
+                    document.getElementById('applyEscalationCopy').addEventListener('click', function() {
+                      if (copy.toast) {
+                        document.getElementById('toastText').value = copy.toast;
+                        state.toastText = copy.toast;
+                        if (typeof updateToastPreviewText === 'function') updateToastPreviewText();
+                      }
+                      if (copy.floating) {
+                        document.getElementById('floatingText').value = copy.floating;
+                        state.floatingText = copy.floating;
+                        if (typeof updateFloatingPreviewText === 'function') updateFloatingPreviewText();
+                      }
+                      if (copy.floatingBtn) {
+                        document.getElementById('floatingBtnText').value = copy.floatingBtn;
+                        state.floatingBtnText = copy.floatingBtn;
+                        var btnPreview = document.getElementById('floatingBtnPreview');
+                        if (btnPreview) btnPreview.textContent = copy.floatingBtn;
+                      }
+                    });
+                  } catch(e) {}
+                })();
               })();
             `}} />
           </div>

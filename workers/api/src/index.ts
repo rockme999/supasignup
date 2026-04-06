@@ -57,7 +57,7 @@ app.use('/api/ai/*', cors({
     const baseUrl = (c.env as Env).BASE_URL.replace(/\/+$/, '');
     return origin === baseUrl ? origin : '';
   },
-  allowMethods: ['POST'],
+  allowMethods: ['GET', 'POST'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 

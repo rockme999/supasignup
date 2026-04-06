@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { generateId } from '@supasignup/bg-core';
 import { adminAuth } from '../middleware/admin';
+import { rateLimitMiddleware } from '../middleware/auth';
 
 type AdminEnv = {
   Bindings: Env;
@@ -16,7 +17,7 @@ type AdminEnv = {
 const admin = new Hono<AdminEnv>();
 
 // POST /auth/login — 관리자 전용 로그인 (미들웨어 적용 전에 등록)
-admin.post('/auth/login', async (c) => {
+admin.post('/auth/login', rateLimitMiddleware, async (c) => {
   const body = await c.req.json<{ email?: string; password?: string }>();
   if (!body.email || !body.password) {
     return c.json({ error: 'missing_fields', message: '아이디와 비밀번호를 입력해주세요.' }, 400);
@@ -57,6 +58,12 @@ admin.use('/*', adminAuth);
 // LIKE 패턴 특수문자 이스케이프 (%, _, \)
 function escapeLike(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+// CSV 인젝션 방어: =, +, -, @ 로 시작하는 값 앞에 ' 추가
+function sanitizeCsvCell(val: string): string {
+  if (/^[=+\-@]/.test(val)) return "'" + val;
+  return val;
 }
 
 // ─── GET /stats/providers — 기간별/플랜별 프로바이더 분포 ────
@@ -476,7 +483,7 @@ admin.get('/export/shops', async (c) => {
 
   const header = '쇼핑몰명,Mall ID,플랫폼,플랜,소유자 이메일,상태,가입일\n';
   const rows = (result.results ?? []).map((r) =>
-    `"${(r.shop_name || '').replace(/"/g, '""')}","${r.mall_id}","${r.platform}","${r.plan}","${r.owner_email}","${r.status}","${r.created_at}"`,
+    `"${sanitizeCsvCell((r.shop_name || '').replace(/"/g, '""'))}","${sanitizeCsvCell(r.mall_id)}","${sanitizeCsvCell(r.platform)}","${sanitizeCsvCell(r.plan)}","${sanitizeCsvCell(r.owner_email)}","${sanitizeCsvCell(r.status)}","${sanitizeCsvCell(r.created_at)}"`,
   ).join('\n');
 
   const bom = '\uFEFF';
@@ -509,7 +516,7 @@ admin.get('/export/stats', async (c) => {
 
   const header = '날짜,쇼핑몰명,프로바이더,액션,건수\n';
   const rows = (result.results ?? []).map((r) =>
-    `"${r.date}","${(r.shop_name || '').replace(/"/g, '""')}","${r.provider}","${r.action}","${r.cnt}"`,
+    `"${sanitizeCsvCell(r.date)}","${sanitizeCsvCell((r.shop_name || '').replace(/"/g, '""'))}","${sanitizeCsvCell(r.provider)}","${sanitizeCsvCell(r.action)}","${String(r.cnt)}"`,
   ).join('\n');
 
   const bom = '\uFEFF';
@@ -543,12 +550,12 @@ admin.get('/monitoring', async (c) => {
   const workerName = isDev ? 'bg-api-dev' : 'bg-api';
   const d1Id = isDev ? 'd420b951-c93b-4449-8f8c-f86c9f99a2cc' : '254438d7-b1b1-45a1-afe1-2c766aba252b';
 
-  // GraphQL 쿼리: Workers 요청/에러/CPU + 일자별 추이
-  const query = `query {
+  // GraphQL 쿼리: Workers 요청/에러/CPU + 일자별 추이 (variables 사용으로 인젝션 방어)
+  const query = `query($accountTag: string!, $since7d: string!, $until: string!, $since24h: string!, $workerName: string!, $d1Id: string!) {
     viewer {
-      accounts(filter: {accountTag: "${accountId}"}) {
+      accounts(filter: {accountTag: $accountTag}) {
         workersInvocationsAdaptive(
-          filter: {datetimeGeq: "${since7d}", datetimeLt: "${until}", scriptName: "${workerName}"}
+          filter: {datetimeGeq: $since7d, datetimeLt: $until, scriptName: $workerName}
           limit: 1000
           orderBy: [datetime_ASC]
         ) {
@@ -557,7 +564,7 @@ admin.get('/monitoring', async (c) => {
           dimensions { datetime: datetimeHour scriptName }
         }
         d1AnalyticsAdaptive(
-          filter: {datetimeGeq: "${since}", datetimeLt: "${until}", databaseId: "${d1Id}"}
+          filter: {datetimeGeq: $since24h, datetimeLt: $until, databaseId: $d1Id}
           limit: 100
         ) {
           sum { readQueries writeQueries rowsRead rowsWritten }
@@ -574,7 +581,17 @@ admin.get('/monitoring', async (c) => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({
+        query,
+        variables: {
+          accountTag: accountId,
+          since7d,
+          until,
+          since24h: since,
+          workerName,
+          d1Id,
+        },
+      }),
     });
 
     if (!resp.ok) {

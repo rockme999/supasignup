@@ -1,6 +1,8 @@
 import type { D1PreparedStatement } from '@cloudflare/workers-types';
 import type { Env } from '@supasignup/bg-core';
 import { callAI } from '../routes/ai';
+import { applyAiCopyToConfigs } from './ai-copy';
+import type { AiCopy } from './ai-copy';
 
 export async function handleScheduled(env: Env): Promise<void> {
   // 1. 만료된 구독 처리
@@ -61,7 +63,7 @@ async function handleWeeklyBriefings(env: Env): Promise<void> {
 
   // Plus 플랜 shop만 대상 (shop_identity가 있어야 의미 있는 브리핑 가능)
   const shops = await env.DB.prepare(
-    `SELECT shop_id, shop_name, shop_identity FROM shops
+    `SELECT shop_id, shop_name, shop_identity, banner_config, popup_config, escalation_config, client_id FROM shops
      WHERE plan != 'free' AND deleted_at IS NULL AND shop_identity IS NOT NULL`
   ).all();
 
@@ -69,6 +71,10 @@ async function handleWeeklyBriefings(env: Env): Promise<void> {
     shop_id: string;
     shop_name: string;
     shop_identity: string;
+    banner_config: string | null;
+    popup_config: string | null;
+    escalation_config: string | null;
+    client_id: string;
   }>;
 
   if (targets.length === 0) return;
@@ -140,16 +146,25 @@ async function handleWeeklyBriefings(env: Env): Promise<void> {
 ■ 지난 주 통계: ${prevStatSummary}
 ■ 이전 보고서: ${prevBriefingText}
 
-■ 규칙: 1) 데이터 기반 분석과 AI 의견 구분 2) 번개가입 범위 내 액션만 제안 3) 이전 보고서 대비 변화 언급 4) 데이터 부족 시 억지 분석 금지
+■ 규칙: 1) 데이터 기반 분석과 AI 의견 구분 2) 번개가입 범위 내 액션만 제안 3) 이전 보고서 대비 변화 언급 4) 데이터 부족 시 억지 분석 금지 5) 금기어: "1초 가입", "1초가입" 절대 사용 금지 (경쟁사 서비스명), 우리 서비스명은 "번개가입"
 
-JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actions":["액션1","액션2","액션3"],"insight":"앱 범위 밖 참고사항"}`;
+■ 추가로, 이 쇼핑몰의 정체성과 혜택에 맞는 마케팅 문구를 생성해주세요:
+  - banner: 미니배너에 표시할 한 줄 문구 (30자 이내, 가입 유도)
+  - toast: 재방문 고객에게 보여줄 토스트 메시지 (30자 이내, {n}은 방문횟수로 치환됨)
+  - floating: 플로팅 배너 문구 (30자 이내, 가입 혜택 강조)
+  - floatingBtn: 플로팅 배너 버튼 텍스트 (20자 이내)
+  - popupTitle: 이탈 감지 팝업 제목 (20자 이내, 주의를 끄는 문구)
+  - popupBody: 이탈 감지 팝업 본문 (100자 이내, 혜택과 긴급성 강조)
+  - popupCta: 팝업 CTA 버튼 텍스트 (20자 이내)
+
+JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actions":["액션1","액션2","액션3"],"insight":"앱 범위 밖 참고사항","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
 
       const raw = await callAI(env, [
         { role: 'system', content: 'You are a Korean e-commerce marketing advisor. Always respond with valid JSON only, no markdown, no explanation.' },
         { role: 'user', content: prompt },
       ]);
 
-      let parsed: { performance: string; strategy: string; actions: string[]; insight?: string } | null = null;
+      let parsed: { performance: string; strategy: string; actions: string[]; insight?: string; copy?: AiCopy } | null = null;
       try {
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
@@ -172,6 +187,19 @@ JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actio
         parsed.insight ?? null,
         JSON.stringify(stats),
       ).run();
+
+      // AI 추천 문구 저장 + 자동 적용 처리
+      if (parsed.copy) {
+        await env.DB.prepare(
+          "UPDATE shops SET ai_suggested_copy = ?, updated_at = datetime('now') WHERE shop_id = ?"
+        ).bind(JSON.stringify(parsed.copy), shop.shop_id).run();
+
+        let identity: Record<string, unknown> = {};
+        try { identity = JSON.parse(shop.shop_identity); } catch { /* ignore */ }
+        if (identity.auto_apply_ai_copy) {
+          await applyAiCopyToConfigs(env, shop, parsed.copy as AiCopy);
+        }
+      }
 
       console.log(`[Scheduled] Briefing created for ${shop.shop_name} (${shop.shop_id})`);
     } catch (e) {

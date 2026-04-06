@@ -39,7 +39,7 @@ binding = "AI"
 [env.dev]
 name = "bg-api-dev"
 
-# 스테이징은 cron 불필요
+# dev cron: 계정 cron 5개 제한으로 비활성화 (프로덕션 안정화 후 프로덕션 cron으로 운영)
 [env.dev.triggers]
 crons = []
 
