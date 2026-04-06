@@ -17,6 +17,7 @@
 --   2026-04-06: coupon_issues 테이블 추가 (쿠폰 발급 히스토리)
 --   2026-04-06: shops.ai_suggested_copy 추가 (AI 브리핑 시 생성된 추천 문구 JSON 저장)
 --   2026-04-06: funnel_events event_type 13종 확장 + shop_id/event_type/created_at 복합 인덱스 추가
+--   2026-04-07: 인덱스 최적화 — login_stats 3컬럼 복합 인덱스, 불필요 인덱스 4개 삭제
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -140,9 +141,8 @@ CREATE TABLE IF NOT EXISTS login_stats (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_login_stats_shop_id ON login_stats(shop_id);
-CREATE INDEX IF NOT EXISTS idx_login_stats_created_at ON login_stats(created_at);
-CREATE INDEX IF NOT EXISTS idx_login_stats_shop_action ON login_stats(shop_id, action);
+CREATE INDEX IF NOT EXISTS idx_login_stats_shop_id         ON login_stats(shop_id);
+CREATE INDEX IF NOT EXISTS idx_login_stats_shop_action_date ON login_stats(shop_id, action, created_at);
 
 -- ============================================================
 -- 7. user_providers - Multi-provider linking
@@ -186,10 +186,7 @@ CREATE TABLE IF NOT EXISTS funnel_events (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_funnel_events_shop_id    ON funnel_events(shop_id);
-CREATE INDEX IF NOT EXISTS idx_funnel_events_created_at ON funnel_events(created_at);
-CREATE INDEX IF NOT EXISTS idx_funnel_events_type       ON funnel_events(event_type);
-CREATE INDEX IF NOT EXISTS idx_funnel_shop_type_date    ON funnel_events(shop_id, event_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_funnel_shop_type_date ON funnel_events(shop_id, event_type, created_at);
 
 -- ============================================================
 -- 10. inquiries - 1:1 문의 게시판

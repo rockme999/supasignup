@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import type { MiddlewareHandler } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { handleScheduled, generateBriefingForShop } from './services/scheduled';
 
@@ -22,6 +23,29 @@ import { TEST_FRONT_API_JS } from './widget/test-front-api';
 import { TEST_EVENTS_JS } from './widget/test-events';
 
 const app = new Hono<{ Bindings: Env }>();
+
+// ── Security headers: Global ─────────────────────────────────
+app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+});
+
+// ── Security headers: Dashboard / Admin routes ───────────────
+// Widget 라우트(/api/widget/*)는 iframe 허용 필요 → X-Frame-Options 제외
+const PROTECTED_ROUTE_PATTERNS = ['/dashboard/', '/supadmin/', '/api/dashboard/', '/api/supadmin/'];
+app.use('*', async (c, next) => {
+  await next();
+  const path = c.req.path;
+  const isProtected = PROTECTED_ROUTE_PATTERNS.some((p) => path === p.slice(0, -1) || path.startsWith(p));
+  if (isProtected) {
+    c.header('X-Frame-Options', 'DENY');
+    c.header(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"
+    );
+  }
+});
 
 // ── CORS: Widget routes (public, GET only) ──────────────────
 app.use('/api/widget/*', cors({
@@ -105,8 +129,18 @@ app.get('/widget/buttons.js', (c) => {
   });
 });
 
+// ── Dev-only guard: /widget/test*.js, /test/* ────────────────
+// BASE_URL에 '-dev.'가 포함된 dev 환경에서만 접근 허용.
+// 프로덕션(bg.suparain.kr)에서는 404 반환.
+const devOnly: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  if (!(c.env as Env).BASE_URL.includes('-dev.')) {
+    return c.notFound();
+  }
+  await next();
+};
+
 // ── ScriptTag DOM 조작 테스트 (개발용) ──────────────────────
-app.get('/widget/test.js', (c) => {
+app.get('/widget/test.js', devOnly, (c) => {
   return c.body(TEST_DOM_JS, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
     'Cache-Control': 'no-cache, no-store',
@@ -115,7 +149,7 @@ app.get('/widget/test.js', (c) => {
 });
 
 // ── ScriptTag localStorage 검증 테스트 (개발용) ────────────
-app.get('/widget/test-storage.js', (c) => {
+app.get('/widget/test-storage.js', devOnly, (c) => {
   return c.body(TEST_STORAGE_JS, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
     'Cache-Control': 'no-cache, no-store',
@@ -124,7 +158,7 @@ app.get('/widget/test-storage.js', (c) => {
 });
 
 // ── ScriptTag Shadow DOM + IntersectionObserver 테스트 (개발용)
-app.get('/widget/test-shadow-io.js', (c) => {
+app.get('/widget/test-shadow-io.js', devOnly, (c) => {
   return c.body(TEST_SHADOW_IO_JS, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
     'Cache-Control': 'no-cache, no-store',
@@ -133,7 +167,7 @@ app.get('/widget/test-shadow-io.js', (c) => {
 });
 
 // ── ScriptTag Front API 검증 테스트 (개발용) ───────────────
-app.get('/widget/test-front-api.js', (c) => {
+app.get('/widget/test-front-api.js', devOnly, (c) => {
   // client_id를 런타임에 주입
   const js = TEST_FRONT_API_JS.replace(
     "var CLIENT_ID  = '';",
@@ -147,7 +181,7 @@ app.get('/widget/test-front-api.js', (c) => {
 });
 
 // ── ScriptTag 이벤트 감지 테스트 (개발용) ──────────────────
-app.get('/widget/test-events.js', (c) => {
+app.get('/widget/test-events.js', devOnly, (c) => {
   return c.body(TEST_EVENTS_JS, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
     'Cache-Control': 'no-cache, no-store',
@@ -165,6 +199,9 @@ app.route('/api/facebook', facebookRoutes);
 app.route('/api/dashboard/billing', billingRoutes);
 app.route('/api/supadmin', adminRoutes);
 app.route('/api/ai', aiRoutes);
+
+// ── Dev-only: /test/* 라우트 (프로덕션에서 비활성화) ─────────
+app.use('/test/*', devOnly);
 app.route('/test', testRoutes);
 
 app.route('/', pageRoutes);

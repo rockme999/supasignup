@@ -17,6 +17,16 @@ export const WIDGET_JS = `(function() {
   // ─── 서버에서 주입된 BASE_URL (런타임에 치환됨) ─────────────
   var __MY_BASE_URL__ = '';
 
+  // ─── 유틸: HTML 이스케이프 (XSS 방지) ───────────────────────
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // ─── Provider Info ───────────────────────────────────────────
   var PROVIDERS = {
     kakao: {
@@ -1035,7 +1045,7 @@ export const WIDGET_JS = `(function() {
 
       // 본문
       var body = document.createElement('p');
-      body.innerHTML = popupBody.replace(/\\n/g, '<br>');
+      body.innerHTML = escapeHtml(popupBody).replace(/\\n/g, '<br>');
       body.style.cssText = 'font-size:14px;color:#6b7280;text-align:center;margin:0 0 16px';
 
       // CTA 버튼

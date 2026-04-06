@@ -12,15 +12,18 @@ export interface Shop {
   platform_access_token: string | null;
   platform_refresh_token: string | null;
   allowed_redirect_uris: string | null; // JSON array string
-  plan: 'free' | 'monthly' | 'yearly';
+  plan: 'free' | 'plus';
   sso_configured: number; // 0 or 1
   widget_style: string | null; // JSON string
+  sso_type: string; // 카페24 SSO 슬롯 식별자 (sso, sso1, sso2, ...)
   coupon_config?: string | null; // JSON string (CouponConfig)
+  coupon_enabled?: number; // 0 or 1 (coupon_config.enabled 파싱 결과 캐시용)
   kakao_channel_id?: string | null; // Plus: 카카오 채널 ID
   shop_identity?: string | null; // Plus: AI 분석 쇼핑몰 정체성 JSON
   banner_config?: string | null; // Plus: 미니배너 설정 JSON
   popup_config?: string | null; // Plus: 이탈 감지 팝업 설정 JSON
   escalation_config?: string | null; // Plus: 에스컬레이션 설정 JSON
+  ai_suggested_copy?: string | null; // Plus: AI 브리핑 생성 추천 문구 JSON
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
