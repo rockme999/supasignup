@@ -500,7 +500,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           font-size: 10px;
           padding: 1px 6px;
           border-radius: 4px;
-          background: #7c3aed;
+          background: #ec4899;
           color: #fff;
           margin-left: auto;
           font-weight: 600;

@@ -4553,8 +4553,8 @@ export const BannerSettingsPage: FC<{
     { bg: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' },
     { bg: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' },
     { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' },
-    { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
-    { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
+    { bg: 'linear-gradient(135deg, #2563eb 0%, #ec4899 100%)', color: '#fff', border: 'none' },
+    { bg: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', color: '#fff', border: 'none' },
     { bg: '#111827', color: '#fff', border: 'none' },
   ];
   const ps = presetStyles[bc.preset] || presetStyles[0];
@@ -4614,7 +4614,7 @@ export const BannerSettingsPage: FC<{
                         <span style="font-size:12px;color:#64748b;font-weight:400">(위젯 설치 시 자동 활성화)</span>
                       </label>
                       <div style="display:flex;align-items:center;gap:8px">
-                        <div style="width:40px;height:22px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
+                        <div style="width:40px;height:22px;background:linear-gradient(135deg,#f472b6 0%,#db2777 100%);border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
                           <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
                         </div>
                         <span style="font-size:13px;color:#374151">활성화됨</span>
@@ -4623,7 +4623,7 @@ export const BannerSettingsPage: FC<{
                     <div class="form-group" style="flex:1">
                       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:12px">이전 로그인 기록 감지 시 표시 안함</label>
                       <div style="display:flex;align-items:center;gap:8px">
-                        <div id="bannerHideReturningToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideForReturning ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' : '#d1d5db'}`}>
+                        <div id="bannerHideReturningToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideForReturning ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'}`}>
                           <div style={`position:absolute;top:2px;${bc.hideForReturning ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
                         </div>
                       </div>
@@ -4699,10 +4699,10 @@ export const BannerSettingsPage: FC<{
                       <div class="banner-preset-card" data-preset="4" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 4 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#fef2f2;display:flex;align-items:center;justify-content:center`}>
                         <span style="color:#991b1b;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">붉은색</span>
                       </div>
-                      <div class="banner-preset-card" data-preset="5" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 5 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);display:flex;align-items:center;justify-content:center`}>
+                      <div class="banner-preset-card" data-preset="5" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 5 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:linear-gradient(135deg,#2563eb 0%,#ec4899 100%);display:flex;align-items:center;justify-content:center`}>
                         <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
                       </div>
-                      <div class="banner-preset-card" data-preset="6" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 6 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);display:flex;align-items:center;justify-content:center`}>
+                      <div class="banner-preset-card" data-preset="6" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 6 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:linear-gradient(135deg,#f472b6 0%,#db2777 100%);display:flex;align-items:center;justify-content:center`}>
                         <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">보라-자주</span>
                       </div>
                       <div class="banner-preset-card" data-preset="7" style={`width:80px;height:50px;border-radius:8px;cursor:pointer;border:${bc.preset === 7 ? '3px solid #2563eb' : '2px solid transparent'};overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center`}>
@@ -4728,7 +4728,7 @@ export const BannerSettingsPage: FC<{
                   <div style="margin-bottom:16px">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
                       <span style="font-size:13px;font-weight:600">전체 너비</span>
-                      <div id="bannerFullWidthToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${(bc.fullWidth !== false) ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' : '#d1d5db'}`}>
+                      <div id="bannerFullWidthToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${(bc.fullWidth !== false) ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'}`}>
                         <div style={`position:absolute;top:2px;${(bc.fullWidth !== false) ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
                       </div>
                     </div>
@@ -4757,7 +4757,7 @@ export const BannerSettingsPage: FC<{
                   <div style="display:flex;gap:8px">
                     <button
                       id="bannerSaveBtn"
-                      style="flex:1;padding:10px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer"
+                      style="flex:1;padding:10px;background:linear-gradient(135deg,#f472b6 0%,#db2777 100%);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer"
                     >
                       설정 저장
                     </button>
@@ -4793,8 +4793,8 @@ export const BannerSettingsPage: FC<{
                   { bg: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' },
                   { bg: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' },
                   { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' },
-                  { bg: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: '#fff', border: 'none' },
-                  { bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' },
+                  { bg: 'linear-gradient(135deg, #2563eb 0%, #ec4899 100%)', color: '#fff', border: 'none' },
+                  { bg: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', color: '#fff', border: 'none' },
                   { bg: '#111827', color: '#fff', border: 'none' },
                 ];
                 var currentBannerPreset = ${bc.preset};
@@ -4876,7 +4876,7 @@ export const BannerSettingsPage: FC<{
                     isFullWidth = !isFullWidth;
                     var dot = this.querySelector('div');
                     if (isFullWidth) {
-                      this.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+                      this.style.background = 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)';
                       dot.style.left = 'auto';
                       dot.style.right = '2px';
                       paddingGroup.style.opacity = '0.4';
@@ -4980,7 +4980,7 @@ export const BannerSettingsPage: FC<{
                     hideForReturning = !hideForReturning;
                     var dot = this.querySelector('div');
                     if (hideForReturning) {
-                      this.style.background = 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)';
+                      this.style.background = 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)';
                       dot.style.left = 'auto';
                       dot.style.right = '2px';
                     } else {
@@ -5254,7 +5254,7 @@ export const PopupSettingsPage: FC<{
                       &#10005;
                     </div>
                     <div style="text-align:center;margin-bottom:16px">
-                      <div id="popupPreviewIconBg" style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+                      <div id="popupPreviewIconBg" style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#ec4899);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
                         <span id="popupPreviewIcon" style="color:white;font-size:20px">🎁</span>
                       </div>
                       <h3 id="popupPreviewTitle" style="font-size:20px;font-weight:700;margin:0 0 8px;color:#111827">잠깐만요!</h3>
@@ -5332,7 +5332,7 @@ export const PopupSettingsPage: FC<{
                   <div style="margin-bottom:16px">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
                     <div style="display:flex;gap:8px;flex-wrap:wrap">
-                      <div class="popup-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center">
+                      <div class="popup-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#ec4899);display:flex;align-items:center;justify-content:center">
                         <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">기본 블루</span>
                       </div>
                       <div class="popup-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center">
@@ -5392,7 +5392,7 @@ export const PopupSettingsPage: FC<{
                 var SHOP_ID = '${shopId}';
                 var DEFAULTS = { enabled: true, title: '잠깐만요!', body: '지금 가입하면 특별 혜택을 드려요!', ctaText: '혜택 받고 가입하기', preset: 0, borderRadius: 16, opacity: 100, icon: '🎁', allPages: false, cooldownHours: 24 };
                 var popupPresets = [
-                  { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
+                  { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #ec4899)' },
                   { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
                   { ctaBg: '#ea580c', iconBg: 'linear-gradient(135deg, #ea580c, #f59e0b)' },
                   { ctaBg: '#6b7280', iconBg: '#6b7280' },
@@ -5693,10 +5693,10 @@ export const EscalationSettingsPage: FC<{
                   {/* 플로팅 배너 미리보기 */}
                   <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:20px">
                     <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
-                      <span id="floatingBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;border-radius:10px;font-size:10px;font-weight:700;flex-shrink:0">4+</span>
+                      <span id="floatingBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;background:linear-gradient(135deg,#2563eb,#ec4899);color:white;border-radius:10px;font-size:10px;font-weight:700;flex-shrink:0">4+</span>
                       <p id="floatingLabel" style="font-size:11px;color:#94a3b8;margin:0">4회 이상 방문 — 화면 하단 고정 배너</p>
                     </div>
-                    <div id="floatingBannerPreview" style="background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);border-radius:0px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div id="floatingBannerPreview" style="background:linear-gradient(135deg,#2563eb 0%,#ec4899 100%);border-radius:0px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
                       <span id="floatingTextPreview" style="color:white;font-size:13px;font-weight:600">회원가입하면 특별 혜택!</span>
                       <button id="floatingBtnPreview" style="flex-shrink:0;padding:6px 14px;background:white;color:#2563eb;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
                         바로 가입하기
@@ -5858,7 +5858,7 @@ export const EscalationSettingsPage: FC<{
                   {/* 플로팅 배너 섹션 */}
                   <div style="margin-bottom:20px">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-                      <span id="floatingSectionBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;border-radius:12px;font-size:11px;font-weight:700;flex-shrink:0">4+</span>
+                      <span id="floatingSectionBadge" style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;background:linear-gradient(135deg,#2563eb,#ec4899);color:white;border-radius:12px;font-size:11px;font-weight:700;flex-shrink:0">4+</span>
                       <h3 style="font-size:14px;font-weight:600;margin:0">플로팅 배너</h3>
                       <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
                         <div id="floatingEnabledToggle" style="width:36px;height:20px;background:#2563eb;border-radius:10px;position:relative;cursor:pointer">
@@ -5882,7 +5882,7 @@ export const EscalationSettingsPage: FC<{
                       <div style="flex:1">
                         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">플로팅 배너 프리셋</label>
                         <div style="display:flex;gap:8px;flex-wrap:wrap">
-                          <div class="esc-floating-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center">
+                          <div class="esc-floating-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#ec4899);display:flex;align-items:center;justify-content:center">
                             <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑-보라</span>
                           </div>
                           <div class="esc-floating-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
@@ -5963,7 +5963,7 @@ export const EscalationSettingsPage: FC<{
                   floatingAnimation: 'slideUp',
                 };
                 var floatingPresets = [
-                  { bg: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', btnColor: '#2563eb', btnBg: 'white' },
+                  { bg: 'linear-gradient(135deg, #2563eb, #ec4899)', color: 'white', btnColor: '#2563eb', btnBg: 'white' },
                   { bg: '#111827', color: 'white', btnColor: '#374151', btnBg: 'white' },
                   { bg: 'linear-gradient(135deg, #ec4899, #f43f5e)', color: 'white', btnColor: '#ec4899', btnBg: 'white' },
                   { bg: '#6b7280', color: 'white', btnColor: '#6b7280', btnBg: 'white' },
