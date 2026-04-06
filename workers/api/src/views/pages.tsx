@@ -396,7 +396,7 @@ export const HomePage: FC<{
               <span style="width:28px;height:28px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
               <div>
                 <div style="font-size:14px;font-weight:600;margin-bottom:2px">프로바이더 선택 &amp; 확인</div>
-                <div style="font-size:12px;color:#64748b">Google, Kakao, Naver 등 원하는 소셜 프로바이더를 선택하고 쇼핑몰에서 확인하세요.</div>
+                <div style="font-size:12px;color:#64748b">프로바이더를 선택한 후, SSO 설정 가이드에서 '설정 확인' 버튼을 눌러 연동이 정상인지 꼭 확인하세요.</div>
               </div>
             </div>
           </div>
@@ -6514,6 +6514,14 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
           </div>
           <a href="/dashboard/settings/providers" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">설정하기 →</a>
         </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">4</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#1e293b">SSO 설정 확인</div>
+            <div style="font-size:12px;color:#64748b">SSO 설정 가이드에서 설정 확인 버튼으로 연동 검증</div>
+          </div>
+          <a href="/dashboard/settings/sso-guide" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">확인하기 →</a>
+        </div>
       </div>
     </div>
 
@@ -6528,6 +6536,7 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
         <li>카페24 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; <strong>SSO 로그인 연동 관리</strong>로 이동합니다.</li>
         <li>SSO 로그인 연동을 등록하고, 가이드에 표시된 값을 정확히 복사-붙여넣기합니다.</li>
         <li>연동 상태를 <strong>"사용함"</strong>으로 변경합니다.</li>
+        <li>SSO 설정 가이드 페이지 하단의 <strong>"설정 확인"</strong> 버튼을 클릭하여 연동이 정상인지 확인합니다. 번개가입이 카페24의 SSO 슬롯을 자동 감지하고 설정을 확정합니다.</li>
       </ol>
     </div>
 
@@ -6571,6 +6580,14 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
           <span class="badge badge-green" style="font-size:11px">Plus</span>
           <span>미니배너, 이탈 감지 팝업, 에스컬레이션은 각 설정 페이지에서 활성화</span>
         </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-green" style="font-size:11px">Plus</span>
+          <span>AI 정체성 분석: 기본 설정에서 실행하면 업종, 타겟, 톤앤매너를 AI가 자동 분석합니다</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-green" style="font-size:11px">Plus</span>
+          <span>AI 추천 문구 자동 적용: 토글을 켜면 AI가 매주 마케팅 문구를 자동 업데이트합니다</span>
+        </div>
       </div>
     </div>
 
@@ -6579,7 +6596,8 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
       <h2 style="margin-bottom:8px;color:#166534">설정 완료 확인</h2>
       <p style="font-size:13px;color:#166534;line-height:1.7">
         모든 설정 후 쇼핑몰 로그인 페이지를 열어 소셜 로그인 버튼이 정상 표시되는지 확인하세요.<br />
-        테스트 계정으로 실제 소셜 로그인을 시도하면 가장 확실합니다.
+        테스트 계정으로 실제 소셜 로그인을 시도하면 가장 확실합니다.<br />
+        SSO 설정 가이드에서 '설정 확인' 버튼으로 연동 상태를 먼저 확인하는 것이 좋습니다.
       </p>
     </div>
 
@@ -6630,11 +6648,19 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <a href="/dashboard/settings/general" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">기본 설정 →</a>
           </div>
         </li>
-        <li style="display:flex;gap:16px;padding:14px 0">
+        <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
           <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">5</div>
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">쇼핑몰 로그인 페이지에서 동작 확인</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 로그인 페이지를 열어 소셜 로그인 버튼이 정상 표시되는지 확인합니다.</p>
+          </div>
+        </li>
+        <li style="display:flex;gap:16px;padding:14px 0">
+          <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">6</div>
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">SSO 설정 확인</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">SSO 설정 가이드 하단의 '설정 확인' 버튼으로 카페24 SSO 슬롯(sso~sso5)을 자동 감지하고 설정을 확정합니다.</p>
+            <a href="/dashboard/settings/sso-guide" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">SSO 설정 가이드 →</a>
           </div>
         </li>
       </ol>
@@ -6687,6 +6713,10 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
 
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-top:14px;font-size:13px;color:#92400e;line-height:1.7">
         <strong>주의:</strong> URL 값은 한 글자도 틀리지 않게 정확히 복사-붙여넣기 해야 합니다. 직접 입력 시 오류가 발생할 수 있습니다.
+      </div>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-top:12px;font-size:13px;color:#1e40af;line-height:1.6">
+        SSO 등록 완료 후 SSO 설정 가이드 페이지 하단의 <strong>'설정 확인'</strong> 버튼을 반드시 클릭하세요. 카페24의 SSO 슬롯을 자동 감지하여 번개가입의 SSO 설정을 확정하고, 다른 SSO 앱과의 충돌 여부도 확인할 수 있습니다.
       </div>
 
       <div style="margin-top:14px">
@@ -6895,9 +6925,29 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 보고서</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">매주 월요일 자동으로 성과 분석 리포트를 생성합니다. 전략 제안과 추천 마케팅 문구도 함께 제공됩니다.</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">매주 월요일 자동으로 성과 분석 리포트를 생성합니다. 지난주 성과 요약, 이번 주 전략 제안, 실행 가능한 액션 3가지, AI 인사이트, 추천 마케팅 문구 7종이 포함됩니다.</p>
           </div>
           <a href="/dashboard/ai-reports" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">보기 →</a>
+        </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 정체성 분석</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 URL과 상품 정보를 AI가 분석하여 업종, 타겟 고객, 톤앤매너, 핵심 키워드를 자동 파악합니다. AI 보고서와 추천 문구의 정확도를 높이는 기반입니다.</p>
+          </div>
+          <a href="/dashboard/settings/general" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
+        </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 추천 마케팅 문구</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">AI 보고서 생성 시 쇼핑몰 정체성에 맞는 마케팅 문구 7종이 자동 생성됩니다: 미니배너, 팝업(제목/본문/CTA), 에스컬레이션(토스트/배너/버튼). 각 설정 페이지에서 'AI 추천' 영역에 표시되며 원클릭 적용 가능합니다.</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 자동 적용</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">기본 설정에서 'AI 추천 문구 자동 적용' 토글을 켜면, AI 보고서 생성 시 추천 문구가 미니배너/팝업/에스컬레이션에 자동 반영됩니다. 매주 자동 보고서와 함께 문구도 자동 업데이트됩니다.</p>
+          </div>
+          <a href="/dashboard/settings/general" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
@@ -7055,7 +7105,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </div>
       </details>
 
-      <details style="padding:12px 0">
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
           <span style="color:#94a3b8;font-size:12px">▶</span> SSO 설정에서 입력해야 할 값들은 어디서 확인하나요?
         </summary>
@@ -7069,6 +7119,18 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <li>User info Return API</li>
           </ul>
           <a href="/dashboard/settings/sso-guide" style="display:inline-flex;align-items:center;gap:4px;margin-top:10px;color:#6366f1;font-size:12px;text-decoration:none">SSO 설정 가이드 →</a>
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">SSO 설정이 정상인지 어떻게 확인하나요?</summary>
+        <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
+          카페24 관리자에서 SSO 등록을 완료한 후, 대시보드 &gt; 설정 &gt; <a href="/dashboard/settings/sso-guide" style="color:#2563eb">SSO 설정 가이드</a> 페이지 하단의 <strong>'설정 확인'</strong> 버튼을 클릭하세요.<br /><br />
+          번개가입이 카페24의 SSO 슬롯(sso~sso5)을 자동으로 스캔하여 각 슬롯의 상태를 색상 배지로 표시합니다:<br />
+          - <strong style="color:#059669">번개가입</strong>: 정상 등록됨<br />
+          - <strong style="color:#f59e0b">다른 앱</strong>: 다른 SSO 앱이 등록됨<br />
+          - <strong style="color:#94a3b8">미등록</strong>: SSO 미사용 슬롯<br /><br />
+          번개가입 슬롯이 감지되면 자동으로 설정이 확정됩니다.
         </div>
       </details>
     </div>
@@ -7306,6 +7368,59 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <li>소셜 로그인으로 재접속이 불가해집니다. (단, 기존 ID/PW 회원에 소셜 계정이 연동된 경우 ID/PW 로그인은 계속 가능합니다.)</li>
             <li>재설치하면 이전 설정이 복원됩니다.</li>
           </ul>
+        </div>
+      </details>
+    </div>
+
+    {/* 9. AI 기능 */}
+    <div class="card" style="margin-bottom:16px">
+      <h2 style="margin-bottom:16px">AI 기능</h2>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 정체성 분석이란 무엇인가요?</summary>
+        <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
+          쇼핑몰 URL의 HTML과 판매 상품 정보를 AI가 분석하여 <strong>업종</strong>(패션/뷰티/식품 등), <strong>타겟 고객</strong>(20-30대 여성 등), <strong>톤앤매너</strong>(친근하고 캐주얼 등), <strong>핵심 키워드</strong>를 자동으로 파악합니다.<br /><br />
+          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a> 페이지에서 실행하며, 일일 10회까지 가능합니다. 이 정보가 AI 보고서와 추천 문구의 정확도를 높이는 기반이 됩니다.
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 주간 보고서는 어떻게 동작하나요?</summary>
+        <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
+          매주 <strong>월요일 오전 9시(KST)</strong>에 자동 생성됩니다. 보고서에는 4가지 핵심 내용이 포함됩니다:<br /><br />
+          1. <strong>지난주 성과 요약</strong> — 데이터 기반 사실 분석<br />
+          2. <strong>이번 주 전략 제안</strong> — 번개가입 기능 범위 내 실행 가능한 전략<br />
+          3. <strong>실행 가능한 액션 3가지</strong> — 바로 적용 가능한 구체적 행동<br />
+          4. <strong>AI 인사이트</strong> — 앱 범위 밖의 참고 트렌드<br /><br />
+          이전 보고서와 비교하여 변화 추이도 분석합니다. <a href="/dashboard/ai-reports" style="color:#2563eb">AI 보고서</a> 페이지에서 수동으로도 생성할 수 있습니다.
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 추천 마케팅 문구란 무엇인가요?</summary>
+        <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
+          AI 보고서 생성 시 쇼핑몰 정체성에 맞는 <strong>마케팅 문구 7종</strong>이 자동 생성됩니다:<br /><br />
+          - 미니배너 문구<br />
+          - 에스컬레이션 토스트 메시지<br />
+          - 에스컬레이션 플로팅 배너 문구 + 버튼 텍스트<br />
+          - 이탈 감지 팝업 제목 + 본문 + CTA 버튼<br /><br />
+          각 설정 페이지에서 <strong>'AI 추천'</strong> 영역에 추천 문구가 표시되며, 적용 버튼으로 원클릭 적용할 수 있습니다.
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 추천 문구 자동 적용이란?</summary>
+        <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
+          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a>에서 <strong>'AI 추천 문구 자동 적용'</strong> 토글을 켜면, AI 보고서가 생성될 때마다 추천 문구가 미니배너, 이탈 감지 팝업, 에스컬레이션 설정에 자동 반영됩니다.<br /><br />
+          매주 월요일 자동 보고서와 함께 마케팅 문구도 자동 업데이트되므로, 항상 최신 트렌드에 맞는 문구가 유지됩니다.
+        </div>
+      </details>
+
+      <details style="padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 기능을 사용하려면 무엇이 필요한가요?</summary>
+        <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
+          AI 기능은 <strong>Plus 플랜 전용</strong>입니다. 먼저 기본 설정에서 <strong>AI 정체성 분석</strong>을 실행해야 보고서와 추천 문구의 품질이 높아집니다.<br /><br />
+          정체성 분석 없이도 동작하지만, 쇼핑몰 맞춤화된 결과를 원하시면 정체성 분석을 먼저 진행하세요. <a href="/dashboard/billing" style="color:#2563eb">Plus 업그레이드 →</a>
         </div>
       </details>
     </div>
