@@ -209,7 +209,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         /* ── Sidebar ─────────────────────────────── */
         .sidebar {
           width: 240px;
-          background: #ffffff;
+          background: linear-gradient(180deg, #f0f4ff 0%, #f8fafc 40%, #ffffff 100%);
           border-right: 1px solid #e2e8f0;
           color: #64748b;
           padding: 20px 0;
@@ -221,11 +221,11 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           padding: 0 20px 16px;
           font-size: 18px;
           font-weight: 700;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid #dbeafe;
           margin-bottom: 12px;
-          color: #1e293b;
+          color: #1e3a5f;
         }
-        .sidebar-logo span { color: #1e293b; }
+        .sidebar-logo span { color: #2563eb; }
         .sidebar nav { flex: 1; }
         .sidebar nav a {
           display: flex;
@@ -238,18 +238,18 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           border-radius: 8px;
           transition: all 0.15s;
         }
-        .sidebar nav a:hover { background: #f1f5f9; color: #1e293b; text-decoration: none; }
+        .sidebar nav a:hover { background: rgba(37,99,235,0.06); color: #1e3a5f; text-decoration: none; }
         .sidebar nav a.active {
-          background: #eff6ff;
+          background: rgba(37,99,235,0.1);
           color: #2563eb;
           font-weight: 600;
           border-left: 3px solid #2563eb;
           padding-left: 9px;
         }
-        .sidebar nav a svg { opacity: 0.7; }
+        .sidebar nav a svg { opacity: 0.6; }
         .sidebar nav a.active svg { opacity: 1; color: #2563eb; }
         .sidebar-footer {
-          border-top: 1px solid #f1f5f9;
+          border-top: 1px solid #dbeafe;
           padding: 12px 20px;
           margin-top: auto;
         }
@@ -459,18 +459,18 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .mobile-nav-overlay.open { display: block; }
         .mobile-nav-drawer {
           position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
-          background: #ffffff;
+          background: linear-gradient(180deg, #f0f4ff 0%, #f8fafc 40%, #ffffff 100%);
           border-right: 1px solid #e2e8f0;
           z-index: 101; transform: translateX(-100%); transition: transform 0.25s ease; padding: 20px 0;
           display: flex; flex-direction: column;
         }
         .mobile-nav-drawer.open { transform: translateX(0); }
-        .mobile-nav-drawer .sidebar-logo { padding: 0 20px 16px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; color: #1e293b; }
-        .mobile-nav-drawer .sidebar-logo span { color: #1e293b; }
+        .mobile-nav-drawer .sidebar-logo { padding: 0 20px 16px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #dbeafe; margin-bottom: 12px; color: #1e3a5f; }
+        .mobile-nav-drawer .sidebar-logo span { color: #2563eb; }
         .mobile-nav-drawer nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin: 2px 8px; color: #475569; font-size: 14px; border-radius: 8px; transition: all 0.15s; }
-        .mobile-nav-drawer nav a:hover { background: #f1f5f9; color: #1e293b; text-decoration: none; }
-        .mobile-nav-drawer nav a.active { background: #eff6ff; color: #2563eb; font-weight: 600; border-left: 3px solid #2563eb; padding-left: 9px; }
-        .mobile-nav-drawer .sidebar-footer { border-top: 1px solid #f1f5f9; padding: 12px 20px; margin-top: auto; }
+        .mobile-nav-drawer nav a:hover { background: rgba(37,99,235,0.06); color: #1e3a5f; text-decoration: none; }
+        .mobile-nav-drawer nav a.active { background: rgba(37,99,235,0.1); color: #2563eb; font-weight: 600; border-left: 3px solid #2563eb; padding-left: 9px; }
+        .mobile-nav-drawer .sidebar-footer { border-top: 1px solid #dbeafe; padding: 12px 20px; margin-top: auto; }
         .mobile-nav-drawer .sidebar-footer a { color: #94a3b8; font-size: 13px; }
 
         @media (max-width: 768px) {

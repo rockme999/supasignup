@@ -278,6 +278,7 @@ export const HomePage: FC<{
   return (
     <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
       <h1>대시보드</h1>
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px">쇼핑몰 현황을 한눈에 확인하세요.</p>
 
       {/* SSO 미설정 경고 */}
       {!shop.sso_configured && (
@@ -303,15 +304,8 @@ export const HomePage: FC<{
         </div>
       </div>
 
+      {/* 핵심 지표 요약 */}
       <div class="stat-grid">
-        <div class="stat-card">
-          <div class="label">전체 가입</div>
-          <div class="value">{(stats?.total_signups ?? 0).toLocaleString()}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">전체 로그인</div>
-          <div class="value">{(stats?.total_logins ?? 0).toLocaleString()}</div>
-        </div>
         <div class="stat-card">
           <div class="label">오늘 가입</div>
           <div class="value">{stats?.today_signups ?? 0}</div>
@@ -320,13 +314,25 @@ export const HomePage: FC<{
           <div class="label">이번 달 가입</div>
           <div class="value">{stats?.month_signups ?? 0}</div>
         </div>
+        <div class="stat-card">
+          <div class="label">누적 가입</div>
+          <div class="value">{(stats?.total_signups ?? 0).toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">누적 로그인</div>
+          <div class="value">{(stats?.total_logins ?? 0).toLocaleString()}</div>
+        </div>
       </div>
 
+      {/* 소셜별 가입 현황 요약 */}
       {stats && Object.keys(stats.by_provider).length > 0 && (
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="margin-bottom:0">소셜별 가입 현황</h2>
-            <a href="/dashboard/stats" style="font-size:13px">자세히 보기 →</a>
+            <div>
+              <h2 style="margin-bottom:2px">프로바이더별 가입 현황</h2>
+              <p style="font-size:12px;color:#94a3b8;margin:0">누적 기준 요약 — 상세 분석은 통계 페이지에서 확인하세요</p>
+            </div>
+            <a href="/dashboard/stats" style="font-size:13px;white-space:nowrap">상세 통계 →</a>
           </div>
           {Object.entries(stats.by_provider).map(([provider, count]) => (
             <ProgressBar
@@ -339,17 +345,18 @@ export const HomePage: FC<{
         </div>
       )}
 
-      {/* 빠른 바로가기 */}
+      {/* 빠른 설정 링크 */}
       <div class="card">
-        <h2 style="margin-bottom:16px">빠른 바로가기</h2>
+        <h2 style="margin-bottom:16px">빠른 설정</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+          <a href="/dashboard/settings/sso-guide" style={`display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid ${!shop.sso_configured ? '#ef4444' : '#e5e7eb'};border-radius:12px;text-decoration:none;color:#374151;background:${!shop.sso_configured ? '#fef2f2' : 'transparent'};transition:border-color 0.15s`} class="quick-link">
+            <span style="font-size:28px">🔑</span>
+            <span style="font-size:13px;font-weight:600">SSO 설정 가이드{!shop.sso_configured ? ' !' : ' ✓'}</span>
+            {!shop.sso_configured && <span style="font-size:11px;color:#ef4444">설정 필요</span>}
+          </a>
           <a href="/dashboard/settings/providers" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">🎨</span>
             <span style="font-size:13px;font-weight:600">로그인 디자인</span>
-          </a>
-          <a href="/dashboard/settings/sso-guide" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-            <span style="font-size:28px">🔑</span>
-            <span style="font-size:13px;font-weight:600">SSO 설정 가이드</span>
           </a>
           <a href="/dashboard/settings/coupon" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">🎟️</span>
@@ -357,12 +364,18 @@ export const HomePage: FC<{
           </a>
           <a href="/dashboard/stats" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
             <span style="font-size:28px">📊</span>
-            <span style="font-size:13px;font-weight:600">통계 보기</span>
+            <span style="font-size:13px;font-weight:600">통계 분석</span>
           </a>
-          {isPlus && (
+          {isPlus ? (
             <a href="/dashboard/ai-reports" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
               <span style="font-size:28px">🤖</span>
               <span style="font-size:13px;font-weight:600">AI 보고서</span>
+            </a>
+          ) : (
+            <a href="/dashboard/billing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #d1fae5;border-radius:12px;text-decoration:none;color:#374151;background:#f0fdf4;transition:border-color 0.15s" class="quick-link">
+              <span style="font-size:28px">⚡</span>
+              <span style="font-size:13px;font-weight:600">Plus 업그레이드</span>
+              <span style="font-size:11px;color:#16a34a">미니배너·AI 보고서</span>
             </a>
           )}
         </div>
@@ -670,13 +683,14 @@ export const StatsPage: FC<StatsPageProps> = ({ stats, daily, shops, currentShop
   ];
 
   return (
-    <Layout title="통합 통계" loggedIn currentPath="/dashboard/stats" isCafe24={isCafe24}>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <h1 style="margin-bottom:0">통합 통계</h1>
+    <Layout title="가입 통계 분석" loggedIn currentPath="/dashboard/stats" isCafe24={isCafe24}>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+        <h1 style="margin-bottom:0">가입 통계 분석</h1>
         <div style="margin-left:auto">
           <a href="/api/dashboard/stats/export" class="btn btn-outline btn-sm" download>CSV 내보내기</a>
         </div>
       </div>
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px">프로바이더별 가입 추이와 전환율을 분석합니다.</p>
 
       <div class="filter-bar">
         <select id="shopFilter" onchange="applyFilters()">
@@ -3269,17 +3283,17 @@ export const LandingPage: FC = () => (
         <div class="lp-section-inner">
           <div class="lp-section-label">지원 프로바이더</div>
           <h2 class="lp-section-title">고객이 선호하는 모든 소셜 계정 지원</h2>
-          <p class="lp-section-desc">국내외 주요 소셜 로그인 프로바이더를 모두 지원합니다. 새로운 프로바이더도 지속적으로 추가됩니다.</p>
+          <p class="lp-section-desc">국내외 주요 소셜 로그인 프로바이더를 지원합니다. 새로운 프로바이더도 지속적으로 추가됩니다.</p>
           <div class="lp-providers-grid">
             <span class="lp-provider-badge">Google</span>
             <span class="lp-provider-badge">카카오</span>
             <span class="lp-provider-badge">네이버</span>
             <span class="lp-provider-badge">Apple</span>
             <span class="lp-provider-badge">Discord</span>
-            <span class="lp-provider-badge">Facebook</span>
-            <span class="lp-provider-badge">X (Twitter)</span>
-            <span class="lp-provider-badge">LINE</span>
             <span class="lp-provider-badge">Telegram</span>
+            <span class="lp-provider-badge" style="opacity:0.5;font-size:12px">Facebook <small style="font-size:10px">(예정)</small></span>
+            <span class="lp-provider-badge" style="opacity:0.5;font-size:12px">X (Twitter) <small style="font-size:10px">(예정)</small></span>
+            <span class="lp-provider-badge" style="opacity:0.5;font-size:12px">LINE <small style="font-size:10px">(예정)</small></span>
           </div>
         </div>
       </section>
@@ -3707,7 +3721,7 @@ const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
           <a href="/dashboard/billing" class="btn btn-primary" style="display:inline-flex;width:auto;padding:10px 24px">
             Plus 시작하기 — 월 ₩6,900
           </a>
-          <p style="font-size:11px;color:#94a3b8;margin-top:8px">연간 결제 시 ₩79,000 (2개월 무료)</p>
+          <p style="font-size:11px;color:#94a3b8;margin-top:8px">연간 결제 시 ₩79,000 (약 5% 할인)</p>
         </div>
       </div>
     </div>
@@ -6684,7 +6698,7 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
       <h2 style="margin-bottom:8px">Step 3. 소셜 프로바이더 선택</h2>
       <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:12px">
         한국 시장이라면 <strong>Google + Kakao + Naver</strong> 3종을 기본으로 권장합니다.
-        글로벌 타겟이라면 Apple, Discord, LINE 등을 추가하세요.
+        글로벌 타겟이라면 Apple, Discord 등을 추가하세요.
       </p>
       <a href="/dashboard/settings/providers" style="font-size:13px;color:#2563eb">로그인 디자인에서 설정 →</a>
     </div>
@@ -6925,28 +6939,28 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">게임/커뮤니티 타겟</td>
             </tr>
             <tr style="background:#f8fafc">
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">Facebook</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#16a34a">O</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#16a34a">O</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#64748b"></td>
-            </tr>
-            <tr>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">X (Twitter)</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#dc2626">X</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#dc2626">X</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">이메일 미제공</td>
-            </tr>
-            <tr style="background:#f8fafc">
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">Telegram</td>
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#dc2626">X</td>
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#dc2626">X</td>
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">이메일 미제공</td>
             </tr>
             <tr>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">LINE</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#16a34a">O</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#16a34a">O</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">일본 시장</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#94a3b8">Facebook <span style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:400">예정</span></td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8">추가 예정</td>
+            </tr>
+            <tr style="background:#f8fafc">
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#94a3b8">X (Twitter) <span style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:400">예정</span></td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8">추가 예정 (이메일 미제공)</td>
+            </tr>
+            <tr>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#94a3b8">LINE <span style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:400">예정</span></td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
+              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8">추가 예정 (일본 시장)</td>
             </tr>
           </tbody>
         </table>
@@ -7138,7 +7152,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
           <p>카페24 쇼핑몰에 소셜 로그인을 추가하는 SSO 앱입니다.</p>
-          <p style="margin-top:6px">구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 등 9종의 소셜 프로바이더를 지원하며, 1클릭 회원가입으로 쇼핑몰의 가입 전환율을 높일 수 있습니다. 복잡한 회원가입 양식 없이 기존 소셜 계정으로 즉시 가입이 가능합니다.</p>
+          <p style="margin-top:6px">구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 6종의 소셜 프로바이더를 지원하며(Facebook, X, LINE 추가 예정), 1클릭 회원가입으로 쇼핑몰의 가입 전환율을 높일 수 있습니다. 복잡한 회원가입 양식 없이 기존 소셜 계정으로 즉시 가입이 가능합니다.</p>
         </div>
       </details>
 
@@ -7160,7 +7174,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Free</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">무료</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 로그인 9종 + 가입 쿠폰 1종</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 로그인 6종+ + 가입 쿠폰 1종</td>
               </tr>
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Plus</td>
@@ -7177,7 +7191,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
           <span style="color:#94a3b8;font-size:12px">▶</span> 카페24에서 기본 제공하는 소셜 로그인과 뭐가 다른가요?
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
-          <p>카페24 기본 소셜 로그인은 4종(구글, 카카오, 네이버, 페이스북)이지만, 번개가입은 9종을 지원합니다.</p>
+          <p>카페24 기본 소셜 로그인은 4종(구글, 카카오, 네이버, 페이스북)이지만, 번개가입은 현재 6종(구글, 카카오, 네이버, 애플, 디스코드, 텔레그램)을 지원하며 Facebook, X, LINE을 추가할 예정입니다.</p>
           <p style="margin-top:6px">또한 단순 소셜 로그인 연결 이상의 마케팅 기능을 함께 제공합니다:</p>
           <ul style="margin-top:6px;padding-left:16px">
             <li>AI 마케팅 카피 자동 생성</li>
