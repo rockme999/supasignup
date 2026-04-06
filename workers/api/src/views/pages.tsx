@@ -3670,8 +3670,8 @@ const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
 
   return (
     <div style="position:relative">
-      {/* 프리뷰 영역 (블러) */}
-      <div style="filter:blur(3px);opacity:0.6;pointer-events:none;user-select:none">
+      {/* 프리뷰 영역 (약한 블러) */}
+      <div style="filter:blur(1.5px);opacity:0.75;pointer-events:none;user-select:none">
         <div class="card">
           <h2 style="margin-bottom:8px">{feature} 설정</h2>
           <p style="font-size:13px;color:#64748b;margin-bottom:16px">{info.desc}</p>
@@ -3689,9 +3689,9 @@ const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
         </div>
       </div>
 
-      {/* 오버레이 카드 */}
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10">
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px 32px;max-width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.08)">
+      {/* 오버레이 카드 (하단 배치) */}
+      <div style="position:absolute;left:0;right:0;bottom:24px;display:flex;justify-content:center;z-index:10">
+        <div style="background:rgba(255,255,255,0.97);border:1px solid #e2e8f0;border-radius:12px;padding:20px 28px;max-width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.1);backdrop-filter:blur(8px)">
           <div style="font-size:28px;margin-bottom:12px">⚡</div>
           <h3 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px">{feature}</h3>
           <p style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6">{info.desc}</p>
@@ -3915,11 +3915,12 @@ export const GeneralSettingsPage: FC<{
             <div><strong>키워드:</strong> <span id="roKeywords">-</span></div>
           </div>
           <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
-            <label class="toggle" style="flex-shrink:0">
-              <input type="checkbox" id="autoApplyAiCopy" />
+            <label class="toggle" style={`flex-shrink:0${shop.plan === 'free' ? ';opacity:0.5;cursor:not-allowed' : ''}`}>
+              <input type="checkbox" id="autoApplyAiCopy" disabled={shop.plan === 'free'} />
               <span class="toggle-slider"></span>
             </label>
-            <label for="autoApplyAiCopy" style="font-size:13px;color:#475569;cursor:pointer">AI 추천 문구 자동 적용</label>
+            <label for="autoApplyAiCopy" style={`font-size:13px;color:#475569;${shop.plan === 'free' ? 'opacity:0.5;cursor:not-allowed' : 'cursor:pointer'}`}>AI 추천 문구 자동 적용</label>
+            {shop.plan === 'free' && <span class="badge badge-gray" style="margin-left:4px">Plus 전용</span>}
             <span style="font-size:11px;color:#94a3b8">AI 보고서 생성 시 미니배너·팝업·에스컬레이션 문구를 자동으로 업데이트합니다</span>
           </div>
         </div>
@@ -3994,6 +3995,7 @@ export const GeneralSettingsPage: FC<{
 
             if (autoApplyCheckbox) {
               autoApplyCheckbox.addEventListener('change', async function() {
+                if (this.disabled) { this.checked = false; return; }
                 var currentIdentity = {
                   industry: roFields.industry.textContent !== '-' ? roFields.industry.textContent : '',
                   target: roFields.target.textContent !== '-' ? roFields.target.textContent : '',
@@ -6595,30 +6597,58 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
           {!shop?.sso_configured && <a href="/dashboard/settings/sso-guide" class="btn btn-primary btn-sm" style="margin-left:auto;width:auto">설정하기 →</a>}
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">2</span>
+          <span id="qsSnsBadge" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">2</span>
           <div>
-            <div style="font-size:14px;font-weight:600;color:#1e293b">"회원가입 시 SNS 계정 연동" 활성화</div>
-            <div style="font-size:12px;color:#64748b">카페24 관리자에서 직접 설정 필요</div>
+            <div style="font-size:14px;font-weight:600;color:#1e293b">"회원가입 시 SNS 계정 연동" 확인</div>
+            <div style="font-size:12px;color:#64748b">카페24 관리자에서 기본 활성화 — 확인만 필요</div>
           </div>
+          <button id="qsSnsCheck" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">확인 완료</button>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">3</span>
+          <span id="qsProviderBadge" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">3</span>
           <div>
             <div style="font-size:14px;font-weight:600;color:#1e293b">소셜 프로바이더 선택</div>
             <div style="font-size:12px;color:#64748b">권장: Google + Kakao + Naver</div>
           </div>
           <a href="/dashboard/settings/providers" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">설정하기 →</a>
+          <button id="qsProviderCheck" class="btn btn-outline btn-sm" style="width:auto">확인 완료</button>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">4</span>
+          <span style={`width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:${shop?.sso_configured ? '#059669' : '#d1d5db'}`}>{shop?.sso_configured ? '✓' : '4'}</span>
           <div>
             <div style="font-size:14px;font-weight:600;color:#1e293b">SSO 설정 확인</div>
-            <div style="font-size:12px;color:#64748b">SSO 설정 가이드에서 설정 확인 버튼으로 연동 검증</div>
+            <div style="font-size:12px;color:#64748b">{shop?.sso_configured ? '완료됨' : 'SSO 설정 가이드에서 설정 확인 버튼으로 연동 검증'}</div>
           </div>
-          <a href="/dashboard/settings/sso-guide" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">확인하기 →</a>
+          {!shop?.sso_configured && <a href="/dashboard/settings/sso-guide" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">확인하기 →</a>}
         </div>
       </div>
     </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+      (function() {
+        function initQsCheck(btnId, storageKey, badgeId) {
+          var btn = document.getElementById(btnId);
+          var badge = document.getElementById(badgeId);
+          if (!btn || !badge) return;
+
+          if (localStorage.getItem(storageKey)) {
+            badge.style.background = '#059669';
+            badge.textContent = '✓';
+            btn.style.display = 'none';
+          }
+
+          btn.addEventListener('click', function() {
+            localStorage.setItem(storageKey, '1');
+            badge.style.background = '#059669';
+            badge.textContent = '✓';
+            btn.style.display = 'none';
+          });
+        }
+
+        initQsCheck('qsSnsCheck', 'bg_qs_sns_checked', 'qsSnsBadge');
+        initQsCheck('qsProviderCheck', 'bg_qs_provider_checked', 'qsProviderBadge');
+      })();
+    `}} />
 
     {/* Step 1: SSO 연동 */}
     <div class="card" style="margin-bottom:16px">
@@ -6637,14 +6667,15 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
 
     {/* Step 2: SNS 계정 연동 */}
     <div class="card" style="margin-bottom:16px">
-      <h2 style="margin-bottom:8px">Step 2. "회원가입 시 SNS 계정 연동" 활성화 (강력 권장)</h2>
+      <h2 style="margin-bottom:8px">Step 2. "회원가입 시 SNS 계정 연동" 확인 (강력 권장)</h2>
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#92400e">
-        <strong>이 설정이 없으면</strong> 기존 ID/PW 회원이 소셜 로그인할 때 별도의 @s 회원이 생성되어 주문/적립금이 분리됩니다.
+        <strong>이 설정이 없으면</strong> 기존 ID/PW 회원이 소셜 로그인할 때 별도의 @s 회원이 생성되어 주문/적립금이 분리됩니다.<br />
+        카페24 기본값은 활성화이므로, 변경된 적이 없다면 확인만 하면 됩니다.
       </div>
       <ol style="font-size:13px;color:#374151;line-height:2;padding-left:20px">
         <li>카페24 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정으로 이동합니다.</li>
-        <li><strong>"회원가입 시 SNS 계정 연동"</strong> 항목을 찾습니다.</li>
-        <li><strong>"사용함"</strong>으로 변경하고 저장합니다.</li>
+        <li><strong>"회원가입 시 SNS 계정 연동"</strong> 항목이 <strong>"사용함"</strong>으로 되어 있는지 확인합니다.</li>
+        <li>비활성화된 경우 <strong>"사용함"</strong>으로 변경하고 저장합니다.</li>
       </ol>
     </div>
 
@@ -6716,23 +6747,24 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
           <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">1</div>
           <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">카페24 앱스토어에서 번개가입 설치</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">카페24 앱스토어에서 "번개가입"을 검색하여 설치합니다.</p>
-          </div>
-        </li>
-        <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
-          <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">2</div>
-          <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">SSO 연동 설정 (필수)</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">가장 중요한 단계입니다. SSO 설정 가이드 페이지에서 Client ID, Secret, URL을 확인하고 카페24 관리자에 입력합니다.</p>
             <a href="/dashboard/settings/sso-guide" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">SSO 설정 가이드 →</a>
           </div>
         </li>
         <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
+          <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">2</div>
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">SSO 설정 확인</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">SSO 설정 가이드 하단의 '설정 확인' 버튼으로 연동이 정상인지 확인합니다. 번개가입이 카페24의 SSO 슬롯을 자동 감지하고 설정을 확정합니다.</p>
+            <a href="/dashboard/settings/sso-guide" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">SSO 설정 가이드 →</a>
+          </div>
+        </li>
+        <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
           <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">3</div>
           <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">"회원가입 시 SNS 계정 연동" 활성화</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">카페24 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정 &gt; 회원가입 시 SNS 계정 연동 &gt; "사용함"으로 설정합니다. 이 설정을 해야 기존 ID/PW 회원과 소셜 계정이 자동 연동됩니다.</p>
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">"회원가입 시 SNS 계정 연동" 확인</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">이 옵션은 카페24에서 기본적으로 활성화되어 있습니다. 카페24 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정에서 해당 옵션이 "사용함"으로 되어 있는지 확인하세요. 이 설정을 통해 기존 ID/PW 회원과 소셜 계정이 자동 연동됩니다.</p>
           </div>
         </li>
         <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
@@ -6743,19 +6775,11 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <a href="/dashboard/settings/general" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">기본 설정 →</a>
           </div>
         </li>
-        <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
+        <li style="display:flex;gap:16px;padding:14px 0">
           <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">5</div>
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">쇼핑몰 로그인 페이지에서 동작 확인</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 로그인 페이지를 열어 소셜 로그인 버튼이 정상 표시되는지 확인합니다.</p>
-          </div>
-        </li>
-        <li style="display:flex;gap:16px;padding:14px 0">
-          <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">6</div>
-          <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">SSO 설정 확인</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">SSO 설정 가이드 하단의 '설정 확인' 버튼으로 카페24 SSO 슬롯(sso~sso5)을 자동 감지하고 설정을 확정합니다.</p>
-            <a href="/dashboard/settings/sso-guide" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">SSO 설정 가이드 →</a>
           </div>
         </li>
       </ol>
@@ -6822,11 +6846,11 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
     {/* 3. 회원가입 시 SNS 계정 연동 */}
     <div class="card" style="margin-bottom:16px">
       <h2 style="margin-bottom:8px">3. "회원가입 시 SNS 계정 연동" 설정</h2>
-      <p style="font-size:13px;color:#64748b;margin-bottom:14px">카페24 관리자에서 직접 활성화해야 하는 별도 설정입니다.</p>
+      <p style="font-size:13px;color:#64748b;margin-bottom:14px">이 옵션은 카페24에서 기본적으로 활성화되어 있습니다. 카페24 관리자 &gt; 쇼핑몰 설정 &gt; 고객 설정에서 해당 옵션이 '사용함'으로 되어 있는지 확인하세요.</p>
 
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#991b1b;line-height:1.8">
         <strong>이 설정이 없으면 소셜 로그인이 기존 회원과 연동되지 않습니다.</strong><br />
-        반드시 카페24 관리자에서 직접 활성화해야 합니다.
+        카페24 기본값은 활성화이나, 비활성화로 변경된 경우 다시 사용함으로 설정해야 합니다.
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
