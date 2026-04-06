@@ -15,6 +15,42 @@ type AdminEnv = {
 
 const admin = new Hono<AdminEnv>();
 
+// POST /auth/login — 관리자 전용 로그인 (미들웨어 적용 전에 등록)
+admin.post('/auth/login', async (c) => {
+  const body = await c.req.json<{ email?: string; password?: string }>();
+  if (!body.email || !body.password) {
+    return c.json({ error: 'missing_fields', message: '아이디와 비밀번호를 입력해주세요.' }, 400);
+  }
+
+  const normalizedEmail = body.email.toLowerCase().trim();
+
+  const owner = await c.env.DB
+    .prepare('SELECT owner_id, password_hash, role FROM owners WHERE email = ?')
+    .bind(normalizedEmail)
+    .first<{ owner_id: string; password_hash: string; role: string }>();
+
+  if (!owner || owner.role !== 'admin') {
+    return c.json({ error: 'invalid_credentials', message: '관리자 계정이 아닙니다.' }, 401);
+  }
+
+  const { verifyPassword } = await import('../services/password');
+  const valid = await verifyPassword(body.password, owner.password_hash);
+  if (!valid) {
+    return c.json({ error: 'invalid_credentials', message: '아이디 또는 비밀번호가 올바르지 않습니다.' }, 401);
+  }
+
+  const { createToken } = await import('../services/jwt');
+  const token = await createToken(owner.owner_id, c.env.JWT_SECRET);
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': `bg_admin_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400`,
+    },
+  });
+});
+
 // 모든 /admin/* 라우트에 관리자 인증 적용
 admin.use('/*', adminAuth);
 
@@ -22,6 +58,54 @@ admin.use('/*', adminAuth);
 function escapeLike(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
+
+// ─── GET /stats/providers — 기간별/플랜별 프로바이더 분포 ────
+admin.get('/stats/providers', async (c) => {
+  const days = c.req.query('days');
+  const plan = c.req.query('plan');
+
+  let where = "WHERE ls.action = 'signup'";
+  if (days && ['7', '30', '90'].includes(days)) {
+    where += ` AND ls.created_at >= datetime('now', '-${days} days')`;
+  }
+  if (plan === 'free') {
+    where += " AND s.plan = 'free'";
+  } else if (plan === 'paid') {
+    where += " AND s.plan != 'free'";
+  }
+
+  const result = await c.env.DB.prepare(
+    `SELECT ls.provider, COUNT(*) as cnt FROM login_stats ls JOIN shops s ON ls.shop_id = s.shop_id ${where} GROUP BY ls.provider ORDER BY cnt DESC`
+  ).all<{ provider: string; cnt: number }>();
+
+  return c.json({ providers: result.results ?? [] });
+});
+
+// ─── GET /stats/daily — 일자별/프로바이더별 가입 추이 ────────
+admin.get('/stats/daily', async (c) => {
+  const days = c.req.query('days') || '14';
+  const plan = c.req.query('plan');
+
+  const dayCount = ['7', '14', '30', '90'].includes(days) ? days : '14';
+
+  let where = "WHERE ls.action = 'signup'";
+  where += ` AND ls.created_at >= datetime('now', '-${dayCount} days')`;
+  if (plan === 'free') {
+    where += " AND s.plan = 'free'";
+  } else if (plan === 'paid') {
+    where += " AND s.plan != 'free'";
+  }
+
+  const result = await c.env.DB.prepare(
+    `SELECT DATE(ls.created_at) as date, ls.provider, COUNT(*) as cnt
+     FROM login_stats ls JOIN shops s ON ls.shop_id = s.shop_id
+     ${where}
+     GROUP BY DATE(ls.created_at), ls.provider
+     ORDER BY date ASC, cnt DESC`
+  ).all<{ date: string; provider: string; cnt: number }>();
+
+  return c.json({ daily: result.results ?? [] });
+});
 
 // ─── GET /shops — 전체 쇼핑몰 목록 ──────────────────────────
 admin.get('/shops', async (c) => {
@@ -438,6 +522,73 @@ admin.get('/export/stats', async (c) => {
       'Content-Disposition': `attachment; filename="stats_${today}.csv"`,
     },
   });
+});
+
+// ─── GET /monitoring — Cloudflare 리소스 사용량 ──────────────
+admin.get('/monitoring', async (c) => {
+  const token = c.env.CF_API_TOKEN;
+  const accountId = c.env.CF_ACCOUNT_ID;
+
+  if (!token || !accountId) {
+    return c.json({ error: 'cf_not_configured', message: 'CF_API_TOKEN 또는 CF_ACCOUNT_ID가 설정되지 않았습니다.' }, 503);
+  }
+
+  const now = new Date();
+  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(); // 24시간 전
+  const until = now.toISOString();
+  const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // 번개가입 Worker/D1만 필터링
+  const isDev = c.env.BASE_URL.includes('dev');
+  const workerName = isDev ? 'bg-api-dev' : 'bg-api';
+  const d1Id = isDev ? 'd420b951-c93b-4449-8f8c-f86c9f99a2cc' : '254438d7-b1b1-45a1-afe1-2c766aba252b';
+
+  // GraphQL 쿼리: Workers 요청/에러/CPU + 일자별 추이
+  const query = `query {
+    viewer {
+      accounts(filter: {accountTag: "${accountId}"}) {
+        workersInvocationsAdaptive(
+          filter: {datetimeGeq: "${since7d}", datetimeLt: "${until}", scriptName: "${workerName}"}
+          limit: 1000
+          orderBy: [datetime_ASC]
+        ) {
+          sum { requests errors subrequests }
+          quantiles { cpuTimeP50 cpuTimeP99 }
+          dimensions { datetime: datetimeHour scriptName }
+        }
+        d1AnalyticsAdaptive(
+          filter: {datetimeGeq: "${since}", datetimeLt: "${until}", databaseId: "${d1Id}"}
+          limit: 100
+        ) {
+          sum { readQueries writeQueries rowsRead rowsWritten }
+          dimensions { databaseId }
+        }
+      }
+    }
+  }`;
+
+  try {
+    const resp = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('[Monitoring] CF API error:', resp.status, text);
+      return c.json({ error: 'cf_api_error', status: resp.status }, 502);
+    }
+
+    const data = await resp.json() as { data: unknown; errors: unknown };
+    return c.json({ data: data.data, errors: data.errors });
+  } catch (err) {
+    console.error('[Monitoring] fetch error:', err);
+    return c.json({ error: 'cf_fetch_error' }, 500);
+  }
 });
 
 // ─── GET /audit-log — 감사 로그 ─────────────────────────────

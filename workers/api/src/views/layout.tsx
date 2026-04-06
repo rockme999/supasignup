@@ -147,13 +147,12 @@ const etcNavItems: NavItem[] = [
 ];
 
 const adminNavItems = [
-  { path: '/admin', label: '대시보드', icon: <IconGrid /> },
-  { path: '/admin/shops', label: '쇼핑몰 관리', icon: <IconBuilding /> },
-  { path: '/admin/owners', label: '사용자 관리', icon: <IconUsers /> },
-  { path: '/admin/subscriptions', label: '구독/결제', icon: <IconCurrencyDollar /> },
-  { path: '/admin/ai-reports', label: 'AI 보고서', icon: <IconSparkle /> },
-  { path: '/admin/inquiries', label: '문의 관리', icon: <IconChat /> },
-  { path: '/admin/audit-log', label: '감사 로그', icon: <IconClipboard /> },
+  { path: '/supadmin', label: '대시보드', icon: <IconGrid /> },
+  { path: '/supadmin/shops', label: '쇼핑몰 관리', icon: <IconBuilding /> },
+  { path: '/supadmin/subscriptions', label: '구독/결제', icon: <IconCurrencyDollar /> },
+  { path: '/supadmin/ai-reports', label: 'AI 보고서', icon: <IconSparkle /> },
+  { path: '/supadmin/inquiries', label: '문의 관리', icon: <IconChat /> },
+  { path: '/supadmin/monitoring', label: '시스템 모니터링', icon: <IconClipboard /> },
 ];
 
 export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, isCafe24, children }) => {
@@ -432,69 +431,65 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           {/* Mobile nav overlay + drawer */}
           <div class="mobile-nav-overlay" id="mobile-nav-overlay"></div>
           <div class="mobile-nav-drawer" id="mobile-nav-drawer">
-            <div class="sidebar-logo">⚡ <span>번개가입</span></div>
+            <div class="sidebar-logo">⚡ <span>{isAdmin ? '번개가입 관리자' : '번개가입'}</span></div>
             <nav>
-              {mainNavItems.map(renderNavLink)}
-
-              <div class="nav-section-label">설정</div>
-              {visibleSettingNavItems.map(renderNavLink)}
-
-              <div class="nav-section-label">기타</div>
-              {etcNavItems.map(renderNavLink)}
-
-              {isAdmin && (
+              {isAdmin ? (
                 <>
-                  <div style="border-top:1px solid #334155;margin:12px 0"></div>
-                  <div style="padding:4px 20px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">관리자</div>
                   {adminNavItems.map((item) => (
                     <a
                       href={item.path}
-                      class={currentPath === item.path || (item.path !== '/admin' && currentPath?.startsWith(item.path)) ? 'active' : ''}
+                      class={currentPath === item.path || (item.path !== '/supadmin' && currentPath?.startsWith(item.path)) ? 'active' : ''}
                     >
                       {item.icon} {item.label}
                     </a>
                   ))}
                 </>
+              ) : (
+                <>
+                  {mainNavItems.map(renderNavLink)}
+                  <div class="nav-section-label">설정</div>
+                  {visibleSettingNavItems.map(renderNavLink)}
+                  <div class="nav-section-label">기타</div>
+                  {etcNavItems.map(renderNavLink)}
+                </>
               )}
             </nav>
-            {!isCafe24 && (
-              <div class="sidebar-footer">
-                <a href="/dashboard/logout">로그아웃</a>
-              </div>
-            )}
+            <div class="sidebar-footer">
+              {isAdmin
+                ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>
+                : !isCafe24 && <a href="/dashboard/logout">로그아웃</a>}
+            </div>
           </div>
 
           <aside class="sidebar">
-            <div class="sidebar-logo">⚡ <span>번개가입</span></div>
+            <div class="sidebar-logo">⚡ <span>{isAdmin ? '번개가입 관리자' : '번개가입'}</span></div>
             <nav>
-              {mainNavItems.map(renderNavLink)}
-
-              <div class="nav-section-label">설정</div>
-              {visibleSettingNavItems.map(renderNavLink)}
-
-              <div class="nav-section-label">기타</div>
-              {etcNavItems.map(renderNavLink)}
-
-              {isAdmin && (
+              {isAdmin ? (
                 <>
-                  <div style="border-top:1px solid #334155;margin:12px 0"></div>
-                  <div style="padding:4px 20px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">관리자</div>
                   {adminNavItems.map((item) => (
                     <a
                       href={item.path}
-                      class={currentPath === item.path || (item.path !== '/admin' && currentPath?.startsWith(item.path)) ? 'active' : ''}
+                      class={currentPath === item.path || (item.path !== '/supadmin' && currentPath?.startsWith(item.path)) ? 'active' : ''}
                     >
                       {item.icon} {item.label}
                     </a>
                   ))}
                 </>
+              ) : (
+                <>
+                  {mainNavItems.map(renderNavLink)}
+                  <div class="nav-section-label">설정</div>
+                  {visibleSettingNavItems.map(renderNavLink)}
+                  <div class="nav-section-label">기타</div>
+                  {etcNavItems.map(renderNavLink)}
+                </>
               )}
             </nav>
-            {!isCafe24 && (
-              <div class="sidebar-footer">
-                <a href="/dashboard/logout">로그아웃</a>
-              </div>
-            )}
+            <div class="sidebar-footer">
+              {isAdmin
+                ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>
+                : !isCafe24 && <a href="/dashboard/logout">로그아웃</a>}
+            </div>
           </aside>
           <main class="main">
             {children}

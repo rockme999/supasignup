@@ -34,10 +34,12 @@ import {
   AdminHomePage,
   AdminShopsPage,
   AdminSubscriptionsPage,
-  AdminAuditLogPage,
+  AdminMonitoringPage,
   AdminOwnersPage,
   AdminInquiriesPage,
   AdminAiReportsPage,
+  AdminAiReportDetailPage,
+  AdminShopDetailPage,
 } from '../views/pages';
 
 type PageEnv = {
@@ -472,11 +474,24 @@ pages.get('/dashboard/settings/general', async (c) => {
 
   if (!owner) return c.redirect('/dashboard/login');
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let couponConfig: any = null;
+  if (shop?.coupon_config) {
+    try {
+      const parsed = JSON.parse(shop.coupon_config);
+      // 새 포맷(shipping/amount/rate)인지 확인, 이전 포맷(enabled/coupons)이면 무시
+      if (parsed?.shipping && parsed?.amount && parsed?.rate) {
+        couponConfig = parsed;
+      }
+    } catch { /* ignore */ }
+  }
+
   return c.html(
     <GeneralSettingsPage
       email={owner.email}
       name={owner.name}
       shop={shop ?? null}
+      couponConfig={couponConfig}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -489,15 +504,9 @@ pages.get('/dashboard/settings/sso-guide', async (c) => {
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
 
-  // Mask secret
-  const secret = shop.client_secret;
-  const masked = secret.length > 8
-    ? secret.slice(0, 4) + '****' + secret.slice(-4)
-    : '****';
-
   return c.html(
     <SsoGuidePage
-      shop={{ ...shop, client_secret: masked }}
+      shop={shop}
       clientId={shop.client_id}
       baseUrl={c.env.BASE_URL}
       isCafe24={c.get('isCafe24')}
@@ -853,60 +862,197 @@ pages.delete('/api/dashboard/settings/account', async (c) => {
 
 // ─── Admin SSR 페이지 ─────────────────────────────────────────
 
+// 관리자 전용 쿠키(bg_admin_token)에서 ownerId 추출
+async function getAdminIdFromCookie(cookie: string | undefined, secret: string): Promise<string | null> {
+  if (!cookie) return null;
+  const match = cookie.match(/bg_admin_token=([^;]+)/);
+  if (!match) return null;
+  const payload = await verifyToken(match[1], secret);
+  return payload?.sub ?? null;
+}
+
 // 관리자 인증 미들웨어 (SSR 페이지용 — 인증 실패 시 리다이렉트)
-pages.use('/admin/*', async (c, next) => {
-  const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
-  if (!ownerId) return c.redirect('/dashboard/login');
+pages.use('/supadmin/*', async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  // 로그인/로그아웃 페이지는 인증 불필요
+  if (path === '/supadmin/login' || path === '/supadmin/logout') return next();
+
+  const ownerId = await getAdminIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
+  if (!ownerId) return c.redirect('/supadmin/login');
 
   const owner = await c.env.DB.prepare('SELECT role FROM owners WHERE owner_id = ?')
     .bind(ownerId)
     .first<{ role: string }>();
 
   if (!owner || owner.role !== 'admin') {
-    return c.redirect('/dashboard');
+    return c.redirect('/supadmin/login');
   }
 
   c.set('ownerId', ownerId);
   return next();
 });
 
+// GET /supadmin/login — 관리자 로그인 페이지
+pages.get('/supadmin/login', (c) => {
+  return c.html(
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>관리자 로그인</title>
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .login-card { background: #1e293b; border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+        .login-card h1 { color: #f1f5f9; font-size: 20px; margin-bottom: 8px; text-align: center; }
+        .login-card p { color: #64748b; font-size: 13px; text-align: center; margin-bottom: 24px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #f1f5f9; font-size: 14px; outline: none; }
+        .form-group input:focus { border-color: #3b82f6; }
+        .btn-login { width: 100%; padding: 10px; background: #ef4444; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-login:hover { background: #dc2626; }
+        .btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
+        .error { color: #ef4444; font-size: 12px; text-align: center; margin-top: 12px; display: none; }
+        .badge-admin { background: #ef4444; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+      `}</style>
+    </head>
+    <body>
+      <div class="login-card">
+        <h1><span class="badge-admin">ADMIN</span> 관리자 로그인</h1>
+        <p>번개가입 관리자 전용</p>
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label>아이디</label>
+            <input type="text" id="adminEmail" placeholder="관리자 아이디" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label>비밀번호</label>
+            <input type="password" id="adminPassword" placeholder="비밀번호" autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn-login" id="loginBtn">로그인</button>
+          <p class="error" id="loginError"></p>
+        </form>
+      </div>
+      <script dangerouslySetInnerHTML={{__html: `
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          var btn = document.getElementById('loginBtn');
+          var err = document.getElementById('loginError');
+          btn.disabled = true; btn.textContent = '로그인 중...';
+          err.style.display = 'none';
+          try {
+            var resp = await fetch('/api/supadmin/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                email: document.getElementById('adminEmail').value.trim(),
+                password: document.getElementById('adminPassword').value
+              })
+            });
+            if (resp.ok) {
+              window.location.href = '/supadmin';
+            } else {
+              var data = await resp.json().catch(function() { return {}; });
+              err.textContent = data.message || '아이디 또는 비밀번호가 올바르지 않습니다.';
+              err.style.display = 'block';
+            }
+          } catch(ex) {
+            err.textContent = '서버 오류가 발생했습니다.';
+            err.style.display = 'block';
+          } finally {
+            btn.disabled = false; btn.textContent = '로그인';
+          }
+        });
+      `}} />
+    </body>
+    </html>
+  );
+});
+
+// GET /supadmin/logout
+pages.get('/supadmin/logout', (c) => {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': '/supadmin/login',
+      'Set-Cookie': 'bg_admin_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0',
+    },
+  });
+});
+
 // GET /admin — 관리자 홈
-pages.get('/admin', async (c) => {
-  const [statsResult, recentLogsResult] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT
-        (SELECT COUNT(*) FROM shops) as total_shops,
-        (SELECT COUNT(*) FROM shops WHERE deleted_at IS NULL) as active_shops,
-        (SELECT COUNT(*) FROM login_stats WHERE action = 'signup') as total_signups`,
-    ).first<{ total_shops: number; active_shops: number; total_signups: number }>(),
+pages.get('/supadmin', async (c) => {
+  // 플랜별 쇼핑몰 수
+  const planCounts = await c.env.DB.prepare(
+    `SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN plan = 'free' THEN 1 ELSE 0 END) as free_count,
+      SUM(CASE WHEN plan = 'monthly' THEN 1 ELSE 0 END) as monthly_count,
+      SUM(CASE WHEN plan = 'yearly' THEN 1 ELSE 0 END) as yearly_count
+    FROM shops WHERE deleted_at IS NULL`
+  ).first<{ total: number; free_count: number; monthly_count: number; yearly_count: number }>();
 
-    c.env.DB.prepare(
-      `SELECT a.id, o.email as actor_email, a.action, a.target_type, a.target_id, a.detail, a.created_at
-       FROM audit_logs a
-       LEFT JOIN owners o ON a.actor_id = o.owner_id
-       ORDER BY a.created_at DESC LIMIT 5`,
-    ).all<{ id: string; actor_email: string | null; action: string; target_type: string; target_id: string | null; detail: string | null; created_at: string }>(),
-  ]);
-
+  // 프로바이더별 가입 분포 (전체)
   const providerResult = await c.env.DB.prepare(
-    `SELECT provider, COUNT(*) as cnt FROM login_stats WHERE action = 'signup' GROUP BY provider ORDER BY cnt DESC`,
+    `SELECT provider, COUNT(*) as cnt FROM login_stats WHERE action = 'signup' GROUP BY provider ORDER BY cnt DESC`
   ).all<{ provider: string; cnt: number }>();
+
+  // 일자별 가입 추이 (최근 14일)
+  const dailySignups = await c.env.DB.prepare(
+    `SELECT DATE(created_at) as date, COUNT(*) as cnt
+     FROM login_stats WHERE action = 'signup' AND created_at >= datetime('now', '-14 days')
+     GROUP BY DATE(created_at) ORDER BY date ASC`
+  ).all<{ date: string; cnt: number }>();
+
+  // 상위 10개 쇼핑몰 (총 회원수 기준)
+  const topShops = await c.env.DB.prepare(
+    `SELECT s.shop_name, s.mall_id, s.plan,
+      COUNT(*) as total_signups,
+      SUM(CASE WHEN ls.created_at >= datetime('now', 'start of month') THEN 1 ELSE 0 END) as monthly_signups,
+      SUM(CASE WHEN DATE(ls.created_at) = DATE('now') THEN 1 ELSE 0 END) as daily_signups
+    FROM login_stats ls
+    JOIN shops s ON ls.shop_id = s.shop_id
+    WHERE ls.action = 'signup' AND s.deleted_at IS NULL
+    GROUP BY ls.shop_id
+    ORDER BY total_signups DESC
+    LIMIT 10`
+  ).all<{ shop_name: string; mall_id: string; plan: string; total_signups: number; monthly_signups: number; daily_signups: number }>();
+
+  // 미답변 문의 (최근 10건)
+  const pendingInquiries = await c.env.DB.prepare(
+    `SELECT i.id, i.title, i.created_at, o.email as owner_email, s.shop_name
+     FROM inquiries i
+     JOIN owners o ON i.owner_id = o.owner_id
+     JOIN shops s ON i.shop_id = s.shop_id
+     WHERE i.status = 'pending'
+     ORDER BY i.created_at DESC LIMIT 10`
+  ).all<{ id: string; title: string; created_at: string; owner_email: string; shop_name: string }>();
+
+  const pendingCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as cnt FROM inquiries WHERE status = 'pending'"
+  ).first<{ cnt: number }>();
 
   return c.html(
     <AdminHomePage
-      stats={{
-        total_shops: statsResult?.total_shops ?? 0,
-        active_shops: statsResult?.active_shops ?? 0,
-        total_signups: statsResult?.total_signups ?? 0,
-        provider_distribution: providerResult.results ?? [],
+      planCounts={{
+        total: planCounts?.total ?? 0,
+        free: planCounts?.free_count ?? 0,
+        monthly: planCounts?.monthly_count ?? 0,
+        yearly: planCounts?.yearly_count ?? 0,
       }}
-      recentLogs={recentLogsResult.results ?? []}
+      providerDistribution={providerResult.results ?? []}
+      dailySignups={dailySignups.results ?? []}
+      topShops={topShops.results ?? []}
+      pendingInquiries={pendingInquiries.results ?? []}
+      pendingInquiryCount={pendingCount?.cnt ?? 0}
     />
   );
 });
 
 // GET /admin/shops — 전체 쇼핑몰
-pages.get('/admin/shops', async (c) => {
+pages.get('/supadmin/shops', async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = 20;
   const offset = (page - 1) * limit;
@@ -950,8 +1096,41 @@ pages.get('/admin/shops', async (c) => {
   );
 });
 
+// GET /supadmin/shops/:id — 쇼핑몰 상세
+pages.get('/supadmin/shops/:id', async (c) => {
+  const shopId = c.req.param('id');
+
+  const shop = await c.env.DB.prepare(
+    `SELECT s.*, o.email as owner_email, o.name as owner_name
+     FROM shops s JOIN owners o ON s.owner_id = o.owner_id
+     WHERE s.shop_id = ?`
+  ).bind(shopId).first();
+
+  if (!shop) return c.redirect('/supadmin/shops');
+
+  // 최근 가입 통계 (7일)
+  const recentStats = await c.env.DB.prepare(
+    `SELECT provider, COUNT(*) as cnt FROM login_stats
+     WHERE shop_id = ? AND action = 'signup' AND created_at >= datetime('now', '-7 days')
+     GROUP BY provider ORDER BY cnt DESC`
+  ).bind(shopId).all<{ provider: string; cnt: number }>();
+
+  // 총 가입자 수
+  const totalSignups = await c.env.DB.prepare(
+    "SELECT COUNT(*) as cnt FROM login_stats WHERE shop_id = ? AND action = 'signup'"
+  ).bind(shopId).first<{ cnt: number }>();
+
+  return c.html(
+    <AdminShopDetailPage
+      shop={shop as any}
+      recentStats={recentStats.results ?? []}
+      totalSignups={totalSignups?.cnt ?? 0}
+    />
+  );
+});
+
 // GET /admin/subscriptions — 전체 구독 현황
-pages.get('/admin/subscriptions', async (c) => {
+pages.get('/supadmin/subscriptions', async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT sub.id as subscription_id, sub.shop_id, sub.plan, sub.status, sub.started_at, sub.expires_at, sub.created_at,
             s.mall_id, s.shop_name, o.email as owner_email
@@ -970,112 +1149,15 @@ pages.get('/admin/subscriptions', async (c) => {
   );
 });
 
-// GET /admin/audit-log — 감사 로그
-pages.get('/admin/audit-log', async (c) => {
-  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
-  const limit = 50;
-  const offset = (page - 1) * limit;
-
-  const actionFilter = c.req.query('action') || '';
-  const fromFilter = c.req.query('from') || '';
-  const toFilter = c.req.query('to') || '';
-
-  let where = '';
-  const params: (string | number)[] = [];
-
-  if (actionFilter) {
-    where += ' AND a.action = ?';
-    params.push(actionFilter);
-  }
-  if (fromFilter) {
-    where += ' AND a.created_at >= ?';
-    params.push(fromFilter);
-  }
-  if (toFilter) {
-    // to 날짜는 해당 일의 끝까지 포함하기 위해 다음 날 00:00 미만으로 처리
-    const toNext = new Date(toFilter);
-    toNext.setUTCDate(toNext.getUTCDate() + 1);
-    where += ' AND a.created_at < ?';
-    params.push(toNext.toISOString().slice(0, 10));
-  }
-
-  params.push(limit, offset);
-
-  const result = await c.env.DB.prepare(
-    `SELECT a.id, a.action, a.target_type, a.target_id, a.detail, a.created_at, o.email as actor_email
-     FROM audit_logs a
-     LEFT JOIN owners o ON a.actor_id = o.owner_id
-     WHERE 1=1${where}
-     ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
-  )
-    .bind(...params)
-    .all<{
-      id: string; action: string; target_type: string; target_id: string | null;
-      detail: string | null; created_at: string; actor_email: string | null;
-    }>();
-
+// GET /supadmin/monitoring — 시스템 모니터링
+pages.get('/supadmin/monitoring', (c) => {
   return c.html(
-    <AdminAuditLogPage
-      logs={result.results ?? []}
-      page={page}
-      limit={limit}
-      currentAction={actionFilter || undefined}
-      currentFrom={fromFilter || undefined}
-      currentTo={toFilter || undefined}
-    />
-  );
-});
-
-// GET /admin/owners — 사용자(owner) 목록
-pages.get('/admin/owners', async (c) => {
-  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
-  const limit = 20;
-  const offset = (page - 1) * limit;
-  const search = c.req.query('search') || '';
-
-  const escapedSearch = search ? escapeLike(search) : '';
-
-  let query =
-    `SELECT o.owner_id, o.email, o.name, o.role, o.created_at,
-      (SELECT COUNT(*) FROM shops s WHERE s.owner_id = o.owner_id AND s.deleted_at IS NULL) as shop_count
-     FROM owners o WHERE 1=1`;
-  const params: string[] = [];
-
-  if (search) {
-    query += " AND (o.email LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')";
-    params.push(`%${escapedSearch}%`, `%${escapedSearch}%`);
-  }
-
-  query += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
-  params.push(String(limit), String(offset));
-
-  const countQuery = search
-    ? "SELECT COUNT(*) as total FROM owners o WHERE (o.email LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')"
-    : 'SELECT COUNT(*) as total FROM owners';
-
-  const [ownersResult, countResult] = await Promise.all([
-    c.env.DB.prepare(query).bind(...params).all<{
-      owner_id: string; email: string; name: string; role: string;
-      created_at: string; shop_count: number;
-    }>(),
-    search
-      ? c.env.DB.prepare(countQuery).bind(`%${escapedSearch}%`, `%${escapedSearch}%`).first<{ total: number }>()
-      : c.env.DB.prepare(countQuery).first<{ total: number }>(),
-  ]);
-
-  const total = countResult?.total ?? 0;
-
-  return c.html(
-    <AdminOwnersPage
-      owners={ownersResult.results ?? []}
-      pagination={{ page, pages: Math.ceil(total / limit), total }}
-      search={search}
-    />
+    <AdminMonitoringPage />
   );
 });
 
 // GET /admin/inquiries — 문의 관리
-pages.get('/admin/inquiries', async (c) => {
+pages.get('/supadmin/inquiries', async (c) => {
   const statusFilter = c.req.query('status') || '';
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = 20;
@@ -1125,7 +1207,7 @@ pages.get('/admin/inquiries', async (c) => {
 });
 
 // GET /admin/ai-reports — AI 보고서 현황
-pages.get('/admin/ai-reports', async (c) => {
+pages.get('/supadmin/ai-reports', async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT s.shop_id, s.shop_name, s.mall_id, s.plan, s.shop_identity,
             ab.id as briefing_id, ab.source as briefing_type, ab.performance as summary,
@@ -1150,6 +1232,34 @@ pages.get('/admin/ai-reports', async (c) => {
 
   return c.html(
     <AdminAiReportsPage shops={result.results ?? []} />
+  );
+});
+
+// GET /supadmin/ai-reports/:shopId — 쇼핑몰별 AI 보고서 상세
+pages.get('/supadmin/ai-reports/:shopId', async (c) => {
+  const shopId = c.req.param('shopId');
+
+  const shop = await c.env.DB.prepare(
+    'SELECT shop_id, shop_name FROM shops WHERE shop_id = ?'
+  ).bind(shopId).first<{ shop_id: string; shop_name: string }>();
+
+  if (!shop) return c.redirect('/supadmin/ai-reports');
+
+  const briefings = await c.env.DB.prepare(
+    `SELECT id, performance, strategy, actions, insight, source, created_at
+     FROM ai_briefings WHERE shop_id = ?
+     ORDER BY created_at DESC LIMIT 50`
+  ).bind(shopId).all<{
+    id: string; performance: string; strategy: string; actions: string;
+    insight: string | null; source: string; created_at: string;
+  }>();
+
+  return c.html(
+    <AdminAiReportDetailPage
+      shopName={shop.shop_name || shop.shop_id}
+      shopId={shop.shop_id}
+      briefings={briefings.results ?? []}
+    />
   );
 });
 

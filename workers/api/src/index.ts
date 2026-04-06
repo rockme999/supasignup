@@ -42,7 +42,7 @@ app.use('/api/dashboard/*', cors({
 }));
 
 // ── CORS: Admin API routes (restricted origin) ───────────────
-app.use('/api/admin/*', cors({
+app.use('/api/supadmin/*', cors({
   origin: (origin, c) => {
     const baseUrl = (c.env as Env).BASE_URL.replace(/\/+$/, '');
     return origin === baseUrl ? origin : '';
@@ -163,7 +163,7 @@ app.route('/api/dashboard', statsRoutes);
 app.route('/api/cafe24', cafe24Routes);
 app.route('/api/facebook', facebookRoutes);
 app.route('/api/dashboard/billing', billingRoutes);
-app.route('/api/admin', adminRoutes);
+app.route('/api/supadmin', adminRoutes);
 app.route('/api/ai', aiRoutes);
 app.route('/test', testRoutes);
 

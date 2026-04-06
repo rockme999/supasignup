@@ -1,5 +1,5 @@
 /**
- * 쿠폰 서비스 — 가입 시 카페24 쿠폰 자동 발급 + 혜택 기반 쿠폰 자동 생성.
+ * 쿠폰 서비스 — 가입 시 카페24 쿠폰 자동 발급 + 쿠폰 설정 기반 쿠폰 자동 생성.
  *
  * 카페24 쿠폰 발급 API:
  *   POST https://{mall_id}.cafe24api.com/api/v2/admin/coupons/{coupon_no}/issues
@@ -20,78 +20,47 @@ import { decryptShopTokens } from '../db/queries';
 // ─── 쿠폰 설정 타입 ──────────────────────────────────────────
 
 export interface CouponConfig {
-  enabled: boolean;
-  coupons: CouponItem[];
-  multi_coupon: boolean;
+  shipping: {
+    enabled: boolean;
+    expire_days: number;       // 기본 30
+  };
+  amount: {
+    enabled: boolean;
+    expire_days: number;       // 기본 30
+    discount_amount: number;   // 기본 3000
+    min_order: number;         // 기본 0 (없음)
+  };
+  rate: {
+    enabled: boolean;
+    expire_days: number;       // 기본 7
+    discount_rate: number;     // 기본 10
+    min_order: number;         // 기본 0 (없음)
+  };
+  // 카페24에 생성된 쿠폰 번호 매핑 (생성 후 저장)
+  cafe24_coupons?: {
+    shipping_coupon_no?: number;
+    amount_coupon_no?: number;
+    rate_coupon_no?: number;
+  };
 }
 
-export interface CouponItem {
-  coupon_no: number;
-  coupon_name?: string;
-  benefit_type?: string;   // 'D' = 정액, 'R' = 정률
-  discount_amount?: number;
-  discount_rate?: number;
-  benefit_text?: string;   // 원본 혜택 텍스트 (중복 생성 방지용)
-  min_order?: number;
-  expire_days?: number;
-}
-
-// ─── 혜택 텍스트 파싱 결과 ────────────────────────────────────
-
-interface ParsedBenefit {
-  type: 'amount' | 'rate';
-  value: number;           // 정액: 원 단위 (3000), 정률: 퍼센트 (10)
-  namePrefix?: string;     // '첫 구매' 등 prefix
-  benefitText: string;     // 원본 텍스트
-}
-
-/**
- * 혜택 텍스트에서 쿠폰 생성에 필요한 정보를 파싱한다.
- *
- * 파싱 가능한 패턴:
- *   "3,000원 할인 쿠폰 즉시 지급" → { type: 'amount', value: 3000 }
- *   "10% 할인 쿠폰 즉시 지급"    → { type: 'rate',   value: 10 }
- *   "첫 구매 10% 추가 할인"      → { type: 'rate',   value: 10, namePrefix: '첫 구매' }
- *
- * 쿠폰이 아닌 항목(적립금, 생일 쿠폰 등)은 null 반환.
- */
-export function parseBenefitText(text: string): ParsedBenefit | null {
-  if (!text) return null;
-
-  const trimmed = text.trim();
-
-  // 정액 쿠폰: "X,000원 할인 쿠폰 즉시 지급"
-  const amountMatch = trimmed.match(/^([\d,]+)원\s+할인\s*쿠폰/);
-  if (amountMatch) {
-    const value = parseInt(amountMatch[1].replace(/,/g, ''), 10);
-    if (!isNaN(value) && value > 0) {
-      return { type: 'amount', value, benefitText: trimmed };
-    }
-  }
-
-  // 정률 쿠폰: "X% 할인 쿠폰 즉시 지급"
-  const rateMatch = trimmed.match(/^(\d+)%\s+할인\s*쿠폰/);
-  if (rateMatch) {
-    const value = parseInt(rateMatch[1], 10);
-    if (!isNaN(value) && value > 0 && value <= 100) {
-      return { type: 'rate', value, benefitText: trimmed };
-    }
-  }
-
-  // 첫 구매 정률 쿠폰: "첫 구매 X% 추가 할인"
-  const firstPurchaseMatch = trimmed.match(/^(첫\s*구매)\s+(\d+)%\s+추가\s*할인/);
-  if (firstPurchaseMatch) {
-    const value = parseInt(firstPurchaseMatch[2], 10);
-    if (!isNaN(value) && value > 0 && value <= 100) {
-      return { type: 'rate', value, namePrefix: '첫 구매', benefitText: trimmed };
-    }
-  }
-
-  // 쿠폰이 아닌 항목 (적립금, 생일 쿠폰 등) → null
-  return null;
-}
+export const DEFAULT_COUPON_CONFIG: CouponConfig = {
+  shipping: { enabled: false, expire_days: 30 },
+  amount: { enabled: true, expire_days: 30, discount_amount: 3000, min_order: 0 },
+  rate: { enabled: false, expire_days: 7, discount_rate: 10, min_order: 0 },
+};
 
 // ─── 카페24 쿠폰 생성 ─────────────────────────────────────────
+
+type CouponType = 'shipping' | 'amount' | 'rate';
+
+interface CreateCouponParams {
+  type: CouponType;
+  expire_days: number;
+  discount_amount?: number;   // type === 'amount' 일 때 필수
+  discount_rate?: number;     // type === 'rate' 일 때 필수
+  min_order?: number;         // 0이면 무제한
+}
 
 /**
  * 카페24 Admin API로 쿠폰을 생성하고 coupon_no를 반환한다.
@@ -101,30 +70,42 @@ export function parseBenefitText(text: string): ParsedBenefit | null {
 async function createCafe24Coupon(
   mallId: string,
   accessToken: string,
-  parsed: ParsedBenefit,
+  params: CreateCouponParams,
 ): Promise<{ coupon_no: number; status: number } | { ok: false; status: number }> {
-  const couponName = parsed.namePrefix
-    ? `번개가입 ${parsed.namePrefix} ${parsed.type === 'amount' ? parsed.value.toLocaleString() + '원' : parsed.value + '%'} 할인쿠폰`
-    : `번개가입 ${parsed.type === 'amount' ? parsed.value.toLocaleString() + '원' : parsed.value + '%'} 할인쿠폰`;
+  const { type, expire_days, discount_amount, discount_rate, min_order } = params;
 
-  const benefitText = parsed.type === 'amount'
-    ? `${parsed.value.toLocaleString()}원 할인`
-    : `${parsed.value}% 할인`;
+  const couponName = type === 'shipping'
+    ? '번개가입 무료배송 쿠폰'
+    : type === 'amount'
+      ? `번개가입 ${(discount_amount ?? 0).toLocaleString()}원 할인쿠폰`
+      : `번개가입 ${discount_rate ?? 0}% 할인쿠폰`;
 
-  const discountFields = parsed.type === 'amount'
-    ? {
-        discount_type: 'D',
-        discount_amount: {
-          benefit_price: String(parsed.value),
-        },
-      }
-    : {
-        discount_type: 'R',
-        discount_rate: {
-          benefit_percentage: String(parsed.value),
-          benefit_percentage_round_unit: '10',
-        },
-      };
+  const benefitText = type === 'shipping'
+    ? '무료배송'
+    : type === 'amount'
+      ? `${(discount_amount ?? 0).toLocaleString()}원 할인`
+      : `${discount_rate ?? 0}% 할인`;
+
+  const discountFields = type === 'shipping'
+    ? { discount_type: 'F' }
+    : type === 'amount'
+      ? {
+          discount_type: 'D',
+          discount_amount: {
+            benefit_price: String(discount_amount ?? 0),
+          },
+        }
+      : {
+          discount_type: 'R',
+          discount_rate: {
+            benefit_percentage: String(discount_rate ?? 0),
+            benefit_percentage_round_unit: '10',
+          },
+        };
+
+  const minOrderFields = (min_order ?? 0) > 0
+    ? { available_price_type: 'O', available_min_price: String(min_order) }
+    : { available_price_type: 'U' };
 
   const body = {
     shop_no: 1,
@@ -134,9 +115,10 @@ async function createCafe24Coupon(
       benefit_text: benefitText,
       issue_type: 'M',
       available_period_type: 'F',
-      available_period_days_from_issue: 30,
+      available_period_days_from_issue: expire_days,
       available_site: ['W', 'M'],
       ...discountFields,
+      ...minOrderFields,
     },
   };
 
@@ -172,82 +154,51 @@ async function createCafe24Coupon(
   return { coupon_no: couponNo, status: resp.status };
 }
 
-// ─── 혜택 → 쿠폰 동기화 ──────────────────────────────────────
+// ─── 쿠폰 설정 → 카페24 쿠폰 동기화 ────────────────────────
 
 /**
- * shop_identity의 coupon_benefit + extra_benefits에서 자동 발급 가능한 항목을 파싱하여
- * 카페24에 쿠폰을 자동 생성하고 coupon_config에 저장한다.
+ * coupon_config에서 enabled된 쿠폰들을 카페24에 생성하고
+ * coupon_no를 cafe24_coupons에 저장한다.
  *
- * - 이미 동일 benefit_text의 쿠폰이 coupon_config에 있으면 중복 생성하지 않음
+ * - 이미 coupon_no가 있으면 중복 생성하지 않음
  * - 401 발생 시 토큰 갱신 후 1회 재시도
  * - 쿠폰 생성 후 coupon_config 업데이트 + KV 캐시 무효화
  * - 실패해도 에러 로그만 남기고 예외를 던지지 않음
  */
-export async function syncBenefitsToCoupons(env: Env, shop: Shop): Promise<void> {
+export async function syncCouponConfig(env: Env, shop: Shop): Promise<void> {
   // 1. platform_access_token 확인
   if (!shop.platform_access_token) {
     console.info(`[CouponSync] platform_access_token 없음, 스킵: mall=${shop.mall_id}`);
     return;
   }
 
-  // 2. shop_identity 파싱
-  if (!shop.shop_identity) {
-    console.info(`[CouponSync] shop_identity 없음, 스킵: mall=${shop.mall_id}`);
-    return;
-  }
-
-  let identity: Record<string, unknown>;
-  try {
-    identity = JSON.parse(shop.shop_identity as string) as Record<string, unknown>;
-  } catch {
-    console.error(`[CouponSync] shop_identity JSON 파싱 실패: mall=${shop.mall_id}`);
-    return;
-  }
-
-  // 3. 혜택 텍스트 수집 (coupon_benefit + extra_benefits)
-  const benefitTexts: string[] = [];
-  if (typeof identity.coupon_benefit === 'string' && identity.coupon_benefit) {
-    benefitTexts.push(identity.coupon_benefit);
-  }
-  if (Array.isArray(identity.extra_benefits)) {
-    for (const b of identity.extra_benefits) {
-      if (typeof b === 'string' && b) benefitTexts.push(b);
-    }
-  }
-
-  if (benefitTexts.length === 0) {
-    console.info(`[CouponSync] 혜택 텍스트 없음, 스킵: mall=${shop.mall_id}`);
-    return;
-  }
-
-  // 4. 파싱 가능한 쿠폰 항목만 필터링
-  const parsedBenefits = benefitTexts
-    .map((t) => parseBenefitText(t))
-    .filter((p): p is ParsedBenefit => p !== null);
-
-  if (parsedBenefits.length === 0) {
-    console.info(`[CouponSync] 자동 생성 가능한 쿠폰 없음, 스킵: mall=${shop.mall_id}`);
-    return;
-  }
-
-  // 5. 기존 coupon_config 파싱 (중복 방지용)
-  let config: CouponConfig = { enabled: true, coupons: [], multi_coupon: false };
+  // 2. coupon_config 파싱
+  let config: CouponConfig;
   if (shop.coupon_config) {
     try {
-      config = JSON.parse(shop.coupon_config) as CouponConfig;
+      config = JSON.parse(shop.coupon_config as string) as CouponConfig;
     } catch {
-      // 파싱 실패 시 기본값 사용
+      console.error(`[CouponSync] coupon_config JSON 파싱 실패: mall=${shop.mall_id}`);
+      return;
     }
+  } else {
+    config = { ...DEFAULT_COUPON_CONFIG };
   }
 
-  // 이미 저장된 benefit_text 목록
-  const existingBenefitTexts = new Set(
-    config.coupons
-      .map((c) => c.benefit_text)
-      .filter((t): t is string => typeof t === 'string'),
-  );
+  // 3. enabled된 쿠폰 중 coupon_no가 없는 것만 생성 대상
+  const cafe24 = config.cafe24_coupons ?? {};
+  const needsCreate = {
+    shipping: config.shipping.enabled && !cafe24.shipping_coupon_no,
+    amount: config.amount.enabled && !cafe24.amount_coupon_no,
+    rate: config.rate.enabled && !cafe24.rate_coupon_no,
+  };
 
-  // 6. 토큰 복호화
+  if (!needsCreate.shipping && !needsCreate.amount && !needsCreate.rate) {
+    console.info(`[CouponSync] 생성할 쿠폰 없음, 스킵: mall=${shop.mall_id}`);
+    return;
+  }
+
+  // 4. 토큰 복호화
   let tokens: { access_token: string | null; refresh_token: string | null };
   try {
     tokens = await decryptShopTokens(shop, env.ENCRYPTION_KEY);
@@ -264,46 +215,61 @@ export async function syncBenefitsToCoupons(env: Env, shop: Shop): Promise<void>
   let accessToken = tokens.access_token;
   let configChanged = false;
 
-  // 7. 각 혜택에 대해 쿠폰 생성 (중복 건너뜀)
-  for (const parsed of parsedBenefits) {
-    if (existingBenefitTexts.has(parsed.benefitText)) {
-      console.info(`[CouponSync] 이미 존재, 스킵: mall=${shop.mall_id}, benefit="${parsed.benefitText}"`);
-      continue;
-    }
+  // 5. 각 쿠폰 타입별로 생성
+  const couponTasks: { key: 'shipping' | 'amount' | 'rate'; params: CreateCouponParams }[] = [];
 
-    let result = await createCafe24Coupon(shop.mall_id, accessToken, parsed);
+  if (needsCreate.shipping) {
+    couponTasks.push({
+      key: 'shipping',
+      params: { type: 'shipping', expire_days: config.shipping.expire_days },
+    });
+  }
+  if (needsCreate.amount) {
+    couponTasks.push({
+      key: 'amount',
+      params: {
+        type: 'amount',
+        expire_days: config.amount.expire_days,
+        discount_amount: config.amount.discount_amount,
+        min_order: config.amount.min_order,
+      },
+    });
+  }
+  if (needsCreate.rate) {
+    couponTasks.push({
+      key: 'rate',
+      params: {
+        type: 'rate',
+        expire_days: config.rate.expire_days,
+        discount_rate: config.rate.discount_rate,
+        min_order: config.rate.min_order,
+      },
+    });
+  }
+
+  for (const task of couponTasks) {
+    let result = await createCafe24Coupon(shop.mall_id, accessToken, task.params);
 
     // 401: 토큰 갱신 후 1회 재시도
     if ('ok' in result && !result.ok && result.status === 401 && tokens.refresh_token) {
       const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
       if (newToken) {
         accessToken = newToken;
-        result = await createCafe24Coupon(shop.mall_id, accessToken, parsed);
+        result = await createCafe24Coupon(shop.mall_id, accessToken, task.params);
       }
     }
 
     if ('coupon_no' in result) {
-      const couponName = parsed.namePrefix
-        ? `번개가입 ${parsed.namePrefix} ${parsed.type === 'amount' ? parsed.value.toLocaleString() + '원' : parsed.value + '%'} 할인쿠폰`
-        : `번개가입 ${parsed.type === 'amount' ? parsed.value.toLocaleString() + '원' : parsed.value + '%'} 할인쿠폰`;
-
-      config.coupons.push({
-        coupon_no: result.coupon_no,
-        coupon_name: couponName,
-        benefit_type: parsed.type === 'amount' ? 'D' : 'R',
-        discount_amount: parsed.type === 'amount' ? parsed.value : undefined,
-        discount_rate: parsed.type === 'rate' ? parsed.value : undefined,
-        benefit_text: parsed.benefitText,
-        expire_days: 30,
-      });
-      existingBenefitTexts.add(parsed.benefitText);
+      if (!config.cafe24_coupons) config.cafe24_coupons = {};
+      if (task.key === 'shipping') config.cafe24_coupons.shipping_coupon_no = result.coupon_no;
+      if (task.key === 'amount') config.cafe24_coupons.amount_coupon_no = result.coupon_no;
+      if (task.key === 'rate') config.cafe24_coupons.rate_coupon_no = result.coupon_no;
       configChanged = true;
     }
   }
 
-  // 8. coupon_config 업데이트 + KV 캐시 무효화
+  // 6. coupon_config 업데이트 + KV 캐시 무효화
   if (configChanged) {
-    config.enabled = true;
     try {
       await env.DB
         .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
@@ -313,7 +279,7 @@ export async function syncBenefitsToCoupons(env: Env, shop: Shop): Promise<void>
       // KV 캐시 무효화
       await env.KV.delete(`widget_config:${shop.client_id}`);
 
-      console.info(`[CouponSync] coupon_config 업데이트 완료: mall=${shop.mall_id}, 추가된 쿠폰=${config.coupons.length}개`);
+      console.info(`[CouponSync] coupon_config 업데이트 완료: mall=${shop.mall_id}`);
     } catch (err) {
       console.error(`[CouponSync] coupon_config 저장 실패: mall=${shop.mall_id}`, err);
     }
@@ -408,8 +374,8 @@ async function refreshAndSaveToken(
 /**
  * 가입 시 쿠폰 자동 발급.
  *
- * - coupon_config가 null이거나 enabled=false이면 스킵
- * - multi_coupon=false이면 첫 번째 쿠폰만 발급
+ * - coupon_config가 null이면 스킵
+ * - enabled된 쿠폰의 cafe24_coupons에서 coupon_no를 읽어 발급
  * - 401 발생 시 토큰 갱신 후 재시도
  * - 에러는 로깅만 하고 호출부 플로우를 차단하지 않음 (try-catch 필수)
  *
@@ -435,22 +401,31 @@ export async function issueCouponOnSignup(
     return;
   }
 
-  // 2. enabled 체크
-  if (!config.enabled) {
-    return; // 쿠폰 발급 비활성화
+  // 2. 발급할 coupon_no 목록 수집 (enabled + cafe24_coupons에 번호 있는 것만)
+  const isFree = shop.plan === 'free';
+  const cafe24 = config.cafe24_coupons ?? {};
+  const couponNos: number[] = [];
+
+  if (config.shipping.enabled && cafe24.shipping_coupon_no) {
+    couponNos.push(cafe24.shipping_coupon_no);
+  }
+  if (config.amount.enabled && cafe24.amount_coupon_no) {
+    couponNos.push(cafe24.amount_coupon_no);
+  }
+  // 정률할인: Plus 전용
+  if (!isFree && config.rate.enabled && cafe24.rate_coupon_no) {
+    couponNos.push(cafe24.rate_coupon_no);
   }
 
-  // 3. 발급할 쿠폰 목록 결정 (multi_coupon=false이면 첫 번째만)
-  const couponsToIssue = config.multi_coupon
-    ? config.coupons
-    : config.coupons.slice(0, 1);
+  // 무료 플랜: 1개만 발급
+  const issuableNos = isFree ? couponNos.slice(0, 1) : couponNos;
 
-  if (couponsToIssue.length === 0) {
+  if (issuableNos.length === 0) {
     console.warn(`[Coupon] 발급할 쿠폰 없음: mall=${shop.mall_id}`);
     return;
   }
 
-  // 4. platform_access_token 복호화
+  // 3. platform_access_token 복호화
   if (!shop.platform_access_token) {
     console.error(`[Coupon] access_token 없음: mall=${shop.mall_id}`);
     return;
@@ -471,29 +446,44 @@ export async function issueCouponOnSignup(
 
   let accessToken = tokens.access_token;
 
-  // 5. 쿠폰 발급 (401 시 토큰 갱신 후 재시도)
-  for (const coupon of couponsToIssue) {
+  // 4. 쿠폰 발급 (401 시 토큰 갱신 후 재시도)
+  for (const couponNo of issuableNos) {
     try {
-      let result = await issueSingleCoupon(shop.mall_id, accessToken, coupon.coupon_no, memberId);
+      let result = await issueSingleCoupon(shop.mall_id, accessToken, couponNo, memberId);
 
       // 401 전용: 토큰 만료 → 갱신 후 1회 재시도
       if (!result.ok && result.status === 401 && tokens.refresh_token) {
         const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
         if (newToken) {
           accessToken = newToken;
-          result = await issueSingleCoupon(shop.mall_id, accessToken, coupon.coupon_no, memberId);
+          result = await issueSingleCoupon(shop.mall_id, accessToken, couponNo, memberId);
         }
       }
 
       if (result.ok) {
+        // 쿠폰 타입 결정
+        let couponType = 'unknown';
+        if (cafe24.shipping_coupon_no === couponNo) couponType = 'shipping';
+        else if (cafe24.amount_coupon_no === couponNo) couponType = 'amount';
+        else if (cafe24.rate_coupon_no === couponNo) couponType = 'rate';
+
+        // DB에 발급 기록 저장
+        try {
+          await env.DB.prepare(
+            'INSERT INTO coupon_issues (shop_id, member_id, coupon_type, coupon_no) VALUES (?, ?, ?, ?)',
+          ).bind(shop.shop_id, memberId, couponType, couponNo).run();
+        } catch (err) {
+          console.error(`[Coupon] 발급 기록 저장 실패: mall=${shop.mall_id}, member=${memberId}`, err);
+        }
+
         console.info(
-          `[Coupon] 발급 성공: mall=${shop.mall_id}, coupon_no=${coupon.coupon_no}, member=${memberId}`,
+          `[Coupon] 발급 성공: mall=${shop.mall_id}, coupon_no=${couponNo}, member=${memberId}`,
         );
       }
     } catch (err) {
       // 쿠폰 발급 실패해도 가입 플로우를 차단하지 않음
       console.error(
-        `[Coupon] 예외 발생: mall=${shop.mall_id}, coupon_no=${coupon.coupon_no}, member=${memberId}`,
+        `[Coupon] 예외 발생: mall=${shop.mall_id}, coupon_no=${couponNo}, member=${memberId}`,
         err,
       );
     }

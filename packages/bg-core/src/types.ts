@@ -162,7 +162,7 @@ export interface WidgetStyle {
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
-  preset: 'outline-mono',
+  preset: 'default',
   buttonWidth: 370,
   buttonHeight: 45,
   buttonGap: 6,
@@ -207,8 +207,9 @@ export interface Env {
   ENCRYPTION_KEY: string;
   JWT_SECRET: string;
   AI: any; // Cloudflare Workers AI binding
-  CF_ACCOUNT_ID: string; // Cloudflare Account ID (AI REST API fallback용)
+  CF_ACCOUNT_ID: string; // Cloudflare Account ID (AI REST API fallback + Analytics용)
   CF_AI_TOKEN: string; // Cloudflare AI API Token
+  CF_API_TOKEN: string; // Cloudflare API Token (Analytics GraphQL용)
 }
 
 // Billing

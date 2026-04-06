@@ -29,7 +29,8 @@ import {
   getMonthlySignupCount,
 } from '../db/queries';
 import { purgeWidgetConfigCache } from './widget';
-import { syncBenefitsToCoupons } from '../services/coupon';
+import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
+import type { CouponConfig } from '../services/coupon';
 
 const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
 const COOKIE_MAX_AGE = 86400; // 24 hours
@@ -217,16 +218,6 @@ dashboard.put('/shops/:id', async (c) => {
   }
 
   await updateShop(c.env.DB, shopId, updates);
-
-  // shop_identity가 변경된 경우 백그라운드에서 쿠폰 동기화
-  if ('shop_identity' in updates) {
-    const updatedShop = { ...shop, shop_identity: updates.shop_identity as string | null };
-    c.executionCtx.waitUntil(
-      syncBenefitsToCoupons(c.env, updatedShop).catch((err) =>
-        console.error(`[CouponSync] 백그라운드 동기화 오류: mall=${shop.mall_id}`, err),
-      ),
-    );
-  }
 
   return c.json({ ok: true });
 });
@@ -593,8 +584,8 @@ dashboard.put('/shops/:id/banner', async (c) => {
     anchorSelector: body.anchorSelector || '#top_nav_box',
     position: body.position || 'floating',
     animation: (body.animation === 'slideDown') ? 'slideDown' : 'fadeIn',
-    fullWidth: body.fullWidth !== false,
-    paddingX: Math.min(Math.max(body.paddingX ?? 24, 12), 80),
+    fullWidth: body.fullWidth === true,
+    paddingX: Math.min(Math.max(body.paddingX ?? 28, 12), 80),
     height: Math.min(Math.max(body.height ?? 44, 32), 80),
   };
 
@@ -655,18 +646,51 @@ dashboard.get('/shops/:id/coupon', async (c) => {
     return c.json({ error: 'not_found' }, 404);
   }
 
-  // coupon_config가 없으면 기본값 반환
-  const defaultConfig = { enabled: false, coupons: [], multi_coupon: false };
   if (!shop.coupon_config) {
-    return c.json({ coupon_config: defaultConfig });
+    return c.json({ coupon_config: DEFAULT_COUPON_CONFIG });
   }
 
   try {
     const config = JSON.parse(shop.coupon_config);
+    // 새 포맷(shipping/amount/rate)인지 확인, 이전 포맷이면 기본값 반환
+    if (!config?.shipping || !config?.amount || !config?.rate) {
+      return c.json({ coupon_config: DEFAULT_COUPON_CONFIG });
+    }
     return c.json({ coupon_config: config });
   } catch {
-    return c.json({ coupon_config: defaultConfig });
+    return c.json({ coupon_config: DEFAULT_COUPON_CONFIG });
   }
+});
+
+// ─── GET /shops/:id/coupon-issues ───────────────────────────────────
+dashboard.get('/shops/:id/coupon-issues', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  const page = parseInt(c.req.query('page') ?? '1', 10);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  const [issues, countResult] = await Promise.all([
+    c.env.DB.prepare(
+      'SELECT id, member_id, coupon_type, coupon_no, issued_at FROM coupon_issues WHERE shop_id = ? ORDER BY issued_at DESC LIMIT ? OFFSET ?',
+    ).bind(shopId, limit, offset).all(),
+    c.env.DB.prepare(
+      'SELECT COUNT(*) as total FROM coupon_issues WHERE shop_id = ?',
+    ).bind(shopId).first<{ total: number }>(),
+  ]);
+
+  return c.json({
+    issues: issues.results ?? [],
+    total: countResult?.total ?? 0,
+    page,
+    limit,
+  });
 });
 
 // ─── PUT /shops/:id/coupon ───────────────────────────────────
@@ -680,46 +704,140 @@ dashboard.put('/shops/:id/coupon', async (c) => {
   }
 
   const body = await c.req.json<{
-    enabled?: boolean;
-    coupons?: unknown[];
-    multi_coupon?: boolean;
+    shipping?: { enabled?: boolean; expire_days?: number };
+    amount?: { enabled?: boolean; expire_days?: number; discount_amount?: number; min_order?: number };
+    rate?: { enabled?: boolean; expire_days?: number; discount_rate?: number; min_order?: number };
   }>();
 
-  const isPlusPlan = shop.plan !== 'free';
+  const isFree = shop.plan === 'free';
 
-  // multi_coupon은 Plus 플랜에서만 허용; Free 플랜이면 false 강제
-  const multiCoupon = isPlusPlan ? (body.multi_coupon ?? false) : false;
+  // 무료 플랜: 정률할인 사용 불가, 1종만 허용
+  if (isFree) {
+    if (body.rate?.enabled) {
+      return c.json({ error: 'plan_limit', message: '무료 플랜에서는 정률할인 쿠폰을 사용할 수 없습니다.' }, 403);
+    }
+    const shippingOn = body.shipping?.enabled ?? false;
+    const amountOn = body.amount?.enabled ?? false;
+    if (shippingOn && amountOn) {
+      return c.json({ error: 'plan_limit', message: '무료 플랜에서는 쿠폰 1종만 사용할 수 있습니다.' }, 403);
+    }
+    // 무료 플랜: 세부 설정 강제 기본값
+    if (body.shipping) {
+      body.shipping.expire_days = 30;
+    }
+    if (body.amount) {
+      body.amount.expire_days = 30;
+      body.amount.discount_amount = 3000;
+      body.amount.min_order = 0;
+    }
+  }
 
-  // coupons 배열 검증 + 정규화: 허용 필드만 추출, coupon_no 필수
-  const rawCoupons = Array.isArray(body.coupons) ? body.coupons : [];
-  const validatedCoupons = rawCoupons
-    .filter((c): c is Record<string, unknown> =>
-      typeof c === 'object' && c !== null &&
-      typeof (c as any).coupon_no === 'number' &&
-      Number.isInteger((c as any).coupon_no) &&
-      (c as any).coupon_no > 0
-    )
-    .map(c => ({
-      coupon_no: c.coupon_no as number,
-      coupon_name: typeof c.coupon_name === 'string' ? c.coupon_name : undefined,
-      benefit_type: typeof c.benefit_type === 'string' ? c.benefit_type : undefined,
-      discount_amount: typeof c.discount_amount === 'number' ? c.discount_amount : undefined,
-      min_order: typeof c.min_order === 'number' ? c.min_order : undefined,
-      expire_days: typeof c.expire_days === 'number' ? c.expire_days : undefined,
-    }));
-  const coupons = isPlusPlan ? validatedCoupons : validatedCoupons.slice(0, 1);
+  const VALID_EXPIRE_DAYS = [3, 7, 10, 20, 30];
 
-  const config = {
-    enabled: body.enabled ?? false,
-    coupons,
-    multi_coupon: multiCoupon,
+  // 검증: expire_days
+  for (const key of ['shipping', 'amount', 'rate'] as const) {
+    const section = body[key];
+    if (section?.expire_days !== undefined && !VALID_EXPIRE_DAYS.includes(section.expire_days)) {
+      return c.json({ error: 'invalid_expire_days', message: `expire_days must be one of: ${VALID_EXPIRE_DAYS.join(', ')}` }, 400);
+    }
+  }
+
+  // 검증: discount_amount
+  if (body.amount?.discount_amount !== undefined) {
+    const da = body.amount.discount_amount;
+    if (!Number.isInteger(da) || da < 100) {
+      return c.json({ error: 'invalid_discount_amount', message: 'discount_amount must be an integer >= 100' }, 400);
+    }
+  }
+
+  // 검증: discount_rate
+  if (body.rate?.discount_rate !== undefined) {
+    const dr = body.rate.discount_rate;
+    if (!Number.isInteger(dr) || dr < 1 || dr > 100) {
+      return c.json({ error: 'invalid_discount_rate', message: 'discount_rate must be an integer between 1 and 100' }, 400);
+    }
+  }
+
+  // 검증: min_order
+  for (const key of ['amount', 'rate'] as const) {
+    const section = body[key];
+    if (section?.min_order !== undefined) {
+      if (!Number.isInteger(section.min_order) || section.min_order < 0) {
+        return c.json({ error: 'invalid_min_order', message: 'min_order must be a non-negative integer' }, 400);
+      }
+    }
+  }
+
+  // 기존 config 로드 (cafe24_coupons 보존을 위해)
+  let existingConfig: CouponConfig = { ...DEFAULT_COUPON_CONFIG };
+  if (shop.coupon_config) {
+    try {
+      existingConfig = JSON.parse(shop.coupon_config) as CouponConfig;
+    } catch { /* 파싱 실패 시 기본값 사용 */ }
+  }
+
+  // 새 설정 병합 (cafe24_coupons는 유지, 단 설정이 바뀐 쿠폰의 coupon_no는 초기화)
+  const newConfig: CouponConfig = {
+    shipping: {
+      enabled: body.shipping?.enabled ?? existingConfig.shipping.enabled,
+      expire_days: body.shipping?.expire_days ?? existingConfig.shipping.expire_days,
+    },
+    amount: {
+      enabled: body.amount?.enabled ?? existingConfig.amount.enabled,
+      expire_days: body.amount?.expire_days ?? existingConfig.amount.expire_days,
+      discount_amount: body.amount?.discount_amount ?? existingConfig.amount.discount_amount,
+      min_order: body.amount?.min_order ?? existingConfig.amount.min_order,
+    },
+    rate: {
+      enabled: body.rate?.enabled ?? existingConfig.rate.enabled,
+      expire_days: body.rate?.expire_days ?? existingConfig.rate.expire_days,
+      discount_rate: body.rate?.discount_rate ?? existingConfig.rate.discount_rate,
+      min_order: body.rate?.min_order ?? existingConfig.rate.min_order,
+    },
+    cafe24_coupons: existingConfig.cafe24_coupons ? { ...existingConfig.cafe24_coupons } : undefined,
   };
 
+  // 설정이 변경된 쿠폰은 기존 coupon_no를 초기화하여 재생성 유도
+  if (body.shipping !== undefined && newConfig.cafe24_coupons) {
+    const shippingChanged =
+      body.shipping.expire_days !== undefined &&
+      body.shipping.expire_days !== existingConfig.shipping.expire_days;
+    if (shippingChanged) {
+      newConfig.cafe24_coupons.shipping_coupon_no = undefined;
+    }
+  }
+  if (body.amount !== undefined && newConfig.cafe24_coupons) {
+    const amountChanged =
+      (body.amount.expire_days !== undefined && body.amount.expire_days !== existingConfig.amount.expire_days) ||
+      (body.amount.discount_amount !== undefined && body.amount.discount_amount !== existingConfig.amount.discount_amount) ||
+      (body.amount.min_order !== undefined && body.amount.min_order !== existingConfig.amount.min_order);
+    if (amountChanged) {
+      newConfig.cafe24_coupons.amount_coupon_no = undefined;
+    }
+  }
+  if (body.rate !== undefined && newConfig.cafe24_coupons) {
+    const rateChanged =
+      (body.rate.expire_days !== undefined && body.rate.expire_days !== existingConfig.rate.expire_days) ||
+      (body.rate.discount_rate !== undefined && body.rate.discount_rate !== existingConfig.rate.discount_rate) ||
+      (body.rate.min_order !== undefined && body.rate.min_order !== existingConfig.rate.min_order);
+    if (rateChanged) {
+      newConfig.cafe24_coupons.rate_coupon_no = undefined;
+    }
+  }
+
   await updateShop(c.env.DB, shopId, {
-    coupon_config: JSON.stringify(config),
+    coupon_config: JSON.stringify(newConfig),
   });
 
-  return c.json({ ok: true, coupon_config: config });
+  // 백그라운드에서 카페24 쿠폰 생성 동기화
+  const updatedShop = { ...shop, coupon_config: JSON.stringify(newConfig) };
+  c.executionCtx.waitUntil(
+    syncCouponConfig(c.env, updatedShop).catch((err) =>
+      console.error(`[CouponSync] 백그라운드 동기화 오류: mall=${shop.mall_id}`, err),
+    ),
+  );
+
+  return c.json({ ok: true, coupon_config: newConfig });
 });
 
 // ─── PUT /shops/:id/kakao-channel ────────────────────────────

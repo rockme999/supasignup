@@ -14,6 +14,7 @@
 --   2026-04-04: shops.banner_config 추가 (Plus: 미니배너 설정 저장)
 --   2026-04-05: shops.popup_config 추가 (Plus: 이탈 감지 팝업 설정 저장)
 --   2026-04-05: shops.escalation_config 추가 (Plus: 에스컬레이션 설정 저장)
+--   2026-04-06: coupon_issues 테이블 추가 (쿠폰 발급 히스토리)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -222,3 +223,21 @@ CREATE TABLE IF NOT EXISTS ai_briefings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ai_briefings_shop_created ON ai_briefings(shop_id, created_at DESC);
+
+-- ============================================================
+-- 12. coupon_issues - 쿠폰 발급 히스토리
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coupon_issues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id TEXT NOT NULL,
+  member_id TEXT NOT NULL,
+  coupon_type TEXT NOT NULL,         -- 'shipping', 'amount', 'rate'
+  coupon_no INTEGER NOT NULL,        -- 카페24 쿠폰 번호
+  issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+  used_at TEXT,                       -- 사용 시각
+  order_id TEXT,                      -- 사용된 주문번호
+  FOREIGN KEY (shop_id) REFERENCES shops(shop_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coupon_issues_shop ON coupon_issues(shop_id, issued_at);
+CREATE INDEX IF NOT EXISTS idx_coupon_issues_member ON coupon_issues(shop_id, member_id);

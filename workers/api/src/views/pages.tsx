@@ -891,20 +891,33 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
                 var checkPopup = setInterval(function() {
                   if (!popup || popup.closed) {
                     clearInterval(checkPopup);
-                    fetch('/api/dashboard/billing/status/' + subId, { credentials: 'same-origin' })
-                      .then(function(r) { return r.json(); })
-                      .then(function(s) {
-                        if (s.status === 'active') {
-                          location.reload();
-                        } else {
-                          btnEl.disabled = false;
-                          btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
-                        }
-                      })
-                      .catch(function() {
-                        btnEl.disabled = false;
-                        btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
-                      });
+                    btnEl.textContent = '결제 확인 중...';
+                    var pollCount = 0;
+                    var maxPolls = 15;
+                    var pollInterval = setInterval(function() {
+                      pollCount++;
+                      fetch('/api/dashboard/billing/status/' + subId, { credentials: 'same-origin' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(s) {
+                          if (s.status === 'active') {
+                            clearInterval(pollInterval);
+                            showToast('success', 'Plus 플랜이 활성화되었습니다!');
+                            setTimeout(function() { location.reload(); }, 500);
+                          } else if (pollCount >= maxPolls) {
+                            clearInterval(pollInterval);
+                            showToast('warn', '결제가 처리 중입니다. 잠시 후 새로고침해 주세요.');
+                            btnEl.disabled = false;
+                            btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
+                          }
+                        })
+                        .catch(function() {
+                          if (pollCount >= maxPolls) {
+                            clearInterval(pollInterval);
+                            btnEl.disabled = false;
+                            btnEl.textContent = plan === 'monthly' ? 'Plus 월간 전환' : 'Plus 연간 전환';
+                          }
+                        });
+                    }, 2000);
                   }
                 }, 1000);
               } else {
@@ -932,15 +945,15 @@ export const BillingPage: FC<BillingPageProps> = ({ billingShops, month, shops, 
 
 const DEFAULT_WIDGET_STYLE = {
   preset: 'default',
-  buttonWidth: 280,
-  buttonHeight: 44,
-  buttonGap: 8,
-  borderRadius: 10,
-  align: 'center',
+  buttonWidth: 370,
+  buttonHeight: 45,
+  buttonGap: 6,
+  borderRadius: 5,
+  align: 'left',
   buttonLabel: '{name}로 시작하기',
   showIcon: true,
-  iconGap: 8,
-  paddingLeft: 16,
+  iconGap: 30,
+  paddingLeft: 100,
   showTitle: true,
   showPoweredBy: true,
 };
@@ -1222,15 +1235,15 @@ export const ProvidersPage: FC<{
           </div>
           <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
-              아이콘-텍스트 간격 <span id="iconGapValue">{ws.showIcon !== false ? (ws as any).iconGap ?? 8 : 8}px</span>
+              아이콘-텍스트 간격 <span id="iconGapValue">{ws.showIcon !== false ? (ws as any).iconGap ?? 30 : 30}px</span>
             </label>
-            <input type="range" id="btnIconGap" min="0" max="100" value={String((ws as any).iconGap ?? 8)} style="width:100%" />
+            <input type="range" id="btnIconGap" min="0" max="100" value={String((ws as any).iconGap ?? 30)} style="width:100%" />
           </div>
           <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:6px">
-              왼쪽 여백 <span id="paddingLeftValue">{(ws as any).paddingLeft ?? 16}px</span>
+              왼쪽 여백 <span id="paddingLeftValue">{(ws as any).paddingLeft ?? 100}px</span>
             </label>
-            <input type="range" id="btnPaddingLeft" min="0" max="150" value={String((ws as any).paddingLeft ?? 16)} style="width:100%" />
+            <input type="range" id="btnPaddingLeft" min="0" max="150" value={String((ws as any).paddingLeft ?? 100)} style="width:100%" />
           </div>
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:12px">
@@ -1250,14 +1263,14 @@ export const ProvidersPage: FC<{
           var style = {
             preset: widgetStyle.preset,
             buttonWidth: widgetStyle.buttonWidth,
-            buttonHeight: widgetStyle.buttonHeight || 44,
+            buttonHeight: widgetStyle.buttonHeight || 45,
             buttonGap: widgetStyle.buttonGap,
             borderRadius: widgetStyle.borderRadius,
             align: widgetStyle.align,
             buttonLabel: widgetStyle.buttonLabel || '{name}로 시작하기',
             showIcon: widgetStyle.showIcon !== false,
-            iconGap: widgetStyle.iconGap || 8,
-            paddingLeft: widgetStyle.paddingLeft || 16,
+            iconGap: widgetStyle.iconGap || 30,
+            paddingLeft: widgetStyle.paddingLeft || 100,
             showTitle: widgetStyle.showTitle !== false,
             showPoweredBy: widgetStyle.showPoweredBy !== false
           };
@@ -1553,7 +1566,7 @@ export const ProvidersPage: FC<{
           if (resetBtn) {
             resetBtn.addEventListener('click', async function() {
               if (!confirm('위젯 디자인을 기본값으로 되돌리시겠습니까?')) return;
-              var defaults = {preset:'outline-mono',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true};
+              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true};
               Object.assign(style, defaults);
               // UI 컨트롤 동기화
               document.getElementById('btnWidth').value = defaults.buttonWidth; document.getElementById('widthValue').textContent = defaults.buttonWidth + 'px';
@@ -1569,7 +1582,7 @@ export const ProvidersPage: FC<{
               document.getElementById('labelCustom').style.display = 'none';
               document.getElementById('btnWidth').disabled = false;
               document.querySelectorAll('.preset-card').forEach(function(c) { c.classList.remove('active'); });
-              var defCard = document.querySelector('.preset-card[data-preset="outline-mono"]');
+              var defCard = document.querySelector('.preset-card[data-preset="default"]');
               if (defCard) defCard.classList.add('active');
               document.querySelectorAll('.align-btn').forEach(function(b) { b.classList.remove('active'); });
               var defAlign = document.querySelector('.align-btn[data-align="left"]');
@@ -2000,11 +2013,20 @@ export const TermsPage: FC = () => (
 
 // --- Admin Home ---
 
-type AdminStats = {
-  total_shops: number;
-  active_shops: number;
+type AdminPlanCounts = {
+  total: number;
+  free: number;
+  monthly: number;
+  yearly: number;
+};
+
+type AdminTopShop = {
+  shop_name: string;
+  mall_id: string;
+  plan: string;
   total_signups: number;
-  provider_distribution: { provider: string; cnt: number }[];
+  monthly_signups: number;
+  daily_signups: number;
 };
 
 type AdminAuditLogEntry = {
@@ -2017,82 +2039,126 @@ type AdminAuditLogEntry = {
   created_at: string;
 };
 
+type AdminPendingInquiry = {
+  id: string;
+  title: string;
+  created_at: string;
+  owner_email: string;
+  shop_name: string;
+};
+
 export const AdminHomePage: FC<{
-  stats: AdminStats;
-  recentLogs: AdminAuditLogEntry[];
-}> = ({ stats, recentLogs }) => (
-  <Layout title="관리자 홈" loggedIn isAdmin currentPath="/admin">
+  planCounts: AdminPlanCounts;
+  providerDistribution: { provider: string; cnt: number }[];
+  dailySignups: { date: string; cnt: number }[];
+  topShops: AdminTopShop[];
+  pendingInquiries: AdminPendingInquiry[];
+  pendingInquiryCount: number;
+}> = ({ planCounts, providerDistribution, dailySignups, topShops, pendingInquiries, pendingInquiryCount }) => (
+  <Layout title="관리자 홈" loggedIn isAdmin currentPath="/supadmin">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
       <h1 style="margin-bottom:0">관리자 대시보드</h1>
       <span class="badge badge-red" style="font-size:13px">ADMIN</span>
       <div style="margin-left:auto;display:flex;gap:8px">
-        <a href="/api/admin/export/shops" class="btn btn-outline btn-sm" download>쇼핑몰 CSV</a>
-        <a href="/api/admin/export/stats" class="btn btn-outline btn-sm" download>통계 CSV</a>
+        <a href="/api/supadmin/export/shops" class="btn btn-outline btn-sm" download>쇼핑몰 CSV</a>
+        <a href="/api/supadmin/export/stats" class="btn btn-outline btn-sm" download>통계 CSV</a>
       </div>
     </div>
 
-    <div class="stat-grid">
+    {/* 플랜별 쇼핑몰 수 */}
+    <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
       <div class="stat-card">
         <div class="label">전체 쇼핑몰</div>
-        <div class="value">{stats.total_shops.toLocaleString()}</div>
+        <div class="value">{planCounts.total.toLocaleString()}</div>
       </div>
       <div class="stat-card">
-        <div class="label">활성 쇼핑몰</div>
-        <div class="value">{stats.active_shops.toLocaleString()}</div>
+        <div class="label">무료 플랜</div>
+        <div class="value">{planCounts.free.toLocaleString()}</div>
       </div>
       <div class="stat-card">
-        <div class="label">전체 가입자</div>
-        <div class="value">{stats.total_signups.toLocaleString()}</div>
+        <div class="label">월간 구독</div>
+        <div class="value" style="color:#2563eb">{planCounts.monthly.toLocaleString()}</div>
       </div>
       <div class="stat-card">
-        <div class="label">정지된 쇼핑몰</div>
-        <div class="value">{(stats.total_shops - stats.active_shops).toLocaleString()}</div>
+        <div class="label">연간 구독</div>
+        <div class="value" style="color:#059669">{planCounts.yearly.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">미답변 문의</div>
+        <div class="value" style={pendingInquiryCount > 0 ? 'color:#ef4444' : ''}>{pendingInquiryCount > 0 ? <a href="/supadmin/inquiries?status=pending" style="color:#ef4444;text-decoration:none">{pendingInquiryCount}</a> : '0'}</div>
       </div>
     </div>
 
-    {stats.provider_distribution.length > 0 && (
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">프로바이더별 가입 분포</h2>
+    {/* 프로바이더별 가입 분포 + 기간 필터 */}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin-bottom:0">프로바이더별 가입 분포</h2>
+        <div style="display:flex;gap:8px">
+          <select id="providerPlanFilter" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+            <option value="all" selected>전체 플랜</option>
+            <option value="free">무료</option>
+            <option value="paid">유료</option>
+          </select>
+          <select id="providerPeriodFilter" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+            <option value="all" selected>전체 기간</option>
+            <option value="7">최근 7일</option>
+            <option value="30">최근 30일</option>
+            <option value="90">최근 90일</option>
+          </select>
         </div>
-        {stats.provider_distribution.map((row) => (
+      </div>
+      <div id="providerBars">
+        {/* SSR 초기 렌더: 전체 기간 */}
+        {providerDistribution.map((row) => (
           <ProgressBar
             label={providerDisplayNames[row.provider] || row.provider}
             value={row.cnt}
-            max={stats.total_signups}
+            max={providerDistribution.reduce((s, r) => s + r.cnt, 0)}
             color={providerColors[row.provider]}
           />
         ))}
       </div>
-    )}
+    </div>
 
+    {/* 일자별 가입 추이 그래프 (프로바이더별 색상) */}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 style="margin-bottom:0">최근 감사 로그</h2>
-        <a href="/admin/audit-log" style="font-size:13px">전체 보기 →</a>
+        <h2 style="margin-bottom:0">일자별 가입 추이</h2>
+        <div id="dailyLegend" style="display:flex;gap:12px;flex-wrap:wrap"></div>
       </div>
-      {recentLogs.length === 0 ? (
-        <div class="empty-state"><p>감사 로그가 없습니다.</p></div>
+      <div id="dailyChart" style="height:220px;display:flex;align-items:flex-end;gap:4px;padding-top:16px">
+      </div>
+    </div>
+
+    {/* 상위 10개 쇼핑몰 */}
+    <div class="card">
+      <h2>상위 10개 쇼핑몰 (가입 회원수 기준)</h2>
+      {topShops.length === 0 ? (
+        <div class="empty-state"><p>아직 가입 데이터가 없습니다.</p></div>
       ) : (
         <div style="overflow-x:auto">
           <table>
             <thead>
               <tr>
-                <th>시간</th>
-                <th>관리자</th>
-                <th>액션</th>
-                <th>대상</th>
-                <th>상세</th>
+                <th style="width:40px">#</th>
+                <th>쇼핑몰명</th>
+                <th>Mall ID</th>
+                <th style="width:80px">플랜</th>
+                <th style="width:90px;text-align:right">총 회원수</th>
+                <th style="width:90px;text-align:right">당월 가입</th>
+                <th style="width:90px;text-align:right">당일 가입</th>
               </tr>
             </thead>
             <tbody>
-              {recentLogs.map((log) => (
+              {topShops.map((shop, i) => (
                 <tr>
-                  <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
-                  <td style="font-size:13px">{log.actor_email || '-'}</td>
-                  <td><span class="badge badge-gray">{log.action}</span></td>
-                  <td style="font-size:13px">{log.target_type}{log.target_id ? ` / ${log.target_id.slice(0, 8)}…` : ''}</td>
-                  <td style="font-size:13px;color:#64748b">{log.detail || '-'}</td>
+                  <td style="font-size:13px;color:#94a3b8;font-weight:600">{i + 1}</td>
+                  <td style="font-size:13px;font-weight:500">{shop.shop_name || '-'}</td>
+                  <td style="font-size:12px"><code>{shop.mall_id}</code></td>
+                  <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : shop.plan === 'monthly' ? '월간' : '연간'}</span></td>
+                  <td style="text-align:right;font-weight:600">{shop.total_signups.toLocaleString()}</td>
+                  <td style="text-align:right;color:#2563eb">{shop.monthly_signups.toLocaleString()}</td>
+                  <td style="text-align:right;color:#059669">{shop.daily_signups.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -2100,6 +2166,198 @@ export const AdminHomePage: FC<{
         </div>
       )}
     </div>
+
+    {/* 미답변 문의 */}
+    {pendingInquiries.length > 0 && (
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="margin-bottom:0;color:#ef4444">미답변 문의 ({pendingInquiryCount}건)</h2>
+          <a href="/supadmin/inquiries?status=pending" style="font-size:13px">전체 보기 →</a>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>제목</th>
+                <th style="width:140px">쇼핑몰</th>
+                <th style="width:160px">문의자</th>
+                <th style="width:140px">문의일시</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingInquiries.map((inq) => (
+                <tr>
+                  <td style="font-size:13px">{inq.title}</td>
+                  <td style="font-size:12px;color:#64748b">{inq.shop_name || '-'}</td>
+                  <td style="font-size:12px;color:#64748b">{inq.owner_email}</td>
+                  <td style="font-size:12px;color:#94a3b8">{inq.created_at.slice(0, 16).replace('T', ' ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    {/* 시스템 지표 (Cloudflare) */}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin-bottom:0">시스템 상태</h2>
+        <a href="/supadmin/monitoring" style="font-size:13px">상세 보기 →</a>
+      </div>
+      <div id="sysMetrics" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+        <div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;grid-column:1/-1">로딩 중...</div>
+      </div>
+    </div>
+
+    {/* 기간 필터 + 일자별 차트 JS */}
+    <script dangerouslySetInnerHTML={{__html: `
+      (function() {
+        var providerColors = ${JSON.stringify(providerColors)};
+        var providerNames = ${JSON.stringify(providerDisplayNames)};
+        var chartContainer = document.getElementById('dailyChart');
+        var legendContainer = document.getElementById('dailyLegend');
+
+        // ─── 일자별 차트 렌더링 (프로바이더별 stacked bar) ─────
+        function renderDailyChart(rawData) {
+          if (!rawData || rawData.length === 0) {
+            chartContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;color:#94a3b8;font-size:13px">데이터가 없습니다.</div>';
+            legendContainer.innerHTML = '';
+            return;
+          }
+          // rawData: [{date, provider, cnt}, ...]
+          var dates = [];
+          var providers = [];
+          var byDate = {};
+          rawData.forEach(function(d) {
+            if (!byDate[d.date]) { byDate[d.date] = {}; dates.push(d.date); }
+            byDate[d.date][d.provider] = (byDate[d.date][d.provider] || 0) + d.cnt;
+            if (providers.indexOf(d.provider) === -1) providers.push(d.provider);
+          });
+          var maxCnt = Math.max(1, ...dates.map(function(dt) {
+            return Object.values(byDate[dt]).reduce(function(s, v) { return s + v; }, 0);
+          }));
+
+          var html = '';
+          dates.forEach(function(dt) {
+            var total = Object.values(byDate[dt]).reduce(function(s, v) { return s + v; }, 0);
+            var barH = Math.max(8, Math.round((total / maxCnt) * 170));
+            html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">';
+            html += '<span style="font-size:10px;font-weight:600;color:#1e293b">' + total + '</span>';
+            html += '<div style="width:100%;max-width:28px;height:' + barH + 'px;border-radius:4px 4px 0 0;overflow:hidden;display:flex;flex-direction:column-reverse">';
+            providers.forEach(function(p) {
+              var cnt = byDate[dt][p] || 0;
+              if (cnt === 0) return;
+              var segH = Math.max(2, Math.round((cnt / total) * barH));
+              html += '<div style="width:100%;height:' + segH + 'px;background:' + (providerColors[p] || '#94a3b8') + '" title="' + (providerNames[p] || p) + ': ' + cnt + '"></div>';
+            });
+            html += '</div>';
+            html += '<span style="font-size:9px;color:#94a3b8">' + dt.slice(5) + '</span>';
+            html += '</div>';
+          });
+          chartContainer.innerHTML = html;
+
+          // 범례
+          var legHtml = '';
+          providers.forEach(function(p) {
+            legHtml += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#64748b">';
+            legHtml += '<div style="width:10px;height:10px;border-radius:2px;background:' + (providerColors[p] || '#94a3b8') + '"></div>';
+            legHtml += (providerNames[p] || p);
+            legHtml += '</div>';
+          });
+          legendContainer.innerHTML = legHtml;
+        }
+
+        // ─── 필터 공통 함수 ─────────────────
+        function getFilterParams() {
+          var days = document.getElementById('providerPeriodFilter').value;
+          var plan = document.getElementById('providerPlanFilter').value;
+          var params = [];
+          if (days !== 'all') params.push('days=' + days);
+          if (plan !== 'all') params.push('plan=' + plan);
+          return params;
+        }
+
+        // ─── 프로바이더 분포 로드 ────────────
+        async function loadProviderStats() {
+          var params = getFilterParams();
+          var url = '/api/supadmin/stats/providers' + (params.length ? '?' + params.join('&') : '');
+          try {
+            var resp = await fetch(url, { credentials: 'same-origin' });
+            var data = await resp.json();
+            var container = document.getElementById('providerBars');
+            if (!data.providers || data.providers.length === 0) {
+              container.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:12px 0">해당 조건의 데이터가 없습니다.</div>';
+              return;
+            }
+            var total = data.providers.reduce(function(s, r) { return s + r.cnt; }, 0);
+            var html = '';
+            data.providers.forEach(function(row) {
+              var pct = total > 0 ? Math.round((row.cnt / total) * 100) : 0;
+              var color = providerColors[row.provider] || '#94a3b8';
+              var name = providerNames[row.provider] || row.provider;
+              html += '<div style="margin-bottom:8px">';
+              html += '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>' + name + '</span><span style="color:#64748b">' + row.cnt.toLocaleString() + '건 (' + pct + '%)</span></div>';
+              html += '<div style="background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden"><div style="background:' + color + ';height:100%;width:' + pct + '%;border-radius:4px"></div></div>';
+              html += '</div>';
+            });
+            container.innerHTML = html;
+          } catch(e) {}
+        }
+
+        // ─── 일자별 추이 로드 ────────────────
+        async function loadDailyChart() {
+          var params = getFilterParams();
+          // 기간 필터가 없으면 기본 14일
+          var hasDays = params.some(function(p) { return p.startsWith('days='); });
+          if (!hasDays) params.push('days=14');
+          var url = '/api/supadmin/stats/daily' + (params.length ? '?' + params.join('&') : '');
+          try {
+            var resp = await fetch(url, { credentials: 'same-origin' });
+            var data = await resp.json();
+            renderDailyChart(data.daily || []);
+          } catch(e) {
+            chartContainer.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;text-align:center">차트 로드 실패</div>';
+          }
+        }
+
+        // ─── 필터 변경 시 둘 다 업데이트 ─────
+        async function onFilterChange() {
+          await Promise.all([loadProviderStats(), loadDailyChart()]);
+        }
+        document.getElementById('providerPeriodFilter').addEventListener('change', onFilterChange);
+        document.getElementById('providerPlanFilter').addEventListener('change', onFilterChange);
+
+        // 초기 로드
+        loadDailyChart();
+
+        // ─── 시스템 지표 로드 ────────────────
+        (async function() {
+          var container = document.getElementById('sysMetrics');
+          try {
+            var resp = await fetch('/api/supadmin/monitoring', { credentials: 'same-origin' });
+            var result = await resp.json();
+            if (result.error) {
+              container.innerHTML = '<div style="text-align:center;padding:12px;color:#94a3b8;font-size:12px;grid-column:1/-1">' + (result.error === 'cf_not_configured' ? 'CF Token 미설정' : '로드 실패') + '</div>';
+              return;
+            }
+            var acc = result.data && result.data.viewer && result.data.viewer.accounts && result.data.viewer.accounts[0];
+            if (!acc) { container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;font-size:12px">데이터 없음</div>'; return; }
+            var workers = acc.workersInvocationsAdaptive || [];
+            var totalReqs = 0, totalErrors = 0;
+            workers.forEach(function(w) { totalReqs += w.sum.requests; totalErrors += w.sum.errors; });
+            var errRate = totalReqs > 0 ? (totalErrors / totalReqs * 100).toFixed(2) : '0';
+            var html = '';
+            html += '<div><div style="font-size:12px;color:#64748b">Workers 요청 (7일)</div><div style="font-size:20px;font-weight:700">' + totalReqs.toLocaleString() + '</div></div>';
+            html += '<div><div style="font-size:12px;color:#64748b">에러율</div><div style="font-size:20px;font-weight:700;color:' + (parseFloat(errRate) > 1 ? '#ef4444' : '#059669') + '">' + errRate + '%</div></div>';
+            html += '<div><div style="font-size:12px;color:#64748b">에러 수</div><div style="font-size:20px;font-weight:700;color:' + (totalErrors > 0 ? '#ef4444' : '#059669') + '">' + totalErrors.toLocaleString() + '</div></div>';
+            container.innerHTML = html;
+          } catch(e) {
+            container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;font-size:12px">로드 실패</div>';
+          }
+        })();
+      })();
+    `}} />
   </Layout>
 );
 
@@ -2126,11 +2384,11 @@ export const AdminShopsPage: FC<{
   pagination: AdminShopsPagination;
   search: string;
 }> = ({ shops, pagination, search }) => (
-  <Layout title="전체 쇼핑몰" loggedIn isAdmin currentPath="/admin/shops">
+  <Layout title="전체 쇼핑몰" loggedIn isAdmin currentPath="/supadmin/shops">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <h1 style="margin-bottom:0">전체 쇼핑몰 관리</h1>
       <div style="margin-left:auto">
-        <a href="/api/admin/export/shops" class="btn btn-outline btn-sm" download>CSV 내보내기</a>
+        <a href="/api/supadmin/export/shops" class="btn btn-outline btn-sm" download>CSV 내보내기</a>
       </div>
     </div>
 
@@ -2144,7 +2402,7 @@ export const AdminShopsPage: FC<{
           style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"
         />
         <button type="submit" class="btn btn-primary btn-sm" style="width:auto">검색</button>
-        {search && <a href="/admin/shops" class="btn btn-outline btn-sm">초기화</a>}
+        {search && <a href="/supadmin/shops" class="btn btn-outline btn-sm">초기화</a>}
       </form>
     </div>
 
@@ -2175,7 +2433,7 @@ export const AdminShopsPage: FC<{
             <tbody>
               {shops.map((shop) => (
                 <tr>
-                  <td>{shop.shop_name || '-'}</td>
+                  <td><a href={'/supadmin/shops/' + shop.shop_id} style="color:#2563eb;text-decoration:none;font-weight:500">{shop.shop_name || '-'}</a></td>
                   <td><code style="font-size:12px">{shop.mall_id}</code></td>
                   <td style="font-size:13px">{shop.owner_email}</td>
                   <td>
@@ -2236,11 +2494,11 @@ export const AdminShopsPage: FC<{
       {pagination.pages > 1 && (
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
           {pagination.page > 1 && (
-            <a href={`/admin/shops?page=${pagination.page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">이전</a>
+            <a href={`/supadmin/shops?page=${pagination.page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">이전</a>
           )}
           <span style="padding:6px 12px;font-size:13px;color:#64748b">{pagination.page} / {pagination.pages}</span>
           {pagination.page < pagination.pages && (
-            <a href={`/admin/shops?page=${pagination.page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">다음</a>
+            <a href={`/supadmin/shops?page=${pagination.page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">다음</a>
           )}
         </div>
       )}
@@ -2251,7 +2509,7 @@ export const AdminShopsPage: FC<{
       document.getElementById('searchForm').addEventListener('submit', function(e) {
         e.preventDefault();
         var q = document.getElementById('searchInput').value.trim();
-        window.location.href = '/admin/shops' + (q ? '?search=' + encodeURIComponent(q) : '');
+        window.location.href = '/supadmin/shops' + (q ? '?search=' + encodeURIComponent(q) : '');
       });
 
       // 플랜 저장 버튼
@@ -2261,7 +2519,7 @@ export const AdminShopsPage: FC<{
           var row = this.closest('tr');
           var select = row.querySelector('.plan-select');
           var plan = select.value;
-          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/plan', { plan: plan }, this);
+          var resp = await apiCall('PUT', '/api/supadmin/shops/' + shopId + '/plan', { plan: plan }, this);
           if (resp.ok) {
             this.textContent = '저장됨!';
             setTimeout(function() { btn.textContent = '저장'; }, 1500);
@@ -2279,7 +2537,7 @@ export const AdminShopsPage: FC<{
           var action = this.dataset.action;
           var label = action === 'suspend' ? '정지' : '활성화';
           if (!confirm('이 쇼핑몰을 ' + label + '하시겠습니까?')) return;
-          var resp = await apiCall('PUT', '/api/admin/shops/' + shopId + '/status', { action: action }, this);
+          var resp = await apiCall('PUT', '/api/supadmin/shops/' + shopId + '/status', { action: action }, this);
           if (resp.ok) {
             location.reload();
           } else {
@@ -2310,7 +2568,7 @@ type AdminSubscriptionRow = {
 export const AdminSubscriptionsPage: FC<{
   subscriptions: AdminSubscriptionRow[];
 }> = ({ subscriptions }) => (
-  <Layout title="구독 현황" loggedIn isAdmin currentPath="/admin/subscriptions">
+  <Layout title="구독 현황" loggedIn isAdmin currentPath="/supadmin/subscriptions">
     <h1>전체 구독 현황</h1>
 
     <div class="card">
@@ -2383,7 +2641,7 @@ export const AdminSubscriptionsPage: FC<{
         btn.addEventListener('click', async function() {
           var subId = this.dataset.subscriptionId;
           if (!confirm('이 구독을 취소하시겠습니까? 해당 쇼핑몰에 다른 활성 구독이 없으면 플랜이 무료로 다운그레이드됩니다.')) return;
-          var resp = await apiCall('PUT', '/api/admin/subscriptions/' + subId + '/cancel', {}, this);
+          var resp = await apiCall('PUT', '/api/supadmin/subscriptions/' + subId + '/cancel', {}, this);
           if (resp.ok) {
             showToast('success', '구독이 취소되었습니다.');
             setTimeout(function() { location.reload(); }, 800);
@@ -2416,7 +2674,7 @@ export const AdminAuditLogPage: FC<{
   const filterSuffix = filterParams ? `&${filterParams}` : '';
 
   return (
-    <Layout title="감사 로그" loggedIn isAdmin currentPath="/admin/audit-log">
+    <Layout title="감사 로그" loggedIn isAdmin currentPath="/supadmin/audit-log">
       <h1>감사 로그</h1>
 
       <div class="filter-bar">
@@ -2431,7 +2689,7 @@ export const AdminAuditLogPage: FC<{
         <input type="date" id="dateFrom" value={currentFrom || ''} onchange="applyAuditFilters()" />
         <input type="date" id="dateTo" value={currentTo || ''} onchange="applyAuditFilters()" />
         {(currentAction || currentFrom || currentTo) && (
-          <a href="/admin/audit-log" class="btn btn-outline btn-sm">초기화</a>
+          <a href="/supadmin/audit-log" class="btn btn-outline btn-sm">초기화</a>
         )}
       </div>
 
@@ -2474,11 +2732,11 @@ export const AdminAuditLogPage: FC<{
 
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
           {page > 1 && (
-            <a href={`/admin/audit-log?page=${page - 1}${filterSuffix}`} class="btn btn-outline btn-sm">이전</a>
+            <a href={`/supadmin/audit-log?page=${page - 1}${filterSuffix}`} class="btn btn-outline btn-sm">이전</a>
           )}
           <span style="padding:6px 12px;font-size:13px;color:#64748b">페이지 {page}</span>
           {logs.length === limit && (
-            <a href={`/admin/audit-log?page=${page + 1}${filterSuffix}`} class="btn btn-outline btn-sm">다음</a>
+            <a href={`/supadmin/audit-log?page=${page + 1}${filterSuffix}`} class="btn btn-outline btn-sm">다음</a>
           )}
         </div>
       </div>
@@ -2493,12 +2751,142 @@ export const AdminAuditLogPage: FC<{
           if (from) params.push('from=' + encodeURIComponent(from));
           if (to) params.push('to=' + encodeURIComponent(to));
           var qs = params.length ? '?' + params.join('&') : '';
-          window.location.href = '/admin/audit-log' + qs;
+          window.location.href = '/supadmin/audit-log' + qs;
         }
       `}} />
     </Layout>
   );
 };
+
+// --- Admin Monitoring ---
+
+export const AdminMonitoringPage: FC = () => (
+  <Layout title="시스템 모니터링" loggedIn isAdmin currentPath="/supadmin/monitoring">
+    <h1>시스템 모니터링</h1>
+    <p style="font-size:14px;color:#64748b;margin-bottom:24px">Cloudflare Workers 리소스 사용량</p>
+
+    <div id="monitoringContent">
+      <div style="text-align:center;padding:40px;color:#94a3b8">로딩 중...</div>
+    </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+      (function() {
+        async function loadMonitoring() {
+          var container = document.getElementById('monitoringContent');
+          try {
+            var resp = await fetch('/api/supadmin/monitoring', { credentials: 'same-origin' });
+            var result = await resp.json();
+
+            if (result.error === 'cf_not_configured') {
+              container.innerHTML = '<div class="card"><div style="text-align:center;padding:40px"><h3 style="color:#f59e0b;margin-bottom:8px">API Token 미설정</h3><p style="color:#64748b;font-size:13px">Cloudflare API Token을 Worker secret으로 설정해주세요.</p><code style="display:block;margin-top:12px;font-size:12px;color:#94a3b8">npx wrangler secret put CF_API_TOKEN --env dev</code></div></div>';
+              return;
+            }
+
+            if (result.error) {
+              container.innerHTML = '<div class="card"><div style="text-align:center;padding:40px;color:#ef4444">데이터 로드 실패: ' + (result.message || result.error) + '</div></div>';
+              return;
+            }
+
+            var accounts = result.data && result.data.viewer && result.data.viewer.accounts;
+            if (!accounts || accounts.length === 0) {
+              container.innerHTML = '<div class="card"><div style="text-align:center;padding:40px;color:#94a3b8">데이터가 없습니다.</div></div>';
+              return;
+            }
+
+            var acc = accounts[0];
+            var workers = acc.workersInvocationsAdaptive || [];
+            var d1 = acc.d1AnalyticsAdaptive || [];
+
+            // Workers 집계
+            var totalReqs = 0, totalErrors = 0, totalSubreqs = 0;
+            var cpuP50Sum = 0, cpuP99Sum = 0, cpuCount = 0;
+            var dailyMap = {};
+
+            workers.forEach(function(w) {
+              totalReqs += w.sum.requests;
+              totalErrors += w.sum.errors;
+              totalSubreqs += w.sum.subrequests;
+              if (w.quantiles) {
+                cpuP50Sum += w.quantiles.cpuTimeP50 || 0;
+                cpuP99Sum += w.quantiles.cpuTimeP99 || 0;
+                cpuCount++;
+              }
+              // 일자별 집계
+              var day = w.dimensions.datetime.slice(0, 10);
+              if (!dailyMap[day]) dailyMap[day] = { requests: 0, errors: 0 };
+              dailyMap[day].requests += w.sum.requests;
+              dailyMap[day].errors += w.sum.errors;
+            });
+
+            var avgP50 = cpuCount > 0 ? Math.round(cpuP50Sum / cpuCount * 100) / 100 : 0;
+            var avgP99 = cpuCount > 0 ? Math.round(cpuP99Sum / cpuCount * 100) / 100 : 0;
+            var errorRate = totalReqs > 0 ? (totalErrors / totalReqs * 100).toFixed(2) : '0';
+
+            // D1 집계
+            var d1Reads = 0, d1Writes = 0, d1RowsRead = 0, d1RowsWritten = 0;
+            d1.forEach(function(r) {
+              d1Reads += r.sum.readQueries || 0;
+              d1Writes += r.sum.writeQueries || 0;
+              d1RowsRead += r.sum.rowsRead || 0;
+              d1RowsWritten += r.sum.rowsWritten || 0;
+            });
+
+            // HTML 렌더링
+            var html = '';
+
+            // Stats 카드
+            html += '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">';
+            html += '<div class="stat-card"><div class="label">요청 수 (7일)</div><div class="value">' + totalReqs.toLocaleString() + '</div></div>';
+            html += '<div class="stat-card"><div class="label">에러율</div><div class="value" style="color:' + (parseFloat(errorRate) > 1 ? '#ef4444' : '#059669') + '">' + errorRate + '%</div></div>';
+            html += '<div class="stat-card"><div class="label">CPU P50 / P99</div><div class="value" style="font-size:18px">' + avgP50 + ' / ' + avgP99 + 'ms</div></div>';
+            html += '<div class="stat-card"><div class="label">서브리퀘스트</div><div class="value">' + totalSubreqs.toLocaleString() + '</div></div>';
+            html += '</div>';
+
+            // D1 카드
+            html += '<div class="card" style="margin-bottom:16px"><h2>D1 Database (24시간)</h2>';
+            html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;font-size:13px">';
+            html += '<div><div style="color:#64748b;font-size:12px">읽기 쿼리</div><div style="font-size:20px;font-weight:700">' + d1Reads.toLocaleString() + '</div></div>';
+            html += '<div><div style="color:#64748b;font-size:12px">쓰기 쿼리</div><div style="font-size:20px;font-weight:700">' + d1Writes.toLocaleString() + '</div></div>';
+            html += '<div><div style="color:#64748b;font-size:12px">읽은 행</div><div style="font-size:20px;font-weight:700">' + d1RowsRead.toLocaleString() + '</div></div>';
+            html += '<div><div style="color:#64748b;font-size:12px">쓴 행</div><div style="font-size:20px;font-weight:700">' + d1RowsWritten.toLocaleString() + '</div></div>';
+            html += '</div></div>';
+
+            // 일자별 요청 추이 차트
+            var days = Object.keys(dailyMap).sort();
+            if (days.length > 0) {
+              var maxReqs = Math.max(1, Math.max.apply(null, days.map(function(d) { return dailyMap[d].requests; })));
+              html += '<div class="card"><h2>일자별 요청 추이 (7일)</h2>';
+              html += '<div style="height:180px;display:flex;align-items:flex-end;gap:6px;padding-top:16px">';
+              days.forEach(function(d) {
+                var r = dailyMap[d];
+                var h = Math.max(4, Math.round((r.requests / maxReqs) * 150));
+                var errH = r.errors > 0 ? Math.max(2, Math.round((r.errors / maxReqs) * 150)) : 0;
+                html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">';
+                html += '<span style="font-size:10px;font-weight:600">' + r.requests.toLocaleString() + '</span>';
+                html += '<div style="width:100%;max-width:36px;display:flex;flex-direction:column-reverse">';
+                html += '<div style="width:100%;height:' + (h - errH) + 'px;background:#3b82f6;border-radius:4px 4px 0 0"></div>';
+                if (errH > 0) html += '<div style="width:100%;height:' + errH + 'px;background:#ef4444"></div>';
+                html += '</div>';
+                html += '<span style="font-size:9px;color:#94a3b8">' + d.slice(5) + '</span>';
+                html += '</div>';
+              });
+              html += '</div>';
+              html += '<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#64748b">';
+              html += '<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:#3b82f6;border-radius:2px"></div>요청</div>';
+              html += '<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:#ef4444;border-radius:2px"></div>에러</div>';
+              html += '</div></div>';
+            }
+
+            container.innerHTML = html;
+          } catch(e) {
+            container.innerHTML = '<div class="card"><div style="text-align:center;padding:40px;color:#ef4444">오류: ' + e.message + '</div></div>';
+          }
+        }
+        loadMonitoring();
+      })();
+    `}} />
+  </Layout>
+);
 
 // --- Admin Owners ---
 
@@ -2522,7 +2910,7 @@ export const AdminOwnersPage: FC<{
   pagination: AdminOwnersPagination;
   search: string;
 }> = ({ owners, pagination, search }) => (
-  <Layout title="사용자 관리" loggedIn isAdmin currentPath="/admin/owners">
+  <Layout title="사용자 관리" loggedIn isAdmin currentPath="/supadmin/owners">
     <h1>사용자(Owner) 관리</h1>
 
     <div class="filter-bar" style="margin-bottom:16px">
@@ -2535,7 +2923,7 @@ export const AdminOwnersPage: FC<{
           style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"
         />
         <button type="submit" class="btn btn-primary btn-sm" style="width:auto">검색</button>
-        {search && <a href="/admin/owners" class="btn btn-outline btn-sm">초기화</a>}
+        {search && <a href="/supadmin/owners" class="btn btn-outline btn-sm">초기화</a>}
       </form>
     </div>
 
@@ -2607,11 +2995,11 @@ export const AdminOwnersPage: FC<{
       {pagination.pages > 1 && (
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
           {pagination.page > 1 && (
-            <a href={`/admin/owners?page=${pagination.page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">이전</a>
+            <a href={`/supadmin/owners?page=${pagination.page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">이전</a>
           )}
           <span style="padding:6px 12px;font-size:13px;color:#64748b">{pagination.page} / {pagination.pages}</span>
           {pagination.page < pagination.pages && (
-            <a href={`/admin/owners?page=${pagination.page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">다음</a>
+            <a href={`/supadmin/owners?page=${pagination.page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}`} class="btn btn-outline btn-sm">다음</a>
           )}
         </div>
       )}
@@ -2622,7 +3010,7 @@ export const AdminOwnersPage: FC<{
       document.getElementById('searchForm').addEventListener('submit', function(e) {
         e.preventDefault();
         var q = document.getElementById('searchInput').value.trim();
-        window.location.href = '/admin/owners' + (q ? '?search=' + encodeURIComponent(q) : '');
+        window.location.href = '/supadmin/owners' + (q ? '?search=' + encodeURIComponent(q) : '');
       });
 
       // 정지/활성화 버튼
@@ -2632,7 +3020,7 @@ export const AdminOwnersPage: FC<{
           var action = this.dataset.action;
           var label = action === 'suspend' ? '정지' : '활성화';
           if (!confirm('이 사용자를 ' + label + '하시겠습니까?\\n' + (action === 'suspend' ? '해당 사용자의 모든 쇼핑몰이 비활성화됩니다.' : '해당 사용자의 모든 쇼핑몰이 복원됩니다.'))) return;
-          var resp = await apiCall('PUT', '/api/admin/owners/' + ownerId + '/status', { action: action }, this);
+          var resp = await apiCall('PUT', '/api/supadmin/owners/' + ownerId + '/status', { action: action }, this);
           if (resp.ok) {
             showToast('success', '사용자 상태가 변경되었습니다.');
             setTimeout(function() { location.reload(); }, 800);
@@ -3159,16 +3547,180 @@ type ShopSummary = {
   created_at: string;
 };
 
+type CouponConfigUI = {
+  shipping: { enabled: boolean; expire_days: number };
+  amount: { enabled: boolean; expire_days: number; discount_amount: number; min_order: number };
+  rate: { enabled: boolean; expire_days: number; discount_rate: number; min_order: number };
+  cafe24_coupons?: {
+    shipping_coupon_no?: number;
+    amount_coupon_no?: number;
+    rate_coupon_no?: number;
+  };
+};
+
+const DEFAULT_COUPON_CONFIG_UI: CouponConfigUI = {
+  shipping: { enabled: false, expire_days: 30 },
+  amount: { enabled: true, expire_days: 30, discount_amount: 3000, min_order: 0 },
+  rate: { enabled: false, expire_days: 7, discount_rate: 10, min_order: 0 },
+};
+
 export const GeneralSettingsPage: FC<{
   email: string;
   name: string;
   shop: ShopSummary | null;
+  couponConfig?: CouponConfigUI | null;
   isCafe24?: boolean;
-}> = ({ email, name, shop, isCafe24 }) => (
+}> = ({ email, name, shop, couponConfig, isCafe24 }) => (
   <Layout title="기본 설정" loggedIn currentPath="/dashboard/settings/general" isCafe24={isCafe24}>
     <h1>기본 설정</h1>
 
     {shop && (<>
+      <div class="card" id="couponSettingsCard">
+        {/* 회원 가입 쿠폰 설정 */}
+        <div style="max-width:600px">
+          <h2>회원 가입 쿠폰 설정</h2>
+          <p style="font-size:13px;color:#64748b;margin-bottom:4px">
+            설정을 저장하면 카페24에 쿠폰이 자동 생성되고, 회원가입 시 자동 발급됩니다.
+          </p>
+          {shop.plan === 'free' && (
+            <p style="font-size:12px;color:#f59e0b;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:12px">
+              무료 플랜: 무료배송 또는 정액할인 중 <strong>1종만</strong> 기본값으로 발급 가능합니다.
+              <a href="/dashboard/billing" style="color:#2563eb;font-weight:600;margin-left:4px">Plus 업그레이드 →</a>
+            </p>
+          )}
+
+          {/* 무료배송 쿠폰 카드 */}
+          <div id="couponCard_shipping" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <label class="toggle" style="flex-shrink:0">
+                  <input type="checkbox" id="coupon_shipping_enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <strong style="font-size:14px">무료배송 쿠폰</strong>
+              </div>
+              <span id="coupon_shipping_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
+            </div>
+            <div id="couponDetail_shipping" style="display:grid;gap:10px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
+                <select id="coupon_shipping_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="3">3일</option>
+                  <option value="7">7일</option>
+                  <option value="20">20일</option>
+                  <option value="30" selected>30일</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 정액할인 쿠폰 카드 */}
+          <div id="couponCard_amount" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <label class="toggle" style="flex-shrink:0">
+                  <input type="checkbox" id="coupon_amount_enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <strong style="font-size:14px">정액할인 쿠폰</strong>
+              </div>
+              <span id="coupon_amount_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
+            </div>
+            <div id="couponDetail_amount" style="display:grid;gap:10px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">할인금액</label>
+                <select id="coupon_amount_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="1000">1,000원</option>
+                  <option value="2000">2,000원</option>
+                  <option value="3000" selected>3,000원</option>
+                  <option value="5000">5,000원</option>
+                  <option value="10000">10,000원</option>
+                  <option value="custom">직접 입력</option>
+                </select>
+                <input type="number" id="coupon_amount_custom" placeholder="금액 입력" min="100" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
+                <span style="font-size:13px;color:#64748b">원</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
+                <select id="coupon_amount_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="3">3일</option>
+                  <option value="7">7일</option>
+                  <option value="10">10일</option>
+                  <option value="20">20일</option>
+                  <option value="30" selected>30일</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">최소구매</label>
+                <select id="coupon_amount_minorder_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="0" selected>없음</option>
+                  <option value="10000">10,000원</option>
+                  <option value="30000">30,000원</option>
+                  <option value="50000">50,000원</option>
+                  <option value="custom">직접 입력</option>
+                </select>
+                <input type="number" id="coupon_amount_minorder_custom" placeholder="금액 입력" min="0" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
+                <span id="coupon_amount_minorder_unit" style="font-size:13px;color:#64748b;display:none">원 이상</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 정률할인 쿠폰 카드 */}
+          <div id="couponCard_rate" style={`border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:16px${shop.plan === 'free' ? ';opacity:0.5;pointer-events:none' : ''}`}>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <label class="toggle" style="flex-shrink:0">
+                  <input type="checkbox" id="coupon_rate_enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <strong style="font-size:14px">정률할인 쿠폰</strong>
+                {shop.plan === 'free' && <span class="badge badge-gray" style="margin-left:4px">Plus 전용</span>}
+              </div>
+              <span id="coupon_rate_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
+            </div>
+            <div id="couponDetail_rate" style="display:grid;gap:10px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">할인율</label>
+                <select id="coupon_rate_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="5">5%</option>
+                  <option value="7">7%</option>
+                  <option value="10" selected>10%</option>
+                  <option value="15">15%</option>
+                  <option value="20">20%</option>
+                  <option value="custom">직접 입력</option>
+                </select>
+                <input type="number" id="coupon_rate_custom" placeholder="숫자 입력" min="1" max="100" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:90px" />
+                <span style="font-size:13px;color:#64748b">%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
+                <select id="coupon_rate_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="3">3일</option>
+                  <option value="7" selected>7일</option>
+                  <option value="10">10일</option>
+                  <option value="20">20일</option>
+                  <option value="30">30일</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <label style="font-size:13px;color:#475569;min-width:64px">최소구매</label>
+                <select id="coupon_rate_minorder_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                  <option value="0" selected>없음</option>
+                  <option value="10000">10,000원</option>
+                  <option value="30000">30,000원</option>
+                  <option value="50000">50,000원</option>
+                  <option value="custom">직접 입력</option>
+                </select>
+                <input type="number" id="coupon_rate_minorder_custom" placeholder="금액 입력" min="0" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
+                <span id="coupon_rate_minorder_unit" style="font-size:13px;color:#64748b;display:none">원 이상</span>
+              </div>
+            </div>
+          </div>
+
+          <button id="saveCouponConfigBtn" class="btn btn-primary btn-sm">쿠폰 설정 저장</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>쇼핑몰 정체성 (AI 분석)</h2>
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1e40af">
@@ -3221,96 +3773,6 @@ export const GeneralSettingsPage: FC<{
 
       </div>
 
-      <div class="card">
-        {/* 회원 가입 혜택 */}
-        <div style="max-width:560px">
-          <h2>회원 가입 혜택 <span style="font-size:12px;color:#64748b;font-weight:400">— AI가 이 혜택을 강조하여 가입 유도 카피를 생성합니다</span></h2>
-          <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
-            <span style="color:#2563eb;font-weight:600">[자동 발급]</span> 혜택을 저장하면 카페24에 쿠폰이 자동 생성되고, 가입 시 회원에게 자동 발급됩니다. &nbsp;|&nbsp;
-            <span style="color:#f59e0b;font-weight:600">[쇼핑몰 설정]</span> 카페24 관리자에서 직접 설정이 필요합니다. (AI 문구 생성에만 활용)
-          </p>
-          <div style="display:grid;gap:20px">
-            {/* 가입 쿠폰 — 라디오 단일 선택 */}
-            <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">가입 쿠폰 혜택 <span style="color:#2563eb;font-size:11px">[자동 발급]</span></label>
-              <div id="couponRadios">
-                <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:4px">
-                  {['1,000원', '2,000원', '3,000원', '5,000원', '10,000원'].map(amt => (
-                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:130px">
-                      <input type="radio" name="couponBenefit" value={`${amt} 할인 쿠폰 즉시 지급`} style="margin:0" />
-                      {amt}
-                    </label>
-                  ))}
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-bottom:4px">
-                  {['10%', '15%', '20%'].map(pct => (
-                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:130px">
-                      <input type="radio" name="couponBenefit" value={`${pct} 할인 쿠폰 즉시 지급`} style="margin:0" />
-                      {pct} 할인
-                    </label>
-                  ))}
-                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex:1">
-                    <input type="radio" name="couponBenefit" value="__custom__" style="margin:0" />
-                    <input type="text" id="idCouponBenefitCustom" placeholder="직접 입력" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" onfocus="this.previousElementSibling.checked=true" />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* 무료배송 — 라디오 단일 선택 */}
-            <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">무료배송 기준 <span style="color:#f59e0b;font-size:11px">[쇼핑몰 설정]</span></label>
-              <div id="shippingRadios" style="display:flex;flex-wrap:wrap;gap:4px 16px">
-                {['전 상품', '3만원 이상', '5만원 이상', '7만원 이상', '10만원 이상'].map((label, i) => {
-                  const values = ['전 상품 무료배송', '30,000원 이상 무료배송', '50,000원 이상 무료배송', '70,000원 이상 무료배송', '100,000원 이상 무료배송'];
-                  return (
-                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;min-width:120px">
-                      <input type="radio" name="freeShipping" value={values[i]} style="margin:0" />
-                      {label}
-                    </label>
-                  );
-                })}
-                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex:1">
-                  <input type="radio" name="freeShipping" value="__custom__" style="margin:0" />
-                  <input type="text" id="idFreeShippingCustom" placeholder="직접 입력" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" onfocus="this.previousElementSibling.checked=true" />
-                </label>
-              </div>
-            </div>
-
-            {/* 추가 혜택 — 토글 다중 선택 (2열 그리드) */}
-            <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">추가 혜택 (여러 개 선택 가능)</label>
-              <div id="extraBenefitToggles" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px">
-                {[
-                  { value: '첫 구매 10% 추가 할인', label: '첫 구매 10% 할인', tag: '자동', tagColor: '#2563eb' },
-                  { value: '적립금 1,000원 즉시 지급', label: '적립금 1,000원', tag: '쇼핑몰', tagColor: '#f59e0b' },
-                  { value: '생일 쿠폰 자동 발급', label: '생일 쿠폰', tag: '쇼핑몰', tagColor: '#f59e0b' },
-                  { value: '회원 등급별 추가 할인', label: '등급별 할인', tag: '쇼핑몰', tagColor: '#f59e0b' },
-                  { value: '신상품 알림 우선 발송', label: '신상품 알림', tag: '쇼핑몰', tagColor: '#f59e0b' },
-                ].map(item => (
-                  <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
-                    <span class="toggle" style="flex-shrink:0">
-                      <input type="checkbox" name="extraBenefit" value={item.value} />
-                      <span class="toggle-slider"></span>
-                    </span>
-                    <span>{item.label}</span>
-                    <span style={`font-size:10px;color:${item.tagColor};font-weight:600`}>{item.tag}</span>
-                  </label>
-                ))}
-                <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;grid-column:1/-1">
-                  <span class="toggle" style="flex-shrink:0">
-                    <input type="checkbox" id="extraBenefitCustomToggle" />
-                    <span class="toggle-slider"></span>
-                  </span>
-                  <input type="text" id="idExtraBenefitCustom" placeholder="직접 입력 (예: 회원 전용 할인 이벤트)" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" onfocus="document.getElementById('extraBenefitCustomToggle').checked=true" />
-                </label>
-              </div>
-            </div>
-          </div>
-          <button id="saveBenefitsBtn" class="btn btn-primary btn-sm" style="margin-top:16px">혜택 저장</button>
-        </div>
-      </div>
-
       <div style="display:none">
         <script dangerouslySetInnerHTML={{__html: `
           (function() {
@@ -3326,60 +3788,6 @@ export const GeneralSettingsPage: FC<{
 
             var roFields = { industry: document.getElementById('roIndustry'), target: document.getElementById('roTarget'), tone: document.getElementById('roTone'), summary: document.getElementById('roSummary'), keywords: document.getElementById('roKeywords') };
             var editFields = { industry: document.getElementById('idIndustry'), target: document.getElementById('idTarget'), tone: document.getElementById('idTone'), summary: document.getElementById('idSummary'), keywords: document.getElementById('idKeywords') };
-
-            // 직접 입력 필드는 인라인이므로 별도 토글 불필요
-
-            function getRadioValue(name) {
-              var checked = document.querySelector('input[name="' + name + '"]:checked');
-              if (!checked) return '';
-              if (checked.value === '__custom__') {
-                var customId = 'id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom';
-                return document.getElementById(customId).value.trim();
-              }
-              return checked.value;
-            }
-
-            function setRadioValue(name, val) {
-              if (!val) return;
-              var radios = document.querySelectorAll('input[name="' + name + '"]');
-              var found = false;
-              radios.forEach(function(r) { if (r.value === val) { r.checked = true; found = true; } });
-              if (!found) {
-                // 프리셋에 없는 값 → 직접 입력
-                radios.forEach(function(r) { if (r.value === '__custom__') r.checked = true; });
-                var customId = 'id' + name.charAt(0).toUpperCase() + name.slice(1) + 'Custom';
-                document.getElementById(customId).value = val;
-              }
-            }
-
-            function getExtraBenefits() {
-              var values = [];
-              document.querySelectorAll('input[name="extraBenefit"]:checked').forEach(function(cb) {
-                values.push(cb.value);
-              });
-              var customToggle = document.getElementById('extraBenefitCustomToggle');
-              var customInput = document.getElementById('idExtraBenefitCustom');
-              if (customToggle.checked && customInput.value.trim()) {
-                values.push(customInput.value.trim());
-              }
-              return values;
-            }
-
-            function setExtraBenefits(arr) {
-              if (!Array.isArray(arr)) return;
-              var knownValues = [];
-              document.querySelectorAll('input[name="extraBenefit"]').forEach(function(cb) { knownValues.push(cb.value); });
-              var customItems = [];
-              arr.forEach(function(val) {
-                var cb = document.querySelector('input[name="extraBenefit"][value="' + val + '"]');
-                if (cb) { cb.checked = true; }
-                else { customItems.push(val); }
-              });
-              if (customItems.length > 0) {
-                document.getElementById('extraBenefitCustomToggle').checked = true;
-                document.getElementById('idExtraBenefitCustom').value = customItems.join(', ');
-              }
-            }
 
             function showReadonly(id) {
               roFields.industry.textContent = id.industry || '-';
@@ -3414,10 +3822,6 @@ export const GeneralSettingsPage: FC<{
               .then(function(d) {
                 if (d.identity && d.identity.industry) {
                   showReadonly(d.identity);
-                  // 혜택 로드
-                  setRadioValue('couponBenefit', d.identity.coupon_benefit || '');
-                  setRadioValue('freeShipping', d.identity.free_shipping || '');
-                  setExtraBenefits(d.identity.extra_benefits || []);
                 } else {
                   // shop_identity가 비어있으면 자동으로 AI 분석 시작
                   analyzeBtn.click();
@@ -3484,23 +3888,205 @@ export const GeneralSettingsPage: FC<{
               finally { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
             });
 
-            // 혜택 저장
-            document.getElementById('saveBenefitsBtn').addEventListener('click', async function() {
+            // ─── 쿠폰 설정 UI ────────────────────────────────────
+            var SHOP_PLAN = '${shop?.plan ?? 'free'}';
+            var IS_FREE = SHOP_PLAN === 'free';
+            var INITIAL_COUPON_CONFIG = ${JSON.stringify(couponConfig ?? DEFAULT_COUPON_CONFIG_UI)};
+
+            // 헬퍼: 선택 박스 값 설정 (프리셋에 없으면 custom 전환)
+            function setSelectOrCustom(selectId, customId, value, toStr) {
+              var sel = document.getElementById(selectId);
+              var cust = document.getElementById(customId);
+              var strVal = String(value);
+              var found = false;
+              for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === strVal) { sel.value = strVal; found = true; break; }
+              }
+              if (!found) {
+                sel.value = 'custom';
+                cust.value = strVal;
+                cust.style.display = 'inline-block';
+              }
+            }
+
+            // 헬퍼: select change 이벤트로 custom 입력 토글
+            function bindCustomToggle(selectId, customId, unitId) {
+              var sel = document.getElementById(selectId);
+              var cust = document.getElementById(customId);
+              sel.addEventListener('change', function() {
+                if (sel.value === 'custom') {
+                  cust.style.display = 'inline-block';
+                  cust.focus();
+                } else {
+                  cust.style.display = 'none';
+                }
+                if (unitId) {
+                  document.getElementById(unitId).style.display = (sel.value !== '0') ? 'inline' : 'none';
+                }
+              });
+            }
+
+            // 헬퍼: select 또는 custom input에서 값 읽기
+            function getSelectOrCustom(selectId, customId) {
+              var sel = document.getElementById(selectId);
+              if (sel.value === 'custom') {
+                return parseInt(document.getElementById(customId).value, 10) || 0;
+              }
+              return parseInt(sel.value, 10) || 0;
+            }
+
+            // 토글 ON/OFF에 따라 세부 설정 영역 활성화/비활성화
+            function bindToggleDetail(checkboxId, detailId) {
+              var cb = document.getElementById(checkboxId);
+              var detail = document.getElementById(detailId);
+              function applyState() {
+                var inputs = detail.querySelectorAll('select, input');
+                // 무료 플랜: 세부 설정은 항상 disabled (토글 ON/OFF 무관)
+                if (IS_FREE) {
+                  inputs.forEach(function(el) { el.disabled = true; });
+                  detail.style.opacity = cb.checked ? '0.6' : '0.4';
+                } else {
+                  inputs.forEach(function(el) { el.disabled = !cb.checked; });
+                  detail.style.opacity = cb.checked ? '1' : '0.4';
+                }
+              }
+              cb.addEventListener('change', applyState);
+              applyState();
+            }
+
+            // 초기 값 세팅
+            function initCouponUI(cfg) {
+              // 무료배송
+              document.getElementById('coupon_shipping_enabled').checked = cfg.shipping.enabled;
+              document.getElementById('coupon_shipping_expire').value = String(cfg.shipping.expire_days);
+
+              // 정액할인
+              document.getElementById('coupon_amount_enabled').checked = cfg.amount.enabled;
+              document.getElementById('coupon_amount_expire').value = String(cfg.amount.expire_days);
+              setSelectOrCustom('coupon_amount_preset', 'coupon_amount_custom', cfg.amount.discount_amount);
+              var amtMinSel = document.getElementById('coupon_amount_minorder_preset');
+              var amtMinCust = document.getElementById('coupon_amount_minorder_custom');
+              var amtMinUnit = document.getElementById('coupon_amount_minorder_unit');
+              if (cfg.amount.min_order > 0) {
+                setSelectOrCustom('coupon_amount_minorder_preset', 'coupon_amount_minorder_custom', cfg.amount.min_order);
+                amtMinUnit.style.display = 'inline';
+              }
+
+              // 정률할인
+              document.getElementById('coupon_rate_enabled').checked = cfg.rate.enabled;
+              document.getElementById('coupon_rate_expire').value = String(cfg.rate.expire_days);
+              setSelectOrCustom('coupon_rate_preset', 'coupon_rate_custom', cfg.rate.discount_rate);
+              if (cfg.rate.min_order > 0) {
+                setSelectOrCustom('coupon_rate_minorder_preset', 'coupon_rate_minorder_custom', cfg.rate.min_order);
+                document.getElementById('coupon_rate_minorder_unit').style.display = 'inline';
+              }
+
+              // 카페24 쿠폰 번호 배지
+              var c24 = cfg.cafe24_coupons || {};
+              function showBadge(badgeId, couponNo) {
+                var badge = document.getElementById(badgeId);
+                if (couponNo) { badge.textContent = '쿠폰 #' + couponNo; badge.style.display = 'inline'; }
+                else { badge.style.display = 'none'; }
+              }
+              showBadge('coupon_shipping_no_badge', c24.shipping_coupon_no);
+              showBadge('coupon_amount_no_badge', c24.amount_coupon_no);
+              showBadge('coupon_rate_no_badge', c24.rate_coupon_no);
+
+              // 토글 바인딩
+              bindToggleDetail('coupon_shipping_enabled', 'couponDetail_shipping');
+              bindToggleDetail('coupon_amount_enabled', 'couponDetail_amount');
+              bindToggleDetail('coupon_rate_enabled', 'couponDetail_rate');
+
+              // 무료 플랜: 세부 설정 disabled + 1종만 허용
+              if (IS_FREE) {
+                // 세부 설정(금액/기간/최소구매) 모두 disabled
+                document.querySelectorAll('#couponDetail_shipping select, #couponDetail_amount select, #couponDetail_amount input, #couponDetail_rate select, #couponDetail_rate input').forEach(function(el) { el.disabled = true; });
+                // 정률할인 강제 OFF
+                document.getElementById('coupon_rate_enabled').checked = false;
+                document.getElementById('coupon_rate_enabled').disabled = true;
+                applyFreeToggleConstraint();
+              }
+            }
+
+            // 무료 플랜: 1종만 허용 (무료배송 ↔ 정액할인 상호 배타)
+            function applyFreeToggleConstraint() {
+              if (!IS_FREE) return;
+              var shipCb = document.getElementById('coupon_shipping_enabled');
+              var amtCb = document.getElementById('coupon_amount_enabled');
+              // 둘 다 켜져있으면 나중에 켠 쪽만 유지 (초기 로드 시 shipping 우선)
+              if (shipCb.checked && amtCb.checked) {
+                amtCb.checked = false;
+              }
+              bindToggleDetail('coupon_shipping_enabled', 'couponDetail_shipping');
+              bindToggleDetail('coupon_amount_enabled', 'couponDetail_amount');
+            }
+
+            if (IS_FREE) {
+              document.getElementById('coupon_shipping_enabled').addEventListener('change', function() {
+                if (this.checked) {
+                  document.getElementById('coupon_amount_enabled').checked = false;
+                  bindToggleDetail('coupon_amount_enabled', 'couponDetail_amount');
+                }
+              });
+              document.getElementById('coupon_amount_enabled').addEventListener('change', function() {
+                if (this.checked) {
+                  document.getElementById('coupon_shipping_enabled').checked = false;
+                  bindToggleDetail('coupon_shipping_enabled', 'couponDetail_shipping');
+                }
+              });
+            }
+
+            bindCustomToggle('coupon_amount_preset', 'coupon_amount_custom', null);
+            bindCustomToggle('coupon_amount_minorder_preset', 'coupon_amount_minorder_custom', 'coupon_amount_minorder_unit');
+            bindCustomToggle('coupon_rate_preset', 'coupon_rate_custom', null);
+            bindCustomToggle('coupon_rate_minorder_preset', 'coupon_rate_minorder_custom', 'coupon_rate_minorder_unit');
+
+            // 최소구매 unit span 초기 표시
+            document.getElementById('coupon_amount_minorder_preset').addEventListener('change', function() {
+              document.getElementById('coupon_amount_minorder_unit').style.display = (this.value !== '0') ? 'inline' : 'none';
+            });
+            document.getElementById('coupon_rate_minorder_preset').addEventListener('change', function() {
+              document.getElementById('coupon_rate_minorder_unit').style.display = (this.value !== '0') ? 'inline' : 'none';
+            });
+
+            initCouponUI(INITIAL_COUPON_CONFIG);
+
+            // 쿠폰 설정 저장
+            document.getElementById('saveCouponConfigBtn').addEventListener('click', async function() {
               var btn = this;
-              // 기존 정체성에 혜택 정보 병합
-              var resp1 = await fetch('/api/ai/identity?shop_id=' + shopId, { credentials: 'same-origin' });
-              var existing = {};
-              try { var d = await resp1.json(); existing = d.identity || {}; } catch(e) {}
-              existing.coupon_benefit = getRadioValue('couponBenefit');
-              existing.free_shipping = getRadioValue('freeShipping');
-              existing.extra_benefits = getExtraBenefits();
               btn.disabled = true; btn.textContent = '저장 중...';
+
+              var payload = {
+                shipping: {
+                  enabled: document.getElementById('coupon_shipping_enabled').checked,
+                  expire_days: parseInt(document.getElementById('coupon_shipping_expire').value, 10),
+                },
+                amount: {
+                  enabled: document.getElementById('coupon_amount_enabled').checked,
+                  expire_days: parseInt(document.getElementById('coupon_amount_expire').value, 10),
+                  discount_amount: getSelectOrCustom('coupon_amount_preset', 'coupon_amount_custom'),
+                  min_order: getSelectOrCustom('coupon_amount_minorder_preset', 'coupon_amount_minorder_custom'),
+                },
+                rate: {
+                  enabled: document.getElementById('coupon_rate_enabled').checked,
+                  expire_days: parseInt(document.getElementById('coupon_rate_expire').value, 10),
+                  discount_rate: getSelectOrCustom('coupon_rate_preset', 'coupon_rate_custom'),
+                  min_order: getSelectOrCustom('coupon_rate_minorder_preset', 'coupon_rate_minorder_custom'),
+                },
+              };
+
               try {
-                var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId, { shop_identity: JSON.stringify(existing) });
-                if (resp.ok) { showToast('success', '혜택 정보가 저장되었습니다.'); }
-                else { showToast('error', '저장 중 오류가 발생했습니다.'); }
+                var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon', payload);
+                if (resp.ok) {
+                  var data = await resp.json();
+                  if (data.coupon_config) initCouponUI(data.coupon_config);
+                  showToast('success', '쿠폰 설정이 저장되었습니다. 카페24 쿠폰이 백그라운드에서 생성됩니다.');
+                } else {
+                  var errData = await resp.json().catch(function() { return {}; });
+                  showToast('error', errData.message || '저장 중 오류가 발생했습니다.');
+                }
               } catch(e) { showToast('error', '오류: ' + e.message); }
-              finally { btn.disabled = false; btn.textContent = '혜택 저장'; }
+              finally { btn.disabled = false; btn.textContent = '쿠폰 설정 저장'; }
             });
           })();
         `}} />
@@ -3540,91 +4126,191 @@ export const GeneralSettingsPage: FC<{
 
 // ─── Login Design Page (삭제됨 — ProvidersPage에 통합) ───────
 
-// ─── Coupon Status Page (읽기 전용) ─────────────────────────
-
-type CouponItemDisplay = {
-  coupon_no: number;
-  coupon_name?: string;
-  benefit_type?: string;   // 'D' = 정액, 'R' = 정률
-  discount_amount?: number;
-  discount_rate?: number;
-  benefit_text?: string;
-  expire_days?: number;
-};
-
-type CouponConfigDisplay = {
-  enabled: boolean;
-  coupons: CouponItemDisplay[];
-  multi_coupon: boolean;
-};
+// ─── Coupon Status Page ──────────────────────────────────────
 
 export const CouponSettingsPage: FC<{
   shop: { shop_id: string; shop_name: string; plan: string };
-  couponConfig: CouponConfigDisplay | null;
+  couponConfig: CouponConfigUI | null;
   isCafe24?: boolean;
 }> = ({ shop, couponConfig, isCafe24 }) => {
-  const coupons = couponConfig?.coupons ?? [];
+  const cfg = couponConfig ?? DEFAULT_COUPON_CONFIG_UI;
+  const cafe24 = cfg.cafe24_coupons ?? {};
+
+  type CouponRow = {
+    label: string;
+    enabled: boolean;
+    detail: string;
+    expire_days: number;
+    coupon_no?: number;
+  };
+
+  const rows: CouponRow[] = [
+    {
+      label: '무료배송 쿠폰',
+      enabled: cfg.shipping.enabled,
+      detail: '무료배송',
+      expire_days: cfg.shipping.expire_days,
+      coupon_no: cafe24.shipping_coupon_no,
+    },
+    {
+      label: '정액할인 쿠폰',
+      enabled: cfg.amount.enabled,
+      detail: `${cfg.amount.discount_amount.toLocaleString()}원 할인${cfg.amount.min_order > 0 ? ` (${cfg.amount.min_order.toLocaleString()}원 이상)` : ''}`,
+      expire_days: cfg.amount.expire_days,
+      coupon_no: cafe24.amount_coupon_no,
+    },
+    {
+      label: '정률할인 쿠폰',
+      enabled: cfg.rate.enabled,
+      detail: `${cfg.rate.discount_rate}% 할인${cfg.rate.min_order > 0 ? ` (${cfg.rate.min_order.toLocaleString()}원 이상)` : ''}`,
+      expire_days: cfg.rate.expire_days,
+      coupon_no: cafe24.rate_coupon_no,
+    },
+  ];
 
   return (
     <Layout title="쿠폰 현황" loggedIn currentPath="/dashboard/settings/coupon" isCafe24={isCafe24}>
       <h1>쿠폰 현황</h1>
-      <p style="font-size:14px;color:#64748b;margin-bottom:24px">가입 시 자동 발급되는 쿠폰 목록입니다.</p>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">가입 시 자동 발급되는 쿠폰 설정 및 현황입니다.</p>
 
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">자동 생성된 쿠폰</h2>
-          {couponConfig?.enabled
-            ? <span class="badge badge-green">발급 활성화</span>
-            : <span class="badge badge-gray">발급 비활성화</span>}
+          <h2 style="margin-bottom:0">쿠폰 설정 현황</h2>
+          <a href="/dashboard/settings/general#couponSettingsCard" class="btn btn-outline btn-sm">설정 변경 →</a>
         </div>
 
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1e40af">
-          쿠폰은 기본 설정의 회원가입 혜택에서 자동 관리됩니다. 혜택을 저장하면 카페24에 쿠폰이 자동 생성되고 이 목록에 표시됩니다.
+          기본 설정에서 쿠폰 3종을 개별 토글/세부설정할 수 있습니다. 저장 시 카페24에 쿠폰이 자동 생성되고 가입 시 자동 발급됩니다.
           <a href="/dashboard/settings/general" style="margin-left:8px;font-weight:600;color:#2563eb">기본 설정으로 이동 →</a>
         </div>
 
-        {coupons.length === 0 ? (
-          <div style="text-align:center;padding:40px 0;color:#94a3b8">
-            <p style="font-size:15px;margin-bottom:8px">아직 자동 생성된 쿠폰이 없습니다.</p>
-            <p style="font-size:13px">기본 설정 &gt; 회원가입 혜택에서 쿠폰 혜택을 저장하면 자동으로 생성됩니다.</p>
-          </div>
-        ) : (
-          <div style="overflow-x:auto">
-            <table>
-              <thead>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>쿠폰 종류</th>
+                <th style="width:80px">상태</th>
+                <th>할인 내용</th>
+                <th style="width:100px">유효기간</th>
+                <th style="width:110px">카페24 쿠폰 #</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
                 <tr>
-                  <th style="width:80px">쿠폰 번호</th>
-                  <th>쿠폰명</th>
-                  <th style="width:120px">할인</th>
-                  <th style="width:100px">유효기간</th>
-                  <th style="width:120px">연결 혜택</th>
+                  <td style="font-size:13px;font-weight:500">{row.label}</td>
+                  <td>
+                    {row.enabled
+                      ? <span class="badge badge-green">활성</span>
+                      : <span class="badge badge-gray">비활성</span>}
+                  </td>
+                  <td style="font-size:13px">{row.enabled ? row.detail : '-'}</td>
+                  <td style="font-size:13px">{row.enabled ? `발급일 +${row.expire_days}일` : '-'}</td>
+                  <td style="font-size:12px">
+                    {row.coupon_no
+                      ? <code style="color:#059669">#{row.coupon_no}</code>
+                      : <span style="color:#94a3b8">{row.enabled ? '생성 대기' : '-'}</span>}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {coupons.map((coupon) => (
-                  <tr>
-                    <td><code style="font-size:12px">{coupon.coupon_no}</code></td>
-                    <td style="font-size:13px">{coupon.coupon_name || '-'}</td>
-                    <td style="font-size:13px">
-                      {coupon.benefit_type === 'D' && coupon.discount_amount
-                        ? `${coupon.discount_amount.toLocaleString()}원 할인`
-                        : coupon.benefit_type === 'R' && coupon.discount_rate
-                          ? `${coupon.discount_rate}% 할인`
-                          : '-'}
-                    </td>
-                    <td style="font-size:13px">
-                      {coupon.expire_days ? `발급일 +${coupon.expire_days}일` : '-'}
-                    </td>
-                    <td style="font-size:12px;color:#64748b">
-                      {coupon.benefit_text || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* 발급 히스토리 */}
+      <div class="card">
+        <h2>발급 히스토리</h2>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px">회원가입 시 자동 발급된 쿠폰 내역입니다.</p>
+
+        <div id="couponIssuesTable">
+          <div style="text-align:center;padding:20px;color:#94a3b8">
+            <p>로딩 중...</p>
+          </div>
+        </div>
+
+        <div id="couponIssuesPagination" style="display:flex;justify-content:center;gap:8px;margin-top:12px"></div>
+      </div>
+
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var shopId = '${shop.shop_id}';
+          var currentPage = 1;
+
+          function couponTypeLabel(type) {
+            if (type === 'shipping') return '무료배송';
+            if (type === 'amount') return '정액할인';
+            if (type === 'rate') return '정률할인';
+            return type;
+          }
+
+          function formatDate(iso) {
+            if (!iso) return '-';
+            var d = new Date(iso + 'Z');
+            var offset = 9 * 60;
+            var kst = new Date(d.getTime() + offset * 60 * 1000);
+            var y = kst.getUTCFullYear();
+            var m = String(kst.getUTCMonth()+1).padStart(2,'0');
+            var day = String(kst.getUTCDate()).padStart(2,'0');
+            var h = String(kst.getUTCHours()).padStart(2,'0');
+            var min = String(kst.getUTCMinutes()).padStart(2,'0');
+            return y + '-' + m + '-' + day + ' ' + h + ':' + min;
+          }
+
+          async function loadIssues(page) {
+            currentPage = page;
+            var container = document.getElementById('couponIssuesTable');
+            var pagination = document.getElementById('couponIssuesPagination');
+
+            try {
+              var resp = await fetch('/api/dashboard/shops/' + shopId + '/coupon-issues?page=' + page, { credentials: 'same-origin' });
+              var data = await resp.json();
+
+              if (!data.issues || data.issues.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8"><p style="font-size:14px;margin-bottom:4px">아직 발급된 쿠폰이 없습니다.</p><p style="font-size:12px">회원이 가입하면 설정된 쿠폰이 자동 발급되고 여기에 표시됩니다.</p></div>';
+                pagination.innerHTML = '';
+                return;
+              }
+
+              var html = '<div style="overflow-x:auto"><table><thead><tr>';
+              html += '<th style="width:50px">번호</th>';
+              html += '<th>회원 ID</th>';
+              html += '<th style="width:90px">쿠폰 종류</th>';
+              html += '<th style="width:90px">쿠폰 번호</th>';
+              html += '<th style="width:155px">발급일시 (KST)</th>';
+              html += '</tr></thead><tbody>';
+
+              data.issues.forEach(function(issue) {
+                html += '<tr>';
+                html += '<td style="font-size:12px;color:#94a3b8">' + issue.id + '</td>';
+                html += '<td style="font-size:13px"><code>' + issue.member_id + '</code></td>';
+                html += '<td style="font-size:13px">' + couponTypeLabel(issue.coupon_type) + '</td>';
+                html += '<td style="font-size:12px"><code>' + issue.coupon_no + '</code></td>';
+                html += '<td style="font-size:12px;color:#64748b">' + formatDate(issue.issued_at) + '</td>';
+                html += '</tr>';
+              });
+
+              html += '</tbody></table></div>';
+              container.innerHTML = html;
+
+              var totalPages = Math.ceil(data.total / data.limit);
+              var pagHtml = '';
+              if (totalPages > 1) {
+                if (currentPage > 1) pagHtml += '<button onclick="window.__loadCouponIssues(' + (currentPage-1) + ')" style="padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;cursor:pointer;background:#fff">이전</button>';
+                pagHtml += '<span style="font-size:12px;color:#64748b;padding:4px 8px">' + currentPage + ' / ' + totalPages + '</span>';
+                if (currentPage < totalPages) pagHtml += '<button onclick="window.__loadCouponIssues(' + (currentPage+1) + ')" style="padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;cursor:pointer;background:#fff">다음</button>';
+              }
+              pagination.innerHTML = pagHtml;
+
+            } catch(e) {
+              container.innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444">데이터를 불러오지 못했습니다.</div>';
+            }
+          }
+
+          window.__loadCouponIssues = loadIssues;
+          loadIssues(1);
+        })();
+      `}} />
     </Layout>
   );
 };
@@ -4848,8 +5534,8 @@ export const EscalationSettingsPage: FC<{
                       <div style="flex:1">
                         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">표시 시간</label>
                         <div style="display:flex;align-items:center;gap:12px">
-                          <input type="range" min="1" max="10" value="3" id="toastDuration" style="flex:1" />
-                          <span id="toastDurationValue" style="font-size:13px;min-width:28px;text-align:right;color:#374151">3초</span>
+                          <input type="range" min="1" max="10" value="5" id="toastDuration" style="flex:1" />
+                          <span id="toastDurationValue" style="font-size:13px;min-width:28px;text-align:right;color:#374151">5초</span>
                         </div>
                       </div>
                       <div style="flex:1">
@@ -4965,7 +5651,7 @@ export const EscalationSettingsPage: FC<{
                   toastOpacity: 96,
                   toastBorderRadius: 20,
                   toastAnimation: 'fadeIn',
-                  toastDuration: 3,
+                  toastDuration: 5,
                   toastPersist: false,
                   floatingText: '\uD68C\uC6D0\uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD!',
                   floatingBtnText: '\uBC14\uB85C \uAC00\uC785\uD558\uAE30',
@@ -5832,7 +6518,7 @@ export const AdminInquiriesPage: FC<{
   pagination: { page: number; pages: number; total: number };
   statusFilter: string;
 }> = ({ inquiries, pagination, statusFilter }) => (
-  <Layout title="문의 관리" loggedIn isAdmin currentPath="/admin/inquiries">
+  <Layout title="문의 관리" loggedIn isAdmin currentPath="/supadmin/inquiries">
     <h1>문의 관리</h1>
 
     <div class="filter-bar" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -5841,7 +6527,7 @@ export const AdminInquiriesPage: FC<{
         const active = statusFilter === s;
         return (
           <a
-            href={s ? `/admin/inquiries?status=${s}` : '/admin/inquiries'}
+            href={s ? `/supadmin/inquiries?status=${s}` : '/supadmin/inquiries'}
             class={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
             style="width:auto"
           >
@@ -5901,11 +6587,11 @@ export const AdminInquiriesPage: FC<{
       {pagination.pages > 1 && (
         <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
           {pagination.page > 1 && (
-            <a href={`/admin/inquiries?page=${pagination.page - 1}${statusFilter ? `&status=${statusFilter}` : ''}`} class="btn btn-outline btn-sm">이전</a>
+            <a href={`/supadmin/inquiries?page=${pagination.page - 1}${statusFilter ? `&status=${statusFilter}` : ''}`} class="btn btn-outline btn-sm">이전</a>
           )}
           <span style="padding:6px 12px;font-size:13px;color:#64748b">{pagination.page} / {pagination.pages}</span>
           {pagination.page < pagination.pages && (
-            <a href={`/admin/inquiries?page=${pagination.page + 1}${statusFilter ? `&status=${statusFilter}` : ''}`} class="btn btn-outline btn-sm">다음</a>
+            <a href={`/supadmin/inquiries?page=${pagination.page + 1}${statusFilter ? `&status=${statusFilter}` : ''}`} class="btn btn-outline btn-sm">다음</a>
           )}
         </div>
       )}
@@ -5950,7 +6636,7 @@ export const AdminInquiriesPage: FC<{
         var btn = this;
         btn.disabled = true; btn.textContent = '등록 중...';
         try {
-          var resp = await apiCall('PUT', '/api/admin/inquiries/' + id + '/reply', { reply: reply }, btn);
+          var resp = await apiCall('PUT', '/api/supadmin/inquiries/' + id + '/reply', { reply: reply }, btn);
           if (resp.ok) {
             showToast('success', '답변이 등록되었습니다.');
             modal.style.display = 'none';
@@ -5987,7 +6673,7 @@ type AdminAiReportRow = {
 export const AdminAiReportsPage: FC<{
   shops: AdminAiReportRow[];
 }> = ({ shops }) => (
-  <Layout title="AI 보고서" loggedIn isAdmin currentPath="/admin/ai-reports">
+  <Layout title="AI 보고서" loggedIn isAdmin currentPath="/supadmin/ai-reports">
     <h1>AI 보고서 현황</h1>
     <p style="font-size:14px;color:#64748b;margin-bottom:24px">
       전체 쇼핑몰의 AI 주간 브리핑 최신 현황입니다.
@@ -6012,7 +6698,7 @@ export const AdminAiReportsPage: FC<{
             <tbody>
               {shops.map((row) => (
                 <tr>
-                  <td style="font-size:13px;font-weight:500">{row.shop_name || '-'}</td>
+                  <td style="font-size:13px;font-weight:500"><a href={`/supadmin/ai-reports/${row.shop_id}`} style="color:#2563eb;text-decoration:none">{row.shop_name || '-'}</a></td>
                   <td style="font-size:12px;color:#64748b">{row.mall_id}</td>
                   <td>
                     <span class={`badge ${row.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
@@ -6041,3 +6727,258 @@ export const AdminAiReportsPage: FC<{
     </div>
   </Layout>
 );
+
+// --- Admin AI Report Detail ---
+
+type AdminBriefingRow = {
+  id: string;
+  performance: string;
+  strategy: string;
+  actions: string;
+  insight?: string | null;
+  source: string;
+  created_at: string;
+};
+
+export const AdminAiReportDetailPage: FC<{
+  shopName: string;
+  shopId: string;
+  briefings: AdminBriefingRow[];
+}> = ({ shopName, shopId, briefings }) => (
+  <Layout title={`${shopName} — AI 보고서`} loggedIn isAdmin currentPath="/supadmin/ai-reports">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <a href="/supadmin/ai-reports" style="color:#64748b;text-decoration:none;font-size:13px">&larr; 목록으로</a>
+      <h1 style="margin-bottom:0">{shopName}</h1>
+      <span style="font-size:13px;color:#94a3b8">AI 보고서 ({briefings.length}건)</span>
+    </div>
+
+    {briefings.length === 0 ? (
+      <div class="card">
+        <div class="empty-state"><p>이 쇼핑몰의 AI 보고서가 없습니다.</p></div>
+      </div>
+    ) : (
+      briefings.map((b) => {
+        let actionList: string[] = [];
+        try { actionList = JSON.parse(b.actions); } catch { /* ignore */ }
+
+        return (
+          <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:13px;font-weight:600;color:#1e293b">{b.created_at.slice(0, 10)}</span>
+                <span class={`badge ${b.source === 'scheduled' ? 'badge-blue' : 'badge-gray'}`} style="font-size:11px">
+                  {b.source === 'scheduled' ? '자동' : '수동'}
+                </span>
+              </div>
+              <span style="font-size:11px;color:#94a3b8">{b.created_at.slice(0, 16).replace('T', ' ')}</span>
+            </div>
+
+            <div style="display:grid;gap:12px">
+              <div>
+                <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px">성과 요약</div>
+                <div style="font-size:13px;color:#1e293b;line-height:1.6">{b.performance || '-'}</div>
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px">전략 제안</div>
+                <div style="font-size:13px;color:#1e293b;line-height:1.6">{b.strategy || '-'}</div>
+              </div>
+              {actionList.length > 0 && (
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px">액션 아이템</div>
+                  <ul style="margin:0;padding-left:20px;font-size:13px;color:#1e293b;line-height:1.8">
+                    {actionList.map((a) => <li>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+              {b.insight && (
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px">참고사항</div>
+                  <div style="font-size:13px;color:#64748b;line-height:1.6">{b.insight}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })
+    )}
+  </Layout>
+);
+
+// --- Admin Shop Detail ---
+
+export const AdminShopDetailPage: FC<{
+  shop: {
+    shop_id: string;
+    shop_name: string;
+    mall_id: string;
+    platform: string;
+    plan: string;
+    owner_email: string;
+    owner_name: string;
+    client_id: string;
+    enabled_providers: string;
+    sso_configured: number;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+    shop_identity?: string | null;
+    widget_style?: string | null;
+    coupon_config?: string | null;
+    banner_config?: string | null;
+    popup_config?: string | null;
+    escalation_config?: string | null;
+    kakao_channel_id?: string | null;
+  };
+  recentStats: { provider: string; cnt: number }[];
+  totalSignups: number;
+}> = ({ shop, recentStats, totalSignups }) => {
+  const parseJson = (str: string | null | undefined) => {
+    if (!str) return null;
+    try { return JSON.parse(str); } catch { return null; }
+  };
+
+  const identity = parseJson(shop.shop_identity);
+  const widgetStyle = parseJson(shop.widget_style);
+  const couponConfig = parseJson(shop.coupon_config);
+  const bannerConfig = parseJson(shop.banner_config);
+  const popupConfig = parseJson(shop.popup_config);
+  const escalationConfig = parseJson(shop.escalation_config);
+  const providers = shop.enabled_providers ? shop.enabled_providers.split(',').filter(Boolean) : [];
+
+  return (
+    <Layout title={`${shop.shop_name || shop.mall_id} — 쇼핑몰 상세`} loggedIn isAdmin currentPath="/supadmin/shops">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <a href="/supadmin/shops" style="color:#64748b;text-decoration:none;font-size:13px">← 목록으로</a>
+        <h1 style="margin-bottom:0">{shop.shop_name || shop.mall_id}</h1>
+        <span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : shop.plan === 'monthly' ? '월간' : '연간'}</span>
+        {shop.deleted_at && <span class="badge badge-red">정지됨</span>}
+      </div>
+
+      {/* 기본 정보 */}
+      <div class="card">
+        <h2>기본 정보</h2>
+        <div style="overflow-x:auto">
+          <table>
+            <tbody>
+              <tr><th style="width:140px">Mall ID</th><td><code>{shop.mall_id}</code></td></tr>
+              <tr><th>플랫폼</th><td>{shop.platform}</td></tr>
+              <tr><th>소유자</th><td>{shop.owner_name} ({shop.owner_email})</td></tr>
+              <tr><th>Client ID</th><td><code style="font-size:11px">{shop.client_id}</code></td></tr>
+              <tr><th>SSO 연동</th><td>{shop.sso_configured ? <span class="badge badge-green">완료</span> : <span class="badge badge-yellow">미완료</span>}</td></tr>
+              <tr><th>활성 프로바이더</th><td>{providers.length > 0 ? providers.map(p => <span class="badge badge-gray" style="margin-right:4px">{providerDisplayNames[p] || p}</span>) : '-'}</td></tr>
+              <tr><th>카카오 채널</th><td>{shop.kakao_channel_id || '-'}</td></tr>
+              <tr><th>등록일</th><td>{shop.created_at?.slice(0, 16).replace('T', ' ')}</td></tr>
+              <tr><th>최종 수정</th><td>{shop.updated_at?.slice(0, 16).replace('T', ' ') || '-'}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 가입 통계 */}
+      <div class="card">
+        <h2>가입 통계</h2>
+        <div style="display:flex;gap:24px;margin-bottom:16px">
+          <div>
+            <div style="font-size:12px;color:#64748b">총 가입자</div>
+            <div style="font-size:24px;font-weight:700">{totalSignups.toLocaleString()}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#64748b">최근 7일</div>
+            <div style="font-size:24px;font-weight:700;color:#2563eb">{recentStats.reduce((s, r) => s + r.cnt, 0).toLocaleString()}</div>
+          </div>
+        </div>
+        {recentStats.length > 0 && (
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px">최근 7일 프로바이더별</div>
+            {recentStats.map(row => (
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-size:13px;min-width:60px">{providerDisplayNames[row.provider] || row.provider}</span>
+                <div style="flex:1;background:#f1f5f9;border-radius:4px;height:6px;overflow:hidden">
+                  <div style={`background:${providerColors[row.provider] || '#94a3b8'};height:100%;width:${Math.round((row.cnt / Math.max(1, recentStats[0].cnt)) * 100)}%`}></div>
+                </div>
+                <span style="font-size:12px;color:#64748b;min-width:40px;text-align:right">{row.cnt}건</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 쇼핑몰 정체성 */}
+      <div class="card">
+        <h2>쇼핑몰 정체성 (AI 분석)</h2>
+        {identity ? (
+          <div style="display:grid;gap:8px;font-size:13px">
+            <div><strong>업종:</strong> {identity.industry || '-'}</div>
+            <div><strong>타겟 고객:</strong> {identity.target || identity.target_audience || '-'}</div>
+            <div><strong>톤앤매너:</strong> {identity.tone || '-'}</div>
+            <div><strong>한 줄 소개:</strong> {identity.summary || '-'}</div>
+            <div><strong>키워드:</strong> {Array.isArray(identity.keywords) ? identity.keywords.join(', ') : '-'}</div>
+          </div>
+        ) : (
+          <p style="color:#94a3b8;font-size:13px">AI 분석 데이터가 없습니다.</p>
+        )}
+      </div>
+
+      {/* 위젯 스타일 */}
+      <div class="card">
+        <h2>위젯 디자인</h2>
+        {widgetStyle ? (
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+            <div><strong>프리셋:</strong> {widgetStyle.preset || '-'}</div>
+            <div><strong>버튼 너비:</strong> {widgetStyle.buttonWidth}px</div>
+            <div><strong>버튼 높이:</strong> {widgetStyle.buttonHeight || 44}px</div>
+            <div><strong>버튼 간격:</strong> {widgetStyle.buttonGap}px</div>
+            <div><strong>모서리:</strong> {widgetStyle.borderRadius}px</div>
+            <div><strong>정렬:</strong> {widgetStyle.align || '-'}</div>
+            <div><strong>버튼 문구:</strong> {widgetStyle.buttonLabel || '-'}</div>
+            <div><strong>아이콘 표시:</strong> {widgetStyle.showIcon !== false ? '예' : '아니오'}</div>
+          </div>
+        ) : (
+          <p style="color:#94a3b8;font-size:13px">기본 스타일 사용 중</p>
+        )}
+      </div>
+
+      {/* 쿠폰 설정 */}
+      <div class="card">
+        <h2>쿠폰 설정</h2>
+        {couponConfig?.shipping || couponConfig?.amount || couponConfig?.rate ? (
+          <div style="display:grid;gap:8px;font-size:13px">
+            <div><strong>무료배송:</strong> {couponConfig.shipping?.enabled ? `활성 (${couponConfig.shipping.expire_days}일)` : '비활성'}</div>
+            <div><strong>정액할인:</strong> {couponConfig.amount?.enabled ? `활성 (${couponConfig.amount.discount_amount?.toLocaleString()}원, ${couponConfig.amount.expire_days}일${couponConfig.amount.min_order > 0 ? `, 최소 ${couponConfig.amount.min_order.toLocaleString()}원` : ''})` : '비활성'}</div>
+            <div><strong>정률할인:</strong> {couponConfig.rate?.enabled ? `활성 (${couponConfig.rate.discount_rate}%, ${couponConfig.rate.expire_days}일${couponConfig.rate.min_order > 0 ? `, 최소 ${couponConfig.rate.min_order.toLocaleString()}원` : ''})` : '비활성'}</div>
+            {couponConfig.cafe24_coupons && (
+              <div style="margin-top:4px;color:#64748b">
+                <strong>카페24 쿠폰:</strong>
+                {couponConfig.cafe24_coupons.shipping_coupon_no && ` 무료배송 #${couponConfig.cafe24_coupons.shipping_coupon_no}`}
+                {couponConfig.cafe24_coupons.amount_coupon_no && ` 정액 #${couponConfig.cafe24_coupons.amount_coupon_no}`}
+                {couponConfig.cafe24_coupons.rate_coupon_no && ` 정률 #${couponConfig.cafe24_coupons.rate_coupon_no}`}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p style="color:#94a3b8;font-size:13px">쿠폰 설정 없음</p>
+        )}
+      </div>
+
+      {/* Plus 기능 설정 (배너, 팝업, 에스컬레이션) */}
+      <div class="card">
+        <h2>Plus 기능</h2>
+        <div style="display:grid;gap:12px;font-size:13px">
+          <div>
+            <strong>미니배너:</strong>{' '}
+            {bannerConfig ? <span class="badge badge-green">설정됨</span> : <span class="badge badge-gray">미설정</span>}
+            {bannerConfig && <span style="color:#64748b;margin-left:8px">프리셋 {bannerConfig.preset}, 위치: {bannerConfig.position || '-'}</span>}
+          </div>
+          <div>
+            <strong>이탈 감지 팝업:</strong>{' '}
+            {popupConfig ? <span class="badge badge-green">설정됨</span> : <span class="badge badge-gray">미설정</span>}
+          </div>
+          <div>
+            <strong>에스컬레이션:</strong>{' '}
+            {escalationConfig ? <span class="badge badge-green">설정됨</span> : <span class="badge badge-gray">미설정</span>}
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};

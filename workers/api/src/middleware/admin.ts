@@ -44,6 +44,6 @@ export const adminAuth = createMiddleware<{
 
 function getCookieToken(cookie: string | undefined): string | undefined {
   if (!cookie) return undefined;
-  const match = cookie.match(/bg_token=([^;]+)/);
+  const match = cookie.match(/bg_admin_token=([^;]+)/);
   return match?.[1];
 }

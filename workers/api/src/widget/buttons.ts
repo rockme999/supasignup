@@ -659,8 +659,8 @@ export const WIDGET_JS = `(function() {
 
     var position = bc.position || 'floating';
 
-    var isFullWidth = (bc.fullWidth !== false);
-    var paddingX = (bc.paddingX != null ? bc.paddingX : 24);
+    var isFullWidth = (bc.fullWidth === true);
+    var paddingX = (bc.paddingX != null ? bc.paddingX : 28);
     var heightPx = 30;
 
     var s = banner.style;
