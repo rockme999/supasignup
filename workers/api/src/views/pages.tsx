@@ -3409,12 +3409,7 @@ export const AiReportsPage: FC<{
       <p style="font-size:14px;color:#64748b;margin-bottom:24px">지난 주 성과를 분석하고 이번 주 전략을 AI가 생성합니다.</p>
 
       {!isPlus ? (
-        <div class="card" style="text-align:center;padding:48px 24px">
-          <div style="font-size:40px;margin-bottom:16px">🔒</div>
-          <h2 style="margin-bottom:8px">Plus 전용 기능</h2>
-          <p style="font-size:14px;color:#64748b;margin-bottom:20px">AI 주간 브리핑은 Plus 플랜에서만 사용할 수 있습니다.</p>
-          <a href="/dashboard/billing" class="btn btn-primary" style="width:auto">Plus 업그레이드</a>
-        </div>
+        <PlusLockOverlay feature="AI 보고서" />
       ) : (
         <div>
           {(!briefings || briefings.length === 0) ? (
@@ -3606,18 +3601,118 @@ export const AiReportsPage: FC<{
   );
 };
 
-// ─── Plus Lock Overlay ───────────────────────────────────────
+// ─── Plus Lock Overlay (프리뷰 + 블러) ─────────────────────
 
-const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => (
-  <div class="card" style="text-align:center;padding:48px">
-    <div style="font-size:48px;margin-bottom:16px">🔒</div>
-    <h2>{feature}</h2>
-    <p style="color:#64748b;margin:8px 0 24px">이 기능은 Plus 플랜에서 사용할 수 있습니다.</p>
-    <a href="/dashboard/billing" class="btn btn-primary" style="display:inline-flex;width:auto">
-      Plus로 업그레이드 (월 ₩6,900)
-    </a>
-  </div>
-);
+const plusFeatureInfo: Record<string, { desc: string; highlights: string[]; preview: string }> = {
+  '미니배너': {
+    desc: '쇼핑몰 로그인 페이지 상단에 가입 유도 배너를 표시합니다.',
+    highlights: ['8가지 색상 프리셋', '텍스트/아이콘 자유 설정', '높이/여백/애니메이션 조절', 'AI 추천 문구 자동 적용'],
+    preview: `<div style="display:grid;gap:8px">
+      <div style="background:linear-gradient(90deg,#2563eb,#3b82f6);color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;text-align:center">⚡ 지금 가입하면 3,000원 할인 쿠폰!</div>
+      <div style="background:#111827;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;text-align:center">🎁 회원 전용 특별 혜택을 받으세요</div>
+      <div style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:8px 16px;border-radius:6px;font-size:12px;text-align:center">✨ 첫 가입 무료배송 쿠폰 즉시 지급</div>
+    </div>`,
+  },
+  '이탈 감지 팝업': {
+    desc: '방문자가 페이지를 떠나려 할 때 가입 유도 팝업을 표시합니다.',
+    highlights: ['PC: 마우스 이탈 감지', '모바일: 급격한 스크롤 감지', '8가지 색상 테마', '제목/본문/CTA 자유 설정', '쿨다운 시간 설정'],
+    preview: `<div style="background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:20px;max-width:280px;margin:0 auto;text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">🎁</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">잠깐만요!</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:12px">지금 가입하면 특별 혜택을 드려요!</div>
+      <div style="background:#2563eb;color:#fff;padding:6px 16px;border-radius:6px;font-size:12px;display:inline-block">혜택 받고 가입하기</div>
+    </div>`,
+  },
+  '에스컬레이션': {
+    desc: '비로그인 재방문자의 방문 횟수에 따라 단계적으로 가입을 유도합니다.',
+    highlights: ['2~3회 방문: 토스트 메시지', '4회 이상: 플로팅 배너', '방문 횟수 {n} 치환', '스타일/애니메이션/표시 시간 설정'],
+    preview: `<div style="display:grid;gap:10px">
+      <div style="background:#1e293b;color:#fff;padding:10px 16px;border-radius:20px;font-size:12px;max-width:260px">안녕하세요! 2번째 방문을 환영합니다 😊</div>
+      <div style="background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;display:flex;justify-content:space-between;align-items:center;max-width:300px">
+        <span>회원가입하면 특별 혜택!</span>
+        <span style="background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:4px;font-size:11px">바로 가입</span>
+      </div>
+    </div>`,
+  },
+  '카카오 채널': {
+    desc: '신규 가입 완료 후 카카오 채널 추가를 유도합니다.',
+    highlights: ['가입 완료 화면에 채널 추가 버튼', '카카오 채널 ID만 입력하면 설정 완료', '마케팅 메시지 발송 가능'],
+    preview: `<div style="text-align:center">
+      <div style="background:#FEE500;color:#191919;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#191919" d="M12 3c5.8 0 10.5 3.66 10.5 8.17 0 4.52-4.7 8.18-10.5 8.18-.63 0-1.25-.04-1.85-.12l-3.69 2.52c-.23.16-.54-.04-.47-.31l.88-3.3C3.84 16.46 1.5 14.02 1.5 11.17 1.5 6.66 6.2 3 12 3z"/></svg>
+        카카오 채널 추가하기
+      </div>
+    </div>`,
+  },
+  'AI 보고서': {
+    desc: '매주 월요일 AI가 자동으로 성과 분석 리포트를 생성합니다.',
+    highlights: ['지난주 성과 요약', '이번 주 전략 제안', '실행 가능한 액션 3가지', '추천 마케팅 문구 7종 자동 생성'],
+    preview: `<div style="display:grid;gap:8px">
+      <div style="background:#f8fafc;border-left:3px solid #2563eb;padding:10px 12px;border-radius:4px;font-size:12px"><strong>📊 성과:</strong> 카카오 가입이 전주 대비 23% 증가했습니다</div>
+      <div style="background:#f8fafc;border-left:3px solid #059669;padding:10px 12px;border-radius:4px;font-size:12px"><strong>🎯 전략:</strong> 네이버 프로바이더 추가를 권장합니다</div>
+      <div style="background:#f8fafc;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:4px;font-size:12px"><strong>✅ 액션:</strong> 미니배너 문구를 시즌 프로모션으로 변경</div>
+    </div>`,
+  },
+  'AI 설정': {
+    desc: 'AI가 쇼핑몰을 분석하여 맞춤형 마케팅 전략을 제공합니다.',
+    highlights: ['쇼핑몰 정체성 자동 분석 (업종/타겟/톤)', '맞춤 카피 생성', '에스컬레이션 단계별 메시지 자동 생성'],
+    preview: `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font-size:12px;display:grid;gap:6px">
+      <div><strong>업종:</strong> 패션/의류</div>
+      <div><strong>타겟:</strong> 20-30대 여성</div>
+      <div><strong>톤앤매너:</strong> 트렌디하고 캐주얼한</div>
+      <div><strong>키워드:</strong> 스트리트패션, 캐주얼, 데일리룩</div>
+    </div>`,
+  },
+};
+
+const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
+  const info = plusFeatureInfo[feature] || { desc: '이 기능은 Plus 플랜에서 사용할 수 있습니다.', highlights: [], preview: '' };
+
+  return (
+    <div style="position:relative">
+      {/* 프리뷰 영역 (블러) */}
+      <div style="filter:blur(3px);opacity:0.6;pointer-events:none;user-select:none">
+        <div class="card">
+          <h2 style="margin-bottom:8px">{feature} 설정</h2>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px">{info.desc}</p>
+          {info.preview && <div dangerouslySetInnerHTML={{ __html: info.preview }} />}
+          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px">
+              <div style="height:8px;background:#e2e8f0;border-radius:4px;width:60%;margin-bottom:8px"></div>
+              <div style="height:32px;background:#f1f5f9;border-radius:6px"></div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px">
+              <div style="height:8px;background:#e2e8f0;border-radius:4px;width:40%;margin-bottom:8px"></div>
+              <div style="height:32px;background:#f1f5f9;border-radius:6px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 오버레이 카드 */}
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px 32px;max-width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.08)">
+          <div style="font-size:28px;margin-bottom:12px">⚡</div>
+          <h3 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px">{feature}</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6">{info.desc}</p>
+          {info.highlights.length > 0 && (
+            <div style="text-align:left;margin-bottom:16px">
+              {info.highlights.map(h => (
+                <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px">
+                  <span style="color:#2563eb;font-size:10px">●</span> {h}
+                </div>
+              ))}
+            </div>
+          )}
+          <a href="/dashboard/billing" class="btn btn-primary" style="display:inline-flex;width:auto;padding:10px 24px">
+            Plus 시작하기 — 월 ₩6,900
+          </a>
+          <p style="font-size:11px;color:#94a3b8;margin-top:8px">연간 결제 시 ₩79,000 (2개월 무료)</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── General Settings Page ───────────────────────────────────
 
