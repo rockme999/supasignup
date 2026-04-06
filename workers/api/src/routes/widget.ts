@@ -176,11 +176,13 @@ widget.post('/event', async (c) => {
 
   // funnel_events 테이블에 D1으로 영구 저장
   const eventId = crypto.randomUUID();
+  const eventData = body.event_data || {};
+  const visitorId = (eventData as Record<string, unknown>).visitor_id as string | undefined || null;
   c.executionCtx.waitUntil(
     c.env.DB.prepare(
-      'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url, visitor_id) VALUES (?, ?, ?, ?, ?, ?)'
     )
-      .bind(eventId, shop.shop_id, body.event_type, JSON.stringify(body.event_data || {}), body.page_url || '')
+      .bind(eventId, shop.shop_id, body.event_type, JSON.stringify(eventData), body.page_url || '', visitorId)
       .run(),
   );
 

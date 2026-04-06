@@ -13,7 +13,7 @@ import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
 import { authMiddleware } from '../middleware/auth';
-import { buildSinceExpr, verifyShopOwnership } from '../db/stats-utils';
+import { buildSinceExpr, buildDateFilter, verifyShopOwnership } from '../db/stats-utils';
 
 type StatsEnv = {
   Bindings: Env;
@@ -30,29 +30,10 @@ stats.get('/stats', async (c) => {
   const shopIdFilter = c.req.query('shop_id') || null;
   const period = c.req.query('period') || null; // today, 7d, 30d, month
 
-  // Build date filter
-  let dateFilter = '';
-  let dateParam: string | null = null;
+  // Build date filter (공통 유틸 사용)
+  const { dateFilter, dateParam } = buildDateFilter(period ?? '');
   const today = new Date().toISOString().slice(0, 10);
   const yearMonth = today.slice(0, 7);
-
-  if (period === 'today') {
-    dateFilter = ' AND ls.created_at >= ?';
-    dateParam = today;
-  } else if (period === '7d') {
-    dateFilter = ' AND ls.created_at >= ?';
-    const d7 = new Date();
-    d7.setUTCDate(d7.getUTCDate() - 7);
-    dateParam = d7.toISOString().slice(0, 10);
-  } else if (period === '30d') {
-    dateFilter = ' AND ls.created_at >= ?';
-    const d30 = new Date();
-    d30.setUTCDate(d30.getUTCDate() - 30);
-    dateParam = d30.toISOString().slice(0, 10);
-  } else if (period === 'month') {
-    dateFilter = ' AND ls.created_at >= ?';
-    dateParam = `${yearMonth}-01`;
-  }
 
   const shopFilter = shopIdFilter ? ' AND ls.shop_id = ?' : '';
 
@@ -418,9 +399,9 @@ stats.get('/stats/effort', async (c) => {
              ELSE 'direct'
            END as trigger_type
          FROM (
-           SELECT json_extract(event_data, '$.visitor_id') as vid,
+           SELECT f1.visitor_id as vid,
              (SELECT f2.event_type FROM funnel_events f2
-              WHERE f2.shop_id = ? AND json_extract(f2.event_data, '$.visitor_id') = json_extract(f1.event_data, '$.visitor_id')
+              WHERE f2.shop_id = ? AND f2.visitor_id = f1.visitor_id
               AND f2.event_type IN ('banner_click', 'popup_signup', 'escalation_click', 'kakao_channel_click')
               AND f2.created_at <= f1.created_at
               ORDER BY f2.created_at DESC LIMIT 1
@@ -428,8 +409,8 @@ stats.get('/stats/effort', async (c) => {
            FROM funnel_events f1
            WHERE f1.shop_id = ? AND f1.event_type = 'signup_complete'
            AND f1.created_at >= ${sinceExpr}
-           AND json_extract(f1.event_data, '$.visitor_id') IS NOT NULL
-           AND json_extract(f1.event_data, '$.visitor_id') != ''
+           AND f1.visitor_id IS NOT NULL
+           AND f1.visitor_id != ''
          )
        )
        GROUP BY trigger_type`,
@@ -439,14 +420,14 @@ stats.get('/stats/effort', async (c) => {
     c.env.DB.prepare(
       `SELECT AVG(pv_cnt) as avg_product_views FROM (
          SELECT vid, SUM(is_product_pv) as pv_cnt FROM (
-           SELECT json_extract(event_data, '$.visitor_id') as vid,
+           SELECT visitor_id as vid,
                   event_type,
                   CASE WHEN event_type = 'page_view' AND json_extract(event_data, '$.page_type') = 'product' THEN 1 ELSE 0 END as is_product_pv
            FROM funnel_events
            WHERE shop_id = ? AND event_type IN ('page_view', 'signup_complete')
            AND created_at >= ${sinceExpr}
-           AND json_extract(event_data, '$.visitor_id') IS NOT NULL
-           AND json_extract(event_data, '$.visitor_id') != ''
+           AND visitor_id IS NOT NULL
+           AND visitor_id != ''
          )
          GROUP BY vid
          HAVING SUM(CASE WHEN event_type = 'signup_complete' THEN 1 ELSE 0 END) > 0
@@ -460,12 +441,12 @@ stats.get('/stats/effort', async (c) => {
        ) * 24 as avg_hours_to_signup
        FROM (
          SELECT
-           json_extract(event_data, '$.visitor_id') as vid,
+           visitor_id as vid,
            MIN(created_at) as first_time,
            MAX(CASE WHEN event_type = 'signup_complete' THEN created_at END) as signup_time
          FROM funnel_events
          WHERE shop_id = ? AND created_at >= ${sinceExpr}
-         AND json_extract(event_data, '$.visitor_id') IS NOT NULL
+         AND visitor_id IS NOT NULL
          GROUP BY vid
          HAVING signup_time IS NOT NULL
        )`,

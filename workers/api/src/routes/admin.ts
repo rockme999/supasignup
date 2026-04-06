@@ -8,6 +8,7 @@ import type { Env } from '@supasignup/bg-core';
 import { generateId } from '@supasignup/bg-core';
 import { adminAuth } from '../middleware/admin';
 import { rateLimitMiddleware } from '../middleware/auth';
+import { escapeLike } from '../db/stats-utils';
 
 type AdminEnv = {
   Bindings: Env;
@@ -55,10 +56,6 @@ admin.post('/auth/login', rateLimitMiddleware, async (c) => {
 // 모든 /admin/* 라우트에 관리자 인증 적용
 admin.use('/*', adminAuth);
 
-// LIKE 패턴 특수문자 이스케이프 (%, _, \)
-function escapeLike(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-}
 
 // CSV 인젝션 방어: =, +, -, @ 로 시작하는 값 앞에 ' 추가
 function sanitizeCsvCell(val: string): string {

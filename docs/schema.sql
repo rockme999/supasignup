@@ -18,6 +18,7 @@
 --   2026-04-06: shops.ai_suggested_copy 추가 (AI 브리핑 시 생성된 추천 문구 JSON 저장)
 --   2026-04-06: funnel_events event_type 13종 확장 + shop_id/event_type/created_at 복합 인덱스 추가
 --   2026-04-07: 인덱스 최적화 — login_stats 3컬럼 복합 인덱스, 불필요 인덱스 4개 삭제
+--   2026-04-07: funnel_events.visitor_id 컬럼 추가 (JSON 정규화) + idx_funnel_visitor 복합 인덱스 추가
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -183,10 +184,12 @@ CREATE TABLE IF NOT EXISTS funnel_events (
   event_type TEXT NOT NULL,           -- 13종: banner_show | banner_click | popup_show | popup_close | popup_signup | escalation_show | escalation_click | escalation_dismiss | kakao_channel_show | kakao_channel_click | page_view | oauth_start | signup_complete
   event_data TEXT,                    -- JSON payload
   page_url   TEXT,
+  visitor_id TEXT,                    -- event_data.visitor_id 정규화 컬럼 (인덱스 가능, 0018 마이그레이션)
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_funnel_shop_type_date ON funnel_events(shop_id, event_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_funnel_visitor ON funnel_events(shop_id, visitor_id, event_type, created_at);
 
 -- ============================================================
 -- 10. inquiries - 1:1 문의 게시판

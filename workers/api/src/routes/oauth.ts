@@ -53,13 +53,14 @@ async function recordFunnelSignup(
   if (visitorId) eventData.visitor_id = visitorId;
   if (device) eventData.device = device;
   await db.prepare(
-    'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url, visitor_id) VALUES (?, ?, ?, ?, ?, ?)',
   ).bind(
     generateId(),
     shopId,
     'signup_complete',
     JSON.stringify(eventData),
     '',
+    visitorId || null,
   ).run();
 }
 

@@ -109,12 +109,12 @@
 
 ### P2: 공통 추출 + 라우트 분리
 
-- [ ] **2-1. 공통 유틸/미들웨어 추출**
-  - [ ] `escapeLike` → `db/stats-utils.ts`로 통합 (pages.tsx, admin.ts 중복 제거)
-  - [ ] `getOwnerShop` → `middleware/shop-loader.ts` 미들웨어로 (17회 호출 → 1회)
-  - [ ] 날짜 필터 빌더 → `db/stats-utils.ts`에 `buildDateFilter()` 추가
+- [x] **2-1. 공통 유틸 추출** ✅ 2026-04-07
+  - [x] `escapeLike` → `db/stats-utils.ts`로 통합 (pages.tsx, admin.ts 중복 제거)
+  - [x] `buildDateFilter()` → `db/stats-utils.ts`에 추가, stats.ts + pages.tsx 적용
+  - [-] `getOwnerShop` 미들웨어화 → 스킵 (같은 파일 내에서만 사용, 이동 효과 없음)
 
-- [ ] **2-2. routes/pages.tsx 분리**
+- [-] **2-2. routes/pages.tsx 분리** — 보류 (PUT/DELETE 3개만 존재, 현재 규모에서 불필요)
   - [ ] `routes/pages/public.tsx` — landing, login, register, logout, legal
   - [ ] `routes/pages/dashboard.tsx` — home, settings 라우트
   - [ ] `routes/pages/dashboard-stats.tsx` — stats 라우트 (가장 복잡)
@@ -127,22 +127,17 @@
 
 ### P3: DB 최적화 — funnel_events visitor_id 정규화
 
-- [ ] **3-1. 마이그레이션 작성**
-  - [ ] `ALTER TABLE funnel_events ADD COLUMN visitor_id TEXT`
-  - [ ] `UPDATE funnel_events SET visitor_id = json_extract(event_data, '$.visitor_id')`
-  - [ ] `CREATE INDEX idx_funnel_visitor ON funnel_events(shop_id, visitor_id, event_type, created_at)`
+- [x] **3-1. 마이그레이션 작성** ✅ 2026-04-07
+  - [x] `0018_funnel_visitor_id.sql` — ALTER + UPDATE 백필 + 복합 인덱스
 
-- [ ] **3-2. INSERT 코드 수정**
-  - [ ] `widget.ts` 이벤트 INSERT 시 visitor_id 컬럼에도 저장
-  - [ ] `oauth.ts` recordFunnelSignup 시 visitor_id 컬럼에도 저장
+- [x] **3-2. INSERT 코드 수정** ✅ 2026-04-07
+  - [x] `widget.ts` — event_data에서 visitor_id 추출 후 별도 컬럼에 저장
+  - [x] `oauth.ts` — recordFunnelSignup에 visitor_id 컬럼 추가
 
-- [ ] **3-3. 쿼리 코드 수정**
-  - [ ] trigger 분포 쿼리: `json_extract(..., '$.visitor_id')` → `visitor_id` 컬럼 참조
-  - [ ] avg_product_views 쿼리: 동일 수정
-  - [ ] avg_hours_to_signup 쿼리: 동일 수정
-  - [ ] distribution 쿼리: 동일 수정
+- [x] **3-3. 쿼리 코드 수정** ✅ 2026-04-07
+  - [x] stats.ts + pages.tsx — trigger/product_views/time_to_signup 6개 쿼리 모두 visitor_id 컬럼 참조로 전환
 
-- [ ] **3-4. schema.sql 반영 + dev 적용**
+- [x] **3-4. schema.sql + dev 적용** ✅ 2026-04-07
 
 ---
 

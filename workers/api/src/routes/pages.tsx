@@ -8,7 +8,7 @@ import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
 import { verifyToken } from '../services/jwt';
-import { buildSinceExpr } from '../db/stats-utils';
+import { buildSinceExpr, escapeLike, buildDateFilter } from '../db/stats-utils';
 import { hashPassword, verifyPassword } from '../services/password';
 import {
   LoginPage,
@@ -48,10 +48,6 @@ type PageEnv = {
   Bindings: Env;
   Variables: { ownerId: string; isCafe24: boolean };
 };
-
-function escapeLike(s: string): string {
-  return s.replace(/[%_\\]/g, '\\$&');
-}
 
 // 현재 owner의 shop을 자동 조회 (단일 쇼핑몰 구조)
 async function getOwnerShop(db: D1Database, ownerId: string) {
@@ -312,23 +308,10 @@ pages.get('/dashboard/stats', async (c) => {
   const shopIdFilter = c.req.query('shop_id') || (shops.length > 0 ? shops[0].shop_id : null);
   const currentShopPlan = shops.find(s => s.shop_id === shopIdFilter)?.plan || 'free';
 
-  // Build date filter
-  let dateFilter = '';
-  let dateParam: string | null = null;
+  // Build date filter (공통 유틸 사용)
+  const { dateFilter, dateParam } = buildDateFilter(period);
   const today = new Date().toISOString().slice(0, 10);
   const yearMonth = today.slice(0, 7);
-
-  if (period === 'today') {
-    dateFilter = ' AND ls.created_at >= ?';
-    dateParam = today;
-  } else if (period === '7d') {
-    dateFilter = " AND ls.created_at >= DATE('now', '-7 days')";
-  } else if (period === '30d') {
-    dateFilter = " AND ls.created_at >= DATE('now', '-30 days')";
-  } else if (period === 'month') {
-    dateFilter = ' AND ls.created_at >= ?';
-    dateParam = `${yearMonth}-01`;
-  }
 
   const shopFilter = shopIdFilter ? ' AND ls.shop_id = ?' : '';
 
@@ -508,9 +491,9 @@ pages.get('/dashboard/stats', async (c) => {
                ELSE 'direct'
              END as trigger_type
            FROM (
-             SELECT json_extract(event_data, '$.visitor_id') as vid,
+             SELECT f1.visitor_id as vid,
                (SELECT f2.event_type FROM funnel_events f2
-                WHERE f2.shop_id = ? AND json_extract(f2.event_data, '$.visitor_id') = json_extract(f1.event_data, '$.visitor_id')
+                WHERE f2.shop_id = ? AND f2.visitor_id = f1.visitor_id
                 AND f2.event_type IN ('banner_click', 'popup_signup', 'escalation_click', 'kakao_channel_click')
                 AND f2.created_at <= f1.created_at
                 ORDER BY f2.created_at DESC LIMIT 1
@@ -518,8 +501,8 @@ pages.get('/dashboard/stats', async (c) => {
              FROM funnel_events f1
              WHERE f1.shop_id = ? AND f1.event_type = 'signup_complete'
              AND f1.created_at >= ${sinceExpr}
-             AND json_extract(f1.event_data, '$.visitor_id') IS NOT NULL
-             AND json_extract(f1.event_data, '$.visitor_id') != ''
+             AND f1.visitor_id IS NOT NULL
+             AND f1.visitor_id != ''
            )
          )
          GROUP BY trigger_type`,
@@ -528,14 +511,14 @@ pages.get('/dashboard/stats', async (c) => {
       c.env.DB.prepare(
         `SELECT AVG(pv_cnt) as avg_product_views FROM (
            SELECT vid, SUM(is_product_pv) as pv_cnt FROM (
-             SELECT json_extract(event_data, '$.visitor_id') as vid,
+             SELECT visitor_id as vid,
                     event_type,
                     CASE WHEN event_type = 'page_view' AND json_extract(event_data, '$.page_type') = 'product' THEN 1 ELSE 0 END as is_product_pv
              FROM funnel_events
              WHERE shop_id = ? AND event_type IN ('page_view', 'signup_complete')
              AND created_at >= ${sinceExpr}
-             AND json_extract(event_data, '$.visitor_id') IS NOT NULL
-             AND json_extract(event_data, '$.visitor_id') != ''
+             AND visitor_id IS NOT NULL
+             AND visitor_id != ''
            )
            GROUP BY vid
            HAVING SUM(CASE WHEN event_type = 'signup_complete' THEN 1 ELSE 0 END) > 0
@@ -548,12 +531,12 @@ pages.get('/dashboard/stats', async (c) => {
          ) * 24 as avg_hours_to_signup
          FROM (
            SELECT
-             json_extract(event_data, '$.visitor_id') as vid,
+             visitor_id as vid,
              MIN(created_at) as first_time,
              MAX(CASE WHEN event_type = 'signup_complete' THEN created_at END) as signup_time
            FROM funnel_events
            WHERE shop_id = ? AND created_at >= ${sinceExpr}
-           AND json_extract(event_data, '$.visitor_id') IS NOT NULL
+           AND visitor_id IS NOT NULL
            GROUP BY vid
            HAVING signup_time IS NOT NULL
          )`,
@@ -1095,6 +1078,13 @@ pages.get('/dashboard/shops/:id/ai-briefing', async (c) => {
 pages.get('/dashboard/settings', (c) => {
   return c.redirect('/dashboard/settings/general');
 });
+
+// ─── Settings API (JSON endpoints in pages.tsx) ──────────────
+// NOTE: 아래 PUT/DELETE 엔드포인트들은 pages.tsx에 혼재되어 있음.
+// 분리 가능 여부: routes/settings.ts 를 별도로 만들어 이관할 수 있음.
+// 단, getOwnerIdFromCookie 헬퍼도 함께 이동해야 하고, app.ts 라우팅 등록도 필요.
+// 현재 규모(3개 엔드포인트)에서는 리스크 대비 이득이 적으므로 보류.
+// ─────────────────────────────────────────────────────────────
 
 // ─── Settings API (password change) ─────────────────────────
 
