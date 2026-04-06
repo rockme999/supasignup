@@ -143,15 +143,15 @@
 
 ### P4: D1 batch API 적용
 
-- [ ] **4-1. dashboard 홈 쿼리 batch화**
-  - [ ] 6개 Promise.all → `db.batch()` 1회
+- [x] **4-1. dashboard 홈 쿼리 batch화** ✅ 2026-04-07
+  - [x] 6개 Promise.all → `db.batch()` 1회
 
-- [ ] **4-2. dashboard/stats 쿼리 batch화**
-  - [ ] 배치 1 (기본 5쿼리) → `db.batch()` 1회
-  - [ ] 배치 2 (퍼널+effort 4쿼리) → `db.batch()` 1회
-  - [ ] 배치 3 (distribution+hourly 4쿼리) → `db.batch()` 1회
+- [x] **4-2. dashboard/stats 쿼리 batch화** ✅ 2026-04-07
+  - [x] 기본 5쿼리 + 배치1(4) + 배치2(4) + 배치3(4) = 총 4회 batch
 
-- [ ] **4-3. 배포 + 응답 시간 비교**
+- [x] **4-3. stats.ts /stats 쿼리 batch화** ✅ 2026-04-07
+  - [x] 4개 Promise.all → `db.batch()` 1회
+  - [x] dev 배포 + 검증 완료 — Version `6f3901a8`
 
 ---
 
@@ -292,3 +292,4 @@ P5 (1일)     → Stats 서비스 레이어 추출
 | 날짜 | 변경 내용 |
 |------|-----------|
 | 2026-04-07 | 초안 작성: 3개 영역 검토 결과 + 체크리스트 + 테스트 계획 |
+| 2026-04-07 | P0~P4 전체 완료 |

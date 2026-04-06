@@ -212,50 +212,62 @@ pages.get('/dashboard', async (c) => {
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
   const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 
-  const [totalResult, todayResult, monthResult, providerResult, billingResult, funnelResult] = await Promise.all([
+  // 6 independent queries → single batch call
+  const homeResults = await c.env.DB.batch([
+    // [0] Total signups / logins
     c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
         SUM(CASE WHEN action = 'signup' THEN 1 ELSE 0 END) as signups,
         SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins
        FROM login_stats WHERE shop_id = ?`,
-    ).bind(shop.shop_id).first<{ total: number; signups: number; logins: number }>(),
+    ).bind(shop.shop_id),
 
+    // [1] Today's signups
     c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM login_stats
        WHERE shop_id = ? AND action = 'signup' AND created_at >= ?`,
-    ).bind(shop.shop_id, today).first<{ cnt: number }>(),
+    ).bind(shop.shop_id, today),
 
+    // [2] This month's signups
     c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM login_stats
        WHERE shop_id = ? AND action = 'signup' AND created_at >= ?`,
-    ).bind(shop.shop_id, `${yearMonth}-01`).first<{ cnt: number }>(),
+    ).bind(shop.shop_id, `${yearMonth}-01`),
 
+    // [3] Per-provider breakdown
     c.env.DB.prepare(
       `SELECT provider, COUNT(*) as cnt
        FROM login_stats
        WHERE shop_id = ? AND action = 'signup'
        GROUP BY provider`,
-    ).bind(shop.shop_id).all<{ provider: string; cnt: number }>(),
+    ).bind(shop.shop_id),
 
+    // [4] Billing: this month's signups
     c.env.DB.prepare(
       `SELECT COUNT(*) as monthly_signups FROM login_stats
        WHERE shop_id = ? AND action = 'signup'
        AND created_at >= ? AND created_at < ?`,
-    ).bind(shop.shop_id, `${billingMonth}-01`, nextMonthFirst)
-     .first<{ monthly_signups: number }>(),
+    ).bind(shop.shop_id, `${billingMonth}-01`, nextMonthFirst),
 
-    // 퍼널 요약 (최근 7일, 홈 대시보드용)
+    // [5] 퍼널 요약 (최근 7일, 홈 대시보드용)
     c.env.DB.prepare(
       `SELECT event_type, COUNT(*) as cnt
        FROM funnel_events
        WHERE shop_id = ? AND created_at >= datetime('now', '-7 days')
        GROUP BY event_type`,
-    ).bind(shop.shop_id).all<{ event_type: string; cnt: number }>(),
+    ).bind(shop.shop_id),
   ]);
 
+  const totalResult = (homeResults[0] as D1Result<{ total: number; signups: number; logins: number }>).results?.[0];
+  const todayResult = (homeResults[1] as D1Result<{ cnt: number }>).results?.[0];
+  const monthResult = (homeResults[2] as D1Result<{ cnt: number }>).results?.[0];
+  const providerRows = (homeResults[3] as D1Result<{ provider: string; cnt: number }>).results ?? [];
+  const billingResult = (homeResults[4] as D1Result<{ monthly_signups: number }>).results?.[0];
+  const funnelResult = (homeResults[5] as D1Result<{ event_type: string; cnt: number }>).results ?? [];
+
   const byProvider: Record<string, number> = {};
-  for (const row of providerResult.results ?? []) {
+  for (const row of providerRows) {
     byProvider[row.provider] = row.cnt;
   }
 
@@ -266,7 +278,7 @@ pages.get('/dashboard', async (c) => {
 
   // 퍼널 요약 계산
   const funnelCounts: Record<string, number> = {};
-  for (const row of funnelResult.results ?? []) {
+  for (const row of funnelResult) {
     funnelCounts[row.event_type] = row.cnt;
   }
 
@@ -347,8 +359,9 @@ pages.get('/dashboard/stats', async (c) => {
   const funnelPeriod = period || '7d';
   const sinceExpr = buildSinceExpr(funnelPeriod);
 
-  // All queries in parallel
-  const [totalResult, todayResult, monthResult, providerResult, dailyResult] = await Promise.all([
+  // 5 base queries → single batch call
+  const baseResults = await c.env.DB.batch([
+    // [0] Total signups / logins
     c.env.DB.prepare(
       `SELECT
         COUNT(*) as total,
@@ -357,30 +370,34 @@ pages.get('/dashboard/stats', async (c) => {
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL${dateFilter}${shopFilter}`,
-    ).bind(...baseParams).first<{ total: number; signups: number; logins: number }>(),
+    ).bind(...baseParams),
 
+    // [1] Today's signups
     c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
        AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
-    ).bind(...todayParams).first<{ cnt: number }>(),
+    ).bind(...todayParams),
 
+    // [2] This month's signups
     c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL
        AND ls.action = 'signup' AND ls.created_at >= ?${shopFilter}`,
-    ).bind(...monthParams).first<{ cnt: number }>(),
+    ).bind(...monthParams),
 
+    // [3] Per-provider breakdown
     c.env.DB.prepare(
       `SELECT ls.provider, COUNT(*) as cnt
        FROM login_stats ls
        JOIN shops s ON ls.shop_id = s.shop_id
        WHERE s.owner_id = ? AND s.deleted_at IS NULL AND ls.action = 'signup'${dateFilter}${shopFilter}
        GROUP BY ls.provider`,
-    ).bind(...providerParams).all<{ provider: string; cnt: number }>(),
+    ).bind(...providerParams),
 
+    // [4] Daily breakdown
     c.env.DB.prepare(
       `SELECT DATE(ls.created_at) as day, ls.action, COUNT(*) as cnt
        FROM login_stats ls
@@ -389,11 +406,17 @@ pages.get('/dashboard/stats', async (c) => {
        AND ls.created_at >= ?${shopFilter}
        GROUP BY day, ls.action
        ORDER BY day`,
-    ).bind(...dailyParams).all<{ day: string; action: string; cnt: number }>(),
+    ).bind(...dailyParams),
   ]);
 
+  const totalResult = (baseResults[0] as D1Result<{ total: number; signups: number; logins: number }>).results?.[0];
+  const todayResult = (baseResults[1] as D1Result<{ cnt: number }>).results?.[0];
+  const monthResult = (baseResults[2] as D1Result<{ cnt: number }>).results?.[0];
+  const providerResult = (baseResults[3] as D1Result<{ provider: string; cnt: number }>).results ?? [];
+  const dailyResult = (baseResults[4] as D1Result<{ day: string; action: string; cnt: number }>).results ?? [];
+
   const byProvider: Record<string, number> = {};
-  for (const row of providerResult.results ?? []) {
+  for (const row of providerResult) {
     byProvider[row.provider] = row.cnt;
   }
 
@@ -438,30 +461,34 @@ pages.get('/dashboard/stats', async (c) => {
   } | undefined;
 
   if (shopIdFilter) {
-    // 배치 1: 퍼널 + OAuth 이탈 + effort 기본 (4개)
-    const [funnelRaw, dropoffStartRaw, dropoffCompleteRaw, effortRaw] = await Promise.all([
+    // 배치 1: 퍼널 + OAuth 이탈 + effort 기본 (4개) → single batch call
+    const batch1Results = await c.env.DB.batch([
+      // [0] 퍼널 이벤트
       c.env.DB.prepare(
         `SELECT event_type, COUNT(*) as cnt
          FROM funnel_events
          WHERE shop_id = ? AND created_at >= ${sinceExpr}
          GROUP BY event_type`,
-      ).bind(shopIdFilter).all<{ event_type: string; cnt: number }>(),
+      ).bind(shopIdFilter),
 
+      // [1] OAuth 이탈: oauth_start
       c.env.DB.prepare(
         `SELECT json_extract(event_data, '$.provider') as provider, COUNT(*) as cnt
          FROM funnel_events
          WHERE shop_id = ? AND event_type = 'oauth_start' AND created_at >= ${sinceExpr}
          GROUP BY provider`,
-      ).bind(shopIdFilter).all<{ provider: string; cnt: number }>(),
+      ).bind(shopIdFilter),
 
+      // [2] OAuth 이탈: signup_complete
       c.env.DB.prepare(
         `SELECT json_extract(event_data, '$.provider') as provider, COUNT(*) as cnt
          FROM funnel_events
          WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}
          AND json_extract(event_data, '$.provider') IS NOT NULL
          GROUP BY provider`,
-      ).bind(shopIdFilter).all<{ provider: string; cnt: number }>(),
+      ).bind(shopIdFilter),
 
+      // [3] effort 기본
       c.env.DB.prepare(
         `SELECT
            AVG(CAST(json_extract(event_data, '$.visit_count') AS REAL)) as avg_visit_count,
@@ -470,16 +497,17 @@ pages.get('/dashboard/stats', async (c) => {
            SUM(CASE WHEN CAST(json_extract(event_data, '$.visit_count') AS INTEGER) = 1 THEN 1 ELSE 0 END) as first_visit_signups
          FROM funnel_events
          WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}`,
-      ).bind(shopIdFilter).first<{
-        avg_visit_count: number | null;
-        avg_session_pages: number | null;
-        total_signups: number;
-        first_visit_signups: number;
-      }>(),
+      ).bind(shopIdFilter),
     ]);
 
-    // 배치 2: effort 상세 + distribution 디바이스/유입 (4개)
-    const [triggerRaw, pageViewRaw, timeRaw, deviceRaw] = await Promise.all([
+    const funnelRaw = batch1Results[0] as D1Result<{ event_type: string; cnt: number }>;
+    const dropoffStartRaw = batch1Results[1] as D1Result<{ provider: string; cnt: number }>;
+    const dropoffCompleteRaw = batch1Results[2] as D1Result<{ provider: string; cnt: number }>;
+    const effortRaw = (batch1Results[3] as D1Result<{ avg_visit_count: number | null; avg_session_pages: number | null; total_signups: number; first_visit_signups: number }>).results?.[0];
+
+    // 배치 2: effort 상세 + distribution 디바이스/유입 (4개) → single batch call
+    const batch2Results = await c.env.DB.batch([
+      // [0] 가입 트리거 분포
       c.env.DB.prepare(
         `SELECT trigger_type, COUNT(*) as cnt FROM (
            SELECT vid,
@@ -506,8 +534,9 @@ pages.get('/dashboard/stats', async (c) => {
            )
          )
          GROUP BY trigger_type`,
-      ).bind(shopIdFilter, shopIdFilter).all<{ trigger_type: string; cnt: number }>(),
+      ).bind(shopIdFilter, shopIdFilter),
 
+      // [1] 평균 상품 페이지 조회 수
       c.env.DB.prepare(
         `SELECT AVG(pv_cnt) as avg_product_views FROM (
            SELECT vid, SUM(is_product_pv) as pv_cnt FROM (
@@ -523,8 +552,9 @@ pages.get('/dashboard/stats', async (c) => {
            GROUP BY vid
            HAVING SUM(CASE WHEN event_type = 'signup_complete' THEN 1 ELSE 0 END) > 0
          )`,
-      ).bind(shopIdFilter).first<{ avg_product_views: number | null }>(),
+      ).bind(shopIdFilter),
 
+      // [2] 첫 방문 → 가입까지 소요시간
       c.env.DB.prepare(
         `SELECT AVG(
            MAX(0, julianday(signup_time) - julianday(first_time))
@@ -540,18 +570,25 @@ pages.get('/dashboard/stats', async (c) => {
            GROUP BY vid
            HAVING signup_time IS NOT NULL
          )`,
-      ).bind(shopIdFilter).first<{ avg_hours_to_signup: number | null }>(),
+      ).bind(shopIdFilter),
 
+      // [3] 디바이스 분포
       c.env.DB.prepare(
         `SELECT json_extract(event_data, '$.device') as device, COUNT(*) as cnt
          FROM funnel_events
          WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}
          GROUP BY device ORDER BY cnt DESC`,
-      ).bind(shopIdFilter).all<{ device: string; cnt: number }>(),
+      ).bind(shopIdFilter),
     ]);
 
-    // 배치 3: distribution 나머지 + hourly (4개)
-    const [referrerRaw, pageTypeRaw, providerDeviceRaw, hourlyRaw] = await Promise.all([
+    const triggerRaw = batch2Results[0] as D1Result<{ trigger_type: string; cnt: number }>;
+    const pageViewRaw = (batch2Results[1] as D1Result<{ avg_product_views: number | null }>).results?.[0];
+    const timeRaw = (batch2Results[2] as D1Result<{ avg_hours_to_signup: number | null }>).results?.[0];
+    const deviceRaw = batch2Results[3] as D1Result<{ device: string; cnt: number }>;
+
+    // 배치 3: distribution 나머지 + hourly (4개) → single batch call
+    const batch3Results = await c.env.DB.batch([
+      // [0] 유입 경로 분포
       c.env.DB.prepare(
         `SELECT json_extract(event_data, '$.referrer') as referrer, COUNT(*) as cnt
          FROM funnel_events
@@ -560,8 +597,9 @@ pages.get('/dashboard/stats', async (c) => {
          AND created_at >= ${sinceExpr}
          AND json_extract(event_data, '$.referrer') != ''
          GROUP BY referrer ORDER BY cnt DESC LIMIT 20`,
-      ).bind(shopIdFilter).all<{ referrer: string; cnt: number }>(),
+      ).bind(shopIdFilter),
 
+      // [1] 첫 방문 페이지 분포
       c.env.DB.prepare(
         `SELECT json_extract(event_data, '$.page_type') as page_type, COUNT(*) as cnt
          FROM funnel_events
@@ -569,8 +607,9 @@ pages.get('/dashboard/stats', async (c) => {
          AND CAST(json_extract(event_data, '$.visit_count') AS INTEGER) = 1
          AND created_at >= ${sinceExpr}
          GROUP BY page_type ORDER BY cnt DESC`,
-      ).bind(shopIdFilter).all<{ page_type: string; cnt: number }>(),
+      ).bind(shopIdFilter),
 
+      // [2] 프로바이더 × 디바이스 교차 분석
       c.env.DB.prepare(
         `SELECT json_extract(event_data, '$.provider') as provider,
                 json_extract(event_data, '$.device') as device,
@@ -579,8 +618,9 @@ pages.get('/dashboard/stats', async (c) => {
          WHERE shop_id = ? AND event_type = 'signup_complete' AND created_at >= ${sinceExpr}
          AND json_extract(event_data, '$.provider') IS NOT NULL
          GROUP BY provider, device ORDER BY cnt DESC`,
-      ).bind(shopIdFilter).all<{ provider: string; device: string; cnt: number }>(),
+      ).bind(shopIdFilter),
 
+      // [3] 시간대별 히트맵 (login_stats, 최근 30일 고정)
       c.env.DB.prepare(
         `SELECT
            CAST(strftime('%w', datetime(created_at, '+9 hours')) AS INTEGER) as dow,
@@ -590,8 +630,13 @@ pages.get('/dashboard/stats', async (c) => {
          WHERE shop_id = ? AND action = 'signup' AND created_at >= ${buildSinceExpr('30d')}
          GROUP BY dow, hour
          ORDER BY dow, hour`,
-      ).bind(shopIdFilter).all<{ dow: number; hour: number; cnt: number }>(),
+      ).bind(shopIdFilter),
     ]);
+
+    const referrerRaw = batch3Results[0] as D1Result<{ referrer: string; cnt: number }>;
+    const pageTypeRaw = batch3Results[1] as D1Result<{ page_type: string; cnt: number }>;
+    const providerDeviceRaw = batch3Results[2] as D1Result<{ provider: string; device: string; cnt: number }>;
+    const hourlyRaw = batch3Results[3] as D1Result<{ dow: number; hour: number; cnt: number }>;
 
     // 퍼널 데이터
     funnelData = funnelRaw.results ?? [];
@@ -715,7 +760,7 @@ pages.get('/dashboard/stats', async (c) => {
         month_signups: monthResult?.cnt ?? 0,
         by_provider: byProvider,
       }}
-      daily={dailyResult.results ?? []}
+      daily={dailyResult}
       shops={shops}
       currentShopId={shopIdFilter}
       currentPeriod={period}
