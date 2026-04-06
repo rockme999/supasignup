@@ -60,61 +60,50 @@
 
 ### P1: 뷰 컴포넌트 분리 (views/pages.tsx 8,734줄 → 30+ 파일)
 
-- [ ] **1-1. shared/ 공통 모듈 추출**
-  - [ ] `views/pages/shared/constants.ts` — providerColors, providerDisplayNames 등
-  - [ ] `views/pages/shared/charts.tsx` — LineChart, PieChart, HeatmapChart, ProgressBar, MetricCard
-  - [ ] `views/pages/shared/types.ts` — HomeStats, DailyData, FunnelEventRow 등 뷰 전용 타입
-  - [ ] `views/pages/shared/utils.ts` — parseProviders 등
+> 30+개 → **10개 파일**로 재조정 (2026-04-07)
+> 원칙: 함께 변경되는 것은 함께 둔다 / 같은 공통 요소를 공유하면 묶는다 / 평균 ~900줄/파일
 
-- [ ] **1-2. 인증 페이지 분리**
-  - [ ] `views/pages/auth.tsx` — LoginPage, RegisterPage (~130줄)
+- [x] **1-1. shared.ts — 공통 상수/타입/유틸 (190줄)** ✅ 2026-04-07
+  - [ ] providerColors, providerDisplayNames, providerPieColors, PIE_FALLBACK_COLORS
+  - [ ] parseProviders, inquiryStatusLabel
+  - [ ] 뷰 전용 타입 (HomeStats, DailyData, ShopDetail, ShopSummary 등)
 
-- [ ] **1-3. 메인 대시보드 분리**
-  - [ ] `views/pages/home.tsx` — HomePage (~250줄)
-  - [ ] `views/pages/stats.tsx` — StatsPage (~450줄, charts 의존)
-  - [ ] `views/pages/billing.tsx` — BillingPage (~200줄)
+- [x] **1-2. charts.tsx — 차트 컴포넌트 (194줄)** ✅ 2026-04-07
+  - [ ] ProgressBar, LineChart, PieChart, HeatmapChart, MetricCard
 
-- [ ] **1-4. 설정 페이지 분리**
-  - [ ] `views/pages/settings/general.tsx` — GeneralSettingsPage (~600줄)
-  - [ ] `views/pages/settings/providers.tsx` — ProvidersPage (~650줄)
-  - [ ] `views/pages/settings/sso-guide.tsx` — SsoGuidePage (~380줄)
-  - [ ] `views/pages/settings/coupon.tsx` — CouponSettingsPage (~190줄)
-  - [ ] `views/pages/settings/banner.tsx` — BannerSettingsPage (~680줄)
-  - [ ] `views/pages/settings/popup.tsx` — PopupSettingsPage (~440줄)
-  - [ ] `views/pages/settings/escalation.tsx` — EscalationSettingsPage (~790줄)
-  - [ ] `views/pages/settings/kakao.tsx` — KakaoSettingsPage (~80줄)
-  - [ ] `views/pages/settings/ai.tsx` — AiSettingsPage (~70줄)
+- [x] **1-3. auth.tsx — 인증 (111줄)** ✅ 2026-04-07
+  - [ ] LoginPage, RegisterPage
 
-- [ ] **1-5. 도움말/법적 페이지 분리**
-  - [ ] `views/pages/help/quickstart.tsx` — QuickStartPage (~160줄)
-  - [ ] `views/pages/help/guide.tsx` — GuidePage (~390줄)
-  - [ ] `views/pages/help/faq.tsx` — FaqPage (~450줄)
-  - [ ] `views/pages/legal.tsx` — PrivacyPage, TermsPage (~430줄)
-  - [ ] `views/pages/landing.tsx` — LandingPage (~300줄)
+- [x] **1-4. home.tsx — 홈 대시보드 (245줄)** ✅ 2026-04-07
+  - [ ] HomePage + HomeShop 타입
 
-- [ ] **1-6. 기타 페이지 분리**
-  - [ ] `views/pages/inquiries.tsx` — InquiriesPage, InquiryDetailPage (~190줄)
-  - [ ] `views/pages/ai-reports.tsx` — AiReportsPage (~350줄)
+- [x] **1-5. stats.tsx — 통계 (466줄)** ✅ 2026-04-07
+  - [ ] StatsPage + StatsPageProps, OauthDropoffData 등 전용 타입
 
-- [ ] **1-7. 관리자 페이지 분리**
-  - [ ] `views/pages/admin/home.tsx` — AdminHomePage
-  - [ ] `views/pages/admin/shops.tsx` — AdminShopsPage, AdminShopDetailPage
-  - [ ] `views/pages/admin/monitoring.tsx` — AdminMonitoringPage
-  - [ ] `views/pages/admin/owners.tsx` — AdminOwnersPage
-  - [ ] `views/pages/admin/inquiries.tsx` — AdminInquiriesPage
-  - [ ] `views/pages/admin/ai-reports.tsx` — AdminAiReportsPage, AdminAiReportDetailPage
-  - [ ] `views/pages/admin/audit-log.tsx` — AdminAuditLogPage
-  - [ ] `views/pages/admin/subscriptions.tsx` — AdminSubscriptionsPage
+- [x] **1-6. settings.tsx — 기본 설정 (1,826줄)** ✅ 2026-04-07
+  - [ ] GeneralSettingsPage, SsoGuidePage, ProvidersPage, BillingPage, CouponSettingsPage
 
-- [ ] **1-8. barrel re-export + 기존 pages.tsx 축소**
-  - [ ] `views/pages/index.ts` — 전체 barrel export
-  - [ ] `views/pages.tsx` — `export * from './pages/index'`로 축소 (기존 import 경로 유지)
-  - [ ] 기존 pages.tsx 원본 삭제
+- [x] **1-7. plus-features.tsx — Plus 전용 설정 (2,371줄)** ✅ 2026-04-07
+  - [ ] PlusLockOverlay + plusFeatureInfo
+  - [ ] BannerSettingsPage, PopupSettingsPage, EscalationSettingsPage
+  - [ ] KakaoSettingsPage, AiSettingsPage, AiReportsPage
 
-- [ ] **1-9. 빌드 + 배포 검증**
-  - [ ] `tsc --noEmit` 정상
-  - [ ] `wrangler deploy --env dev` 성공
-  - [ ] 전체 페이지 정상 렌더링 확인
+- [x] **1-8. help.tsx — 도움말/문의 (1,162줄)** ✅ 2026-04-07
+  - [ ] QuickStartPage, GuidePage, FaqPage
+  - [ ] InquiriesPage, InquiryDetailPage
+
+- [x] **1-9. admin.tsx — 관리자 전체 (1,520줄)** ✅ 2026-04-07
+  - [ ] AdminHomePage, AdminShopsPage, AdminShopDetailPage
+  - [ ] AdminSubscriptionsPage, AdminAuditLogPage, AdminMonitoringPage, AdminOwnersPage
+  - [ ] AdminInquiriesPage, AdminAiReportsPage, AdminAiReportDetailPage
+
+- [x] **1-10. static.tsx — 정적 페이지 (695줄)** ✅ 2026-04-07
+  - [ ] LandingPage, PrivacyPage, TermsPage (Layout 미사용, 자체 완결형)
+
+- [x] **1-11. barrel re-export + 빌드 검증** ✅ 2026-04-07
+  - [x] `views/pages.tsx` → 14줄 barrel re-export로 축소
+  - [x] `wrangler deploy --env dev` 성공 — Version `3f4ffaef`
+  - [x] 페이지 정상 렌더링 확인
 
 ---
 
