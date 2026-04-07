@@ -695,6 +695,7 @@ async function getLineUserInfo(tokens: OAuthTokenResponse): Promise<OAuthUserInf
       const payloadPart = (tokens.id_token as string).split('.')[1];
       // Handle base64url → base64 for atob
       const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+      // 토큰 엔드포인트에서 TLS로 직접 수신했으므로 서명 검증 생략
       const payload = JSON.parse(atob(base64)) as Record<string, unknown>;
 
       // Validate id_token claims (iss, exp)
@@ -769,7 +770,16 @@ export async function verifyTelegramAuth(
   for (let i = 0; i < HASH_LEN; i++) {
     result |= expected.charCodeAt(i) ^ received.charCodeAt(i);
   }
-  return result === 0;
+  if (result !== 0) return false;
+
+  // 6. auth_date 만료 검증: 5분(300초) 이상 경과한 데이터 거부
+  const authDate = parseInt(data.auth_date || '0');
+  const now = Math.floor(Date.now() / 1000);
+  if (now - authDate > 300) {
+    throw new Error('Telegram auth data expired');
+  }
+
+  return true;
 }
 
 /**

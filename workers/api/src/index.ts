@@ -52,7 +52,6 @@ app.use('/api/widget/*', cors({
   origin: (origin) => origin || '*',
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type'],
-  credentials: true,
 }));
 
 // ── CORS: Dashboard routes (restricted origin) ──────────────

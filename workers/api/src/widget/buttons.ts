@@ -632,6 +632,7 @@ export const WIDGET_JS = `(function() {
           var popup = window.open(ssoUrl, 'bg_sso_popup', 'width=520,height=700,scrollbars=yes');
           // 팝업 완료 메시지 수신 → 이전 페이지로 이동
           window.addEventListener('message', function handler(e) {
+            if (!e.origin.endsWith('.cafe24.com')) return; // origin 검증
             if (e.data === 'bg_sso_complete') {
               window.removeEventListener('message', handler);
               window.location.href = savedReturnUrl;

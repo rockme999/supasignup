@@ -14,42 +14,56 @@ export async function handleScheduled(env: Env): Promise<void> {
 
 // ─── 만료 구독 처리 ──────────────────────────────────────────
 async function handleExpiredSubscriptions(env: Env): Promise<void> {
+  // 만료 구독 + 동일 shop의 비만료 active 구독 수 + client_id를 단일 쿼리로 조회.
+  // other_active_count는 이번에 함께 만료될 구독(expires_at < now)을 제외하여
+  // 동시 만료 시에도 plan 미전환 버그가 발생하지 않도록 처리.
   const expired = await env.DB.prepare(
-    `SELECT s.id, s.shop_id FROM subscriptions s
+    `SELECT s.id, s.shop_id, sh.client_id,
+       (SELECT COUNT(*) FROM subscriptions s2
+        WHERE s2.shop_id = s.shop_id
+          AND s2.status = 'active'
+          AND s2.id != s.id
+          AND s2.expires_at >= datetime('now')
+       ) AS other_active_count
+     FROM subscriptions s
+     JOIN shops sh ON s.shop_id = sh.shop_id
      WHERE s.status = 'active' AND s.expires_at < datetime('now')`
-  ).all();
+  ).all<{ id: string; shop_id: string; client_id: string; other_active_count: number }>();
 
   const results = expired.results ?? [];
   if (results.length === 0) return;
 
+  // batch statements 구성
   const statements: D1PreparedStatement[] = [];
-  for (const sub of results) {
-    const record = sub as { id: string; shop_id: string };
 
-    const otherActive = await env.DB
-      .prepare("SELECT COUNT(*) as cnt FROM subscriptions WHERE shop_id = ? AND status = 'active' AND id != ?")
-      .bind(record.shop_id, record.id)
-      .first<{ cnt: number }>();
-
+  // 모든 만료 구독을 expired로 전환
+  for (const record of results) {
     statements.push(
       env.DB.prepare("UPDATE subscriptions SET status = 'expired' WHERE id = ?").bind(record.id),
     );
+  }
 
-    if (!otherActive || otherActive.cnt === 0) {
-      statements.push(
-        env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(record.shop_id),
-      );
+  // other_active_count가 0인 shop만 plan을 free로 전환 (shop_id 중복 방지)
+  const shopsToDowngrade = new Set<string>();
+  for (const record of results) {
+    if (record.other_active_count === 0) {
+      shopsToDowngrade.add(record.shop_id);
     }
+  }
+  for (const shopId of shopsToDowngrade) {
+    statements.push(
+      env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(shopId),
+    );
   }
 
   await env.DB.batch(statements);
 
-  for (const sub of results) {
-    const record = sub as { id: string; shop_id: string };
-    const shop = await env.DB.prepare('SELECT client_id FROM shops WHERE shop_id = ?')
-      .bind(record.shop_id).first<{ client_id: string }>();
-    if (shop) {
-      await env.KV.delete(`widget_config:${shop.client_id}`);
+  // KV 캐시 삭제 — client_id는 1단계에서 이미 조회했으므로 추가 DB 호출 없음
+  const clientIdsSeen = new Set<string>();
+  for (const record of results) {
+    if (record.client_id && !clientIdsSeen.has(record.client_id)) {
+      clientIdsSeen.add(record.client_id);
+      await env.KV.delete(`widget_config:${record.client_id}`);
     }
   }
 }

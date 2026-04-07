@@ -144,10 +144,13 @@ export async function updateShop(
   const sets: string[] = [];
   const values: unknown[] = [];
 
+  const JSON_COLUMNS = new Set(['enabled_providers', 'allowed_redirect_uris', 'widget_style', 'coupon_config', 'banner_config', 'popup_config', 'escalation_config']);
+
   for (const [key, value] of Object.entries(data)) {
     if (!ALLOWED_UPDATE_COLUMNS.has(key)) continue;
     sets.push(`${key} = ?`);
-    values.push(value);
+    const finalValue = JSON_COLUMNS.has(key) && typeof value === 'object' ? JSON.stringify(value) : value;
+    values.push(finalValue);
   }
 
   if (sets.length === 0) return;
@@ -181,17 +184,6 @@ export async function getUserByEmailHash(
     .prepare('SELECT * FROM users WHERE email_hash = ?')
     .bind(emailHash)
     .first<User>();
-}
-
-export async function getUserProviders(
-  db: D1Database,
-  userId: string,
-): Promise<Array<{ provider: string; provider_uid: string; linked_at: string }>> {
-  const result = await db
-    .prepare('SELECT provider, provider_uid, linked_at FROM user_providers WHERE user_id = ?')
-    .bind(userId)
-    .all();
-  return (result.results ?? []) as Array<{ provider: string; provider_uid: string; linked_at: string }>;
 }
 
 export async function addUserProvider(
@@ -323,31 +315,6 @@ export async function getUserById(
 }
 
 // ─── ShopUser queries ────────────────────────────────────────
-
-export async function getShopUser(
-  db: D1Database,
-  shopId: string,
-  userId: string,
-): Promise<ShopUser | null> {
-  return db
-    .prepare('SELECT * FROM shop_users WHERE shop_id = ? AND user_id = ?')
-    .bind(shopId, userId)
-    .first<ShopUser>();
-}
-
-export async function createShopUser(
-  db: D1Database,
-  shopId: string,
-  userId: string,
-): Promise<ShopUser> {
-  const id = generateId();
-  const shopUser = await db
-    .prepare('INSERT INTO shop_users (id, shop_id, user_id) VALUES (?, ?, ?) RETURNING *')
-    .bind(id, shopId, userId)
-    .first<ShopUser>();
-
-  return shopUser!;
-}
 
 /**
  * Insert shop_user if not exists, return action type.

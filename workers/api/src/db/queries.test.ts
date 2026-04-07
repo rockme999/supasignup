@@ -10,8 +10,6 @@ import {
   updateShop,
   softDeleteShop,
   upsertUser,
-  getShopUser,
-  createShopUser,
   getMonthlySignupCount,
   isOverFreeLimit,
   recordStat,
@@ -317,38 +315,6 @@ describe('getUserById', () => {
     const result = await getUserById(db as unknown as D1Database, 'user_001');
     expect(result).toEqual(mockUser);
     expect(db._binds[0][0]).toBe('user_001');
-  });
-});
-
-// ─── ShopUser queries ────────────────────────────────────────
-
-describe('getShopUser', () => {
-  it('queries by shop_id and user_id', async () => {
-    const db = createMockD1();
-    db._setFirstResult({ id: 'su_001', shop_id: 'shop_001', user_id: 'user_001' });
-    const result = await getShopUser(db as unknown as D1Database, 'shop_001', 'user_001');
-    expect(result).toBeDefined();
-    expect(db._binds[0]).toEqual(['shop_001', 'user_001']);
-  });
-
-  it('returns null when not found', async () => {
-    const db = createMockD1();
-    db._setFirstResult(null);
-    const result = await getShopUser(db as unknown as D1Database, 'shop_001', 'user_new');
-    expect(result).toBeNull();
-  });
-});
-
-describe('createShopUser', () => {
-  it('inserts new shop_user with generated id', async () => {
-    const db = createMockD1();
-    const newShopUser = { id: 'su_new', shop_id: 'shop_001', user_id: 'user_001', status: 'active' };
-    db._setFirstSequence([null, newShopUser]);
-
-    const result = await createShopUser(db as unknown as D1Database, 'shop_001', 'user_001');
-    expect(db._queries[0]).toContain('INSERT INTO shop_users');
-    expect(db._binds[0][1]).toBe('shop_001');
-    expect(db._binds[0][2]).toBe('user_001');
   });
 });
 

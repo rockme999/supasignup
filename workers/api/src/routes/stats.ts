@@ -15,6 +15,12 @@ import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/b
 import { authMiddleware } from '../middleware/auth';
 import { buildSinceExpr, buildDateFilter, verifyShopOwnership } from '../db/stats-utils';
 
+// CSV 인젝션 방어: =, +, -, @ 로 시작하는 값 앞에 ' 추가
+function sanitizeCsvCell(val: string): string {
+  if (/^[=+\-@]/.test(val)) return "'" + val;
+  return val;
+}
+
 type StatsEnv = {
   Bindings: Env;
   Variables: { ownerId: string };
@@ -179,7 +185,7 @@ stats.get('/stats/export', async (c) => {
 
   const header = '날짜,쇼핑몰명,프로바이더,액션,건수\n';
   const rows = (result.results ?? []).map((r) =>
-    `"${r.date}","${(r.shop_name || '').replace(/"/g, '""')}","${r.provider}","${r.action}","${r.cnt}"`,
+    `"${sanitizeCsvCell(r.date)}","${sanitizeCsvCell((r.shop_name || '').replace(/"/g, '""'))}","${sanitizeCsvCell(r.provider)}","${sanitizeCsvCell(r.action)}","${String(r.cnt)}"`,
   ).join('\n');
 
   const bom = '\uFEFF';
@@ -387,6 +393,9 @@ stats.get('/stats/effort', async (c) => {
       first_visit_signups: number;
     }>(),
 
+    // TODO: 상관 서브쿼리(visitor별 last_click 조회)가 O(N) 실행됨
+    // 현재 idx_funnel_visitor 인덱스가 커버하여 각 실행은 O(log N)이지만,
+    // 데이터 수만 건 이상 증가 시 윈도우 함수 또는 집계 테이블 도입 검토 필요
     // 가입 트리거 분포: signup_complete 이벤트의 provider 기반
     // + 가입한 visitor가 마지막으로 클릭한 위젯 유형 분석
     c.env.DB.prepare(

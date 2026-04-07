@@ -178,6 +178,8 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <title>{title} - 번개가입</title>
+      {/* 인라인 CSS 사유: (1) Workers에 static_assets 미설정으로 별도 CSS 파일 서빙 불가
+          (2) Hono JSX가 CSS content 속성의 특수문자를 HTML 엔티티로 이스케이프하여 dangerouslySetInnerHTML 필수 (commit 4dd85a9) */}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
@@ -726,6 +728,12 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           catch(e) { btn.textContent = '실패'; }
           document.body.removeChild(ta);
           setTimeout(function() { btn.textContent = '복사'; }, 1500);
+        }
+
+        // data-value attribute에서 값을 읽어 복사 (onclick 인라인에 민감값 노출 방지)
+        function copyFromAttr(btn) {
+          var text = btn.getAttribute('data-value') || '';
+          copyText(text, btn);
         }
 
         // Form API helper

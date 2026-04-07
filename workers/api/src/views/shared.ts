@@ -1,6 +1,9 @@
 /**
  * Shared constants, types, and utilities for dashboard SSR pages.
  */
+import { WidgetStyle, DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
+export type { WidgetStyle };
+export { DEFAULT_WIDGET_STYLE };
 
 // ─── Provider constants ───────────────────────────────────────
 
@@ -47,38 +50,6 @@ export const providerPieColors: Record<string, string> = {
 };
 
 export const PIE_FALLBACK_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
-
-// ─── Widget style constants ───────────────────────────────────
-
-export const DEFAULT_WIDGET_STYLE = {
-  preset: 'default',
-  buttonWidth: 370,
-  buttonHeight: 45,
-  buttonGap: 6,
-  borderRadius: 5,
-  align: 'left',
-  buttonLabel: '{name}로 시작하기',
-  showIcon: true,
-  iconGap: 30,
-  paddingLeft: 100,
-  showTitle: true,
-  showPoweredBy: true,
-};
-
-export type WidgetStyle = {
-  preset: string;
-  buttonWidth: number;
-  buttonHeight?: number;
-  buttonGap: number;
-  borderRadius: number;
-  align: string;
-  buttonLabel?: string;
-  showIcon?: boolean;
-  iconGap?: number;
-  paddingLeft?: number;
-  showTitle?: boolean;
-  showPoweredBy?: boolean;
-};
 
 // ─── Coupon config constants ──────────────────────────────────
 

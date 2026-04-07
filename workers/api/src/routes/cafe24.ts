@@ -295,7 +295,12 @@ cafe24.post('/webhook', async (c) => {
     return c.json({ error: 'missing_authentication' }, 401);
   }
 
-  const payload = JSON.parse(body) as { event_no?: number; resource?: Record<string, unknown> };
+  let payload: { event_no?: number; resource?: Record<string, unknown> };
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return c.json({ error: 'invalid_json' }, 400);
+  }
   const eventNo = payload.event_no;
 
   // App uninstall event (90001: expired, 90002: legacy uninstall, 90077: app deleted)

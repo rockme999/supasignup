@@ -615,6 +615,8 @@ dashboard.get('/shops/:id/setup', async (c) => {
   const baseUrl = c.env.BASE_URL;
   const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
 
+  // client_secret 평문 노출: 쇼핑몰 관리자가 카페24 SSO 설정 시 복사해야 하므로 마스킹하지 않음
+  // 이 엔드포인트는 인증된 shop owner만 접근 가능
   return c.json({
     client_id: shop.client_id,
     client_secret: shop.client_secret,

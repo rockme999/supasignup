@@ -74,7 +74,7 @@ export const SsoGuidePage: FC<{
               <td style="padding:14px 20px">
                 <div style="display:flex; align-items:center; gap:8px">
                   <input type="text" value={shop.client_secret} readonly style="padding:8px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; width:420px; background:#f9fafb; color:#374151; font-family:monospace" />
-                  <button class="copy-btn" onclick={`copyText('${shop.client_secret}',this)`} style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
+                  <button class="copy-btn" data-value={shop.client_secret} onclick="copyFromAttr(this)" style="position:static; background:#2563eb; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px">복사</button>
                 </div>
               </td>
             </tr>
@@ -208,7 +208,7 @@ function verifySso(shopId) {
     btn.disabled = false;
     btn.textContent = '설정 확인';
     result.style.display = 'block';
-    result.innerHTML = '<div style="padding:16px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626">오류가 발생했습니다: ' + err.message + '</div>';
+    result.textContent = '오류가 발생했습니다: ' + err.message;
   });
 }
     `}} />

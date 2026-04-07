@@ -5,7 +5,7 @@
  * All pages except /login and /register require authentication via cookie.
  */
 import { Hono } from 'hono';
-import type { Env } from '@supasignup/bg-core';
+import type { Env, WidgetStyle } from '@supasignup/bg-core';
 import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
 import { verifyToken } from '../services/jwt';
 import { buildSinceExpr, escapeLike, buildDateFilter } from '../db/stats-utils';
@@ -876,7 +876,7 @@ pages.get('/dashboard/settings/providers', async (c) => {
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
 
-  let widgetStyle: { preset: string; buttonWidth: number; buttonGap: number; borderRadius: number; align: string } | undefined;
+  let widgetStyle: WidgetStyle | undefined;
   if (shop.widget_style) {
     try { widgetStyle = JSON.parse(shop.widget_style); } catch { /* use default */ }
   }

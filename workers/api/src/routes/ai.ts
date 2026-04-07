@@ -178,7 +178,7 @@ ai.post('/identity', async (c) => {
     return c.json({ error: 'not_found', message: 'Shop not found' }, 404);
   }
 
-  // 일일 호출 제한: 3회
+  // 일일 호출 제한: 10회
   const allowed = await checkAiRateLimit(c.env, body.shop_id, 'identity', 10);
   if (!allowed) {
     return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
