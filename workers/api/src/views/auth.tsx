@@ -11,6 +11,9 @@ export const LoginPage: FC<{ error?: string }> = ({ error }) => (
         <h1>⚡ 번개가입</h1>
         <p class="sub">관리자 대시보드 로그인</p>
         {error && <div class="alert alert-error">{error}</div>}
+        <div style="background:#dbeafe;color:#1e40af;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;line-height:1.6;text-align:left">
+          카페24 쇼핑몰 사용자는 카페24 관리자에서 <strong>번개가입 앱</strong>을 실행하면 자동으로 로그인됩니다.
+        </div>
         <form id="loginForm">
           <div class="form-group">
             <label>이메일</label>
@@ -44,9 +47,7 @@ export const LoginPage: FC<{ error?: string }> = ({ error }) => (
         `}} />
       </div>
       <div style="margin-top:32px; text-align:center; font-size:11px; color:#94a3b8; line-height:1.8">
-        <div>주식회사 수파레인 | 대표이사 임호빈 | 사업자등록번호 716-88-01081</div>
-        <div>경기도 김포시 태장로 789 금광하이테크시티 465호</div>
-        <div>전화 031-992-5988 | 이메일 help@suparain.com</div>
+        <div>주식회사 수파레인 | 이메일 help@suparain.com</div>
         <div><a href="/privacy" style="color:#94a3b8">개인정보처리방침</a></div>
       </div>
     </div>

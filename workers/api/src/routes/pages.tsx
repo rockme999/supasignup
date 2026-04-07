@@ -109,19 +109,14 @@ pages.use('/dashboard/*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
 
   // Public pages
-  if (path === '/dashboard/login' || path === '/dashboard/register' || path === '/dashboard/logout' || path === '/dashboard/session-expired') {
+  if (path === '/dashboard/logout' || path === '/dashboard/session-expired') {
     return next();
   }
 
   const ownerId = await getOwnerIdFromCookie(c.req.header('Cookie'), c.env.JWT_SECRET);
   if (!ownerId) {
-    // 플랫폼 사용자 힌트 쿠키가 있으면 세션 만료 안내 페이지로
-    const cookie = c.req.header('Cookie') ?? '';
-    const isPlatform = cookie.includes('bg_platform=1');
-    if (isPlatform) {
-      return c.redirect('/dashboard/session-expired');
-    }
-    return c.redirect('/dashboard/login');
+    // 현재 카페24 전용 서비스 — 미인증 시 항상 세션 만료 안내 페이지로
+    return c.redirect('/dashboard/session-expired');
   }
   c.set('ownerId', ownerId);
 
@@ -171,19 +166,15 @@ pages.get('/dashboard/session-expired', (c) => {
   );
 });
 
-pages.get('/dashboard/login', (c) => {
-  return c.html(<LoginPage />);
-});
-
-pages.get('/dashboard/register', (c) => {
-  return c.html(<RegisterPage />);
-});
+// 카페24 전용 — login/register 페이지 비활성화 (카페24 관리자에서 앱 실행으로 자동 로그인)
+// pages.get('/dashboard/login', ...);
+// pages.get('/dashboard/register', ...);
 
 pages.get('/dashboard/logout', (c) => {
   return new Response(null, {
     status: 302,
     headers: {
-      'Location': '/dashboard/login',
+      'Location': '/dashboard/session-expired',
       'Set-Cookie': 'bg_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0',
     },
   });

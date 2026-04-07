@@ -238,6 +238,17 @@ export const WIDGET_JS = `(function() {
     if (this.pageType === 'login') {
       // 이전 페이지 저장 (로그인/가입/동의 페이지가 아닌 마지막 페이지)
       this.saveReturnUrl();
+
+      // SSO 로그인 완료 후 로그인 페이지에 머무는 경우 → 저장된 이전 페이지로 자동 이동
+      // (카페24 MemberAction.snsLogin()이 return_url을 무시하는 문제 대응)
+      if (this.isUserLoggedIn()) {
+        var returnUrl = this.getReturnUrl();
+        if (returnUrl && returnUrl !== '/member/login.html') {
+          try { localStorage.removeItem('bg_return_url'); } catch(e) {}
+          window.location.href = returnUrl;
+          return;
+        }
+      }
     }
     this.loadConfig(clientId);
   };

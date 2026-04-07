@@ -88,7 +88,7 @@ export const HomePage: FC<{
               <div class="value">{(stats?.total_signups ?? 0).toLocaleString()}</div>
             </div>
             <div class="stat-card">
-              <div class="label">전환율 <span style="font-size:10px;color:#94a3b8">(7일)</span></div>
+              <div class="label">가입률 <span style="font-size:10px;color:#94a3b8">(7일)</span></div>
               <div class="value" style={overallCvr > 0 ? 'color:var(--color-primary)' : ''}>{overallCvr}%</div>
             </div>
           </div>

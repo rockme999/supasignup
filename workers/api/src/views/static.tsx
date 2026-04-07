@@ -205,7 +205,7 @@ export const LandingPage: FC = () => (
                 <svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               </div>
               <h3>1-클릭 소셜 회원가입</h3>
-              <p>고객이 이미 사용 중인 소셜 계정으로 별도의 정보 입력 없이 즉시 쇼핑몰 회원가입을 완료합니다. 가입 전환율을 극적으로 높입니다.</p>
+              <p>고객이 이미 사용 중인 소셜 계정으로 별도의 정보 입력 없이 즉시 쇼핑몰 회원가입을 완료합니다. 가입률을 극적으로 높입니다.</p>
             </div>
             <div class="lp-feature-card">
               <div class="lp-feature-icon">
@@ -294,8 +294,7 @@ export const LandingPage: FC = () => (
           </div>
           <hr class="lp-footer-divider" />
           <div class="lp-footer-biz">
-            <strong>주식회사 수파레인</strong> &nbsp;|&nbsp; 대표이사 임호빈 &nbsp;|&nbsp; 사업자등록번호 716-88-01081<br />
-            경기도 김포시 태장로 789 금광하이테크시티 465호 &nbsp;|&nbsp; 전화 031-992-5988 &nbsp;|&nbsp; 이메일 help@suparain.com
+            <strong>주식회사 수파레인</strong> &nbsp;|&nbsp; 사업자등록번호 716-88-01081 &nbsp;|&nbsp; 이메일 help@suparain.com
           </div>
         </div>
       </footer>
@@ -495,9 +494,7 @@ export const PrivacyPage: FC = () => (
         </div>
 
         <div class="privacy-footer">
-          <p><strong>주식회사 수파레인</strong> | 대표이사 임호빈 | 사업자등록번호 716-88-01081</p>
-          <p>경기도 김포시 태장로 789 금광하이테크시티 465호</p>
-          <p>전화 031-992-5988 | 이메일 help@suparain.com</p>
+          <p><strong>주식회사 수파레인</strong> | 사업자등록번호 716-88-01081 | 이메일 help@suparain.com</p>
           <p style="margin-top:8px"><a href="https://bg.suparain.kr">https://bg.suparain.kr</a></p>
         </div>
       </div>
@@ -683,9 +680,7 @@ export const TermsPage: FC = () => (
         </div>
 
         <div class="terms-footer">
-          <p><strong>주식회사 수파레인</strong> | 대표이사 임호빈 | 사업자등록번호 716-88-01081</p>
-          <p>경기도 김포시 태장로 789 금광하이테크시티 465호</p>
-          <p>전화 031-992-5988 | 이메일 help@suparain.com</p>
+          <p><strong>주식회사 수파레인</strong> | 사업자등록번호 716-88-01081 | 이메일 help@suparain.com</p>
           <p style="margin-top:8px"><a href="https://bg.suparain.kr">https://bg.suparain.kr</a></p>
         </div>
       </div>

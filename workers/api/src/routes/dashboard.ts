@@ -46,75 +46,10 @@ const dashboard = new Hono<DashboardEnv>();
 // Auth routes (no auth middleware)
 // ═══════════════════════════════════════════════════════════════
 
-// ─── POST /auth/register ─────────────────────────────────────
-dashboard.post('/auth/register', rateLimitMiddleware, async (c) => {
-  const body = await c.req.json<{ email?: string; password?: string; name?: string }>();
-
-  if (!body.email || !body.password) {
-    return c.json({ error: 'missing_fields', message: 'email and password are required' }, 400);
-  }
-
-  if (body.password.length < 8) {
-    return c.json({ error: 'weak_password', message: 'Password must be at least 8 characters' }, 400);
-  }
-
-  const normalizedEmail = body.email.toLowerCase().trim();
-
-  // Check duplicate email
-  const existing = await c.env.DB
-    .prepare('SELECT owner_id FROM owners WHERE email = ?')
-    .bind(normalizedEmail)
-    .first();
-
-  if (existing) {
-    return c.json({ error: 'email_exists', message: 'Email already registered' }, 409);
-  }
-
-  const ownerId = generateId();
-  const passwordHash = await hashPassword(body.password);
-
-  await c.env.DB
-    .prepare('INSERT INTO owners (owner_id, email, name, password_hash) VALUES (?, ?, ?, ?)')
-    .bind(ownerId, normalizedEmail, body.name ?? null, passwordHash)
-    .run();
-
-  const token = await createToken(ownerId, c.env.JWT_SECRET);
-
-  return c.json({ owner_id: ownerId, token }, 201, {
-    'Set-Cookie': `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}`,
-  });
-});
-
-// ─── POST /auth/login ────────────────────────────────────────
-dashboard.post('/auth/login', rateLimitMiddleware, async (c) => {
-  const body = await c.req.json<{ email?: string; password?: string }>();
-
-  if (!body.email || !body.password) {
-    return c.json({ error: 'missing_fields' }, 400);
-  }
-
-  const normalizedEmail = body.email.toLowerCase().trim();
-
-  const owner = await c.env.DB
-    .prepare('SELECT owner_id, password_hash FROM owners WHERE email = ?')
-    .bind(normalizedEmail)
-    .first<{ owner_id: string; password_hash: string }>();
-
-  if (!owner) {
-    return c.json({ error: 'invalid_credentials' }, 401);
-  }
-
-  const valid = await verifyPassword(body.password, owner.password_hash);
-  if (!valid) {
-    return c.json({ error: 'invalid_credentials' }, 401);
-  }
-
-  const token = await createToken(owner.owner_id, c.env.JWT_SECRET);
-
-  return c.json({ owner_id: owner.owner_id, token }, 200, {
-    'Set-Cookie': `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${COOKIE_MAX_AGE}`,
-  });
-});
+// 카페24 전용 — register/login API 비활성화
+// 카페24 관리자에서 앱 실행 시 OAuth 콜백(/api/cafe24/callback)으로 자동 로그인 처리
+dashboard.post('/auth/register', (c) => c.json({ error: 'disabled', message: '카페24 관리자에서 앱을 실행해주세요.' }, 403));
+dashboard.post('/auth/login', (c) => c.json({ error: 'disabled', message: '카페24 관리자에서 앱을 실행해주세요.' }, 403));
 
 // ═══════════════════════════════════════════════════════════════
 // Protected routes (auth middleware applied)

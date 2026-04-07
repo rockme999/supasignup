@@ -73,7 +73,7 @@ export const StatsPage: FC<StatsPageProps> = ({
           <a href="/api/dashboard/stats/export" class="btn btn-outline btn-sm" download>CSV 내보내기</a>
         </div>
       </div>
-      <p style="font-size:14px;color:#64748b;margin-bottom:16px">프로바이더별 가입 추이와 전환율을 분석합니다.</p>
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px">프로바이더별 가입 추이와 가입 현황을 분석합니다.</p>
 
       {/* ── 필터 바 ── */}
       <div class="filter-bar">
@@ -137,10 +137,10 @@ export const StatsPage: FC<StatsPageProps> = ({
               <div style="background:rgba(255,255,255,0.97);border:1px solid #e2e8f0;border-radius:12px;padding:24px 32px;max-width:380px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.12);backdrop-filter:blur(8px);position:sticky;top:120px">
                 <div style="font-size:32px;margin-bottom:12px">📊</div>
                 <h3 style="font-size:17px;font-weight:700;color:#1e293b;margin-bottom:8px">상세 통계 분석</h3>
-                <p style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6">퍼널 분석, OAuth 이탈률, 가입 노력 분석, 디바이스/유입경로 분포, 시간대별 히트맵을 확인하세요.</p>
+                <p style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6">단계별 가입 흐름, 로그인 완료율, 가입 경로 분석, 기기/유입경로 분포, 시간대별 패턴을 확인하세요.</p>
                 <div style="text-align:left;margin-bottom:16px">
-                  <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px"><span style="color:#2563eb;font-size:10px">●</span> 배너→클릭→팝업→가입 퍼널 전환율</div>
-                  <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px"><span style="color:#2563eb;font-size:10px">●</span> 프로바이더별 OAuth 완료/이탈 비율</div>
+                  <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px"><span style="color:#2563eb;font-size:10px">●</span> 배너→클릭→팝업→가입 단계별 진행률</div>
+                  <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px"><span style="color:#2563eb;font-size:10px">●</span> 소셜 로그인별 가입 완료/이탈 비율</div>
                   <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px"><span style="color:#2563eb;font-size:10px">●</span> 평균 방문 횟수, 소요 시간, 트리거 분석</div>
                   <div style="font-size:12px;color:#475569;padding:3px 0;display:flex;align-items:center;gap:6px"><span style="color:#2563eb;font-size:10px">●</span> 디바이스 · 유입경로 · 시간대 패턴</div>
                 </div>
@@ -183,13 +183,13 @@ export const StatsPage: FC<StatsPageProps> = ({
           {/* ── 퍼널 분석 ── */}
           {funnelData !== undefined && (
             <div class="card" style="margin-bottom:16px">
-              <h3 style="margin-bottom:4px">퍼널 분석</h3>
+              <h3 style="margin-bottom:4px">단계별 가입 흐름</h3>
               <p style="font-size:12px;color:#94a3b8;margin-bottom:16px">
                 {periodLabel} 기준 — 배너 노출부터 가입 완료까지
               </p>
 
               {funnelData.length === 0 ? (
-                <div class="empty-state"><p>퍼널 이벤트 데이터가 없습니다.</p></div>
+                <div class="empty-state"><p>가입 흐름 데이터가 없습니다.</p></div>
               ) : (() => {
                 const steps = [
                   { key: 'banner_show',      label: '배너 노출',     color: '#bfdbfe', nextKey: 'banner_click' },
@@ -227,7 +227,7 @@ export const StatsPage: FC<StatsPageProps> = ({
                           </div>
                           {convRate !== null && (
                             <div style="margin-left:106px;font-size:11px;color:#94a3b8;margin-top:2px">
-                              ↓ 전환율 <strong style="color:#2563eb">{convRate}%</strong>
+                              ↓ 진행률 <strong style="color:#2563eb">{convRate}%</strong>
                             </div>
                           )}
                         </div>
@@ -243,7 +243,7 @@ export const StatsPage: FC<StatsPageProps> = ({
                         팝업 CVR <strong style="color:#1e293b">{popupCvr}%</strong>
                       </div>
                       <div style="font-size:12px;color:#64748b">
-                        전체 전환율 <strong style="color:#1d4ed8">{overallCvr}%</strong>
+                        전체 가입률 <strong style="color:#1d4ed8">{overallCvr}%</strong>
                       </div>
                     </div>
 
@@ -276,9 +276,9 @@ export const StatsPage: FC<StatsPageProps> = ({
           {/* ── OAuth 이탈 분석 ── */}
           {oauthDropoff && (
             <div class="card" style="margin-bottom:16px">
-              <h3 style="margin-bottom:4px">OAuth 이탈 분석</h3>
+              <h3 style="margin-bottom:4px">소셜 로그인 완료율</h3>
               <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
-                프로바이더별 OAuth 시작 → 가입 완료 전환율
+                소셜 로그인 시작부터 가입 완료까지의 성공률
               </p>
               <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
                 <div style="font-size:13px;color:#64748b">
@@ -290,7 +290,7 @@ export const StatsPage: FC<StatsPageProps> = ({
                   </span>
                 </div>
                 <div style="font-size:13px;color:#64748b">
-                  전체 이탈률 <strong style="color:#ef4444">{oauthDropoff.overall_dropoff_rate}%</strong>
+                  전체 미완료율 <strong style="color:#ef4444">{oauthDropoff.overall_dropoff_rate}%</strong>
                 </div>
               </div>
               {oauthDropoff.providers.length === 0 ? (

@@ -564,7 +564,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
           <p>카페24 쇼핑몰에 소셜 로그인을 추가하는 SSO 앱입니다.</p>
-          <p style="margin-top:6px">구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 6종의 소셜 프로바이더를 지원하며(Facebook, X, LINE 추가 예정), 1클릭 회원가입으로 쇼핑몰의 가입 전환율을 높일 수 있습니다. 복잡한 회원가입 양식 없이 기존 소셜 계정으로 즉시 가입이 가능합니다.</p>
+          <p style="margin-top:6px">구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 6종의 소셜 프로바이더를 지원하며(Facebook, X, LINE 추가 예정), 1클릭 회원가입으로 쇼핑몰의 가입률을 높일 수 있습니다. 복잡한 회원가입 양식 없이 기존 소셜 계정으로 즉시 가입이 가능합니다.</p>
         </div>
       </details>
 

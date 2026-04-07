@@ -17,6 +17,27 @@ warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 ask()  { echo -e "${YELLOW}[?]${NC} $1"; read -r REPLY; }
 
+# D1 테이블 목록 조회 헬퍼 (JSON 파싱 개선)
+get_tables() {
+  local DB_NAME=$1
+  local ENV_FLAG=${2:-}
+  npx wrangler d1 execute "$DB_NAME" $ENV_FLAG --remote --json \
+    --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
+    2>/dev/null | node -e "
+      const chunks = [];
+      process.stdin.on('data', c => chunks.push(c));
+      process.stdin.on('end', () => {
+        try {
+          const data = JSON.parse(chunks.join(''));
+          const results = data[0]?.results || [];
+          results.forEach(r => console.log(r.name));
+        } catch(e) {
+          process.exit(1);
+        }
+      });
+    " 2>/dev/null | sort
+}
+
 # ============================================================
 # 1. 스키마 비교 함수
 # ============================================================
@@ -24,23 +45,34 @@ compare_schemas() {
   echo ""
   echo "=== D1 스키마 비교 ==="
 
-  PROD_SCHEMA=$(npx wrangler d1 execute bg-production --remote \
-    --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
-    2>&1 | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"//' | sort)
-
-  DEV_SCHEMA=$(npx wrangler d1 execute bg-dev --env dev --remote \
-    --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%' ORDER BY name" \
-    2>&1 | grep -oE '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"//' | sort)
+  PROD_SCHEMA=$(get_tables bg-production || echo "")
+  DEV_SCHEMA=$(get_tables bg-dev "--env dev" || echo "")
 
   if [ -z "$PROD_SCHEMA" ] || [ -z "$DEV_SCHEMA" ]; then
     warn "스키마 조회 실패 — 수동 확인 필요"
-  elif [ "$PROD_SCHEMA" = "$DEV_SCHEMA" ]; then
+    [ -z "$PROD_SCHEMA" ] && warn "  프로덕션 DB 조회 실패"
+    [ -z "$DEV_SCHEMA" ] && warn "  스테이징 DB 조회 실패"
+    return 1
+  fi
+
+  PROD_ONLY=$(comm -23 <(echo "$PROD_SCHEMA") <(echo "$DEV_SCHEMA"))
+  DEV_ONLY=$(comm -13 <(echo "$PROD_SCHEMA") <(echo "$DEV_SCHEMA"))
+
+  if [ -z "$PROD_ONLY" ] && [ -z "$DEV_ONLY" ]; then
     log "테이블 목록 일치"
     echo "  테이블: $(echo "$PROD_SCHEMA" | tr '\n' ', ')"
   else
     warn "테이블 목록 불일치!"
-    echo "  프로덕션: $(echo "$PROD_SCHEMA" | tr '\n' ', ')"
-    echo "  스테이징: $(echo "$DEV_SCHEMA" | tr '\n' ', ')"
+    if [ -n "$PROD_ONLY" ]; then
+      echo -e "  ${RED}프로덕션에만 있는 테이블:${NC}"
+      echo "$PROD_ONLY" | sed 's/^/    - /'
+    fi
+    if [ -n "$DEV_ONLY" ]; then
+      echo -e "  ${RED}스테이징에만 있는 테이블:${NC}"
+      echo "$DEV_ONLY" | sed 's/^/    - /'
+      echo ""
+      err "스테이징에만 있는 테이블이 있습니다. 마이그레이션 파일을 먼저 생성하세요!"
+    fi
   fi
 }
 
@@ -60,7 +92,69 @@ check_migrations() {
 }
 
 # ============================================================
-# 3. Secrets 비교
+# 3. docs/schema.sql과 실제 DB 테이블 정합성 검증
+# ============================================================
+check_schema_sync() {
+  echo ""
+  echo "=== docs/schema.sql 정합성 검증 ==="
+
+  local SCHEMA_FILE="../../docs/schema.sql"
+  if [ ! -f "$SCHEMA_FILE" ]; then
+    warn "docs/schema.sql 파일이 없습니다"
+    return
+  fi
+
+  # schema.sql에서 CREATE TABLE 이름 추출
+  DOC_TABLES=$(grep -iE "^CREATE TABLE" "$SCHEMA_FILE" \
+    | sed -E 's/CREATE TABLE (IF NOT EXISTS )?//i' \
+    | sed -E 's/[[:space:]]*\(.*//' \
+    | tr -d '`" ' \
+    | sort)
+
+  DEV_SCHEMA=$(get_tables bg-dev "--env dev" || echo "")
+
+  if [ -z "$DEV_SCHEMA" ]; then
+    warn "스테이징 DB 조회 실패 — 정합성 검증 건너뜀"
+    return
+  fi
+
+  # schema.sql에 있지만 DB에 없는 테이블
+  DOC_ONLY=$(comm -23 <(echo "$DOC_TABLES") <(echo "$DEV_SCHEMA"))
+  # DB에 있지만 schema.sql에 없는 테이블
+  DB_ONLY=$(comm -13 <(echo "$DOC_TABLES") <(echo "$DEV_SCHEMA") | grep -v -E "^(sqlite_sequence|_cf_KV)$" || true)
+
+  if [ -z "$DOC_ONLY" ] && [ -z "$DB_ONLY" ]; then
+    log "docs/schema.sql과 스테이징 DB 테이블 일치"
+  else
+    if [ -n "$DOC_ONLY" ]; then
+      warn "docs/schema.sql에 있지만 DB에 없는 테이블:"
+      echo "$DOC_ONLY" | sed 's/^/    - /'
+    fi
+    if [ -n "$DB_ONLY" ]; then
+      warn "DB에 있지만 docs/schema.sql에 없는 테이블:"
+      echo "$DB_ONLY" | sed 's/^/    - /'
+    fi
+  fi
+
+  # 마이그레이션 파일에서 CREATE TABLE 이름 추출
+  MIGRATION_TABLES=$(grep -ihE "CREATE TABLE" migrations/*.sql 2>/dev/null \
+    | sed -E 's/.*CREATE TABLE (IF NOT EXISTS )?//i' \
+    | sed -E 's/[[:space:]]*\(.*//' \
+    | tr -d '`" ' \
+    | sort -u)
+
+  # DB에 있는 사용자 테이블 중 마이그레이션에 없는 것
+  UNMIGRATED=$(comm -13 <(echo "$MIGRATION_TABLES") <(echo "$DEV_SCHEMA") | grep -v -E "^(sqlite_sequence|_cf_KV)$" || true)
+  if [ -n "$UNMIGRATED" ]; then
+    echo ""
+    warn "DB에 있지만 마이그레이션 파일에 CREATE TABLE이 없는 테이블:"
+    echo "$UNMIGRATED" | sed 's/^/    - /'
+    echo "  → 수동 생성된 테이블일 수 있습니다. 마이그레이션을 만드세요!"
+  fi
+}
+
+# ============================================================
+# 4. Secrets 비교
 # ============================================================
 check_secrets() {
   echo ""
@@ -96,6 +190,7 @@ case "${1:-}" in
     echo "============================================"
     check_migrations
     compare_schemas
+    check_schema_sync
     check_secrets
     ;;
 
@@ -119,6 +214,11 @@ case "${1:-}" in
     echo "  프로덕션 배포"
     echo "============================================"
     warn "프로덕션에 배포합니다. 실행 중인 서비스에 영향을 줄 수 있습니다."
+
+    # 배포 전 스키마 비교 (불일치 시 중단)
+    log "배포 전 스키마 비교..."
+    compare_schemas
+
     ask "계속하시겠습니까? (yes/no)"
     [ "$REPLY" = "yes" ] || err "취소됨"
 
@@ -128,7 +228,7 @@ case "${1:-}" in
     log "프로덕션 마이그레이션 적용..."
     npx wrangler d1 migrations apply bg-production --remote
 
-    log "스키마 비교 검증..."
+    log "배포 후 스키마 재비교..."
     compare_schemas
 
     ask "스키마 검증을 확인했습니다. 프로덕션 Worker를 배포할까요? (yes/no)"
@@ -149,6 +249,7 @@ case "${1:-}" in
     # Step 1: 환경 점검
     check_migrations
     compare_schemas
+    check_schema_sync
     check_secrets
 
     ask "환경 점검 결과를 확인했습니다. 스테이징 배포를 진행할까요? (yes/no)"
