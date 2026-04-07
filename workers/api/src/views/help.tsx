@@ -33,19 +33,19 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
         <div style="display:flex;align-items:center;gap:12px">
           <span id="qsProviderBadge" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">3</span>
           <div>
-            <div style="font-size:14px;font-weight:600;color:#1e293b">소셜 프로바이더 선택</div>
+            <div style="font-size:14px;font-weight:600;color:#1e293b">소셜 로그인 선택</div>
             <div style="font-size:12px;color:#64748b">권장: Google + Kakao + Naver</div>
           </div>
           <a href="/dashboard/settings/providers" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">설정하기 →</a>
           <button id="qsProviderCheck" class="btn btn-outline btn-sm" style="width:auto">확인 완료</button>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          <span style={`width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:${shop?.sso_configured ? '#059669' : '#d1d5db'}`}>{shop?.sso_configured ? '✓' : '4'}</span>
+          <span id="qsWidgetBadge" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#d1d5db">4</span>
           <div>
-            <div style="font-size:14px;font-weight:600;color:#1e293b">SSO 설정 확인</div>
-            <div style="font-size:12px;color:#64748b">{shop?.sso_configured ? '완료됨' : 'SSO 설정 가이드에서 설정 확인 버튼으로 연동 검증'}</div>
+            <div style="font-size:14px;font-weight:600;color:#1e293b">쇼핑몰에서 위젯 확인</div>
+            <div style="font-size:12px;color:#64748b">쇼핑몰 로그인 페이지에서 소셜 로그인 버튼이 표시되는지 확인하세요</div>
           </div>
-          {!shop?.sso_configured && <a href="/dashboard/settings/sso-guide" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">확인하기 →</a>}
+          <button id="qsWidgetCheck" class="btn btn-outline btn-sm" style="margin-left:auto;width:auto">확인 완료</button>
         </div>
       </div>
     </div>
@@ -73,6 +73,7 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
 
         initQsCheck('qsSnsCheck', 'bg_qs_sns_checked', 'qsSnsBadge');
         initQsCheck('qsProviderCheck', 'bg_qs_provider_checked', 'qsProviderBadge');
+        initQsCheck('qsWidgetCheck', 'bg_qs_widget_checked', 'qsWidgetBadge');
       })();
     `}} />
 
@@ -105,9 +106,9 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
       </ol>
     </div>
 
-    {/* Step 3: 프로바이더 선택 */}
+    {/* Step 3: 소셜 로그인 선택 */}
     <div class="card" style="margin-bottom:16px">
-      <h2 style="margin-bottom:8px">Step 3. 소셜 프로바이더 선택</h2>
+      <h2 style="margin-bottom:8px">Step 3. 소셜 로그인 선택</h2>
       <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:12px">
         한국 시장이라면 <strong>Google + Kakao + Naver</strong> 3종을 기본으로 권장합니다.
         글로벌 타겟이라면 Apple, Discord 등을 추가하세요.
@@ -197,9 +198,9 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <li style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9">
           <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">4</div>
           <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">소셜 프로바이더 선택 및 로그인 디자인 설정</p>
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">소셜 로그인 선택 및 디자인 설정</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">사용할 소셜 로그인 서비스를 활성화하고, 버튼 디자인을 쇼핑몰에 맞게 조정합니다.</p>
-            <a href="/dashboard/settings/general" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">기본 설정 →</a>
+            <a href="/dashboard/settings/providers" style="font-size:13px;color:#3b82f6;text-decoration:none;margin-top:6px;display:inline-block">로그인 디자인 설정 →</a>
           </div>
         </li>
         <li style="display:flex;gap:16px;padding:14px 0">
@@ -214,7 +215,7 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
 
     {/* 2. SSO 연동 설정 */}
     <div class="card" style="margin-bottom:16px">
-      <h2 style="margin-bottom:8px">2. SSO 연동 설정</h2>
+      <h2 style="margin-bottom:8px">2. SSO(통합 로그인) 연동 설정</h2>
       <p style="font-size:13px;color:#64748b;margin-bottom:16px">카페24 SSO 연동을 위해 아래 값들을 정확히 복사해 입력해야 합니다.</p>
 
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#1e40af;line-height:1.7">
@@ -305,16 +306,16 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
       </div>
     </div>
 
-    {/* 4. 소셜 프로바이더별 안내 */}
+    {/* 4. 소셜 로그인 서비스별 안내 */}
     <div class="card" style="margin-bottom:16px">
-      <h2 style="margin-bottom:8px">4. 소셜 프로바이더별 안내</h2>
-      <p style="font-size:13px;color:#64748b;margin-bottom:14px">각 소셜 프로바이더의 이메일 제공 여부와 기존 회원 연동 가능 여부를 확인하세요.</p>
+      <h2 style="margin-bottom:8px">4. 소셜 로그인 서비스별 안내</h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:14px">각 소셜 로그인 서비스의 이메일 제공 여부와 기존 회원 연동 가능 여부를 확인하세요.</p>
 
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
             <tr style="background:#f8fafc">
-              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#475569;border-bottom:1px solid #e2e8f0">프로바이더</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#475569;border-bottom:1px solid #e2e8f0">서비스</th>
               <th style="padding:10px 12px;text-align:center;font-weight:600;color:#475569;border-bottom:1px solid #e2e8f0">이메일 제공</th>
               <th style="padding:10px 12px;text-align:center;font-weight:600;color:#475569;border-bottom:1px solid #e2e8f0">기존 회원 연동</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;color:#475569;border-bottom:1px solid #e2e8f0">비고</th>
@@ -357,31 +358,14 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:600;color:#dc2626">X</td>
               <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">이메일 미제공</td>
             </tr>
-            <tr>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#94a3b8">Facebook <span style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:400">예정</span></td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8">추가 예정</td>
-            </tr>
-            <tr style="background:#f8fafc">
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#94a3b8">X (Twitter) <span style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:400">예정</span></td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8">추가 예정 (이메일 미제공)</td>
-            </tr>
-            <tr>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#94a3b8">LINE <span style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:400">예정</span></td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8">—</td>
-              <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#94a3b8">추가 예정 (일본 시장)</td>
-            </tr>
           </tbody>
         </table>
       </div>
 
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-top:14px;font-size:13px;color:#92400e;line-height:1.7">
-        <strong>이메일 미제공 프로바이더(X, Telegram)</strong>는 기존 회원과 연동이 불가하며, 항상 신규 @s 회원이 생성됩니다.
+        <strong>이메일 미제공 서비스(Telegram)</strong>는 기존 회원과 연동이 불가하며, 항상 신규 @s 회원이 생성됩니다.
       </div>
+      <p style="font-size:12px;color:#94a3b8;margin-top:10px">향후 추가 예정: Facebook, LINE 등</p>
     </div>
 
     {/* 5. 위젯 디자인 설정 */}
@@ -431,13 +415,13 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
           </tr>
           <tr>
             <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">버튼 문구</td>
-            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">{'{name}'}이 각 프로바이더명(Google, 카카오 등)으로 자동 치환됩니다.</td>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">{'{name}'}이 각 서비스명(Google, 카카오 등)으로 자동 치환됩니다.</td>
           </tr>
         </tbody>
       </table>
 
       <div style="margin-top:14px">
-        <a href="/dashboard/settings/general" class="btn btn-outline btn-sm" style="display:inline-flex;width:auto">디자인 설정 →</a>
+        <a href="/dashboard/settings/providers" class="btn btn-outline btn-sm" style="display:inline-flex;width:auto">디자인 설정 →</a>
       </div>
     </div>
 
@@ -564,7 +548,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
           <p>카페24 쇼핑몰에 소셜 로그인을 추가하는 SSO 앱입니다.</p>
-          <p style="margin-top:6px">구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 6종의 소셜 프로바이더를 지원하며(Facebook, X, LINE 추가 예정), 1클릭 회원가입으로 쇼핑몰의 가입률을 높일 수 있습니다. 복잡한 회원가입 양식 없이 기존 소셜 계정으로 즉시 가입이 가능합니다.</p>
+          <p style="margin-top:6px">구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 6종의 소셜 로그인을 지원합니다. 1클릭 회원가입으로 쇼핑몰의 가입률을 높일 수 있습니다. 복잡한 회원가입 양식 없이 기존 소셜 계정으로 즉시 가입이 가능합니다.</p>
         </div>
       </details>
 
@@ -586,7 +570,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Free</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">무료</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 로그인 6종+ + 가입 쿠폰 1종</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 로그인 6종 + 가입 쿠폰 1종</td>
               </tr>
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Plus</td>
@@ -603,7 +587,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
           <span style="color:#94a3b8;font-size:12px">▶</span> 카페24에서 기본 제공하는 소셜 로그인과 뭐가 다른가요?
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
-          <p>카페24 기본 소셜 로그인은 4종(구글, 카카오, 네이버, 페이스북)이지만, 번개가입은 현재 6종(구글, 카카오, 네이버, 애플, 디스코드, 텔레그램)을 지원하며 Facebook, X, LINE을 추가할 예정입니다.</p>
+          <p>카페24 기본 소셜 로그인은 4종(구글, 카카오, 네이버, 페이스북)이지만, 번개가입은 구글, 카카오, 네이버, 애플, 디스코드, 텔레그램 6종의 소셜 로그인을 지원합니다.</p>
           <p style="margin-top:6px">또한 단순 소셜 로그인 연결 이상의 마케팅 기능을 함께 제공합니다:</p>
           <ul style="margin-top:6px;padding-left:16px">
             <li>AI 마케팅 카피 자동 생성</li>
@@ -699,13 +683,13 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
 
       <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
-          <span style="color:#94a3b8;font-size:12px">▶</span> 프로바이더별 주의사항이 있나요?
+          <span style="color:#94a3b8;font-size:12px">▶</span> 서비스별 주의사항이 있나요?
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
           <table style="border-collapse:collapse;width:100%;max-width:540px;margin-bottom:10px">
             <thead>
               <tr>
-                <th style="text-align:left;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px">프로바이더</th>
+                <th style="text-align:left;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px">서비스</th>
                 <th style="text-align:left;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px">이메일 제공</th>
                 <th style="text-align:left;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px">기존 회원 연동</th>
               </tr>
@@ -722,7 +706,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">Hide My Email 사용 시 연동 불가할 수 있음</td>
               </tr>
               <tr>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">X(트위터), 텔레그램</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">텔레그램</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">미제공</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">기존 회원 연동 불가</td>
               </tr>
@@ -730,7 +714,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
           </table>
           <ul style="padding-left:16px">
             <li><strong>Apple</strong>: "Hide My Email" 기능으로 임시 이메일을 사용하는 경우 기존 계정과 이메일 매칭이 불가할 수 있습니다.</li>
-            <li><strong>X(트위터), 텔레그램</strong>: 이메일을 제공하지 않으므로 기존 ID/PW 회원과의 연동이 불가합니다. 항상 새 <code>@s</code> 회원이 생성됩니다.</li>
+            <li><strong>텔레그램</strong>: 이메일을 제공하지 않으므로 기존 ID/PW 회원과의 연동이 불가합니다. 항상 새 <code>@s</code> 회원이 생성됩니다.</li>
           </ul>
         </div>
       </details>
