@@ -19,6 +19,7 @@
 --   2026-04-06: funnel_events event_type 13종 확장 + shop_id/event_type/created_at 복합 인덱스 추가
 --   2026-04-07: 인덱스 최적화 — login_stats 3컬럼 복합 인덱스, 불필요 인덱스 4개 삭제
 --   2026-04-07: funnel_events.visitor_id 컬럼 추가 (JSON 정규화) + idx_funnel_visitor 복합 인덱스 추가
+--   2026-04-08: cafe24_members 테이블 추가 (카페24 회원 ID 매핑, 웹훅 수신 시 upsert)
 
 -- ============================================================
 -- 1. owners - Operator accounts
@@ -245,3 +246,21 @@ CREATE TABLE IF NOT EXISTS coupon_issues (
 
 CREATE INDEX IF NOT EXISTS idx_coupon_issues_shop ON coupon_issues(shop_id, issued_at);
 CREATE INDEX IF NOT EXISTS idx_coupon_issues_member ON coupon_issues(shop_id, member_id);
+
+-- ============================================================
+-- 13. cafe24_members - 카페24 회원 ID 매핑
+-- ============================================================
+-- 카페24 member_joined 웹훅(90083) 수신 시 upsert.
+-- 카페24가 부여한 member_id(예: abcdef@s)를 쇼핑몰별로 저장하여
+-- 쿠폰 발급 등에서 참조할 수 있도록 함.
+CREATE TABLE IF NOT EXISTS cafe24_members (
+  id         TEXT PRIMARY KEY,
+  shop_id    TEXT NOT NULL REFERENCES shops(shop_id),
+  mall_id    TEXT NOT NULL,
+  member_id  TEXT NOT NULL,           -- 카페24 회원 ID (예: abcdef@s)
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(shop_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cafe24_members_mall ON cafe24_members(mall_id, member_id);

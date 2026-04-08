@@ -335,6 +335,29 @@ export async function ensureShopUser(
   return (result.meta?.changes ?? 0) > 0 ? 'signup' : 'login';
 }
 
+// ─── Cafe24 members ─────────────────────────────────────────
+
+/**
+ * 카페24 회원 ID를 upsert (웹훅 수신 시 호출).
+ * UNIQUE(shop_id, member_id) 충돌 시 updated_at만 갱신.
+ */
+export async function upsertCafe24Member(
+  db: D1Database,
+  shopId: string,
+  mallId: string,
+  memberId: string,
+): Promise<void> {
+  const id = generateId();
+  await db
+    .prepare(
+      `INSERT INTO cafe24_members (id, shop_id, mall_id, member_id)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(shop_id, member_id) DO UPDATE SET updated_at = datetime('now')`,
+    )
+    .bind(id, shopId, mallId, memberId)
+    .run();
+}
+
 // ─── Billing / monthly count ─────────────────────────────────
 
 export async function getMonthlySignupCount(

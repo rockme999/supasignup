@@ -12,7 +12,7 @@ import { generateId, generateSecret, timingSafeEqual } from '@supasignup/bg-core
 import { Cafe24Client, verifyAppLaunchHmac, verifyWebhookHmac, PAYMENT_COMPLETE, REFUND_COMPLETE } from '@supasignup/cafe24-client';
 import { hashPassword } from '../services/password';
 import { createToken } from '../services/jwt';
-import { createShop, getShopByMallId, updateShop, softDeleteShop } from '../db/queries';
+import { createShop, getShopByMallId, updateShop, softDeleteShop, upsertCafe24Member } from '../db/queries';
 import { encrypt } from '@supasignup/bg-core';
 import { issueCouponOnSignup } from '../services/coupon';
 import { probeSsoType } from './dashboard';
@@ -258,8 +258,7 @@ cafe24.get('/callback', async (c) => {
     console.error('Callback error:', err?.message, err?.stack);
     return c.json({
       error: 'callback_failed',
-      message: err?.message ?? String(err),
-      detail: err?.detail ?? null,
+      message: '인증 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
     }, 500);
   }
 });
@@ -359,6 +358,13 @@ cafe24.post('/webhook', async (c) => {
     if (mallId && memberId) {
       const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
       if (shop) {
+        // cafe24_members 테이블에 회원 ID 저장 (upsert) — 실패해도 쿠폰 발급은 진행
+        try {
+          await upsertCafe24Member(c.env.DB, shop.shop_id, mallId, memberId);
+        } catch (err) {
+          console.error(`[Cafe24Member] upsert 실패: mall=${mallId}, member=${memberId}`, err);
+        }
+
         // waitUntil로 Worker 수명 연장 — 응답(200) 반환 후에도 쿠폰 발급 완료까지 실행
         c.executionCtx.waitUntil(
           issueCouponOnSignup(c.env, shop, memberId).catch((err) => {
