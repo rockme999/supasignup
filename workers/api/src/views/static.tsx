@@ -123,7 +123,6 @@ export const LandingPage: FC = () => (
           <nav class="lp-header-nav">
             <a href="#features" class="nav-hide">기능</a>
             <a href="#pricing" class="nav-hide">요금제</a>
-            <a href="/dashboard" class="btn-header">대시보드</a>
           </nav>
         </div>
       </header>
@@ -133,8 +132,7 @@ export const LandingPage: FC = () => (
         <h1>소셜 로그인 1-클릭으로<br /><span>쇼핑몰 회원가입 완료</span></h1>
         <p>복잡한 회원가입 폼은 그만. 쇼핑몰 고객이 소셜 계정 하나로 바로 가입하고, 운영자는 위젯 설치만으로 바로 시작합니다.</p>
         <div class="lp-hero-cta">
-          <a href="/dashboard" class="btn-primary">지금 시작하기</a>
-          <a href="#about" class="btn-secondary">서비스 소개</a>
+          <a href="#about" class="btn-primary">서비스 소개</a>
         </div>
       </section>
 
@@ -253,7 +251,7 @@ export const LandingPage: FC = () => (
             <div class="lp-plan-card featured">
               <div class="lp-plan-badge">인기</div>
               <div class="lp-plan-name">월간 구독</div>
-              <div class="lp-plan-price">29,900<span>원/월</span></div>
+              <div class="lp-plan-price">6,900<span>원/월</span></div>
               <div class="lp-plan-limit">월 무제한</div>
               <hr class="lp-plan-divider" />
               <ul class="lp-plan-features">
@@ -265,8 +263,8 @@ export const LandingPage: FC = () => (
             </div>
             <div class="lp-plan-card">
               <div class="lp-plan-name">연간 구독</div>
-              <div class="lp-plan-price">329,900<span>원/년</span></div>
-              <div class="lp-plan-limit">월 환산 27,492원 · 약 8% 할인</div>
+              <div class="lp-plan-price">79,000<span>원/년</span></div>
+              <div class="lp-plan-limit">월 환산 6,583원 · 약 5% 할인</div>
               <hr class="lp-plan-divider" />
               <ul class="lp-plan-features">
                 <li>소셜 로그인 무제한</li>
@@ -289,12 +287,11 @@ export const LandingPage: FC = () => (
             <div class="lp-footer-links">
               <a href="/privacy">개인정보처리방침</a>
               <a href="/terms">이용약관</a>
-              <a href="/dashboard">대시보드</a>
             </div>
           </div>
           <hr class="lp-footer-divider" />
           <div class="lp-footer-biz">
-            <strong>주식회사 수파레인</strong> &nbsp;|&nbsp; 사업자등록번호 716-88-01081 &nbsp;|&nbsp; 이메일 help@suparain.com
+            이메일 help@suparain.com
           </div>
         </div>
       </footer>

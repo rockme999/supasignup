@@ -6,3 +6,4 @@ dist/
 .env
 .env.*
 *.p8
+docs/.cf-tokens
