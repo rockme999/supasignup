@@ -1039,6 +1039,8 @@ export const AdminOwnersPage: FC<{
 type AdminInquiryRow = {
   id: string;
   title: string;
+  content: string;
+  reply: string | null;
   status: string;
   created_at: string;
   replied_at: string | null;
@@ -1094,7 +1096,14 @@ export const AdminInquiriesPage: FC<{
                 return (
                   <tr>
                     <td style="font-size:13px;font-weight:500;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                      {inq.title}
+                      <a
+                        href="#"
+                        class="inquiry-open"
+                        data-id={inq.id}
+                        style="color:#2563eb;text-decoration:none"
+                      >
+                        {inq.title}
+                      </a>
                     </td>
                     <td style="font-size:12px;color:#64748b">{inq.owner_email}</td>
                     <td style="font-size:12px;color:#64748b">{inq.shop_name || inq.mall_id}</td>
@@ -1102,12 +1111,11 @@ export const AdminInquiriesPage: FC<{
                     <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.created_at.slice(0, 10)}</td>
                     <td>
                       <button
-                        class="btn btn-primary btn-sm reply-btn"
+                        class="btn btn-primary btn-sm inquiry-open"
                         data-id={inq.id}
-                        data-title={inq.title}
                         style="font-size:11px;padding:4px 8px;width:auto"
                       >
-                        답변
+                        {inq.status === 'pending' ? '답변' : '보기'}
                       </button>
                     </td>
                   </tr>
@@ -1131,20 +1139,65 @@ export const AdminInquiriesPage: FC<{
       )}
     </div>
 
+    {/* 문의 데이터 (JSON 임베드) */}
+    <script
+      id="inquiry-data"
+      type="application/json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(
+          inquiries.map((i) => ({
+            id: i.id,
+            title: i.title,
+            content: i.content,
+            reply: i.reply,
+            status: i.status,
+            created_at: i.created_at,
+            replied_at: i.replied_at,
+            owner_email: i.owner_email,
+            shop: i.shop_name || i.mall_id,
+          })),
+        ),
+      }}
+    />
+
     {/* 답변 모달 */}
     <div id="replyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
-      <div style="background:#fff;border-radius:12px;padding:32px;width:100%;max-width:560px;margin:24px">
-        <h2 style="margin-bottom:8px;font-size:18px">답변 작성</h2>
-        <p id="replyModalTitle" style="font-size:13px;color:#64748b;margin-bottom:16px"></p>
-        <textarea
-          id="replyContent"
-          placeholder="답변 내용을 입력해 주세요"
-          rows={6}
-          style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical"
+      <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:640px;margin:24px;max-height:90vh;overflow-y:auto">
+        <h2 id="replyModalTitle" style="margin-bottom:6px;font-size:18px;line-height:1.4"></h2>
+        <p id="replyModalMeta" style="font-size:12px;color:#64748b;margin-bottom:16px"></p>
+
+        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">문의 내용</div>
+        <div
+          id="replyModalContent"
+          style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:20px;max-height:240px;overflow-y:auto"
         />
+
+        <div id="existingReplyWrap" style="display:none;margin-bottom:20px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">
+            기존 답변 <span id="existingReplyMeta" style="font-weight:400;color:#64748b"></span>
+          </div>
+          <div
+            id="existingReplyContent"
+            style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto"
+          />
+        </div>
+
+        <div id="replyFormWrap">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">
+            <span id="replyFormLabel">답변 작성</span>
+          </div>
+          <textarea
+            id="replyContent"
+            placeholder="답변 내용을 입력해 주세요"
+            rows={6}
+            style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit"
+          />
+        </div>
+
         <input type="hidden" id="replyTargetId" />
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-          <button id="cancelReply" class="btn btn-outline" style="width:auto">취소</button>
+          <button id="cancelReply" class="btn btn-outline" style="width:auto">닫기</button>
+          <button id="editReplyBtn" class="btn btn-outline" style="width:auto;display:none">답변 수정</button>
           <button id="submitReply" class="btn btn-primary" style="width:auto">답변 등록</button>
         </div>
       </div>
@@ -1152,14 +1205,66 @@ export const AdminInquiriesPage: FC<{
 
     <script dangerouslySetInnerHTML={{__html: `
       var modal = document.getElementById('replyModal');
-      document.querySelectorAll('.reply-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          document.getElementById('replyTargetId').value = this.dataset.id;
-          document.getElementById('replyModalTitle').textContent = this.dataset.title;
-          document.getElementById('replyContent').value = '';
-          modal.style.display = 'flex';
+      var inquiryData = {};
+      try {
+        var raw = document.getElementById('inquiry-data').textContent || '[]';
+        JSON.parse(raw).forEach(function(i) { inquiryData[i.id] = i; });
+      } catch (e) { console.error('inquiry data parse failed', e); }
+
+      function openInquiry(id) {
+        var inq = inquiryData[id];
+        if (!inq) return;
+        document.getElementById('replyTargetId').value = inq.id;
+        document.getElementById('replyModalTitle').textContent = inq.title;
+        document.getElementById('replyModalMeta').textContent =
+          inq.owner_email + ' · ' + inq.shop + ' · ' + inq.created_at.slice(0, 16).replace('T', ' ');
+        document.getElementById('replyModalContent').textContent = inq.content || '(내용 없음)';
+
+        var existingWrap = document.getElementById('existingReplyWrap');
+        var formWrap = document.getElementById('replyFormWrap');
+        var submitBtn = document.getElementById('submitReply');
+        var editBtn = document.getElementById('editReplyBtn');
+        var textarea = document.getElementById('replyContent');
+
+        if (inq.reply) {
+          existingWrap.style.display = 'block';
+          document.getElementById('existingReplyContent').textContent = inq.reply;
+          document.getElementById('existingReplyMeta').textContent =
+            inq.replied_at ? '(' + inq.replied_at.slice(0, 16).replace('T', ' ') + ')' : '';
+          // 답변완료 상태: 수정 모드로 진입하기 전까지 textarea 숨김
+          formWrap.style.display = 'none';
+          submitBtn.style.display = 'none';
+          editBtn.style.display = 'inline-block';
+          editBtn.textContent = '답변 수정';
+          textarea.value = inq.reply;
+          document.getElementById('replyFormLabel').textContent = '답변 수정';
+        } else {
+          existingWrap.style.display = 'none';
+          formWrap.style.display = 'block';
+          submitBtn.style.display = 'inline-block';
+          submitBtn.textContent = '답변 등록';
+          editBtn.style.display = 'none';
+          textarea.value = '';
+          document.getElementById('replyFormLabel').textContent = '답변 작성';
+        }
+
+        modal.style.display = 'flex';
+      }
+
+      document.querySelectorAll('.inquiry-open').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          openInquiry(this.dataset.id);
         });
       });
+
+      document.getElementById('editReplyBtn').addEventListener('click', function() {
+        document.getElementById('replyFormWrap').style.display = 'block';
+        document.getElementById('submitReply').style.display = 'inline-block';
+        document.getElementById('submitReply').textContent = '답변 수정 저장';
+        this.style.display = 'none';
+      });
+
       document.getElementById('cancelReply').addEventListener('click', function() {
         modal.style.display = 'none';
       });
@@ -1168,6 +1273,7 @@ export const AdminInquiriesPage: FC<{
         var reply = document.getElementById('replyContent').value.trim();
         if (!reply) { showToast('error', '답변 내용을 입력해 주세요.'); return; }
         var btn = this;
+        var originalText = btn.textContent;
         btn.disabled = true; btn.textContent = '등록 중...';
         try {
           var resp = await apiCall('PUT', '/api/supadmin/inquiries/' + id + '/reply', { reply: reply }, btn);
@@ -1180,7 +1286,7 @@ export const AdminInquiriesPage: FC<{
             showToast('error', data.error || '답변 등록 중 오류가 발생했습니다.');
           }
         } finally {
-          btn.disabled = false; btn.textContent = '답변 등록';
+          btn.disabled = false; btn.textContent = originalText;
         }
       });
       modal.addEventListener('click', function(e) {

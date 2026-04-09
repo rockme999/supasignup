@@ -1538,7 +1538,7 @@ pages.get('/supadmin/inquiries', async (c) => {
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT i.id, i.title, i.status, i.created_at, i.replied_at,
+    SELECT i.id, i.title, i.content, i.reply, i.status, i.created_at, i.replied_at,
            o.email as owner_email, s.shop_name, s.mall_id
     FROM inquiries i
     JOIN owners o ON i.owner_id = o.owner_id
@@ -1560,7 +1560,8 @@ pages.get('/supadmin/inquiries', async (c) => {
 
   const [result, countResult] = await Promise.all([
     c.env.DB.prepare(query).bind(...params).all<{
-      id: string; title: string; status: string; created_at: string;
+      id: string; title: string; content: string; reply: string | null;
+      status: string; created_at: string;
       replied_at: string | null; owner_email: string;
       shop_name: string | null; mall_id: string;
     }>(),

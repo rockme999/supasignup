@@ -643,7 +643,7 @@ admin.get('/inquiries', async (c) => {
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT i.id, i.title, i.status, i.created_at, i.replied_at,
+    SELECT i.id, i.title, i.content, i.reply, i.status, i.created_at, i.replied_at,
            o.email as owner_email, s.shop_name, s.mall_id
     FROM inquiries i
     JOIN owners o ON i.owner_id = o.owner_id
