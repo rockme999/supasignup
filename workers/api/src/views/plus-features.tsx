@@ -960,6 +960,10 @@ export const BannerSettingsPage: FC<{
 
                     // 미리보기 크기 업데이트
                     applyBannerSize();
+
+                    // 즉시 저장 — 기존 저장 버튼 클릭 흐름 재사용
+                    var saveBtn = document.getElementById('bannerSaveBtn');
+                    if (saveBtn) saveBtn.click();
                   });
                 }
 
@@ -1379,11 +1383,12 @@ export const PopupSettingsPage: FC<{
                   .finally(function() { btn.disabled = false; btn.textContent = '저장'; });
                 });
 
-                // ── 기본값 되돌리기 ──
+                // ── 기본값 되돌리기 (즉시 저장) ──
                 document.getElementById('popupResetBtn').addEventListener('click', function() {
                   state = Object.assign({}, DEFAULTS);
                   applyState();
-                  showStatus('기본값으로 되돌렸습니다. 저장 버튼을 눌러 적용하세요.', true);
+                  var saveBtn = document.getElementById('popupSaveBtn');
+                  if (saveBtn) saveBtn.click();
                 });
 
                 // ── 초기 로드 ──
@@ -2146,12 +2151,13 @@ export const EscalationSettingsPage: FC<{
                   .finally(function() { btn.disabled = false; btn.textContent = '\uc800\uc7a5'; });
                 });
 
-                // ── 기본값 되돌리기 ──
+                // ── 기본값 되돌리기 (즉시 저장) ──
                 var resetBtn = document.getElementById('escResetBtn');
                 if (resetBtn) resetBtn.addEventListener('click', function() {
                   state = Object.assign({}, DEFAULTS);
                   applyState();
-                  showStatus('\uae30\ubcf8\uac12\uc73c\ub85c \ub418\ub3cc\ub838\uc2b5\ub2c8\ub2e4. \uc800\uc7a5 \ubc84\ud2bc\uc744 \ub220\ub7ec \uc801\uc6a9\ud558\uc138\uc694.', true);
+                  var saveBtn = document.getElementById('escSaveBtn');
+                  if (saveBtn) saveBtn.click();
                 });
 
                 // ── 초기 로드 ──
