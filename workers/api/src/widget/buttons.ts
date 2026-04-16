@@ -387,10 +387,21 @@ export const WIDGET_JS = `(function() {
     if (!this.container) {
       this.container = document.createElement('div');
       this.container.id = 'bg-widget';
-      // Try to find Cafe24 login page area
-      var target = this.findLoginPage();
+      var s = (this.config && this.config.style) || {};
+      var pos = s.widgetPosition || 'before';
+      var target;
+      if (pos === 'custom' && s.customSelector) {
+        target = document.querySelector(s.customSelector);
+      } else {
+        target = this.findLoginPage();
+      }
       if (target) {
-        target.parentNode.insertBefore(this.container, target);
+        if (pos === 'after') {
+          target.parentNode.insertBefore(this.container, target.nextSibling);
+        } else {
+          // before 또는 custom: 대상 요소 앞에 삽입
+          target.parentNode.insertBefore(this.container, target);
+        }
       } else {
         // 로그인/가입 페이지 영역을 찾지 못하면 렌더링하지 않음
         return;
@@ -419,8 +430,8 @@ export const WIDGET_JS = `(function() {
       this.container.style.maxWidth = (buttonWidth + 32) + 'px';
     }
 
-    // Title (showTitle: default true)
-    if (s.showTitle !== false) {
+    // Title (showTitle: default false)
+    if (s.showTitle === true) {
       var title = document.createElement('div');
       title.className = 'bg-widget-title';
       if (preset === 'icon-only') title.style.width = '100%';

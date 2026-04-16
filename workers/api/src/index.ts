@@ -47,11 +47,12 @@ app.use('*', async (c, next) => {
   }
 });
 
-// ── CORS: Widget routes (public, GET only) ──────────────────
+// ── CORS: Widget routes (public) ─────────────────────────────
 app.use('/api/widget/*', cors({
-  origin: (origin) => origin || '*',
+  origin: (origin) => origin || '',
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type'],
+  credentials: true,
 }));
 
 // ── CORS: Dashboard routes (restricted origin) ──────────────

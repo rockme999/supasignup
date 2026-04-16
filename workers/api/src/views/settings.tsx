@@ -592,7 +592,7 @@ export const ProvidersPage: FC<{
           <div>
             <div class="provider-toggle" style="border:none; padding:0">
               <label class="toggle">
-                <input type="checkbox" id="showTitleToggle" checked={ws.showTitle !== false} />
+                <input type="checkbox" id="showTitleToggle" checked={ws.showTitle === true} />
                 <span class="toggle-slider"></span>
               </label>
               <label style="font-size:13px; font-weight:600; color:#475569; cursor:pointer">상단 타이틀 표시</label>
@@ -677,6 +677,37 @@ export const ProvidersPage: FC<{
             </label>
             <input type="range" id="btnPaddingLeft" min="0" max="150" value={String((ws as any).paddingLeft ?? 100)} style="width:100%" />
           </div>
+          <div style="border-top:1px solid #e2e8f0; padding-top:16px; margin-top:4px">
+            <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:8px">위젯 삽입 위치</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              {(['before', 'after', 'custom'] as const).map(pos => {
+                const labels: Record<string, string> = { before: '로그인 폼 위', after: '로그인 폼 아래', custom: '커스텀 셀렉터' };
+                const active = ((ws as any).widgetPosition || 'before') === pos;
+                return (
+                  <button class="position-btn" data-position={pos} type="button" style={`padding:6px 16px; font-size:13px; border-radius:6px; cursor:pointer; border:1px solid ${active ? '#2563eb' : '#d1d5db'}; background:${active ? '#eff6ff' : '#fff'}; color:${active ? '#2563eb' : '#475569'}; font-weight:${active ? '600' : '400'}`}>{labels[pos]}</button>
+                );
+              })}
+            </div>
+            <div id="customSelectorWrap" style={`margin-top:10px; ${((ws as any).widgetPosition || 'before') === 'custom' ? '' : 'display:none'}`}>
+              <input type="text" id="customSelectorInput" placeholder="예: .login__button, #member_login_module_id" value={(ws as any).customSelector || ''} style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; width:100%; font-family:monospace" />
+              <p style="font-size:11px; color:#94a3b8; margin-top:4px; margin-bottom:8px">CSS 셀렉터를 입력하면 해당 요소 앞에 위젯을 삽입합니다.</p>
+              <div>
+                <p style="font-size:11px; font-weight:600; color:#64748b; margin:0 0 6px">자주 쓰는 셀렉터 (클릭하여 적용)</p>
+                <div style="display:flex; flex-wrap:wrap; gap:6px">
+                  {[
+                    { sel: '.login__button', desc: '로그인 버튼 위' },
+                    { sel: '.login__sns', desc: '기본 SNS 영역 위' },
+                    { sel: '.login__util', desc: '회원가입·아이디찾기 위' },
+                    { sel: '.login__security', desc: '보안접속 영역 위' },
+                    { sel: '#member_login_module_id', desc: '로그인 박스 전체 위' },
+                  ].map(item => (
+                    <button type="button" class="selector-suggest-btn" data-selector={item.sel} title={item.desc} style="padding:4px 10px; font-size:11px; font-family:monospace; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; cursor:pointer">{item.sel}</button>
+                  ))}
+                </div>
+                <p style="font-size:11px; color:#94a3b8; margin-top:6px">버튼 위에 마우스를 올리면 삽입 위치 설명이 나옵니다. 쇼핑몰 스킨에 따라 일부 셀렉터는 존재하지 않을 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:12px">
           <button id="resetStyleBtn" type="button" style="padding:8px 16px; font-size:13px; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer">기본값으로 되돌리기</button>
@@ -703,8 +734,10 @@ export const ProvidersPage: FC<{
             showIcon: widgetStyle.showIcon !== false,
             iconGap: widgetStyle.iconGap || 30,
             paddingLeft: widgetStyle.paddingLeft || 100,
-            showTitle: widgetStyle.showTitle !== false,
-            showPoweredBy: widgetStyle.showPoweredBy !== false
+            showTitle: widgetStyle.showTitle === true,
+            showPoweredBy: widgetStyle.showPoweredBy !== false,
+            widgetPosition: widgetStyle.widgetPosition || 'before',
+            customSelector: widgetStyle.customSelector || ''
           };
           var shopPlan = '${shop.plan}';
 
@@ -969,6 +1002,47 @@ export const ProvidersPage: FC<{
             });
           });
 
+          // 위젯 삽입 위치 토글
+          document.querySelectorAll('.position-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              document.querySelectorAll('.position-btn').forEach(function(b) {
+                b.style.border = '1px solid #d1d5db';
+                b.style.background = '#fff';
+                b.style.color = '#475569';
+                b.style.fontWeight = '400';
+              });
+              this.style.border = '1px solid #2563eb';
+              this.style.background = '#eff6ff';
+              this.style.color = '#2563eb';
+              this.style.fontWeight = '600';
+              style.widgetPosition = this.dataset.position;
+              var wrap = document.getElementById('customSelectorWrap');
+              if (wrap) wrap.style.display = this.dataset.position === 'custom' ? '' : 'none';
+              markChanged();
+            });
+          });
+
+          // 커스텀 셀렉터 입력
+          var customSelectorInput = document.getElementById('customSelectorInput');
+          if (customSelectorInput) {
+            customSelectorInput.addEventListener('input', function() {
+              style.customSelector = this.value.trim();
+              markChanged();
+            });
+          }
+
+          // 추천 셀렉터 버튼 클릭 → 입력 필드에 자동 입력
+          document.querySelectorAll('.selector-suggest-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var sel = this.dataset.selector;
+              if (customSelectorInput) {
+                customSelectorInput.value = sel;
+                style.customSelector = sel;
+                markChanged();
+              }
+            });
+          });
+
           // Provider toggle -> re-render preview
           document.querySelectorAll('#providerForm input[name=providers]').forEach(function(cb) {
             cb.addEventListener('change', function() { setTimeout(renderPreview, 100); });
@@ -997,8 +1071,8 @@ export const ProvidersPage: FC<{
           var resetBtn = document.getElementById('resetStyleBtn');
           if (resetBtn) {
             resetBtn.addEventListener('click', async function() {
-              if (!confirm('위젯 디자인을 기본값으로 되돌리시겠습니까?')) return;
-              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true};
+              if (!confirm('위젯 디자인을 기본값으로 되돌리고 저장하시겠습니까?')) return;
+              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:''};
               Object.assign(style, defaults);
               // UI 컨트롤 동기화
               document.getElementById('btnWidth').value = defaults.buttonWidth; document.getElementById('widthValue').textContent = defaults.buttonWidth + 'px';
@@ -1008,7 +1082,7 @@ export const ProvidersPage: FC<{
               document.getElementById('btnIconGap').value = defaults.iconGap; document.getElementById('iconGapValue').textContent = defaults.iconGap + 'px';
               document.getElementById('btnPaddingLeft').value = defaults.paddingLeft; document.getElementById('paddingLeftValue').textContent = defaults.paddingLeft + 'px';
               document.getElementById('showIconToggle').checked = true;
-              document.getElementById('showTitleToggle').checked = true;
+              document.getElementById('showTitleToggle').checked = false;
               document.getElementById('showPoweredByToggle').checked = true;
               document.getElementById('labelPreset').value = defaults.buttonLabel;
               document.getElementById('labelCustom').style.display = 'none';
@@ -1019,9 +1093,21 @@ export const ProvidersPage: FC<{
               document.querySelectorAll('.align-btn').forEach(function(b) { b.classList.remove('active'); });
               var defAlign = document.querySelector('.align-btn[data-align="left"]');
               if (defAlign) defAlign.classList.add('active');
+              // 위치 토글 리셋
+              document.querySelectorAll('.position-btn').forEach(function(b) {
+                b.style.border = '1px solid #d1d5db'; b.style.background = '#fff'; b.style.color = '#475569'; b.style.fontWeight = '400';
+              });
+              var defPos = document.querySelector('.position-btn[data-position="before"]');
+              if (defPos) { defPos.style.border = '1px solid #2563eb'; defPos.style.background = '#eff6ff'; defPos.style.color = '#2563eb'; defPos.style.fontWeight = '600'; }
+              // 커스텀 셀렉터 리셋
+              var csi = document.getElementById('customSelectorInput');
+              if (csi) csi.value = '';
+              var csw = document.getElementById('customSelectorWrap');
+              if (csw) csw.style.display = 'none';
               renderPreview();
               markChanged();
-              showToast('info', '기본값으로 되돌렸습니다. 저장 버튼을 눌러 적용하세요.');
+              // 즉시 저장까지 실행
+              await saveStyle();
             });
           }
 

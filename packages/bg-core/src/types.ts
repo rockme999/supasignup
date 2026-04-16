@@ -164,6 +164,8 @@ export interface WidgetStyle {
   paddingLeft: number; // 버튼 왼쪽 여백 (px)
   showTitle: boolean; // 상단 "⚡ 간편 로그인" 타이틀 표시 여부
   showPoweredBy: boolean; // 하단 "powered by 번개가입" 표시 여부 (무료 플랜은 항상 true)
+  widgetPosition: 'before' | 'after' | 'custom'; // 위젯 삽입 위치: 로그인 폼 앞/뒤/커스텀 셀렉터
+  customSelector: string; // 커스텀 CSS 셀렉터 (widgetPosition이 'custom'일 때 사용)
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -177,8 +179,10 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   showIcon: true,
   iconGap: 30,
   paddingLeft: 100,
-  showTitle: true,
+  showTitle: false,
   showPoweredBy: true,
+  widgetPosition: 'before',
+  customSelector: '',
 };
 
 // Env binding types for Workers

@@ -175,7 +175,7 @@ pages.get('/dashboard/logout', (c) => {
     status: 302,
     headers: {
       'Location': '/dashboard/session-expired',
-      'Set-Cookie': 'bg_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0',
+      'Set-Cookie': 'bg_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
     },
   });
 });
@@ -1224,7 +1224,7 @@ pages.delete('/api/dashboard/settings/account', async (c) => {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': 'bg_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0',
+      'Set-Cookie': 'bg_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
     },
   });
 });
