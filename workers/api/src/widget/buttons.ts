@@ -997,7 +997,7 @@ export const WIDGET_JS = `(function() {
     // allPages가 아니면 로그인/가입 페이지에서만 동작
     if (!allPages && this.pageType !== 'login') return;
 
-    var popupTitle = pc && pc.title ? pc.title : '\uC7A0\uAE4C\uB9CC\uC694!';
+    var popupTitle = pc && pc.title ? pc.title : '잠깐만요!';
     var popupBody = pc && pc.body ? pc.body : '\uC9C0\uAE08 \uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD\uC744 \uB4DC\uB824\uC694!';
     var popupCta = pc && pc.ctaText ? pc.ctaText : '\uD61C\uD0DD \uBC1B\uACE0 \uAC00\uC785\uD558\uAE30';
     var popupIcon = pc ? (pc.icon != null ? pc.icon : '\uD83C\uDF81') : '\uD83C\uDF81';
