@@ -998,8 +998,8 @@ export const WIDGET_JS = `(function() {
     if (!allPages && this.pageType !== 'login') return;
 
     var popupTitle = pc && pc.title ? pc.title : '잠깐만요!';
-    var popupBody = pc && pc.body ? pc.body : '\uC9C0\uAE08 \uAC00\uC785\uD558\uBA74 \uD2B9\uBCC4 \uD61C\uD0DD\uC744 \uB4DC\uB824\uC694!';
-    var popupCta = pc && pc.ctaText ? pc.ctaText : '\uD61C\uD0DD \uBC1B\uACE0 \uAC00\uC785\uD558\uAE30';
+    var popupBody = pc && pc.body ? pc.body : '지금 가입하면 특별 혜택을 드려요!';
+    var popupCta = pc && pc.ctaText ? pc.ctaText : '혜택 받고 가입하기';
     var popupIcon = pc ? (pc.icon != null ? pc.icon : '\uD83C\uDF81') : '\uD83C\uDF81';
     var popupBorderRadius = pc && pc.borderRadius != null ? pc.borderRadius : 16;
     var popupOpacity = pc && pc.opacity != null ? pc.opacity : 100;
