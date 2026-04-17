@@ -53,13 +53,15 @@ type PageEnv = {
 async function getOwnerShop(db: D1Database, ownerId: string) {
   return db.prepare(
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
-            enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style, banner_config
+            enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
+            shop_identity
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
     coupon_config: string | null;
     kakao_channel_id: string | null;
     widget_style: string | null;
     banner_config: string | null;
+    shop_identity: string | null;
   }>();
 }
 
@@ -77,6 +79,7 @@ type ShopRow = {
   coupon_config?: string | null;
   kakao_channel_id?: string | null;
   widget_style?: string | null;
+  shop_identity?: string | null;
 };
 
 const pages = new Hono<PageEnv>();
@@ -194,6 +197,23 @@ pages.get('/dashboard', async (c) => {
         stats={null}
         isCafe24={c.get('isCafe24')}
       />
+    );
+  }
+
+  // shop_identity가 비어 있으면 백그라운드 분석 트리거
+  // 헬퍼가 락/카운터/토큰조회/빈객체검증 모두 처리 (ai.ts:maybeTriggerIdentityAnalysis 참조)
+  let needsAnalysis = !shop.shop_identity;
+  if (!needsAnalysis && shop.shop_identity) {
+    try {
+      const parsed = JSON.parse(shop.shop_identity);
+      needsAnalysis = !parsed?.industry && !parsed?.summary;
+    } catch { needsAnalysis = true; }
+  }
+  if (needsAnalysis) {
+    const { maybeTriggerIdentityAnalysis } = await import('./ai');
+    c.executionCtx.waitUntil(
+      maybeTriggerIdentityAnalysis(c.env, shop.shop_id)
+        .catch((err) => console.error('[dashboard] identity trigger failed:', err))
     );
   }
 

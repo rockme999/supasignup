@@ -161,32 +161,16 @@ ai.get('/identity', async (c) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// POST /identity — 쇼핑몰 정체성 자동 분석
+// 분석 + 저장 핵심 로직 (라우트와 백그라운드 트리거에서 공용)
 // ═══════════════════════════════════════════════════════════════
-ai.post('/identity', async (c) => {
-  const ownerId = c.get('ownerId');
-  let body: { shop_id?: string } = {};
-  try { body = await c.req.json<{ shop_id?: string }>(); } catch { /* ignore */ }
-
-  if (!body.shop_id) {
-    return c.json({ error: 'bad_request', message: 'shop_id is required' }, 400);
-  }
-
-  // 소유권 검증
-  const shop = await getOwnedShop(c.env.DB, body.shop_id, ownerId) as Record<string, unknown> | null;
-  if (!shop) {
-    return c.json({ error: 'not_found', message: 'Shop not found' }, 404);
-  }
-
-  // 일일 호출 제한: 10회
-  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'identity', 10);
-  if (!allowed) {
-    return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
-  }
-
+export async function analyzeAndSaveShopIdentity(
+  env: Env,
+  shop: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const shopId = shop.shop_id as string;
   const shopUrl = (shop.shop_url as string) || (shop.mall_id ? `https://${shop.mall_id}.cafe24.com` : '');
   if (!shopUrl) {
-    return c.json({ error: 'bad_request', message: 'Shop URL is not configured' }, 400);
+    throw new Error('Shop URL is not configured');
   }
 
   // 쇼핑몰 HTML에서 의미 있는 콘텐츠 추출
@@ -199,26 +183,22 @@ ai.post('/identity', async (c) => {
 
     if (pageResp.ok) {
       const fullText = await pageResp.text();
-      // 스크립트/스타일 태그 제거 후 의미 있는 콘텐츠 추출
       const cleaned = fullText
         .replace(/<script[\s\S]*?<\/script>/gi, '')
         .replace(/<style[\s\S]*?<\/style>/gi, '')
         .replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
 
-      // 메타태그 추출
       const titleMatch = fullText.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       const metaDesc = fullText.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)/i);
       const metaKeywords = fullText.match(/<meta[^>]*name=["']keywords["'][^>]*content=["']([^"']*)/i);
       const ogTitle = fullText.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)/i);
       const ogDesc = fullText.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)/i);
 
-      // 본문 텍스트 추출 (태그 제거)
       const bodyMatch = cleaned.match(/<body[\s\S]*?<\/body>/i);
       const bodyText = bodyMatch
         ? bodyMatch[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 3000)
         : '';
 
-      // AI에게 보낼 요약 구성
       const parts = [
         `URL: ${shopUrl}`,
         titleMatch ? `페이지 제목: ${titleMatch[1].trim()}` : '',
@@ -241,7 +221,7 @@ ai.post('/identity', async (c) => {
   if (shop.platform_access_token) {
     try {
       const { decryptShopTokens } = await import('../db/queries');
-      const tokens = await decryptShopTokens(shop as any, c.env.ENCRYPTION_KEY);
+      const tokens = await decryptShopTokens(shop as any, env.ENCRYPTION_KEY);
       if (tokens.access_token) {
         const mallId = shop.mall_id as string;
         const prodResp = await fetch(
@@ -269,27 +249,18 @@ ai.post('/identity', async (c) => {
     }
   }
 
-  // 쇼핑몰 정보 기반 분석 프롬프트
   const jsonFormat = '{"industry":"업종 (예: 패션, 뷰티, 식품, 잡화 등)","target":"타겟 고객 (예: 20-30대 여성)","tone":"톤앤매너 (예: 친근하고 캐주얼)","keywords":["키워드1","키워드2","키워드3"],"summary":"한 줄 소개"}';
   const prompt = htmlSnippet
     ? `다음은 한국 쇼핑몰에서 추출한 정보입니다. 이 쇼핑몰의 정체성을 분석하여 JSON으로만 응답하세요.\n\n${htmlSnippet}${productInfo}\n\n반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이):\n${jsonFormat}`
     : `URL만으로 한국 쇼핑몰을 추론하여 JSON으로만 응답하세요.\n\nURL: ${shopUrl}\n\n반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이):\n${jsonFormat}`;
 
-  let rawResponse = '';
-  try {
-    rawResponse = await callAI(c.env, [
-      { role: 'system', content: 'You are a Korean e-commerce analyst. Always respond with valid JSON only, no markdown, no explanation.' },
-      { role: 'user', content: prompt },
-    ]);
-  } catch (e: any) {
-    console.error('[AI/identity] AI call failed:', e);
-    return c.json({ error: 'ai_error', message: 'AI service unavailable', detail: e?.message || String(e) }, 503);
-  }
+  const rawResponse = await callAI(env, [
+    { role: 'system', content: 'You are a Korean e-commerce analyst. Always respond with valid JSON only, no markdown, no explanation.' },
+    { role: 'user', content: prompt },
+  ]);
 
-  // AI 응답 파싱 (방어 코드)
   let identity: Record<string, unknown> = {};
   try {
-    // 마크다운 코드 블록 제거 후 파싱
     const cleaned = rawResponse.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
     const jsonStart = cleaned.indexOf('{');
     const jsonEnd = cleaned.lastIndexOf('}');
@@ -298,16 +269,100 @@ ai.post('/identity', async (c) => {
     }
   } catch (e) {
     console.warn('[AI/identity] Failed to parse AI response:', rawResponse);
-    // 파싱 실패 시 raw 텍스트를 summary로 저장
-    identity = { summary: rawResponse.slice(0, 200), parse_error: true };
   }
 
-  // shops 테이블에 저장
-  await c.env.DB.prepare(
-    'UPDATE shops SET shop_identity = ?, updated_at = datetime(\'now\') WHERE shop_id = ?'
-  ).bind(JSON.stringify(identity), body.shop_id).run();
+  // 의미 있는 필드(industry 또는 summary)가 없으면 저장하지 않고 실패 처리
+  // — 빈 객체를 DB에 박으면 다음 백그라운드 진입에서 영구 잠김 (`!shop.shop_identity` false 처리)
+  if (!identity.industry && !identity.summary) {
+    throw new Error(`AI returned empty or invalid identity. Raw: ${rawResponse.slice(0, 200)}`);
+  }
 
-  return c.json({ success: true, identity });
+  await env.DB.prepare(
+    'UPDATE shops SET shop_identity = ?, updated_at = datetime(\'now\') WHERE shop_id = ?'
+  ).bind(JSON.stringify(identity), shopId).run();
+
+  return identity;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 백그라운드 트리거: 락 + 실패 카운터 + 토큰 포함 shop 조회
+// dashboard 진입 시 c.executionCtx.waitUntil()로 호출됨
+// ═══════════════════════════════════════════════════════════════
+export async function maybeTriggerIdentityAnalysis(env: Env, shopId: string): Promise<void> {
+  // 1. 실패 카운터 (3회 연속 실패 시 24시간 차단) — 무한 재시도 방지
+  const failKey = `identity_fail:${shopId}`;
+  const failCount = parseInt((await env.KV.get(failKey)) ?? '0', 10);
+  if (failCount >= 3) return;
+
+  // 2. 락 (TTL 120s) — 같은 사용자 새로고침/멀티탭 중복 호출 방지
+  // 주의: KV get/put은 atomic이 아니므로 거의 동시 요청 시 드물게 중복 가능. 비용 미미해 감수.
+  const lockKey = `identity_running:${shopId}`;
+  if (await env.KV.get(lockKey)) return;
+
+  // 3. shop 전체 + 토큰 조회 (이 시점에만 토큰 노출)
+  const shop = await env.DB.prepare(
+    `SELECT shop_id, mall_id, shop_url, shop_identity, platform_access_token, platform_refresh_token
+     FROM shops WHERE shop_id = ? AND deleted_at IS NULL`
+  ).bind(shopId).first<Record<string, unknown>>();
+  if (!shop) return;
+
+  // 4. 이미 의미 있는 identity가 있으면 스킵 (다른 경로가 먼저 채웠을 수 있음)
+  const existing = shop.shop_identity as string | null;
+  if (existing) {
+    try {
+      const parsed = JSON.parse(existing) as Record<string, unknown>;
+      if (parsed && (parsed.industry || parsed.summary)) return;
+    } catch { /* 깨진 JSON이면 재분석 */ }
+  }
+
+  // 5. 락 설정 후 분석 실행
+  await env.KV.put(lockKey, '1', { expirationTtl: 120 });
+
+  try {
+    await analyzeAndSaveShopIdentity(env, shop);
+    // 성공 → 실패 카운터 리셋
+    await env.KV.delete(failKey);
+  } catch (err) {
+    console.error(`[identity-bg] analysis failed for shop ${shopId}:`, err);
+    // 실패 카운터 증가 (24시간 TTL — 누적 카운팅 윈도)
+    await env.KV.put(failKey, String(failCount + 1), { expirationTtl: 86400 });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POST /identity — 쇼핑몰 정체성 자동 분석
+// ═══════════════════════════════════════════════════════════════
+ai.post('/identity', async (c) => {
+  const ownerId = c.get('ownerId');
+  let body: { shop_id?: string } = {};
+  try { body = await c.req.json<{ shop_id?: string }>(); } catch { /* ignore */ }
+
+  if (!body.shop_id) {
+    return c.json({ error: 'bad_request', message: 'shop_id is required' }, 400);
+  }
+
+  // 소유권 검증
+  const shop = await getOwnedShop(c.env.DB, body.shop_id, ownerId) as Record<string, unknown> | null;
+  if (!shop) {
+    return c.json({ error: 'not_found', message: 'Shop not found' }, 404);
+  }
+
+  // 일일 호출 제한: 10회
+  const allowed = await checkAiRateLimit(c.env, body.shop_id, 'identity', 10);
+  if (!allowed) {
+    return c.json({ error: 'ai_rate_limit', message: '일일 호출 한도에 도달했습니다.' }, 429);
+  }
+
+  try {
+    const identity = await analyzeAndSaveShopIdentity(c.env, shop);
+    return c.json({ success: true, identity });
+  } catch (e: any) {
+    console.error('[AI/identity] failed:', e);
+    if (e?.message === 'Shop URL is not configured') {
+      return c.json({ error: 'bad_request', message: e.message }, 400);
+    }
+    return c.json({ error: 'ai_error', message: 'AI service unavailable', detail: e?.message || String(e) }, 503);
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════
