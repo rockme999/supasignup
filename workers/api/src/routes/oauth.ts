@@ -133,9 +133,10 @@ oauth.get('/authorize', async (c) => {
       }
     }
 
-    // 1회 소비: 쿠키/KV 모두 정리. 다음 클릭이 이전 프로바이더를 재사용하는 것을 방지.
-    c.header('Set-Cookie', 'bg_hint=; Path=/; Max-Age=0; SameSite=None; Secure');
-    c.executionCtx.waitUntil(c.env.KV.delete(`provider_hint:${clientId}`).catch(() => {}));
+    // 주의: KV 삭제 금지. 카페24는 /authorize를 2번 호출하므로(memory: feedback_cafe24_sso),
+    // 첫 호출에서 삭제하면 두 번째 호출이 hint를 못 찾아 프로바이더 선택 페이지가 뜸.
+    // 쿠키도 마찬가지로 유지 — 다음 클릭의 /hint에서 overwrite되고, 미클릭 시 120초 TTL로 자연 만료.
+    // 캐시 레이스는 /hint의 delete-before-put 패턴으로 해결됨.
 
     if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
       provider = hintProvider;
@@ -776,5 +777,83 @@ h1{font-size:20px;color:#1e293b;margin-bottom:8px}
 </body>
 </html>`;
 }
+
+// ─── GET /sso-start ──────────────────────────────────────────
+// Widget 클릭 시 top-level 네비게이션 진입점.
+// 목적: bg.suparain.kr에 first-party 맥락으로 방문하게 하여 provider hint 쿠키를
+//       확실히 세팅. 이후 Cafe24 SSO URL로 302 → /authorize가 해당 쿠키를 읽음.
+//
+// 기존 flow(/hint fetch + MemberAction.snsLogin)는 cross-origin fetch의 Set-Cookie가
+// Safari ITP·Chrome 3rd-party 쿠키 차단으로 신뢰 불가하여 /authorize가 KV 엣지 캐시의
+// 이전 값을 읽는 레이스가 있음. 이 엔드포인트가 그 경로를 대체.
+oauth.get('/sso-start', async (c) => {
+  const clientId = c.req.query('client_id');
+  const provider = c.req.query('provider') as ProviderName | undefined;
+  const rawSsoType = c.req.query('sso_type') || 'sso';
+  const rawReturnUrl = c.req.query('return_url') || '/';
+  const visitorId = c.req.query('visitor_id') || '';
+  const device = c.req.query('device') || '';
+
+  // 1. 필수 파라미터 검증
+  if (!clientId || !provider) {
+    return c.text('missing_params', 400);
+  }
+  if (!VALID_PROVIDERS.includes(provider)) {
+    return c.text('invalid_provider', 400);
+  }
+
+  // 2. shop 존재 확인 + mall_id 조회 (오픈 리디렉 방어: 반드시 서버 DB 값만 사용)
+  const shop = await getShopByClientId(c.env.DB, clientId);
+  if (!shop || !shop.mall_id) {
+    return c.text('invalid_client', 404);
+  }
+
+  // 3. provider가 shop에서 활성화되어 있는지 확인
+  const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
+  if (!enabledProviders.includes(provider)) {
+    return c.text('provider_disabled', 400);
+  }
+
+  // 4. sso_type/mall_id sanitize (URL 주입 방어)
+  const safeMallId = shop.mall_id.replace(/[^a-z0-9-]/gi, '').slice(0, 64);
+  const safeSsoType = rawSsoType.replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'sso';
+
+  // 5. return_url 검증: 쇼핑몰 호스트(PC/모바일) 내부 경로만 허용 (오픈 리디렉 방어)
+  let safeReturnPath = '/';
+  try {
+    const parsed = new URL(rawReturnUrl, `https://${safeMallId}.cafe24.com`);
+    const allowedHosts = [`${safeMallId}.cafe24.com`, `m.${safeMallId}.cafe24.com`];
+    if (allowedHosts.includes(parsed.hostname)) {
+      safeReturnPath = parsed.pathname + parsed.search;
+    }
+  } catch { /* 파싱 실패 시 기본 '/' 사용 */ }
+
+  // 6. First-party 쿠키 세팅 — top-level 네비게이션이므로 ITP/3rd-party 차단 무관.
+  //    SameSite=Lax: cafe24.com → bg.suparain.kr/authorize 크로스사이트 top-level GET 시 전송됨.
+  const hintValue = JSON.stringify({ provider, visitor_id: visitorId, device });
+  const cookieValue = encodeURIComponent(hintValue);
+  const setCookie = `bg_hint=${cookieValue}; Path=/; Max-Age=120; SameSite=Lax; Secure; HttpOnly`;
+
+  // 7. KV 백업 기록 (쿠키 전체 차단 사용자 대비 폴백)
+  c.executionCtx.waitUntil(
+    (async () => {
+      try {
+        await c.env.KV.delete(`provider_hint:${clientId}`);
+        await c.env.KV.put(`provider_hint:${clientId}`, hintValue, { expirationTtl: 120 });
+      } catch { /* best effort */ }
+    })()
+  );
+
+  // 8. Cafe24 SSO URL로 302 리디렉 — 쿠키 헤더와 Location을 함께 명시적으로 설정
+  const ssoUrl = `https://${safeMallId}.cafe24.com/Api/Member/Oauth2ClientLogin/${safeSsoType}/?return_url=${encodeURIComponent(safeReturnPath)}`;
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': ssoUrl,
+      'Set-Cookie': setCookie,
+      'Cache-Control': 'no-store',
+    },
+  });
+});
 
 export default oauth;
