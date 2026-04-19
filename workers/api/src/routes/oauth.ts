@@ -104,20 +104,39 @@ oauth.get('/authorize', async (c) => {
   let hintVisitorId = '';
   let hintDevice = '';
   if (!provider) {
-    // Check KV for provider hint (cross-domain safe, set via /api/widget/hint)
-    const hintRaw = await c.env.KV.get(`provider_hint:${clientId}`);
-    // hint는 JSON { provider, visitor_id, device } 또는 레거시 문자열
     let hintProvider: ProviderName | null = null;
-    if (hintRaw) {
+
+    // 1순위: 쿠키 (사용자별 격리 + 강일관성, KV 엣지 캐시 레이스 회피)
+    const cookieHeader = c.req.header('Cookie') || '';
+    const cookieMatch = cookieHeader.match(/(?:^|; )bg_hint=([^;]+)/);
+    if (cookieMatch) {
       try {
-        const hint = JSON.parse(hintRaw);
+        const hint = JSON.parse(decodeURIComponent(cookieMatch[1]));
         hintProvider = hint.provider;
         hintVisitorId = hint.visitor_id || '';
         hintDevice = hint.device || '';
-      } catch {
-        hintProvider = hintRaw as ProviderName; // 레거시 문자열 호환
+      } catch { /* 파싱 실패 시 KV 폴백 */ }
+    }
+
+    // 2순위: KV (쿠키 차단 환경 — Safari ITP 등 — 대비 폴백)
+    if (!hintProvider) {
+      const hintRaw = await c.env.KV.get(`provider_hint:${clientId}`);
+      if (hintRaw) {
+        try {
+          const hint = JSON.parse(hintRaw);
+          hintProvider = hint.provider;
+          hintVisitorId = hint.visitor_id || '';
+          hintDevice = hint.device || '';
+        } catch {
+          hintProvider = hintRaw as ProviderName; // 레거시 문자열 호환
+        }
       }
     }
+
+    // 1회 소비: 쿠키/KV 모두 정리. 다음 클릭이 이전 프로바이더를 재사용하는 것을 방지.
+    c.header('Set-Cookie', 'bg_hint=; Path=/; Max-Age=0; SameSite=None; Secure');
+    c.executionCtx.waitUntil(c.env.KV.delete(`provider_hint:${clientId}`).catch(() => {}));
+
     if (hintProvider && VALID_PROVIDERS.includes(hintProvider) && enabledProviders.includes(hintProvider)) {
       provider = hintProvider;
     } else {

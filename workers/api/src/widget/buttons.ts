@@ -640,7 +640,8 @@ export const WIDGET_JS = `(function() {
 
       if (typeof MemberAction !== 'undefined' && MemberAction.snsLogin) {
         // login 페이지: MemberAction 사용 가능 → 네이티브 SSO 플로우
-        fetch(hintUrl, { mode: 'cors' }).then(function() {
+        // credentials: 'include' — bg.suparain.kr에 쿠키 저장(사용자별 provider hint)
+        fetch(hintUrl, { mode: 'cors', credentials: 'include' }).then(function() {
           MemberAction.snsLogin(ssoType, returnUrl);
         }).catch(function() {
           MemberAction.snsLogin(ssoType, returnUrl);
@@ -650,7 +651,7 @@ export const WIDGET_JS = `(function() {
         var popupReturnUrl = encodeURIComponent('/member/login.html');
         var ssoUrl = 'https://' + mallId + '.cafe24.com/Api/Member/Oauth2ClientLogin/' + ssoType + '/?return_url=' + popupReturnUrl;
         var savedReturnUrl = this.getReturnUrl();
-        fetch(hintUrl, { mode: 'cors' }).then(function() {
+        fetch(hintUrl, { mode: 'cors', credentials: 'include' }).then(function() {
           var popup = window.open(ssoUrl, 'bg_sso_popup', 'width=520,height=700,scrollbars=yes');
           // 팝업 완료 메시지 수신 → 이전 페이지로 이동
           window.addEventListener('message', function handler(e) {

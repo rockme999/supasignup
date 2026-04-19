@@ -254,10 +254,18 @@ widget.get('/hint', async (c) => {
   const visitorId = c.req.query('visitor_id') || '';
   const device = c.req.query('device') || '';
 
-  // KV PUT을 await로 블로킹 — hint가 KV에 확실히 쓰인 후 응답
-  // 위젯이 응답을 받아야 MemberAction.snsLogin()을 호출하므로,
-  // hint가 KV에 없으면 authorize가 이전 프로바이더를 사용하게 됨
-  await c.env.KV.put(`provider_hint:${clientId}`, JSON.stringify({ provider, visitor_id: visitorId, device }), { expirationTtl: 120 });
+  const hintKey = `provider_hint:${clientId}`;
+  const hintValue = JSON.stringify({ provider, visitor_id: visitorId, device });
+
+  // KV edge cache(기본 60초) 레이스 회피: delete로 캐시 무효화 후 put.
+  // 이전 프로바이더가 엣지 캐시에 남아 다른 프로바이더 클릭 시 재사용되는 버그 대응.
+  await c.env.KV.delete(hintKey);
+  await c.env.KV.put(hintKey, hintValue, { expirationTtl: 120 });
+
+  // 사용자별 쿠키(강일관성) — /oauth/authorize가 쿠키를 우선 읽음.
+  // 공유 KV 키의 레이스를 원천 차단. Safari ITP 환경은 쿠키 차단 가능 → KV 폴백.
+  const cookieValue = encodeURIComponent(hintValue);
+  c.header('Set-Cookie', `bg_hint=${cookieValue}; Path=/; Max-Age=120; SameSite=None; Secure`);
 
   return c.json({ ok: true });
 });
