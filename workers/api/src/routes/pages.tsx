@@ -43,6 +43,7 @@ import {
   AdminAiReportDetailPage,
   AdminShopDetailPage,
 } from '../views/pages';
+import { getGlobalAutoReplyEnabled } from './admin';
 
 type PageEnv = {
   Bindings: Env;
@@ -1067,6 +1068,7 @@ pages.get('/dashboard/inquiries/:id', async (c) => {
 
   const inquiry = await c.env.DB.prepare(
     `SELECT i.id, i.title, i.content, i.status, i.reply, i.replied_at, i.created_at,
+            i.customer_read_at, i.attachments,
             s.shop_name, s.mall_id
      FROM inquiries i
      JOIN shops s ON i.shop_id = s.shop_id
@@ -1081,11 +1083,26 @@ pages.get('/dashboard/inquiries/:id', async (c) => {
       reply: string | null;
       replied_at: string | null;
       created_at: string;
+      customer_read_at: string | null;
+      attachments: string | null;
       shop_name: string | null;
       mall_id: string;
     }>();
 
   if (!inquiry) return c.redirect('/dashboard/inquiries');
+
+  // 고객 조회 시각 기록 — 답변이 존재하고 아직 최초 조회 기록이 없을 때만
+  // (실제 고객 페이지 렌더 경로는 이곳이므로 여기서 기록해야 함)
+  if (inquiry.reply && !inquiry.customer_read_at) {
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare(
+        "UPDATE inquiries SET customer_read_at = datetime('now') WHERE id = ? AND customer_read_at IS NULL"
+      )
+        .bind(inquiryId)
+        .run()
+        .catch((e) => console.error('[customer-read] update failed:', e)),
+    );
+  }
 
   return c.html(
     <InquiryDetailPage
@@ -1559,7 +1576,8 @@ pages.get('/supadmin/inquiries', async (c) => {
 
   let query = `
     SELECT i.id, i.title, i.content, i.reply, i.status, i.created_at, i.replied_at,
-           o.email as owner_email, s.shop_name, s.mall_id
+           o.email as owner_email, s.shop_name, s.mall_id,
+           i.shop_id, s.auto_reply_inquiries, i.customer_read_at, i.admin_read_at
     FROM inquiries i
     JOIN owners o ON i.owner_id = o.owner_id
     JOIN shops s ON i.shop_id = s.shop_id
@@ -1578,16 +1596,21 @@ pages.get('/supadmin/inquiries', async (c) => {
     ? 'SELECT COUNT(*) as total FROM inquiries WHERE status = ?'
     : 'SELECT COUNT(*) as total FROM inquiries';
 
-  const [result, countResult] = await Promise.all([
+  const [result, countResult, globalAutoReplyEnabled, pendingCountRow, autoRepliedCountRow] = await Promise.all([
     c.env.DB.prepare(query).bind(...params).all<{
       id: string; title: string; content: string; reply: string | null;
       status: string; created_at: string;
       replied_at: string | null; owner_email: string;
       shop_name: string | null; mall_id: string;
+      shop_id: string; auto_reply_inquiries: number;
+      customer_read_at: string | null; admin_read_at: string | null;
     }>(),
     statusFilter
       ? c.env.DB.prepare(countQuery).bind(statusFilter).first<{ total: number }>()
       : c.env.DB.prepare(countQuery).first<{ total: number }>(),
+    getGlobalAutoReplyEnabled(c.env),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM inquiries WHERE status = 'pending'").first<{ cnt: number }>(),
+    c.env.DB.prepare("SELECT COUNT(*) as cnt FROM inquiries WHERE status = 'auto_replied'").first<{ cnt: number }>(),
   ]);
 
   const total = countResult?.total ?? 0;
@@ -1597,6 +1620,9 @@ pages.get('/supadmin/inquiries', async (c) => {
       inquiries={result.results ?? []}
       pagination={{ page, pages: Math.ceil(total / limit), total }}
       statusFilter={statusFilter}
+      globalAutoReplyEnabled={globalAutoReplyEnabled}
+      pendingCount={pendingCountRow?.cnt ?? 0}
+      autoRepliedCount={autoRepliedCountRow?.cnt ?? 0}
     />
   );
 });
@@ -1635,8 +1661,8 @@ pages.get('/supadmin/ai-reports/:shopId', async (c) => {
   const shopId = c.req.param('shopId');
 
   const shop = await c.env.DB.prepare(
-    'SELECT shop_id, shop_name FROM shops WHERE shop_id = ?'
-  ).bind(shopId).first<{ shop_id: string; shop_name: string }>();
+    'SELECT shop_id, shop_name, mall_id, shop_identity FROM shops WHERE shop_id = ?'
+  ).bind(shopId).first<{ shop_id: string; shop_name: string; mall_id: string; shop_identity: string | null }>();
 
   if (!shop) return c.redirect('/supadmin/ai-reports');
 
@@ -1651,8 +1677,10 @@ pages.get('/supadmin/ai-reports/:shopId', async (c) => {
 
   return c.html(
     <AdminAiReportDetailPage
-      shopName={shop.shop_name || shop.shop_id}
+      shopName={shop.shop_name || shop.mall_id}
       shopId={shop.shop_id}
+      mallId={shop.mall_id}
+      shopIdentity={shop.shop_identity}
       briefings={briefings.results ?? []}
     />
   );

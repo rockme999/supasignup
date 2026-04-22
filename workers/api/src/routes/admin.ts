@@ -9,6 +9,7 @@ import { generateId } from '@supasignup/bg-core';
 import { adminAuth } from '../middleware/admin';
 import { rateLimitMiddleware } from '../middleware/auth';
 import { escapeLike } from '../db/stats-utils';
+import { draftInquiryReply, validateReply, PROMPT_VERSION, AI_MODEL, analyzeAndSaveShopIdentity } from './ai';
 
 type AdminEnv = {
   Bindings: Env;
@@ -644,7 +645,8 @@ admin.get('/inquiries', async (c) => {
 
   let query = `
     SELECT i.id, i.title, i.content, i.reply, i.status, i.created_at, i.replied_at,
-           o.email as owner_email, s.shop_name, s.mall_id
+           i.attachments, i.shop_id, i.customer_read_at, i.admin_read_at,
+           o.email as owner_email, s.shop_name, s.mall_id, s.auto_reply_inquiries
     FROM inquiries i
     JOIN owners o ON i.owner_id = o.owner_id
     JOIN shops s ON i.shop_id = s.shop_id
@@ -717,6 +719,155 @@ admin.put('/inquiries/:id/reply', async (c) => {
   return c.json({ ok: true });
 });
 
+// ─── POST /shops/:id/analyze-identity — 쇼핑몰 정체성 수동 분석 ─
+// 자동 분석이 실패했거나 수동으로 다시 분석하고 싶을 때 관리자가 트리거.
+admin.post('/shops/:id/analyze-identity', async (c) => {
+  const shopId = c.req.param('id');
+
+  const shop = await c.env.DB.prepare(
+    'SELECT * FROM shops WHERE shop_id = ? AND deleted_at IS NULL'
+  ).bind(shopId).first<Record<string, unknown>>();
+  if (!shop) return c.json({ error: 'not_found' }, 404);
+
+  try {
+    const identity = await analyzeAndSaveShopIdentity(c.env, shop);
+    await recordAuditLog(
+      c.env.DB,
+      c.get('ownerId'),
+      'analyze_identity',
+      'shop',
+      shopId,
+      null,
+    );
+    return c.json({ ok: true, identity });
+  } catch (e: any) {
+    console.error('[supadmin] analyze-identity failed:', e?.message || e);
+    const isUrlMissing = e?.message === 'Shop URL is not configured';
+    return c.json(
+      {
+        error: isUrlMissing ? 'bad_request' : 'ai_error',
+        message: isUrlMissing
+          ? '쇼핑몰 URL이 설정되어 있지 않아 분석할 수 없습니다.'
+          : 'AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+      },
+      isUrlMissing ? 400 : 500,
+    );
+  }
+});
+
+// ─── POST /inquiries/:id/mark-read — 관리자 조회 시각 기록 ────
+admin.post('/inquiries/:id/mark-read', async (c) => {
+  const inquiryId = c.req.param('id');
+  // admin_read_at 이 NULL 인 경우에만 기록 (첫 조회 시각 보존)
+  const result = await c.env.DB.prepare(
+    "UPDATE inquiries SET admin_read_at = datetime('now') WHERE id = ? AND admin_read_at IS NULL",
+  )
+    .bind(inquiryId)
+    .run();
+  return c.json({ ok: true, updated: (result.meta?.changes ?? 0) > 0 });
+});
+
+// ─── POST /inquiries/:id/draft-reply — AI 답변 초안 생성 ─────
+admin.post('/inquiries/:id/draft-reply', async (c) => {
+  const inquiryId = c.req.param('id');
+
+  // 일일 호출 제한: 20회 (KV rate limit)
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const rlKey = `rl:reply-draft:${today}`;
+  const used = Number((await c.env.KV.get(rlKey)) ?? '0');
+  if (used >= 20) {
+    return c.json({ error: 'daily_limit_exceeded', message: '오늘 AI 초안 생성 한도(20회)에 도달했습니다.' }, 429);
+  }
+
+  // 문의 조회
+  const inquiry = await c.env.DB.prepare(
+    'SELECT id, shop_id, title, content, status FROM inquiries WHERE id = ?'
+  ).bind(inquiryId).first<{ id: string; shop_id: string; title: string; content: string; status: string }>();
+  if (!inquiry) return c.json({ error: 'not_found' }, 404);
+
+  // 쇼핑몰 조회
+  const shop = await c.env.DB.prepare(
+    'SELECT shop_id, mall_id, shop_name, plan FROM shops WHERE shop_id = ?'
+  ).bind(inquiry.shop_id).first<{ shop_id: string; mall_id: string; shop_name: string | null; plan: string }>();
+  if (!shop) return c.json({ error: 'shop_not_found' }, 404);
+
+  // 호출 카운트 증가 (TTL 86400초 = 하루)
+  await c.env.KV.put(rlKey, String(used + 1), { expirationTtl: 86400 });
+
+  try {
+    const { text, elapsedMs } = await draftInquiryReply(c.env, {
+      shop: {
+        mall_id: shop.mall_id,
+        shop_name: shop.shop_name ?? shop.mall_id,
+        plan: shop.plan,
+      },
+      inquiry: {
+        title: inquiry.title,
+        content: inquiry.content,
+      },
+      autoMode: false,
+    });
+
+    const validation = validateReply(text);
+    if (!validation.ok) {
+      console.warn(`[draft-reply] validation failed: ${validation.reason}`);
+      return c.json({ error: 'validation_failed', reason: validation.reason }, 500);
+    }
+
+    return c.json({ draft: text, elapsedMs });
+  } catch (e: any) {
+    // 상세 에러는 서버 로그에만 기록 (클라이언트 응답에는 generic 메시지만)
+    console.error('[draft-reply] AI call failed:', e?.message || e);
+    return c.json({ error: 'ai_error', message: 'AI 서비스 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' }, 500);
+  }
+});
+
+// ─── GET /inquiries/:id/auto-reply-failures — 자동답변 실패 이력 ─
+admin.get('/inquiries/:id/auto-reply-failures', async (c) => {
+  const inquiryId = c.req.param('id');
+  const result = await c.env.DB.prepare(
+    `SELECT id, attempt, reason, detail, ai_elapsed_ms, created_at
+     FROM ai_auto_reply_failures
+     WHERE inquiry_id = ?
+     ORDER BY created_at DESC
+     LIMIT 50`
+  ).bind(inquiryId).all<{ id: number; attempt: number; reason: string; detail: string | null; ai_elapsed_ms: number | null; created_at: string }>();
+  return c.json({ failures: result.results ?? [] });
+});
+
+// ─── GET /settings/auto-reply — 전역 AI 자동답변 설정 조회 ──
+admin.get('/settings/auto-reply', async (c) => {
+  const enabled = await getGlobalAutoReplyEnabled(c.env);
+  return c.json({ enabled });
+});
+
+// ─── PUT /settings/auto-reply — 전역 AI 자동답변 설정 변경 ──
+admin.put('/settings/auto-reply', async (c) => {
+  let body: { enabled?: boolean } = {};
+  try { body = await c.req.json<{ enabled?: boolean }>(); } catch { /* ignore */ }
+
+  if (typeof body.enabled !== 'boolean') {
+    return c.json({ error: 'bad_request', message: 'enabled (boolean) is required' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    `INSERT INTO app_settings (key, value, updated_by, updated_at)
+     VALUES ('ai_auto_reply_global', ?, ?, datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
+  ).bind(body.enabled ? '1' : '0', c.get('ownerId')).run();
+
+  await recordAuditLog(
+    c.env.DB,
+    c.get('ownerId'),
+    'toggle_global_auto_reply',
+    'app_settings',
+    'ai_auto_reply_global',
+    `ai_auto_reply_global → ${body.enabled ? 'ON' : 'OFF'}`,
+  );
+
+  return c.json({ ok: true, enabled: body.enabled });
+});
+
 // ─── GET /ai-reports — 전체 쇼핑몰 AI 브리핑 목록 ───────────
 admin.get('/ai-reports', async (c) => {
   const result = await c.env.DB.prepare(
@@ -738,6 +889,14 @@ admin.get('/ai-reports', async (c) => {
 
   return c.json({ shops: result.results ?? [] });
 });
+
+// ─── Helper: 전역 AI 자동답변 활성화 여부 조회 ───────────────
+export async function getGlobalAutoReplyEnabled(env: Env): Promise<boolean> {
+  const row = await env.DB.prepare(
+    "SELECT value FROM app_settings WHERE key = 'ai_auto_reply_global'"
+  ).first<{ value: string }>();
+  return row?.value === '1';
+}
 
 // ─── Helper: 감사 로그 기록 ──────────────────────────────────
 async function recordAuditLog(

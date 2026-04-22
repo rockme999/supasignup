@@ -156,6 +156,7 @@ export function parseProviders(raw: string | null | undefined): string[] {
 export const inquiryStatusLabel = (status: string) => {
   if (status === 'pending') return { label: '접수됨', cls: 'badge-yellow' };
   if (status === 'replied') return { label: '답변완료', cls: 'badge-green' };
+  if (status === 'auto_replied') return { label: 'AI자동답변', cls: 'badge-purple' };
   if (status === 'closed') return { label: '종료', cls: 'badge-gray' };
   return { label: status, cls: 'badge-gray' };
 };

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 444px;
+    height: 320px;
+    overflow: hidden;
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: #0b0b2e;
+  }
+  .cover {
+    position: relative;
+    width: 444px;
+    height: 320px;
+    background:
+      radial-gradient(ellipse at 85% 35%, rgba(251,191,36,0.22) 0%, transparent 50%),
+      radial-gradient(ellipse at 15% 95%, rgba(124,58,237,0.35) 0%, transparent 55%),
+      linear-gradient(135deg, #1e1b4b 0%, #0b0b2e 55%, #000012 100%);
+    overflow: hidden;
+    color: #ffffff;
+    padding: 24px 28px;
+    box-sizing: border-box;
+  }
+
+  /* 상단 브랜드 바 */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+  }
+  .topbar .brand {
+    color: #fbbf24;
+  }
+  .topbar .divider {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+    margin: 0 12px;
+  }
+
+  /* 2단 레이아웃: 좌 카피 / 우 아이콘 */
+  .main {
+    position: absolute;
+    left: 28px;
+    right: 28px;
+    top: 62px;
+    bottom: 60px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .copy {
+    flex: 1;
+    min-width: 0;
+  }
+  .tagline {
+    display: inline-block;
+    padding: 4px 11px;
+    margin-bottom: 12px;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fbbf24;
+  }
+  .title {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.16;
+    letter-spacing: -0.025em;
+    margin: 0 0 8px;
+    color: #ffffff;
+  }
+  .title .accent {
+    background: linear-gradient(90deg, #fbbf24 0%, #fde047 60%, #ffffff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .subtitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.55;
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
+
+  /* 우측 아이콘 */
+  .icon-wrap {
+    position: relative;
+    width: 148px;
+    height: 148px;
+    flex-shrink: 0;
+  }
+  .icon-glow {
+    position: absolute;
+    inset: -18px;
+    background: radial-gradient(circle, rgba(251,191,36,0.35) 0%, transparent 65%);
+    filter: blur(8px);
+    z-index: 0;
+  }
+  .icon-img {
+    position: relative;
+    width: 148px;
+    height: 148px;
+    border-radius: 34px;
+    display: block;
+    box-shadow:
+      0 20px 40px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
+    z-index: 1;
+  }
+
+  /* 하단 라인 */
+  .footer {
+    position: absolute;
+    left: 28px;
+    right: 28px;
+    bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: #fbbf24;
+    color: #1e1b4b;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .meta {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.05em;
+    text-align: right;
+    line-height: 1.4;
+  }
+  .meta b {
+    color: #fbbf24;
+    font-weight: 700;
+  }
+
+  /* 은은한 스파크 */
+  .spark {
+    position: absolute;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 10px #fbbf24;
+    z-index: 2;
+  }
+  .spark.s1 { width: 3px; height: 3px; top: 72px; right: 180px; opacity: 0.8; }
+  .spark.s2 { width: 2px; height: 2px; top: 150px; right: 30px; opacity: 0.55; }
+  .spark.s3 { width: 2px; height: 2px; top: 230px; left: 230px; opacity: 0.7; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="topbar">
+      <span class="brand">⚡ BUNGAE SIGNUP</span>
+      <span class="divider"></span>
+      <span>STORY · 01</span>
+    </div>
+
+    <div class="spark s1"></div>
+    <div class="spark s2"></div>
+    <div class="spark s3"></div>
+
+    <div class="main">
+      <div class="copy">
+        <span class="tagline">카페24 공식 앱 · 런칭</span>
+        <h1 class="title">
+          <span class="accent">번개 가입</span>이<br>
+          매출을 바꾼다
+        </h1>
+        <p class="subtitle">카카오·네이버·구글·애플<br>1클릭 가입으로 이탈 방지</p>
+      </div>
+      <div class="icon-wrap">
+        <div class="icon-glow"></div>
+        <img class="icon-img" src="../../../icon.png" alt="번개가입 공식 앱 아이콘">
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="cta">번개가입 런칭</div>
+      <div class="meta">무료 설치<br><b>월 0원부터</b></div>
+    </div>
+  </div>
+</body>
+</html>

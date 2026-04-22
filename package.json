@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=workers/api",
     "deploy": "npm run deploy --workspace=workers/api",
+    "build:ai-context": "node scripts/build-ai-context.mjs",
     "test": "vitest",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit"

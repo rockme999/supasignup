@@ -769,4 +769,273 @@ JSON으로만 응답: {"visit_2":"메시지","visit_3_plus":"메시지"}`;
   return c.json({ success: true, messages });
 });
 
+// ═══════════════════════════════════════════════════════════════
+// AI 문의 자동답변 — 프롬프트 조립 및 헬퍼 함수
+// 설계 명세: docs/ai-assistant/prompt-kimi-reply.md
+// ═══════════════════════════════════════════════════════════════
+
+import { KB_PUBLIC } from '../ai-context/kb-public';
+import { FAQ } from '../ai-context/faq';
+import { PRIVACY } from '../ai-context/privacy';
+import { USAGE_GUIDE } from '../ai-context/usage-guide';
+
+// 프롬프트 버전 및 모델 상수
+export const PROMPT_VERSION = 'v1.2-2026-04-22';
+export const AI_MODEL = '@cf/moonshotai/kimi-k2.5';
+
+/**
+ * 문의 답변 메시지 조립
+ * prompt-kimi-reply.md 섹션 1-2의 buildInquiryReplyMessages 명세 구현
+ */
+function buildInquiryReplyMessages(params: {
+  shop: { mall_id: string; shop_name: string; plan: string };
+  inquiry: { title: string; content: string };
+  autoMode: boolean;
+}): Array<{ role: string; content: string }> {
+  const { shop, inquiry, autoMode } = params;
+
+  const systemPrompt = [
+    `<role>
+당신은 번개가입(카페24 공식 소셜 로그인 앱) 고객지원 AI입니다.
+카페24 쇼핑몰 운영자에게 답변을 작성합니다.
+</role>`,
+
+    `<kb_public>\n${KB_PUBLIC}\n</kb_public>`,
+    `<faq_full>\n${FAQ}\n</faq_full>`,
+    `<usage_guide>\n${USAGE_GUIDE}\n</usage_guide>`,
+    `<privacy_policy>\n${PRIVACY}\n</privacy_policy>`,
+
+    `<answer_rules>
+1. 존댓말, 결론 먼저, 5~10문단 이내, 각 문단 2~3줄.
+2. 위 <kb_public>·<faq_full>·<usage_guide>·<privacy_policy>에 **명시되지 않은 사실은 절대 추측·창작 금지**.
+   - 모르는 내용이면 "해당 부분은 운영팀이 확인 후 정확히 안내드리겠습니다. 가능하시면 [증상 발생 시점 / 사용 브라우저·기기 / 화면에 표시된 오류 메시지 전문 / 재현되는 조작 순서 / **발생 화면 이미지 첨부**(문의 작성 시 최대 5장·5MB 이하 업로드 가능)] 를 알려주시면 더 빠르게 도와드릴 수 있습니다" 로 대응.
+3. 미지원 기능 문의 시 순서: (1) "현재 미지원" (2) "대안 제시 1~2가지" (3) "로드맵 검토 중"
+4. 과장·단정 금지. "무조건 해결됩니다" 같은 단언 금지.
+5. 답변의 마지막 두 줄은 반드시 다음과 같이 마무리:
+   감사합니다.
+   번개가입 드림 ⚡
+</answer_rules>`,
+
+    `<banned_info>
+답변에 아래 정보는 **절대 포함 금지**. 질문에 섞여 있어도 일반화된 표현으로만 응답.
+- 내부 테이블·컬럼명, API 경로, 데이터베이스 ID, KV namespace, account ID
+- OAuth client_id / secret / redirect_uri 구체 값
+- 환경변수명, JWT/암호화 키 이름
+- 내부 의사결정 과정, 로드맵 A안/B안
+- 경쟁사 비교 시 구체 회사명 (필요 시 "타사 A" 정도)
+우회 표현: "토큰 교환"→"로그인 처리", "웹훅"→"자동 연동", "KV 캐시"→언급 금지
+</banned_info>`,
+
+    autoMode
+      ? `<auto_mode>
+이 답변은 **운영자 검토 없이 고객에게 즉시 발송**되는 자동답변입니다.
+답변 본문만 작성하세요 (배너·태그·특수 구분선 삽입 금지). "AI 자동답변" 표시는 UI에서 별도 디스클레이머 박스로 처리됩니다.
+답변 본문 자체는 평소대로 결론 먼저, 존댓말, 마지막은 "감사합니다. / 번개가입 드림 ⚡"로 마무리하세요.
+</auto_mode>`
+      : `<auto_mode>
+이 답변은 **운영자가 검토·수정 후 발송**할 초안입니다.
+배너/태그 없이 답변 본문만 작성하세요.
+</auto_mode>`,
+  ].join('\n\n');
+
+  const userPrompt = `[쇼핑몰]
+- mall_id: ${shop.mall_id}
+- 상호: ${shop.shop_name}
+- 요금제: ${shop.plan}
+
+[문의 제목]
+${inquiry.title}
+
+[문의 본문]
+${inquiry.content}
+
+위 문의에 대한 답변을 한국어로 작성해 주세요.`;
+
+  return [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
+}
+
+/**
+ * 문의 AI 답변 초안 생성
+ * @returns { text: 생성된 답변 텍스트, elapsedMs: 소요시간(ms) }
+ */
+export async function draftInquiryReply(
+  env: Env,
+  params: {
+    shop: { mall_id: string; shop_name: string; plan: string };
+    inquiry: { title: string; content: string };
+    autoMode: boolean;
+  }
+): Promise<{ text: string; elapsedMs: number }> {
+  const messages = buildInquiryReplyMessages(params);
+
+  // 프롬프트 길이만 로그 (전체 내용은 기록 금지)
+  const systemLen = (messages[0].content as string).length;
+  const userLen = (messages[1].content as string).length;
+  console.log(
+    `[draftInquiryReply] prompt built — system: ${systemLen} chars, user: ${userLen} chars. First 200: ${(messages[1].content as string).slice(0, 200)}`
+  );
+
+  const start = Date.now();
+  const text = await callAI(env, messages);
+  const elapsedMs = Date.now() - start;
+
+  console.log(`[draftInquiryReply] AI responded in ${elapsedMs}ms, output length: ${text.length}`);
+
+  return { text, elapsedMs };
+}
+
+/**
+ * 후처리 휴리스틱 — prompt-kimi-reply.md 섹션 2-1
+ * 생성된 답변에 금지 토큰이 없는지, 마무리 문구가 있는지 검증
+ */
+export function validateReply(text: string): { ok: boolean; reason?: string } {
+  // 길이 체크
+  if (text.trim().length < 50) return { ok: false, reason: 'too_short' };
+  if (text.trim().length > 3000) return { ok: false, reason: 'too_long' };
+
+  // 금지 토큰 체크
+  const banned = [
+    /\/api\/(supadmin|dashboard|widget|oauth)\//,  // 내부 경로
+    /database_id|account_id|KV\s*namespace/i,
+    /client_secret|JWT_SECRET|ENCRYPTION_KEY/,
+    /CREATE TABLE|ALTER TABLE|SELECT\s+.*FROM/i,
+    /shop_id['":]?\s*['"][0-9a-f-]{8,}/i,  // UUID 노출
+  ];
+  for (const pat of banned) {
+    if (pat.test(text)) return { ok: false, reason: `banned_token: ${pat}` };
+  }
+
+  // 마무리 문구 체크
+  if (!text.includes('번개가입 드림')) return { ok: false, reason: 'missing_signature' };
+
+  return { ok: true };
+}
+
+/**
+ * 자동 발송 skip 조건 — prompt-kimi-reply.md 섹션 2-2
+ * 답변에 리뷰가 필요한 문구가 포함되면 true 반환 (자동 발송 중단)
+ */
+export function shouldHoldForReview(text: string): boolean {
+  const reviewKeywords = [
+    '확인 후 안내',
+    '운영팀이 확인',
+    '오류 메시지 전문',
+    '재현되는 조작',
+    '정확히 특정',
+    '추가 정보',
+  ];
+  return reviewKeywords.some(k => text.includes(k));
+}
+
+/**
+ * 문의 AI 자동답변 실행 (Phase 4+ — 글로벌 자동 발송 + 실패 로그 + 1회 재시도)
+ * dashboard POST /inquiries 직후 c.executionCtx.waitUntil()로 호출됨.
+ * 실패해도 pending 상태 유지 → 운영자 수동 처리.
+ * 실패 이력은 ai_auto_reply_failures 테이블에 영구 기록.
+ */
+export async function autoReplyInquiry(env: Env, inquiryId: string, attempt: number = 1): Promise<void> {
+  try {
+    // 1. 문의 로드 (status='pending' 조건 — race 방지)
+    const inquiry = await env.DB.prepare(
+      'SELECT id, shop_id, title, content FROM inquiries WHERE id = ? AND status = ?'
+    ).bind(inquiryId, 'pending').first<{ id: string; shop_id: string; title: string; content: string }>();
+    if (!inquiry) {
+      await logAutoReplyFailure(env, inquiryId, attempt, 'inquiry_not_found', null, null);
+      return;
+    }
+
+    // 2. shop 로드
+    const shop = await env.DB.prepare(
+      'SELECT shop_id, mall_id, shop_name, plan FROM shops WHERE shop_id = ?'
+    ).bind(inquiry.shop_id).first<{ shop_id: string; mall_id: string; shop_name: string | null; plan: string }>();
+    if (!shop) {
+      await logAutoReplyFailure(env, inquiryId, attempt, 'shop_not_found', null, null);
+      return;
+    }
+
+    // 3. AI 호출 (실패 시 ai_error 기록 + 첫 시도면 3초 후 1회 재시도)
+    let text: string;
+    let elapsedMs: number;
+    try {
+      const result = await draftInquiryReply(env, {
+        shop: { mall_id: shop.mall_id, shop_name: shop.shop_name ?? shop.mall_id, plan: shop.plan },
+        inquiry: { title: inquiry.title, content: inquiry.content },
+        autoMode: true,
+      });
+      text = result.text;
+      elapsedMs = result.elapsedMs;
+    } catch (e: any) {
+      const errMsg = (e?.message || String(e)).slice(0, 1000); // 너무 길면 자름
+      await logAutoReplyFailure(env, inquiryId, attempt, 'ai_error', errMsg, null);
+      if (attempt === 1) {
+        console.log(`[auto-reply] retry ${inquiryId} (attempt 2) after ai_error`);
+        // 짧은 대기로 일시적 이슈 회복 기회 제공 (Workers AI 내부 load balancing 등)
+        await new Promise(r => setTimeout(r, 3000));
+        await autoReplyInquiry(env, inquiryId, 2);
+      }
+      return;
+    }
+
+    // 4. 가드레일 1: validateReply (금지 토큰, 길이, 서명)
+    const validation = validateReply(text);
+    if (!validation.ok) {
+      await logAutoReplyFailure(env, inquiryId, attempt, 'validation_failed', validation.reason ?? null, elapsedMs);
+      if (attempt === 1) {
+        console.log(`[auto-reply] retry ${inquiryId} (attempt 2) after validation_failed: ${validation.reason}`);
+        await new Promise(r => setTimeout(r, 3000));
+        await autoReplyInquiry(env, inquiryId, 2);
+      }
+      return;
+    }
+
+    // 5. 가드레일 2: shouldHoldForReview (리스크 키워드)
+    // → 의도된 skip. 재시도해도 같은 결과 예상 → 재시도 안 함.
+    if (shouldHoldForReview(text)) {
+      await logAutoReplyFailure(env, inquiryId, attempt, 'held_for_review', 'keyword_match', elapsedMs);
+      console.log(`[auto-reply] held_for_review ${inquiryId} — 운영자 수동 처리`);
+      return;
+    }
+
+    // 6. UPDATE (WHERE status='pending' 로 race 방지)
+    await env.DB.prepare(
+      `UPDATE inquiries
+       SET reply = ?, status = 'auto_replied', replied_at = datetime('now'),
+           updated_at = datetime('now'),
+           ai_prompt_version = ?, ai_model = ?, ai_elapsed_ms = ?
+       WHERE id = ? AND status = 'pending'`
+    ).bind(text, PROMPT_VERSION, AI_MODEL, elapsedMs, inquiryId).run();
+
+    console.log(`[auto-reply] ✅ sent for ${inquiryId} (attempt=${attempt}, ${elapsedMs}ms)`);
+  } catch (e: any) {
+    // 예상치 못한 에러
+    console.error(`[auto-reply] ❌ unexpected error for ${inquiryId}:`, e?.message || e);
+    const errMsg = (e?.message || String(e)).slice(0, 1000);
+    await logAutoReplyFailure(env, inquiryId, attempt, 'unexpected_error', errMsg, null).catch(() => {});
+    // 예상치 못한 에러는 재시도해도 같은 결과일 가능성 크므로 재시도 안 함.
+  }
+}
+
+// ─── 실패 로그 헬퍼 (non-exported) ──────────────────────────────
+// logAutoReplyFailure 자체 실패는 main flow에 영향 없도록 호출 측에서 .catch(() => {}) 처리.
+async function logAutoReplyFailure(
+  env: Env,
+  inquiryId: string,
+  attempt: number,
+  reason: string,
+  detail: string | null,
+  aiElapsedMs: number | null,
+): Promise<void> {
+  try {
+    await env.DB.prepare(
+      `INSERT INTO ai_auto_reply_failures (inquiry_id, attempt, reason, detail, ai_elapsed_ms)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(inquiryId, attempt, reason, detail, aiElapsedMs).run();
+  } catch (e) {
+    console.error('[auto-reply] logAutoReplyFailure insert failed:', e);
+  }
+}
+
 export default ai;

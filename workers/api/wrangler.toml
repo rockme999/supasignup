@@ -32,6 +32,12 @@ id = "fe38c181822b4729850b53ab839339b5"
 [ai]
 binding = "AI"
 
+# R2 버킷 — 문의 첨부 이미지 (프로덕션)
+# 버킷 생성: npx wrangler r2 bucket create bg-inquiry-attachments
+[[r2_buckets]]
+binding = "INQUIRY_ATTACHMENTS"
+bucket_name = "bg-inquiry-attachments"
+
 # Queues (프로덕션)
 [[queues.producers]]
 queue = "bg-briefing-queue"
@@ -76,6 +82,12 @@ id = "d3bc6faec4274bd3bacca408d4bf4277"
 # Workers AI (스테이징)
 [env.dev.ai]
 binding = "AI"
+
+# R2 버킷 — 문의 첨부 이미지 (스테이징)
+# 버킷 생성: npx wrangler r2 bucket create bg-inquiry-attachments-dev
+[[env.dev.r2_buckets]]
+binding = "INQUIRY_ATTACHMENTS"
+bucket_name = "bg-inquiry-attachments-dev"
 
 # Queues (스테이징)
 [[env.dev.queues.producers]]

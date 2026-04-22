@@ -15,6 +15,7 @@ import adminRoutes from './routes/admin';
 import facebookRoutes from './routes/facebook';
 import testRoutes from './routes/test';
 import aiRoutes from './routes/ai';
+import { dashboardAttachmentRoutes, adminAttachmentRoutes } from './routes/inquiry-attachments';
 import { WIDGET_JS } from './widget/buttons';
 import { TEST_DOM_JS } from './widget/test-dom';
 import { TEST_STORAGE_JS } from './widget/test-storage';
@@ -199,6 +200,9 @@ app.route('/api/facebook', facebookRoutes);
 app.route('/api/dashboard/billing', billingRoutes);
 app.route('/api/supadmin', adminRoutes);
 app.route('/api/ai', aiRoutes);
+// 문의 첨부 이미지 (Phase 2)
+app.route('/api/dashboard', dashboardAttachmentRoutes);
+app.route('/api/supadmin', adminAttachmentRoutes);
 
 // ── Dev-only: /test/* 라우트 (프로덕션에서 비활성화) ─────────
 app.use('/test/*', devOnly);

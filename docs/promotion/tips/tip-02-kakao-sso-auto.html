@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사용팁 #2 — 카카오 로그인 자동 연동 원리 (프리뷰)</title>
+<style>
+  body { margin: 0; padding: 48px 20px; background: #f3f4f6; }
+  .preview-notice {
+    max-width: 720px; margin: 0 auto 24px; padding: 14px 18px;
+    background: #fffbeb; border: 1px dashed #fbbf24; border-radius: 8px;
+    font-family: 'Noto Sans KR','Malgun Gothic',sans-serif;
+    font-size: 13px; color: #78350f; line-height: 1.6;
+  }
+  .preview-notice b { color: #92400e; }
+</style>
+</head>
+<body>
+<div class="preview-notice">
+  <b>📋 로컬 프리뷰 전용 래퍼입니다.</b><br>
+  카페24 파트너센터 에디터에 붙여넣을 때는 아래 <code>&lt;div style="max-width:720px..."&gt; ... &lt;/div&gt;</code> 본문 블록만 복사하세요.
+  (이 래퍼 — <code>&lt;!DOCTYPE&gt;</code>, <code>&lt;html&gt;</code>, <code>&lt;head&gt;</code>, 이 노란 안내 박스 — 는 붙여넣지 않습니다.)
+</div>
+<!--
+  카페24 사용팁 #2 본문 HTML — 번개가입이 카카오 로그인을 자동 연동하는 방법
+  붙여넣는 위치: 사용팁 등록 > 상세 내용 > 에디터 "코드 보기" > 본 HTML 전체 복붙
+-->
+<div style="max-width:720px;margin:0 auto;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;color:#1f2937;line-height:1.7;font-size:16px;">
+
+  <!-- 인트로 -->
+  <blockquote style="margin:0 0 32px;padding:20px 24px;border-left:4px solid #fbbf24;background:#fffbeb;color:#78350f;font-size:17px;line-height:1.65;">
+    카카오 로그인을 쇼핑몰에 붙이고 싶은데 <strong>개발자 앱 등록부터 막막하다</strong>는 분들이 많습니다.
+    번개가입은 그 과정을 전부 대신합니다. <strong>토글 하나만 켜면 카카오 로그인이 바로 뜹니다.</strong>
+  </blockquote>
+
+  <!-- 일반적인 방법의 장벽 -->
+  <h2 style="margin:36px 0 12px;font-size:22px;font-weight:700;color:#111827;border-bottom:2px solid #111827;padding-bottom:8px;">
+    일반적으로 카카오 로그인을 붙이려면
+  </h2>
+  <p style="margin:0 0 16px;">
+    카카오 로그인을 직접 쇼핑몰에 연동하려면 대략 이런 과정을 거쳐야 합니다.
+  </p>
+
+  <div style="margin:20px 0;">
+    <div style="padding:14px 18px;margin-bottom:8px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">
+      <div style="font-weight:700;color:#991b1b;margin-bottom:2px;">STEP 1. 카카오 개발자 계정 생성 + 앱 등록</div>
+      <div style="font-size:14px;color:#7f1d1d;">개발자 사이트 가입, 앱 생성, REST API 키 발급</div>
+    </div>
+    <div style="padding:14px 18px;margin-bottom:8px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">
+      <div style="font-weight:700;color:#991b1b;margin-bottom:2px;">STEP 2. 도메인 등록 + Redirect URI 설정</div>
+      <div style="font-size:14px;color:#7f1d1d;">쇼핑몰 도메인과 콜백 URL을 정확히 입력해야 로그인이 성공</div>
+    </div>
+    <div style="padding:14px 18px;margin-bottom:8px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">
+      <div style="font-weight:700;color:#991b1b;margin-bottom:2px;">STEP 3. 카카오 비즈니스 번호로 비즈 앱 심사 신청</div>
+      <div style="font-size:14px;color:#7f1d1d;">이름·이메일 같은 기본 정보를 받으려면 비즈 앱 승인이 필요. 심사는 일반적으로 며칠 ~ 1~2주 소요</div>
+    </div>
+    <div style="padding:14px 18px;margin-bottom:8px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">
+      <div style="font-weight:700;color:#991b1b;margin-bottom:2px;">STEP 4. 서버에 토큰 교환 로직 직접 구현</div>
+      <div style="font-size:14px;color:#7f1d1d;">인가 코드 → 액세스 토큰 교환, 만료 처리, 시크릿 키 보관까지 개발 공수 필요</div>
+    </div>
+    <div style="padding:14px 18px;margin-bottom:8px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">
+      <div style="font-weight:700;color:#991b1b;margin-bottom:2px;">STEP 5. 쇼핑몰 스킨에 버튼 UI 삽입</div>
+      <div style="font-size:14px;color:#7f1d1d;">HTML 편집 권한 · 카페24 스킨 구조 이해가 필요</div>
+    </div>
+  </div>
+
+  <p style="margin:16px 0 0;padding:14px 18px;background:#fef3c7;border-radius:6px;color:#78350f;">
+    개발자·디자이너 없이 운영만 하시는 분들에게는 <strong>STEP 1에서부터 막힙니다</strong>. 비즈 앱 심사가 승인되기 전까지는 고객에게 카카오 로그인을 열 수가 없습니다.
+  </p>
+
+  <!-- 번개가입의 방식 -->
+  <h2 style="margin:48px 0 16px;font-size:22px;font-weight:700;color:#111827;border-bottom:2px solid #111827;padding-bottom:8px;">
+    번개가입은 이 과정을 전부 대신합니다
+  </h2>
+
+  <div style="margin:16px 0;padding:20px 24px;background:linear-gradient(135deg,#ecfdf5 0%,#f0fdf4 100%);border-radius:10px;border:1px solid #86efac;">
+    <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:0.1em;margin-bottom:8px;">번개가입 방식</div>
+    <p style="margin:0 0 12px;font-size:17px;font-weight:700;color:#14532d;line-height:1.5;">
+      운영자가 해야 할 일: 관리자에서 <span style="background:#ffffff;padding:2px 10px;border-radius:4px;color:#fbbf24;">●</span> 카카오 토글을 ON
+    </p>
+    <p style="margin:0;font-size:15px;color:#166534;">
+      끝입니다. 카카오 개발자 계정도, 비즈앱 심사도, 콜백 URL도, 토큰 관리도 필요 없습니다.
+    </p>
+  </div>
+
+  <figure style="margin:20px 0;text-align:center;">
+    <img src="../images/screenshots/kakao-toggle.png" alt="번개가입 관리자 화면에서 카카오 프로바이더 토글 스위치를 켜는 모습" style="width:100%;max-width:720px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+    <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 이 토글 하나로 카카오 로그인이 쇼핑몰에 열립니다</figcaption>
+  </figure>
+
+  <!-- 어떻게 가능한가 -->
+  <h2 style="margin:48px 0 16px;font-size:22px;font-weight:700;color:#111827;border-bottom:2px solid #111827;padding-bottom:8px;">
+    어떻게 가능한가요?
+  </h2>
+  <p style="margin:0 0 16px;">
+    번개가입은 <strong>카페24 공식 앱</strong>으로 운영되며, 카카오·네이버·구글·애플 등 각 소셜 서비스와의 연동은
+    번개가입 운영사가 <strong>공용 인증 브릿지</strong>를 통해 제공합니다.
+    이 브릿지가 하는 일은 다음과 같습니다.
+  </p>
+
+  <div style="margin:16px 0;padding:20px 24px;background:#f9fafb;border-radius:8px;font-family:'Courier New',Consolas,monospace;font-size:14px;color:#374151;line-height:1.8;overflow-x:auto;">
+    [고객] &nbsp;&nbsp;→ 쇼핑몰 로그인 페이지에서 카카오 버튼 클릭<br>
+    [번개가입 브릿지] → 카카오 로그인 창 호출 · 동의 결과 수신<br>
+    [번개가입 브릿지] → 이름/이메일 등 <strong>쇼핑몰에 필요한 최소 정보</strong>만 카페24 회원 API로 전달<br>
+    [카페24] &nbsp;→ 이 쇼핑몰의 회원 DB에 등록 또는 기존 회원과 연결<br>
+    [고객] &nbsp;&nbsp;→ 쇼핑몰에 로그인된 상태로 돌아옴
+  </div>
+
+  <p style="margin:16px 0 0;">
+    고객 입장에서는 <strong>1초 안에 로그인 완료</strong>이고, 운영자 입장에서는 <strong>회원 DB만 늘어나는</strong> 경험입니다.
+    그 사이의 복잡한 토큰 교환·세션 관리·에러 복구는 번개가입이 책임집니다.
+  </p>
+
+  <!-- 보안 -->
+  <h2 style="margin:48px 0 16px;font-size:22px;font-weight:700;color:#111827;border-bottom:2px solid #111827;padding-bottom:8px;">
+    보안과 개인정보는?
+  </h2>
+
+  <ul style="margin:0 0 16px;padding-left:22px;">
+    <li style="margin-bottom:8px;">번개가입은 <strong>카페24 공식 앱 보안 정책</strong>과 카페24 개발자센터의 앱 심사 기준을 준수합니다.</li>
+    <li style="margin-bottom:8px;">고객 동의 화면에 표시되는 항목(이름·이메일 등)만 수신하며, <strong>쇼핑몰 회원 DB에 필요한 최소 정보</strong>만 카페24 회원 API로 전달합니다.</li>
+    <li style="margin-bottom:8px;">로그인 세션과 토큰은 번개가입이 위임 처리하므로, 운영자가 <strong>시크릿 키를 직접 보관할 필요가 없어</strong> 유출 위험이 낮아집니다.</li>
+    <li style="margin-bottom:8px;">번개가입 관리자 화면에서 프로바이더를 <strong>OFF</strong>하면 그 즉시 해당 로그인이 쇼핑몰에서 사라집니다.</li>
+  </ul>
+
+  <!-- 고객 경험 -->
+  <h2 style="margin:48px 0 16px;font-size:22px;font-weight:700;color:#111827;border-bottom:2px solid #111827;padding-bottom:8px;">
+    고객이 실제로 보는 화면
+  </h2>
+
+  <p style="margin:0 0 16px;">고객이 쇼핑몰에서 카카오 버튼을 누르면 익숙한 카카오 동의 화면이 뜹니다.</p>
+
+  <figure style="margin:16px 0;text-align:center;">
+    <img src="../images/screenshots/kakao-consent.png" alt="카카오 로그인 동의 화면 — 고객이 쇼핑몰에 제공할 정보를 확인하고 동의하는 모바일 화면" style="width:100%;max-width:720px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+    <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 카카오 동의 화면 (모바일 예시)</figcaption>
+  </figure>
+
+  <p style="margin:16px 0;">동의하는 순간 — 정말 1초 안에 — 쇼핑몰 마이페이지로 돌아옵니다.</p>
+
+  <figure style="margin:16px 0;text-align:center;">
+    <img src="../images/screenshots/kakao-result.png" alt="카카오 로그인 완료 후 쇼핑몰 마이페이지로 돌아온 화면 — 상단에 회원 이름이 표시됨" style="width:100%;max-width:720px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+    <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 로그인 완료 후 쇼핑몰 마이페이지</figcaption>
+  </figure>
+
+  <!-- FAQ -->
+  <h2 style="margin:48px 0 16px;font-size:22px;font-weight:700;color:#111827;border-bottom:2px solid #111827;padding-bottom:8px;">
+    자주 묻는 질문
+  </h2>
+
+  <div style="margin:16px 0;">
+    <div style="padding:16px 20px;margin-bottom:10px;background:#f9fafb;border-radius:8px;">
+      <div style="font-weight:700;color:#111827;margin-bottom:6px;">Q1. 우리 쇼핑몰이 카카오 앱을 따로 만들 필요가 정말 없나요?</div>
+      <p style="margin:0;color:#374151;font-size:15px;">
+        네. 번개가입이 공용 인증 브릿지를 제공하므로, 운영자는 카카오 개발자 계정·앱·비즈앱 심사 없이 카카오 로그인을 사용할 수 있습니다.
+      </p>
+    </div>
+    <div style="padding:16px 20px;margin-bottom:10px;background:#f9fafb;border-radius:8px;">
+      <div style="font-weight:700;color:#111827;margin-bottom:6px;">Q2. 고객이 보는 동의 화면에 "번개가입"이 뜨나요, 쇼핑몰 이름이 뜨나요?</div>
+      <p style="margin:0;color:#374151;font-size:15px;">
+        동의 화면은 카카오 플랫폼이 보여주는 화면이므로, 카카오 정책에 따른 서비스명이 표시됩니다. 쇼핑몰 이름을 자체 브랜딩으로 노출하려면 별도 비즈 앱 승인이 필요하며, 이 경로도 안내해 드립니다.
+      </p>
+    </div>
+    <div style="padding:16px 20px;margin-bottom:10px;background:#f9fafb;border-radius:8px;">
+      <div style="font-weight:700;color:#111827;margin-bottom:6px;">Q3. 번개가입을 삭제하면 기존 카카오 가입자는 어떻게 되나요?</div>
+      <p style="margin:0;color:#374151;font-size:15px;">
+        쇼핑몰 회원 DB에 이미 등록된 회원 정보는 그대로 남습니다. 다만 카카오 버튼으로의 재로그인은 불가해지므로, 이메일 로그인·비밀번호 재설정 안내를 고객에게 발송하실 수 있습니다.
+      </p>
+    </div>
+    <div style="padding:16px 20px;margin-bottom:10px;background:#f9fafb;border-radius:8px;">
+      <div style="font-weight:700;color:#111827;margin-bottom:6px;">Q4. 네이버·구글·애플도 같은 방식인가요?</div>
+      <p style="margin:0;color:#374151;font-size:15px;">
+        네. 번개가입이 지원하는 모든 프로바이더(Google·카카오·네이버·Apple·Discord·Telegram)가 동일한 위임 방식으로 동작합니다. 각 프로바이더별 개발자 계정 준비는 모두 불필요합니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div style="margin:32px 0 0;padding:24px;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);border-radius:12px;color:#ffffff;text-align:center;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;opacity:0.9;margin-bottom:6px;">TRY IT NOW</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:8px;">카카오 로그인, 오늘 3분 안에 열기</div>
+    <div style="font-size:14px;opacity:0.95;line-height:1.6;">
+      카페24 앱스토어에서 <strong>"번개가입"</strong> 설치 → 관리자에서 카카오 토글 ON → 쇼핑몰에서 확인.<br>
+      비즈앱 심사 기다릴 필요 없이, 오늘 방문한 고객부터 카카오로 번개 가입.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -31,6 +31,8 @@ import {
 import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
+import { autoReplyInquiry } from './ai';
+import { getGlobalAutoReplyEnabled } from './admin';
 
 const VALID_PROVIDERS: ProviderName[] = ['google', 'kakao', 'naver', 'apple', 'discord', 'facebook', 'x', 'line', 'telegram'];
 const COOKIE_MAX_AGE = 86400; // 24 hours
@@ -863,6 +865,12 @@ dashboard.post('/inquiries', authMiddleware, async (c) => {
     .bind(id, shopId, ownerId, body.title.trim(), body.content.trim())
     .run();
 
+  // 전역 AI 자동답변이 ON이면 백그라운드로 답변 생성
+  const autoReplyEnabled = await getGlobalAutoReplyEnabled(c.env);
+  if (autoReplyEnabled) {
+    c.executionCtx.waitUntil(autoReplyInquiry(c.env, id));
+  }
+
   return c.json({ ok: true, id }, 201);
 });
 
@@ -881,6 +889,20 @@ dashboard.get('/inquiries/:id', authMiddleware, async (c) => {
     .first();
 
   if (!inquiry) return c.json({ error: 'not_found' }, 404);
+
+  // 답변이 있고 아직 운영자 조회 기록이 없으면 → customer_read_at 기록 (백그라운드)
+  const inq = inquiry as Record<string, unknown>;
+  if (inq.reply && !inq.customer_read_at) {
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare(
+        "UPDATE inquiries SET customer_read_at = datetime('now') WHERE id = ? AND customer_read_at IS NULL",
+      )
+        .bind(inquiryId)
+        .run()
+        .catch((e: unknown) => console.error('[customer-read] update failed:', e)),
+    );
+  }
+
   return c.json({ inquiry });
 });
 

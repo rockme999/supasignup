@@ -151,7 +151,11 @@ export const AdminHomePage: FC<{
                 <tr>
                   <td style="font-size:13px;color:#94a3b8;font-weight:600">{i + 1}</td>
                   <td style="font-size:13px;font-weight:500">{shop.shop_name || '-'}</td>
-                  <td style="font-size:12px"><code>{shop.mall_id}</code></td>
+                  <td style="font-size:12px">
+                    <a href={`https://${shop.mall_id}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title="쇼핑몰을 새 탭에서 열기">
+                      <code>{shop.mall_id}</code>
+                    </a>
+                  </td>
                   <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : shop.plan === 'monthly' ? '월간' : '연간'}</span></td>
                   <td style="text-align:right;font-weight:600">{shop.total_signups.toLocaleString()}</td>
                   <td style="text-align:right;color:#2563eb">{shop.monthly_signups.toLocaleString()}</td>
@@ -432,7 +436,11 @@ export const AdminShopsPage: FC<{
               {shops.map((shop) => (
                 <tr>
                   <td><a href={'/supadmin/shops/' + shop.shop_id} style="color:#2563eb;text-decoration:none;font-weight:500">{shop.shop_name || '-'}</a></td>
-                  <td><code style="font-size:12px">{shop.mall_id}</code></td>
+                  <td>
+                    <a href={`https://${shop.mall_id}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title="쇼핑몰을 새 탭에서 열기">
+                      <code style="font-size:12px">{shop.mall_id}</code>
+                    </a>
+                  </td>
                   <td style="font-size:13px">{shop.owner_email}</td>
                   <td>
                     <select
@@ -459,28 +467,17 @@ export const AdminShopsPage: FC<{
                         data-shop-id={shop.shop_id}
                         style="font-size:11px;padding:4px 8px"
                       >
-                        저장
+                        플랜 저장
                       </button>
-                      {shop.deleted_at ? (
-                        <button
-                          class="btn btn-primary btn-sm status-btn"
-                          data-shop-id={shop.shop_id}
-                          data-action="activate"
-                          style="font-size:11px;padding:4px 8px"
-                        >
-                          활성화
-                        </button>
-                      ) : (
-                        <button
-                          class="btn btn-danger btn-sm status-btn"
-                          data-shop-id={shop.shop_id}
-                          data-action="suspend"
-                          style="font-size:11px;padding:4px 8px"
-                        >
-                          정지
-                        </button>
-                      )}
+                      <a
+                        href={'/supadmin/shops/' + shop.shop_id}
+                        class="btn btn-outline btn-sm"
+                        style="font-size:11px;padding:4px 8px"
+                      >
+                        상세
+                      </a>
                     </div>
+                    {/* 정지/활성화는 상세 페이지의 "위험 구역"에서만 제공 — 오조작 방지 */}
                   </td>
                 </tr>
               ))}
@@ -528,22 +525,7 @@ export const AdminShopsPage: FC<{
         });
       });
 
-      // 정지/활성화 버튼
-      document.querySelectorAll('.status-btn').forEach(function(btn) {
-        btn.addEventListener('click', async function() {
-          var shopId = this.dataset.shopId;
-          var action = this.dataset.action;
-          var label = action === 'suspend' ? '정지' : '활성화';
-          if (!confirm('이 쇼핑몰을 ' + label + '하시겠습니까?')) return;
-          var resp = await apiCall('PUT', '/api/supadmin/shops/' + shopId + '/status', { action: action }, this);
-          if (resp.ok) {
-            location.reload();
-          } else {
-            var data = await resp.json();
-            showToast('error', data.error || '상태 변경 중 오류가 발생했습니다.');
-          }
-        });
-      });
+      // 쇼핑몰 정지/활성화는 상세 페이지에서만 제공 — 리스트의 오조작 방지
     `}} />
   </Layout>
 );
@@ -605,7 +587,11 @@ export const AdminSubscriptionsPage: FC<{
                 return (
                   <tr>
                     <td>{sub.shop_name || '-'}</td>
-                    <td><code style="font-size:12px">{sub.mall_id}</code></td>
+                    <td>
+                      <a href={`https://${sub.mall_id}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title="쇼핑몰을 새 탭에서 열기">
+                        <code style="font-size:12px">{sub.mall_id}</code>
+                      </a>
+                    </td>
                     <td style="font-size:13px">{sub.owner_email}</td>
                     <td>
                       <span class={`badge ${sub.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
@@ -1047,19 +1033,27 @@ type AdminInquiryRow = {
   owner_email: string;
   shop_name: string | null;
   mall_id: string;
+  shop_id: string;
+  auto_reply_inquiries: number;  // 0 = OFF, 1 = ON
+  attachments?: string;          // R2 첨부 메타 JSON 배열 문자열
+  customer_read_at: string | null;  // 쇼핑몰 운영자(고객)가 답변을 처음 조회한 시각
+  admin_read_at: string | null;     // 수파레인 관리자가 문의를 처음 열어본 시각
 };
 
 export const AdminInquiriesPage: FC<{
   inquiries: AdminInquiryRow[];
   pagination: { page: number; pages: number; total: number };
   statusFilter: string;
-}> = ({ inquiries, pagination, statusFilter }) => (
+  globalAutoReplyEnabled: boolean;
+  pendingCount: number;
+  autoRepliedCount: number;
+}> = ({ inquiries, pagination, statusFilter, globalAutoReplyEnabled, pendingCount, autoRepliedCount }) => (
   <Layout title="문의 관리" loggedIn isAdmin currentPath="/supadmin/inquiries">
     <h1>문의 관리</h1>
 
     <div class="filter-bar" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      {['', 'pending', 'replied', 'closed'].map((s) => {
-        const labels: Record<string, string> = { '': '전체', pending: '미답변', replied: '답변완료', closed: '종료' };
+      {['', 'pending', 'replied', 'auto_replied', 'closed'].map((s) => {
+        const labels: Record<string, string> = { '': '전체', pending: '미답변', replied: '답변완료', auto_replied: 'AI자동답변', closed: '종료' };
         const active = statusFilter === s;
         return (
           <a
@@ -1083,10 +1077,10 @@ export const AdminInquiriesPage: FC<{
             <thead>
               <tr>
                 <th>제목</th>
-                <th>사용자</th>
                 <th>쇼핑몰</th>
                 <th>상태</th>
-                <th>작성일</th>
+                <th>작성일시</th>
+                <th>답변일시</th>
                 <th>액션</th>
               </tr>
             </thead>
@@ -1105,10 +1099,34 @@ export const AdminInquiriesPage: FC<{
                         {inq.title}
                       </a>
                     </td>
-                    <td style="font-size:12px;color:#64748b">{inq.owner_email}</td>
-                    <td style="font-size:12px;color:#64748b">{inq.shop_name || inq.mall_id}</td>
-                    <td><span class={`badge ${st.cls}`}>{st.label}</span></td>
-                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.created_at.slice(0, 10)}</td>
+                    <td style="font-size:12px;color:#64748b">
+                      {inq.mall_id ? (
+                        <a href={`https://${inq.mall_id}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title="쇼핑몰을 새 탭에서 열기">{inq.mall_id}</a>
+                      ) : (
+                        inq.shop_name
+                      )}
+                    </td>
+                    <td>
+                      <span class={`badge ${st.cls}`}>{st.label}</span>
+                      {/* 미열람 뱃지 (우선순위: AI 미검수 > 미확인 > 쇼핑몰 미열람) */}
+                      {(() => {
+                        const hasReply = !!(inq.reply && inq.reply.trim());
+                        if (inq.status === 'auto_replied' && !inq.admin_read_at) {
+                          return <span class="badge badge-red" style="margin-left:4px;font-size:11px">🔴 AI 답변 미검수</span>;
+                        }
+                        if (inq.status === 'replied' && !inq.admin_read_at) {
+                          return <span class="badge badge-yellow" style="margin-left:4px;font-size:11px">🟠 미확인</span>;
+                        }
+                        if (hasReply && !inq.customer_read_at) {
+                          return <span class="badge badge-gray" style="margin-left:4px;font-size:11px" title="쇼핑몰 운영자(고객)가 답변 페이지를 아직 방문하지 않음">👁 쇼핑몰 미열람</span>;
+                        }
+                        return null;
+                      })()}
+                    </td>
+                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.created_at.slice(0, 16).replace('T', ' ')}</td>
+                    <td style="font-size:12px;color:#64748b;white-space:nowrap">
+                      {inq.replied_at ? inq.replied_at.slice(0, 16).replace('T', ' ') : '-'}
+                    </td>
                     <td>
                       <button
                         class="btn btn-primary btn-sm inquiry-open"
@@ -1139,6 +1157,40 @@ export const AdminInquiriesPage: FC<{
       )}
     </div>
 
+    {/* 전역 AI 자동답변 토글 카드 — 목록·페이지네이션 아래로 이동 (2026-04-22) */}
+    <div
+      id="globalAutoReplyCard"
+      style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:20px 24px;margin-top:24px"
+    >
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:15px;font-weight:700;color:#7c3aed">AI 자동답변 (전역)</span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input
+            type="checkbox"
+            id="globalAutoReplyToggle"
+            checked={globalAutoReplyEnabled}
+            style="width:18px;height:18px;cursor:pointer;accent-color:#7c3aed"
+          />
+          <span
+            id="globalAutoReplyLabel"
+            style={`font-size:13px;font-weight:600;color:${globalAutoReplyEnabled ? '#7c3aed' : '#6b7280'}`}
+          >
+            {globalAutoReplyEnabled ? 'ON' : 'OFF'}
+          </span>
+        </label>
+      </div>
+      <p style="font-size:12px;color:#6b7280;margin:0 0 8px 0;line-height:1.6">
+        이 설정을 켜면 모든 쇼핑몰의 <strong>새 문의</strong>에 AI가 즉시 답변을 생성해 고객에게 자동 발송합니다.
+        환각 방지 가드레일(금지 토큰·마무리 문구·리스크 키워드)에 걸리는 답변은 자동 발송되지 않고 pending 상태로 유지됩니다.
+      </p>
+      <p style="font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;margin:0 0 8px 0;line-height:1.5">
+        충분한 테스트 후에만 켜주세요. 잘못된 답변이 고객에게 즉시 발송될 수 있습니다.
+      </p>
+      <p style="font-size:12px;color:#64748b;margin:0">
+        현재 상태: pending <strong id="statPending">{pendingCount}</strong>건 / auto_replied <strong id="statAutoReplied">{autoRepliedCount}</strong>건
+      </p>
+    </div>
+
     {/* 문의 데이터 (JSON 임베드) */}
     <script
       id="inquiry-data"
@@ -1155,6 +1207,10 @@ export const AdminInquiriesPage: FC<{
             replied_at: i.replied_at,
             owner_email: i.owner_email,
             shop: i.shop_name || i.mall_id,
+            shop_id: i.shop_id,
+            attachments: i.attachments || '[]',
+            customer_read_at: i.customer_read_at,
+            admin_read_at: i.admin_read_at,
           })),
         ),
       }}
@@ -1172,19 +1228,59 @@ export const AdminInquiriesPage: FC<{
           style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:20px;max-height:240px;overflow-y:auto"
         />
 
+        {/* 첨부 이미지 갤러리 (JS로 동적 렌더링) */}
+        <div id="attachmentsGallery" style="display:none;margin-bottom:20px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px">첨부 이미지</div>
+          <div id="attachmentsThumbs" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+
         <div id="existingReplyWrap" style="display:none;margin-bottom:20px">
           <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">
             기존 답변 <span id="existingReplyMeta" style="font-weight:400;color:#64748b"></span>
           </div>
           <div
             id="existingReplyContent"
-            style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto"
+            class="md-reply"
+            style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.65;word-break:break-word;max-height:300px;overflow-y:auto"
           />
+          {/* AI 자동답변 디스클레이머 — status='auto_replied' 일 때만 표시 */}
+          <div id="autoReplyDisclaimer" style="display:none;margin-top:10px;padding:10px 12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;font-size:12px;color:#6b7280;line-height:1.6">
+            🤖 <strong style="color:#7c3aed">AI 자동 답변</strong>입니다. 고객에게 동일 문구가 함께 표시됩니다. 내용이 부정확할 경우 "답변 수정" 으로 덮어쓸 수 있습니다.
+          </div>
+        </div>
+
+        {/* AI 자동답변 실패 이력 — 실패 기록이 있는 경우에만 표시 */}
+        <div id="failureHistoryWrap" style="display:none;margin-bottom:20px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">
+            AI 자동답변 실패 이력
+            <span id="failureHistoryCount" style="font-weight:400;color:#b91c1c;margin-left:6px"></span>
+          </div>
+          <div id="failureHistoryList" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:12px;color:#7f1d1d;max-height:200px;overflow-y:auto">
+          </div>
+        </div>
+
+        {/* 전역 자동답변 상태 읽기 전용 뱃지 (운영자 참고용) */}
+        <div id="globalAutoReplyBadgeWrap" style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:600;color:#7c3aed">AI 자동답변 (전역)</span>
+          <span id="modalGlobalAutoReplyBadge" style="font-size:12px;font-weight:700;color:#6b7280">확인 중...</span>
+          <span style="font-size:11px;color:#94a3b8">— 상단 설정에서 변경 가능</span>
         </div>
 
         <div id="replyFormWrap">
-          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">
-            <span id="replyFormLabel">답변 작성</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:600;color:#374151" id="replyFormLabel">답변 작성</span>
+            {/* AI 초안 생성 버튼 */}
+            <button
+              id="draftAiBtn"
+              class="btn btn-sm"
+              style="width:auto;background:#7c3aed;color:#fff;border:none;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer"
+            >
+              ⚡ AI 답변 초안 생성
+            </button>
+            <span id="aiDraftUsageLabel" style="font-size:11px;color:#64748b"></span>
+          </div>
+          <div id="aiDraftLoading" style="display:none;font-size:12px;color:#7c3aed;margin-bottom:8px;padding:8px 10px;background:#faf5ff;border-radius:6px;border:1px solid #e9d5ff">
+            🤖 생성 중... 30~60초 소요됩니다. 잠시 기다려 주세요.
           </div>
           <textarea
             id="replyContent"
@@ -1195,6 +1291,7 @@ export const AdminInquiriesPage: FC<{
         </div>
 
         <input type="hidden" id="replyTargetId" />
+        <input type="hidden" id="replyTargetShopId" />
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
           <button id="cancelReply" class="btn btn-outline" style="width:auto">닫기</button>
           <button id="editReplyBtn" class="btn btn-outline" style="width:auto;display:none">답변 수정</button>
@@ -1211,14 +1308,69 @@ export const AdminInquiriesPage: FC<{
         JSON.parse(raw).forEach(function(i) { inquiryData[i.id] = i; });
       } catch (e) { console.error('inquiry data parse failed', e); }
 
+      // AI 초안 일일 사용 카운트 (localStorage 기반, 프론트 단)
+      var AI_DRAFT_LIMIT = 20;
+      var AI_DRAFT_LS_KEY = 'ai_draft_count_' + new Date().toISOString().slice(0, 10);
+      function getAiDraftCount() { return parseInt(localStorage.getItem(AI_DRAFT_LS_KEY) || '0'); }
+      function incAiDraftCount() { localStorage.setItem(AI_DRAFT_LS_KEY, String(getAiDraftCount() + 1)); }
+
+      function updateAiDraftUsageLabel() {
+        var el = document.getElementById('aiDraftUsageLabel');
+        if (el) el.textContent = '오늘 ' + getAiDraftCount() + '/' + AI_DRAFT_LIMIT + '회 사용';
+      }
+
       function openInquiry(id) {
         var inq = inquiryData[id];
         if (!inq) return;
         document.getElementById('replyTargetId').value = inq.id;
+        document.getElementById('replyTargetShopId').value = inq.shop_id || '';
         document.getElementById('replyModalTitle').textContent = inq.title;
         document.getElementById('replyModalMeta').textContent =
           inq.owner_email + ' · ' + inq.shop + ' · ' + inq.created_at.slice(0, 16).replace('T', ' ');
         document.getElementById('replyModalContent').textContent = inq.content || '(내용 없음)';
+
+        // 첨부 이미지 갤러리 렌더링
+        var gallery = document.getElementById('attachmentsGallery');
+        var thumbsEl = document.getElementById('attachmentsThumbs');
+        thumbsEl.innerHTML = '';
+        var attachments = [];
+        try { attachments = JSON.parse(inq.attachments || '[]'); } catch(e) {}
+        if (attachments.length > 0) {
+          attachments.forEach(function(att) {
+            var wrap = document.createElement('div');
+            wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px';
+
+            var imgLink = document.createElement('a');
+            imgLink.href = '/api/supadmin/inquiries/' + inq.id + '/attachments/' + encodeURIComponent(att.key);
+            imgLink.target = '_blank';
+            imgLink.rel = 'noopener';
+
+            var img = document.createElement('img');
+            img.src = '/api/supadmin/inquiries/' + inq.id + '/attachments/' + encodeURIComponent(att.key);
+            img.alt = att.name;
+            img.style.cssText = 'width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;display:block';
+            img.onerror = function() { this.style.display = 'none'; };
+
+            var meta = document.createElement('div');
+            meta.style.cssText = 'font-size:10px;color:#94a3b8;width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center';
+            var sizeKB = (att.size / 1024).toFixed(0);
+            meta.title = att.name + ' (' + sizeKB + 'KB)';
+            meta.textContent = att.name;
+
+            var dateMeta = document.createElement('div');
+            dateMeta.style.cssText = 'font-size:10px;color:#cbd5e1;width:80px;text-align:center';
+            dateMeta.textContent = att.uploaded_at ? att.uploaded_at.slice(0, 10) : '';
+
+            imgLink.appendChild(img);
+            wrap.appendChild(imgLink);
+            wrap.appendChild(meta);
+            wrap.appendChild(dateMeta);
+            thumbsEl.appendChild(wrap);
+          });
+          gallery.style.display = 'block';
+        } else {
+          gallery.style.display = 'none';
+        }
 
         var existingWrap = document.getElementById('existingReplyWrap');
         var formWrap = document.getElementById('replyFormWrap');
@@ -1228,7 +1380,14 @@ export const AdminInquiriesPage: FC<{
 
         if (inq.reply) {
           existingWrap.style.display = 'block';
-          document.getElementById('existingReplyContent').textContent = inq.reply;
+          // 마크다운 렌더링 (굵게/리스트/단락 등). XSS 방어: bgMdToHtml 내부에서 escape 선행.
+          document.getElementById('existingReplyContent').innerHTML =
+            (window.bgMdToHtml ? window.bgMdToHtml(inq.reply) : inq.reply);
+          // AI 자동답변인 경우에만 디스클레이머 표시
+          var autoReplyDisclaimer = document.getElementById('autoReplyDisclaimer');
+          if (autoReplyDisclaimer) {
+            autoReplyDisclaimer.style.display = (inq.status === 'auto_replied') ? 'block' : 'none';
+          }
           document.getElementById('existingReplyMeta').textContent =
             inq.replied_at ? '(' + inq.replied_at.slice(0, 16).replace('T', ' ') + ')' : '';
           // 답변완료 상태: 수정 모드로 진입하기 전까지 textarea 숨김
@@ -1246,6 +1405,65 @@ export const AdminInquiriesPage: FC<{
           editBtn.style.display = 'none';
           textarea.value = '';
           document.getElementById('replyFormLabel').textContent = '답변 작성';
+        }
+
+        // 모달 내 전역 자동답변 뱃지 업데이트 (현재 전역 토글 상태 반영)
+        var globalToggleEl = document.getElementById('globalAutoReplyToggle');
+        var badge = document.getElementById('modalGlobalAutoReplyBadge');
+        if (badge && globalToggleEl) {
+          var globalOn = globalToggleEl.checked;
+          badge.textContent = globalOn ? 'ON' : 'OFF';
+          badge.style.color = globalOn ? '#7c3aed' : '#6b7280';
+        }
+
+        // 실패 이력 로드 (비동기 — 결과가 늦게 도착해도 모달 열기에 영향 없음)
+        var fhWrap = document.getElementById('failureHistoryWrap');
+        var fhList = document.getElementById('failureHistoryList');
+        var fhCount = document.getElementById('failureHistoryCount');
+        fhWrap.style.display = 'none';
+        fhList.innerHTML = '';
+        apiCall('GET', '/api/supadmin/inquiries/' + inq.id + '/auto-reply-failures', null)
+          .then(function(r) { return r.ok ? r.json() : { failures: [] }; })
+          .then(function(data) {
+            var failures = data.failures || [];
+            if (failures.length === 0) return;
+            fhCount.textContent = '(' + failures.length + '건)';
+            fhList.innerHTML = failures.map(function(f) {
+              var reasonLabel = {
+                'inquiry_not_found': '문의 찾을 수 없음',
+                'shop_not_found': '쇼핑몰 찾을 수 없음',
+                'ai_error': 'AI 호출 실패',
+                'validation_failed': '답변 검증 실패',
+                'held_for_review': '리뷰 보류',
+                'unexpected_error': '예상 외 오류'
+              }[f.reason] || f.reason;
+              var ts = (f.created_at || '').slice(0, 19).replace('T', ' ');
+              var elapsed = f.ai_elapsed_ms ? (' · ' + f.ai_elapsed_ms + 'ms') : '';
+              var detail = f.detail ? ('\\n  → ' + String(f.detail).slice(0, 200)) : '';
+              // 보안: HTML escape 후 줄바꿈만 유지
+              var safeDetail = detail.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\n/g, '<br>');
+              return '<div style="padding:6px 0;border-bottom:1px dashed #fca5a5">' +
+                '<strong>시도 ' + f.attempt + '회차 · ' + reasonLabel + '</strong>' +
+                ' <span style="color:#991b1b;opacity:0.7">' + ts + elapsed + '</span>' +
+                safeDetail +
+                '</div>';
+            }).join('');
+            fhWrap.style.display = 'block';
+          })
+          .catch(function(e) { console.error('failure history load error:', e); });
+
+        updateAiDraftUsageLabel();
+
+        // 관리자 첫 조회 시각 기록 (admin_read_at NULL 인 경우에만)
+        if (!inq.admin_read_at) {
+          apiCall('POST', '/api/supadmin/inquiries/' + id + '/mark-read', null)
+            .then(function(r) {
+              if (r.ok) {
+                // 로컬 데이터 갱신 → 재열람 시 불필요한 재호출 방지
+                inq.admin_read_at = new Date().toISOString();
+              }
+            })
+            .catch(function(e) { console.error('[mark-read] failed:', e); });
         }
 
         modal.style.display = 'flex';
@@ -1268,6 +1486,68 @@ export const AdminInquiriesPage: FC<{
       document.getElementById('cancelReply').addEventListener('click', function() {
         modal.style.display = 'none';
       });
+
+      // AI 답변 초안 생성 버튼 클릭
+      document.getElementById('draftAiBtn').addEventListener('click', async function() {
+        var id = document.getElementById('replyTargetId').value;
+        if (!id) return;
+        if (getAiDraftCount() >= AI_DRAFT_LIMIT) {
+          showToast('error', '오늘 AI 초안 생성 한도(20회)에 도달했습니다.');
+          return;
+        }
+        var textarea = document.getElementById('replyContent');
+        if (textarea.value.trim()) {
+          if (!confirm('이미 작성된 내용이 있습니다. AI 초안으로 교체하시겠습니까?')) return;
+        }
+
+        var btn = this;
+        var loading = document.getElementById('aiDraftLoading');
+        btn.disabled = true;
+        loading.style.display = 'block';
+
+        try {
+          var resp = await apiCall('POST', '/api/supadmin/inquiries/' + id + '/draft-reply', {});
+          if (resp.ok) {
+            var data = await resp.json();
+            textarea.value = data.draft || '';
+            incAiDraftCount();
+            updateAiDraftUsageLabel();
+            showToast('success', 'AI 초안이 생성되었습니다. 검토 후 수정하여 등록해 주세요.');
+          } else {
+            var errData = await resp.json();
+            if (resp.status === 429) {
+              showToast('error', '오늘 AI 초안 생성 한도에 도달했습니다. (서버 기준 20회)');
+            } else {
+              showToast('error', errData.message || 'AI 초안 생성 중 오류가 발생했습니다.');
+            }
+          }
+        } catch (e) {
+          showToast('error', 'AI 초안 생성 중 네트워크 오류가 발생했습니다.');
+        } finally {
+          btn.disabled = false;
+          loading.style.display = 'none';
+        }
+      });
+
+      // 전역 AI 자동답변 토글 변경
+      document.getElementById('globalAutoReplyToggle').addEventListener('change', async function() {
+        var enabled = this.checked;
+        if (enabled && !confirm('⚠️ 모든 쇼핑몰의 새 문의에 AI가 즉시 자동 답변하고 고객에게 발송됩니다.\\n충분한 테스트 후에만 켜주세요. 계속하시겠습니까?')) {
+          this.checked = false;
+          return;
+        }
+        var labelEl = document.getElementById('globalAutoReplyLabel');
+        var resp = await apiCall('PUT', '/api/supadmin/settings/auto-reply', { enabled: enabled });
+        if (resp.ok) {
+          labelEl.textContent = enabled ? 'ON' : 'OFF';
+          labelEl.style.color = enabled ? '#7c3aed' : '#6b7280';
+          showToast('success', '전역 AI 자동답변이 ' + (enabled ? '활성화' : '비활성화') + '되었습니다.');
+        } else {
+          this.checked = !enabled;
+          showToast('error', '전역 자동답변 설정 변경 중 오류가 발생했습니다.');
+        }
+      });
+
       document.getElementById('submitReply').addEventListener('click', async function() {
         var id = document.getElementById('replyTargetId').value;
         var reply = document.getElementById('replyContent').value.trim();
@@ -1317,7 +1597,7 @@ export const AdminAiReportsPage: FC<{
   <Layout title="AI 보고서" loggedIn isAdmin currentPath="/supadmin/ai-reports">
     <h1>AI 보고서 현황</h1>
     <p style="font-size:14px;color:#64748b;margin-bottom:24px">
-      전체 쇼핑몰의 AI 주간 브리핑 최신 현황입니다.
+      전체 쇼핑몰의 AI 주간 브리핑 최신 현황입니다. 정체성 미설정 쇼핑몰은 <strong>🔄 분석</strong> 버튼으로 수동 트리거할 수 있습니다.
     </p>
 
     <div class="card">
@@ -1340,7 +1620,11 @@ export const AdminAiReportsPage: FC<{
               {shops.map((row) => (
                 <tr>
                   <td style="font-size:13px;font-weight:500"><a href={`/supadmin/ai-reports/${row.shop_id}`} style="color:#2563eb;text-decoration:none">{row.shop_name || '-'}</a></td>
-                  <td style="font-size:12px;color:#64748b">{row.mall_id}</td>
+                  <td style="font-size:12px;color:#64748b">
+                    <a href={`https://${row.mall_id}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title="쇼핑몰을 새 탭에서 열기">
+                      {row.mall_id}
+                    </a>
+                  </td>
                   <td>
                     <span class={`badge ${row.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
                       {row.plan}
@@ -1350,7 +1634,17 @@ export const AdminAiReportsPage: FC<{
                     {row.shop_identity ? (
                       <span style="color:#16a34a">설정됨</span>
                     ) : (
-                      <span style="color:#dc2626">미설정</span>
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <span style="color:#dc2626">미설정</span>
+                        <button
+                          class="btn btn-outline btn-sm analyze-identity-btn"
+                          data-shop-id={row.shop_id}
+                          style="font-size:10px;padding:2px 8px;white-space:nowrap"
+                          title="쇼핑몰 URL에서 AI가 업종·타겟·톤앤매너를 자동 분석합니다 (20~40초 소요)"
+                        >
+                          🔄 분석
+                        </button>
+                      </div>
                     )}
                   </td>
                   <td style="font-size:12px;color:#64748b;white-space:nowrap">
@@ -1366,6 +1660,41 @@ export const AdminAiReportsPage: FC<{
         </div>
       )}
     </div>
+
+    <script dangerouslySetInnerHTML={{__html: `
+      // 쇼핑몰 정체성 수동 분석 버튼
+      document.querySelectorAll('.analyze-identity-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var shopId = this.dataset.shopId;
+          if (!confirm('이 쇼핑몰의 정체성을 AI로 분석하시겠습니까?\\n쇼핑몰 URL을 가져와 업종·타겟·톤앤매너를 추출합니다. 약 20~40초 소요됩니다.')) return;
+          var originalText = btn.textContent;
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.style.cursor = 'wait';
+          btn.textContent = '분석 중…';
+          try {
+            var resp = await apiCall('POST', '/api/supadmin/shops/' + shopId + '/analyze-identity', {}, btn);
+            if (resp.ok) {
+              showToast('success', '정체성 분석이 완료되었습니다.');
+              setTimeout(function() { location.reload(); }, 700);
+            } else {
+              var data = await resp.json().catch(function() { return {}; });
+              showToast('error', data.message || '분석 중 오류가 발생했습니다.');
+              btn.disabled = false;
+              btn.style.opacity = '1';
+              btn.style.cursor = 'pointer';
+              btn.textContent = originalText;
+            }
+          } catch (e) {
+            showToast('error', '네트워크 오류가 발생했습니다.');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.textContent = originalText;
+          }
+        });
+      });
+    `}} />
   </Layout>
 );
 
@@ -1384,13 +1713,62 @@ type AdminBriefingRow = {
 export const AdminAiReportDetailPage: FC<{
   shopName: string;
   shopId: string;
+  mallId: string;
+  shopIdentity?: string | null;
   briefings: AdminBriefingRow[];
-}> = ({ shopName, shopId, briefings }) => (
+}> = ({ shopName, shopId, mallId, shopIdentity, briefings }) => {
+  let identity: Record<string, unknown> | null = null;
+  if (shopIdentity) {
+    try { identity = JSON.parse(shopIdentity); } catch { identity = null; }
+  }
+  return (
   <Layout title={`${shopName} — AI 보고서`} loggedIn isAdmin currentPath="/supadmin/ai-reports">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
       <a href="/supadmin/ai-reports" style="color:#64748b;text-decoration:none;font-size:13px">&larr; 목록으로</a>
       <h1 style="margin-bottom:0">{shopName}</h1>
+      <a href={`https://${mallId}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-size:13px" title="쇼핑몰을 새 탭에서 열기">
+        <code style="font-size:12px;background:#f1f5f9;padding:2px 6px;border-radius:4px">{mallId}</code> ↗
+      </a>
       <span style="font-size:13px;color:#94a3b8">AI 보고서 ({briefings.length}건)</span>
+    </div>
+
+    {/* 쇼핑몰 정체성 카드 — 보고서 위에 요약 표시 (클릭 시 아래 상세 카드로 이동) */}
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0">쇼핑몰 정체성 (AI 분석)</h2>
+        {identity ? (
+          <button
+            class="btn btn-outline btn-sm analyze-identity-btn"
+            data-shop-id={shopId}
+            style="font-size:11px;padding:4px 10px"
+            title="쇼핑몰 URL을 다시 읽어 업종·타겟·톤앤매너를 재분석합니다 (20~40초)"
+          >
+            🔄 재분석
+          </button>
+        ) : (
+          <button
+            class="btn btn-primary btn-sm analyze-identity-btn"
+            data-shop-id={shopId}
+            style="font-size:11px;padding:4px 10px"
+            title="쇼핑몰 URL에서 AI가 업종·타겟·톤앤매너를 자동 분석합니다 (20~40초)"
+          >
+            🔄 분석 시작
+          </button>
+        )}
+      </div>
+      {identity ? (
+        <div style="display:grid;gap:8px;font-size:13px;line-height:1.6">
+          <div><strong>업종:</strong> {(identity.industry as string) || '-'}</div>
+          <div><strong>타겟 고객:</strong> {((identity.target || identity.target_audience) as string) || '-'}</div>
+          <div><strong>톤앤매너:</strong> {(identity.tone as string) || '-'}</div>
+          <div><strong>한 줄 소개:</strong> {(identity.summary as string) || '-'}</div>
+          <div><strong>키워드:</strong> {Array.isArray(identity.keywords) ? (identity.keywords as string[]).join(', ') : '-'}</div>
+        </div>
+      ) : (
+        <p style="color:#94a3b8;font-size:13px;margin:0">
+          정체성 분석 데이터가 아직 없습니다. 위 <strong>🔄 분석 시작</strong> 버튼을 눌러 수동으로 분석할 수 있습니다.
+        </p>
+      )}
     </div>
 
     {briefings.length === 0 ? (
@@ -1442,8 +1820,44 @@ export const AdminAiReportDetailPage: FC<{
         );
       })
     )}
+
+    {/* 정체성 수동 (재)분석 버튼 핸들러 — AdminAiReportsPage 와 동일 로직 */}
+    <script dangerouslySetInnerHTML={{__html: `
+      document.querySelectorAll('.analyze-identity-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var shopId = this.dataset.shopId;
+          if (!confirm('이 쇼핑몰의 정체성을 AI로 분석하시겠습니까?\\n쇼핑몰 URL을 가져와 업종·타겟·톤앤매너를 추출합니다. 약 20~40초 소요됩니다.')) return;
+          var originalText = btn.textContent;
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.style.cursor = 'wait';
+          btn.textContent = '분석 중…';
+          try {
+            var resp = await apiCall('POST', '/api/supadmin/shops/' + shopId + '/analyze-identity', {}, btn);
+            if (resp.ok) {
+              showToast('success', '정체성 분석이 완료되었습니다.');
+              setTimeout(function() { location.reload(); }, 700);
+            } else {
+              var data = await resp.json().catch(function() { return {}; });
+              showToast('error', data.message || '분석 중 오류가 발생했습니다.');
+              btn.disabled = false;
+              btn.style.opacity = '1';
+              btn.style.cursor = 'pointer';
+              btn.textContent = originalText;
+            }
+          } catch (e) {
+            showToast('error', '네트워크 오류가 발생했습니다.');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.textContent = originalText;
+          }
+        });
+      });
+    `}} />
   </Layout>
-);
+  );
+};
 
 // --- Admin Shop Detail ---
 
@@ -1502,7 +1916,15 @@ export const AdminShopDetailPage: FC<{
         <div style="overflow-x:auto">
           <table>
             <tbody>
-              <tr><th style="width:140px">Mall ID</th><td><code>{shop.mall_id}</code></td></tr>
+              <tr>
+                <th style="width:140px">Mall ID</th>
+                <td>
+                  <a href={`https://${shop.mall_id}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title="쇼핑몰을 새 탭에서 열기">
+                    <code>{shop.mall_id}</code>
+                  </a>
+                  <span style="margin-left:8px;font-size:11px;color:#94a3b8">↗ 새 탭</span>
+                </td>
+              </tr>
               <tr><th>플랫폼</th><td>{shop.platform}</td></tr>
               <tr><th>소유자</th><td>{shop.owner_name} ({shop.owner_email})</td></tr>
               <tr><th>Client ID</th><td><code style="font-size:11px">{shop.client_id}</code></td></tr>
@@ -1621,6 +2043,81 @@ export const AdminShopDetailPage: FC<{
           </div>
         </div>
       </div>
+
+      {/* ─── 위험 구역 — 정지/활성화 (수파레인 긴급 조치 전용) ─── */}
+      <div class="card" style="background:#fef2f2;border:2px solid #fecaca;margin-top:24px">
+        <h2 style="color:#991b1b;margin-bottom:6px">⚠️ 위험 구역</h2>
+        <p style="font-size:13px;color:#7f1d1d;margin:0 0 14px 0;line-height:1.6">
+          <strong>정지</strong> 시 이 쇼핑몰의 모든 기능(소셜 로그인·자동답변·위젯·웹훅)이 즉시 차단됩니다.
+          법적 이슈·정책 위반·긴급 대응 등 명확한 사유가 있을 때만 사용하세요.
+          실수 방지를 위해 아래 입력란에 <strong>mall_id</strong>({shop.mall_id})를 정확히 입력해야 버튼이 활성화됩니다.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input
+            type="text"
+            id="dangerConfirmInput"
+            data-mall-id={shop.mall_id}
+            placeholder={`확인을 위해 "${shop.mall_id}" 입력`}
+            style="padding:8px 10px;border:1px solid #fecaca;border-radius:6px;font-size:13px;min-width:240px"
+          />
+          {shop.deleted_at ? (
+            <button
+              id="dangerActivateBtn"
+              data-shop-id={shop.shop_id}
+              disabled
+              class="btn btn-primary btn-sm"
+              style="font-size:12px;padding:6px 12px;opacity:0.4;cursor:not-allowed"
+            >
+              활성화
+            </button>
+          ) : (
+            <button
+              id="dangerSuspendBtn"
+              data-shop-id={shop.shop_id}
+              disabled
+              class="btn btn-danger btn-sm"
+              style="font-size:12px;padding:6px 12px;opacity:0.4;cursor:not-allowed"
+            >
+              🛑 정지
+            </button>
+          )}
+          <span style="font-size:12px;color:#7f1d1d">
+            현재 상태: {shop.deleted_at ? <strong>정지됨 ({shop.deleted_at.slice(0,16).replace('T',' ')})</strong> : <strong>활성</strong>}
+          </span>
+        </div>
+      </div>
+
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var input = document.getElementById('dangerConfirmInput');
+          var btn = document.getElementById('dangerSuspendBtn') || document.getElementById('dangerActivateBtn');
+          if (!input || !btn) return;
+          var expected = input.dataset.mallId;
+          var action = btn.id === 'dangerSuspendBtn' ? 'suspend' : 'activate';
+          var label = action === 'suspend' ? '정지' : '활성화';
+
+          input.addEventListener('input', function() {
+            var ok = input.value.trim() === expected;
+            btn.disabled = !ok;
+            btn.style.opacity = ok ? '1' : '0.4';
+            btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+          });
+
+          btn.addEventListener('click', async function() {
+            if (btn.disabled) return;
+            if (!confirm('정말로 이 쇼핑몰을 ' + label + '하시겠습니까?\\n이 조치는 감사 로그에 기록됩니다.')) return;
+            var shopId = btn.dataset.shopId;
+            var resp = await apiCall('PUT', '/api/supadmin/shops/' + shopId + '/status', { action: action }, btn);
+            if (resp.ok) {
+              showToast('success', label + ' 처리되었습니다.');
+              setTimeout(function() { location.reload(); }, 800);
+            } else {
+              var data = await resp.json();
+              showToast('error', data.error || (label + ' 중 오류가 발생했습니다.'));
+            }
+          });
+        })();
+      `}} />
     </Layout>
   );
 };

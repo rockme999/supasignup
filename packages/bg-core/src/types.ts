@@ -220,6 +220,7 @@ export interface Env {
   CF_AI_TOKEN: string; // Cloudflare AI API Token
   CF_API_TOKEN: string; // Cloudflare API Token (Analytics GraphQL용)
   BRIEFING_QUEUE: Queue; // Cloudflare Queue — 주간 브리핑 비동기 처리
+  INQUIRY_ATTACHMENTS: R2Bucket; // R2 버킷 — 문의 첨부 이미지 (Phase 2)
 }
 
 // Billing

@@ -335,6 +335,26 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .badge-red { background: #fef2f2; color: #ef4444; }
         .badge-gray { background: #f1f5f9; color: #64748b; }
         .badge-blue { background: #eff6ff; color: #2563eb; }
+        .badge-purple { background: #f5f3ff; color: #7c3aed; }
+
+        /* ── 문의 답변 마크다운 렌더링 ─────────────── */
+        .md-reply p { margin: 0 0 10px; }
+        .md-reply p:last-child { margin-bottom: 0; }
+        .md-reply strong { font-weight: 700; color: #111827; }
+        .md-reply em { font-style: italic; }
+        .md-reply code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 0.92em; font-family: 'SF Mono', Monaco, Consolas, monospace; }
+        .md-reply pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; margin: 8px 0; }
+        .md-reply pre code { background: transparent; padding: 0; }
+        .md-reply ul, .md-reply ol { margin: 6px 0 10px; padding-left: 22px; }
+        .md-reply ul li, .md-reply ol li { margin-bottom: 4px; line-height: 1.65; }
+        .md-reply h1, .md-reply h2, .md-reply h3 { margin: 14px 0 8px; font-weight: 700; color: #111827; }
+        .md-reply h1 { font-size: 17px; }
+        .md-reply h2 { font-size: 15.5px; }
+        .md-reply h3 { font-size: 14px; }
+        .md-reply h1:first-child, .md-reply h2:first-child, .md-reply h3:first-child { margin-top: 0; }
+        .md-reply blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid #c7d2fe; background: #f5f3ff; color: #4338ca; font-size: 13.5px; border-radius: 0 6px 6px 0; }
+        .md-reply a { color: #2563eb; text-decoration: underline; }
+        .md-reply a:hover { color: #1d4ed8; }
 
         /* ── Alerts ──────────────────────────────── */
         .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
@@ -654,6 +674,59 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
       )}
 
       <script dangerouslySetInnerHTML={{__html: `
+        // ─── 문의 답변 마크다운 → HTML 렌더 (서버 utils/markdown.ts 와 동일 로직) ───
+        window.bgMdToHtml = function(md) {
+          if (!md) return '';
+          var ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+          var text = String(md).replace(/[&<>"']/g, function(c){ return ESC[c]; }).replace(/\\r\\n?/g, '\\n');
+          // 코드 블록
+          text = text.replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, function(_, code){ return '\\n<pre><code>' + code.trim() + '</code></pre>\\n'; });
+          // 인라인 코드
+          text = text.replace(/\`([^\`\\n]+)\`/g, '<code>$1</code>');
+          // 헤딩
+          text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                     .replace(/^# (.+)$/gm, '<h1>$1</h1>');
+          // 굵게 / 기울임
+          text = text.replace(/\\*\\*([^*\\n]+)\\*\\*/g, '<strong>$1</strong>')
+                     .replace(/(?<![*\\w])\\*([^*\\n]+)\\*(?!\\w)/g, '<em>$1</em>');
+          // 링크 (https?:// 만)
+          text = text.replace(/\\[([^\\]\\n]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g,
+            function(_, label, url){ return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'; });
+          // 인용
+          text = text.replace(/(?:^> (.+)(?:\\n|$))+/gm, function(block){
+            var lines = block.trim().split(/\\n/).map(function(l){ return l.replace(/^> /, ''); });
+            return '<blockquote>' + lines.join('<br>') + '</blockquote>\\n';
+          });
+          // 리스트
+          var lines = text.split('\\n'); var out = []; var lt = null;
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var um = line.match(/^\\s*[-*]\\s+(.+)$/);
+            var om = line.match(/^\\s*\\d+\\.\\s+(.+)$/);
+            if (um) {
+              if (lt !== 'ul') { if (lt) out.push('</' + lt + '>'); out.push('<ul>'); lt = 'ul'; }
+              out.push('<li>' + um[1] + '</li>');
+            } else if (om) {
+              if (lt !== 'ol') { if (lt) out.push('</' + lt + '>'); out.push('<ol>'); lt = 'ol'; }
+              out.push('<li>' + om[1] + '</li>');
+            } else {
+              if (lt) { out.push('</' + lt + '>'); lt = null; }
+              out.push(line);
+            }
+          }
+          if (lt) out.push('</' + lt + '>');
+          text = out.join('\\n');
+          // 단락
+          var BLOCK_RE = /^<(ul|ol|pre|h[1-6]|blockquote|table)[\\s>]/i;
+          text = text.split(/\\n{2,}/).map(function(b){
+            var t = b.trim(); if (!t) return '';
+            if (BLOCK_RE.test(t)) return t;
+            return '<p>' + t.replace(/\\n/g, '<br>') + '</p>';
+          }).join('\\n');
+          return text;
+        };
+
         // Mobile hamburger menu handler
         (function() {
           var btn = document.getElementById('hamburger-btn');

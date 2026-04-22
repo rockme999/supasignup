@@ -7,3 +7,16 @@ dist/
 .env.*
 *.p8
 docs/.cf-tokens
+
+# 벤치마크 스크립트 전용 시크릿
+scripts/.env.bench
+
+# macOS Finder 메타
+.DS_Store
+**/.DS_Store
+
+# Claude Code 로컬 상태
+.claude/
+
+# tsc/dist-check 임시 출력
+workers/api/dist-check/
