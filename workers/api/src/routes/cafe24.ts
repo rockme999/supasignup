@@ -16,9 +16,19 @@ import { createShop, getShopByMallId, updateShop, softDeleteShop, upsertCafe24Me
 import { encrypt } from '@supasignup/bg-core';
 import { issueCouponOnSignup } from '../services/coupon';
 import { probeSsoType } from './dashboard';
+import { purgeWidgetConfigCache } from './widget';
 
 // 카페24 회원 가입 이벤트
 const MEMBER_JOINED = 90083;
+
+// 앱 라이프사이클 이벤트
+// 90001: 앱 만료 — 구독 만료. 소프트 삭제가 아니라 plan을 free로 다운그레이드
+//         (유저가 앱을 계속 쓸 의사가 있을 수 있음 → 로그인 기능은 무료로 유지)
+// 90002: 앱 삭제 (레거시) — 유저가 명시적으로 탈퇴
+// 90077: 앱 삭제 (신규) — 유저가 명시적으로 탈퇴
+const APP_EXPIRED = 90001;
+const APP_UNINSTALLED_LEGACY = 90002;
+const APP_UNINSTALLED = 90077;
 
 /**
  * 쇼핑몰의 allowed_redirect_uris 목록을 생성.
@@ -302,14 +312,42 @@ cafe24.post('/webhook', async (c) => {
   }
   const eventNo = payload.event_no;
 
-  // App uninstall event (90001: expired, 90002: legacy uninstall, 90077: app deleted)
-  if (eventNo === 90001 || eventNo === 90002 || eventNo === 90077) {
+  // ─── 앱 만료 (90001): 구독 만료 → plan을 free로 다운그레이드 ───
+  // shop을 soft-delete하지 않는다. 유저가 앱을 계속 쓸 수 있도록 core(소셜 로그인)는 유지,
+  // Plus 기능만 비활성화한다. Plus 설정값은 DB에 보존 — 재결제 시 자동 복원됨.
+  if (eventNo === APP_EXPIRED) {
+    const mallId = payload.resource?.mall_id as string | undefined;
+    if (mallId) {
+      const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
+      if (shop) {
+        await c.env.DB.batch([
+          c.env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?")
+            .bind(shop.shop_id),
+          c.env.DB.prepare("UPDATE subscriptions SET status = 'expired' WHERE shop_id = ? AND status = 'active'")
+            .bind(shop.shop_id),
+        ]);
+        // widget_config 캐시 무효화 (KV + 엣지) — 이후 요청부터 plan=free 반영
+        await Promise.all([
+          c.env.KV.delete(`widget_config:${shop.client_id}`),
+          purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+        ]);
+        console.info(`Shop expired (plan→free): mall=${mallId}, shop_id=${shop.shop_id}`);
+      }
+    }
+  }
+
+  // ─── 앱 삭제 (90002 레거시, 90077 신규): 명시적 탈퇴 → soft delete ───
+  if (eventNo === APP_UNINSTALLED_LEGACY || eventNo === APP_UNINSTALLED) {
     const mallId = payload.resource?.mall_id as string | undefined;
     if (mallId) {
       const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
       if (shop) {
         await softDeleteShop(c.env.DB, shop.shop_id);
-        console.info(`Shop soft-deleted: mall=${mallId}, shop_id=${shop.shop_id}`);
+        await Promise.all([
+          c.env.KV.delete(`widget_config:${shop.client_id}`),
+          purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+        ]);
+        console.info(`Shop soft-deleted (uninstall event=${eventNo}): mall=${mallId}, shop_id=${shop.shop_id}`);
       }
     }
   }

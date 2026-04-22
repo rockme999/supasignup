@@ -49,13 +49,24 @@ function createMockKV() {
 function createMockD1() {
   const mockFirst = vi.fn().mockResolvedValue(null);
   const mockRun = vi.fn().mockResolvedValue({ success: true });
+  const mockBatch = vi.fn().mockResolvedValue([{ success: true }]);
   return {
     prepare: vi.fn().mockReturnValue({
       bind: vi.fn().mockReturnValue({ first: mockFirst, run: mockRun }),
       first: mockFirst,
       run: mockRun,
     }),
+    batch: mockBatch,
     _mockFirst: mockFirst,
+    _mockBatch: mockBatch,
+  };
+}
+
+// 엣지 캐시(caches.default)는 Node 테스트 환경에 없으므로 최소 스텁 제공
+// purgeWidgetConfigCache 호출 시 예외가 나지 않도록 delete만 지원하는 더미 캐시를 주입한다.
+if (!(globalThis as unknown as { caches?: unknown }).caches) {
+  (globalThis as unknown as { caches: { default: { delete: (req: Request) => Promise<boolean> } } }).caches = {
+    default: { delete: async () => true },
   };
 }
 
@@ -179,19 +190,16 @@ describe('POST /api/cafe24/webhook', () => {
     expect(body.error).toBe('missing_authentication');
   });
 
-  it('handles app uninstall webhook', async () => {
+  // 90001 (앱 만료) — soft delete가 아니라 plan을 free로 다운그레이드
+  it('handles app expired webhook (90001) — downgrades plan to free without soft-deleting', async () => {
     const { app, env, d1 } = createTestApp();
 
-    const existingShop = { shop_id: 'shop_to_delete' };
-    let queryCount = 0;
+    const existingShop = { shop_id: 'shop_to_expire', client_id: 'bg_expiring' };
+    const runSpy = vi.fn().mockResolvedValue({ success: true });
     d1.prepare = vi.fn().mockReturnValue({
       bind: vi.fn().mockReturnValue({
-        first: vi.fn().mockImplementation(async () => {
-          queryCount++;
-          if (queryCount === 1) return existingShop; // getShopByMallId
-          return null;
-        }),
-        run: vi.fn().mockResolvedValue({ success: true }),
+        first: vi.fn().mockResolvedValue(existingShop), // getShopByMallId
+        run: runSpy,
       }),
     });
 
@@ -212,5 +220,69 @@ describe('POST /api/cafe24/webhook', () => {
     expect(resp.status).toBe(200);
     const body = await resp.json() as Record<string, unknown>;
     expect(body.ok).toBe(true);
+
+    // batch 호출 — plan='free' + subscription status='expired'
+    expect(d1._mockBatch).toHaveBeenCalledTimes(1);
+    // softDeleteShop (UPDATE shops SET deleted_at = datetime('now')...)은 호출되지 않아야 함
+    const prepareCalls = (d1.prepare as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0] as string);
+    expect(prepareCalls.some((sql) => sql.includes("deleted_at = datetime('now')"))).toBe(false);
+  });
+
+  // 90002 (앱 삭제 레거시) — soft delete
+  it('handles app uninstall webhook (90002 legacy) — soft-deletes shop', async () => {
+    const { app, env, d1 } = createTestApp();
+
+    const existingShop = { shop_id: 'shop_to_delete', client_id: 'bg_deleting' };
+    const runSpy = vi.fn().mockResolvedValue({ success: true });
+    d1.prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(existingShop),
+        run: runSpy,
+      }),
+    });
+
+    const webhookBody = JSON.stringify({
+      event_no: 90002,
+      resource: { mall_id: 'testmall' },
+    });
+
+    const resp = await app.request('/api/cafe24/webhook', {
+      method: 'POST',
+      headers: { 'X-Cafe24-Hmac-SHA256': 'valid_signature', 'Content-Type': 'application/json' },
+      body: webhookBody,
+    }, env);
+
+    expect(resp.status).toBe(200);
+    const prepareCalls = (d1.prepare as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0] as string);
+    // softDeleteShop UPDATE 호출 확인
+    expect(prepareCalls.some((sql) => sql.includes("UPDATE shops SET deleted_at = datetime('now')"))).toBe(true);
+  });
+
+  // 90077 (앱 삭제 신규) — soft delete
+  it('handles app uninstall webhook (90077) — soft-deletes shop', async () => {
+    const { app, env, d1 } = createTestApp();
+
+    const existingShop = { shop_id: 'shop_to_delete_new', client_id: 'bg_new_uninstall' };
+    d1.prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(existingShop),
+        run: vi.fn().mockResolvedValue({ success: true }),
+      }),
+    });
+
+    const webhookBody = JSON.stringify({
+      event_no: 90077,
+      resource: { mall_id: 'testmall' },
+    });
+
+    const resp = await app.request('/api/cafe24/webhook', {
+      method: 'POST',
+      headers: { 'X-Cafe24-Hmac-SHA256': 'valid_signature', 'Content-Type': 'application/json' },
+      body: webhookBody,
+    }, env);
+
+    expect(resp.status).toBe(200);
+    const prepareCalls = (d1.prepare as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0] as string);
+    expect(prepareCalls.some((sql) => sql.includes("UPDATE shops SET deleted_at = datetime('now')"))).toBe(true);
   });
 });
