@@ -1393,14 +1393,15 @@ pages.get('/supadmin', async (c) => {
   // 6개 쿼리 병렬 실행
   const [planCounts, providerResult, dailySignups, topShops, pendingInquiries, pendingCount] =
     await Promise.all([
-      // 플랜별 쇼핑몰 수
+      // 플랜별 쇼핑몰 수 — shops.plan은 'free'/'plus'. 월간/연간 분해는 active subscription의 billing_cycle 기반.
       c.env.DB.prepare(
         `SELECT
-          COUNT(*) as total,
-          SUM(CASE WHEN plan = 'free' THEN 1 ELSE 0 END) as free_count,
-          SUM(CASE WHEN plan = 'monthly' THEN 1 ELSE 0 END) as monthly_count,
-          SUM(CASE WHEN plan = 'yearly' THEN 1 ELSE 0 END) as yearly_count
-        FROM shops WHERE deleted_at IS NULL`,
+          (SELECT COUNT(*) FROM shops WHERE deleted_at IS NULL) as total,
+          (SELECT COUNT(*) FROM shops WHERE deleted_at IS NULL AND plan = 'free') as free_count,
+          (SELECT COUNT(*) FROM shops s JOIN subscriptions sub ON sub.shop_id = s.shop_id
+             WHERE s.deleted_at IS NULL AND s.plan = 'plus' AND sub.status = 'active' AND sub.billing_cycle = 'monthly') as monthly_count,
+          (SELECT COUNT(*) FROM shops s JOIN subscriptions sub ON sub.shop_id = s.shop_id
+             WHERE s.deleted_at IS NULL AND s.plan = 'plus' AND sub.status = 'active' AND sub.billing_cycle = 'yearly') as yearly_count`,
       ).first<{ total: number; free_count: number; monthly_count: number; yearly_count: number }>(),
 
       // 프로바이더별 가입 분포 (전체)

@@ -16,6 +16,7 @@ import facebookRoutes from './routes/facebook';
 import testRoutes from './routes/test';
 import aiRoutes from './routes/ai';
 import { dashboardAttachmentRoutes, adminAttachmentRoutes } from './routes/inquiry-attachments';
+import { adminAuth } from './middleware/admin';
 import { WIDGET_JS } from './widget/buttons';
 import { TEST_DOM_JS } from './widget/test-dom';
 import { TEST_STORAGE_JS } from './widget/test-storage';
@@ -204,8 +205,10 @@ app.route('/api/ai', aiRoutes);
 app.route('/api/dashboard', dashboardAttachmentRoutes);
 app.route('/api/supadmin', adminAttachmentRoutes);
 
-// ── Dev-only: /test/* 라우트 (프로덕션에서 비활성화) ─────────
-app.use('/test/*', devOnly);
+// ── Dev-only + admin-only: /test/* 라우트 ────────────────────
+// 프로덕션에서는 devOnly가 404 반환.
+// dev에서도 adminAuth를 통과한 관리자만 접근 가능 — 실 고객 토큰을 오용한 쿠폰 발급·위젯 제거 등을 차단.
+app.use('/test/*', devOnly, adminAuth);
 app.route('/test', testRoutes);
 
 app.route('/', pageRoutes);

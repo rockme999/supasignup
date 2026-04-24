@@ -190,8 +190,8 @@ describe('POST /api/cafe24/webhook', () => {
     expect(body.error).toBe('missing_authentication');
   });
 
-  // 90001 (앱 만료) — soft delete가 아니라 plan을 free로 다운그레이드
-  it('handles app expired webhook (90001) — downgrades plan to free without soft-deleting', async () => {
+  // 90078 (앱 만료) — soft delete가 아니라 plan을 free로 다운그레이드
+  it('handles app expired webhook (90078) — downgrades plan to free without soft-deleting', async () => {
     const { app, env, d1 } = createTestApp();
 
     const existingShop = { shop_id: 'shop_to_expire', client_id: 'bg_expiring' };
@@ -204,7 +204,7 @@ describe('POST /api/cafe24/webhook', () => {
     });
 
     const webhookBody = JSON.stringify({
-      event_no: 90001,
+      event_no: 90078,
       resource: { mall_id: 'testmall' },
     });
 
@@ -228,22 +228,22 @@ describe('POST /api/cafe24/webhook', () => {
     expect(prepareCalls.some((sql) => sql.includes("deleted_at = datetime('now')"))).toBe(false);
   });
 
-  // 90002 (앱 삭제 레거시) — soft delete
-  it('handles app uninstall webhook (90002 legacy) — soft-deletes shop', async () => {
+  // 90002는 카페24 앱 라이프사이클 이벤트가 아니라 상품 이벤트이므로
+  // 수신해도 우리 앱 상태가 바뀌면 안 된다 (ignored).
+  it('ignores product event (90002) — must not soft-delete shop', async () => {
     const { app, env, d1 } = createTestApp();
 
-    const existingShop = { shop_id: 'shop_to_delete', client_id: 'bg_deleting' };
-    const runSpy = vi.fn().mockResolvedValue({ success: true });
+    const existingShop = { shop_id: 'shop_should_stay', client_id: 'bg_stay' };
     d1.prepare = vi.fn().mockReturnValue({
       bind: vi.fn().mockReturnValue({
         first: vi.fn().mockResolvedValue(existingShop),
-        run: runSpy,
+        run: vi.fn().mockResolvedValue({ success: true }),
       }),
     });
 
     const webhookBody = JSON.stringify({
       event_no: 90002,
-      resource: { mall_id: 'testmall' },
+      resource: { mall_id: 'testmall', product_no: 13, product_code: 'P000000N' },
     });
 
     const resp = await app.request('/api/cafe24/webhook', {
@@ -254,8 +254,8 @@ describe('POST /api/cafe24/webhook', () => {
 
     expect(resp.status).toBe(200);
     const prepareCalls = (d1.prepare as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0] as string);
-    // softDeleteShop UPDATE 호출 확인
-    expect(prepareCalls.some((sql) => sql.includes("UPDATE shops SET deleted_at = datetime('now')"))).toBe(true);
+    // soft delete UPDATE가 호출되면 안 됨
+    expect(prepareCalls.some((sql) => sql.includes("UPDATE shops SET deleted_at = datetime('now')"))).toBe(false);
   });
 
   // 90077 (앱 삭제 신규) — soft delete

@@ -79,12 +79,12 @@ billing.post('/subscribe', async (c) => {
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
   }
 
-  // Create pending subscription
+  // Create pending subscription — plan은 상품 유형('plus'), billing_cycle은 주기(월/연)
   const subId = generateId();
   await c.env.DB
     .prepare(
-      `INSERT INTO subscriptions (id, owner_id, shop_id, plan, status, expires_at)
-       VALUES (?, ?, ?, ?, 'pending', ?)`,
+      `INSERT INTO subscriptions (id, owner_id, shop_id, plan, billing_cycle, status, expires_at)
+       VALUES (?, ?, ?, 'plus', ?, 'pending', ?)`,
     )
     .bind(subId, ownerId, shop.shop_id, body.plan, expiresAt.toISOString())
     .run();
@@ -152,8 +152,8 @@ billing.post('/subscribe', async (c) => {
       await c.env.DB.batch([
         c.env.DB.prepare("UPDATE subscriptions SET status = 'active', started_at = datetime('now'), expires_at = ? WHERE id = ?")
           .bind(expiresAt.toISOString(), subId),
-        c.env.DB.prepare("UPDATE shops SET plan = ?, updated_at = datetime('now') WHERE shop_id = ?")
-          .bind(body.plan, shop.shop_id),
+        c.env.DB.prepare("UPDATE shops SET plan = 'plus', updated_at = datetime('now') WHERE shop_id = ?")
+          .bind(shop.shop_id),
       ]);
       await c.env.KV.delete(`webhook:payment:${order.order_id}`);
       console.info(`Deferred payment processed: subscription=${subId}, order=${order.order_id}`);

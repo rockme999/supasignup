@@ -117,7 +117,8 @@ test.get('/store-info', async (c) => {
 
 // ─── GET /coupons — 쿠폰 목록 조회 테스트 ────────────────────
 test.get('/coupons', async (c) => {
-  const mallId = c.req.query('mall_id') || 'suparain999';
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query parameter is required' }, 400);
 
   const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
   if (!shop?.platform_access_token) {
@@ -154,7 +155,8 @@ test.get('/coupons', async (c) => {
 
 // ─── POST /coupons/create-and-issue — 쿠폰 생성 + 발급 테스트 ─
 test.post('/coupons/create-and-issue', async (c) => {
-  const mallId = c.req.query('mall_id') || 'suparain999';
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query parameter is required' }, 400);
   const body = await c.req.json<{ member_id?: string }>();
   const memberId = body.member_id;
 
@@ -273,7 +275,8 @@ test.post('/coupons/create-and-issue', async (c) => {
 
 // ─── GET /scripttags — ScriptTag 목록 조회 ──────────────────
 test.get('/scripttags', async (c) => {
-  const mallId = c.req.query('mall_id') || 'suparain999';
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query parameter is required' }, 400);
   const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
   if (!shop?.platform_access_token) return c.json({ error: 'no_shop' }, 404);
 
@@ -298,7 +301,8 @@ test.get('/scripttags', async (c) => {
 
 // ─── DELETE /scripttags/:script_no — ScriptTag 삭제 ─────────
 test.delete('/scripttags/:script_no', async (c) => {
-  const mallId = c.req.query('mall_id') || 'suparain999';
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query parameter is required' }, 400);
   const scriptNo = parseInt(c.req.param('script_no'));
   const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
   if (!shop?.platform_access_token) return c.json({ error: 'no_shop' }, 404);
@@ -324,7 +328,8 @@ test.delete('/scripttags/:script_no', async (c) => {
 
 // ─── DELETE /coupons/delete — 쿠폰 삭제 테스트 ─────────────────
 test.delete('/coupons/delete', async (c) => {
-  const mallId = c.req.query('mall_id') || 'suparain999';
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query parameter is required' }, 400);
   const couponNo = c.req.query('coupon_no');
 
   if (!couponNo) {
@@ -423,7 +428,8 @@ test.delete('/coupons/delete', async (c) => {
 
 // ─── POST /coupons/issue — 기존 쿠폰을 회원에게 발급 ──────────
 test.post('/coupons/issue', async (c) => {
-  const mallId = c.req.query('mall_id') || 'suparain999';
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query parameter is required' }, 400);
   const body = await c.req.json<{ coupon_no: string; member_id: string }>();
 
   if (!body.coupon_no || !body.member_id) {

@@ -10,6 +10,16 @@ import { adminAuth } from '../middleware/admin';
 import { rateLimitMiddleware } from '../middleware/auth';
 import { escapeLike } from '../db/stats-utils';
 import { draftInquiryReply, validateReply, PROMPT_VERSION, AI_MODEL, analyzeAndSaveShopIdentity } from './ai';
+import { purgeWidgetConfigCache } from './widget';
+
+// 관리자 조치로 shop 상태가 바뀐 후 위젯 config 캐시(KV + 엣지)를 모두 무효화한다.
+// 둘 다 지우지 않으면 엣지 s-maxage=300 때문에 최대 5분간 구 값이 서빙됨.
+async function invalidateShopCaches(env: Env, clientId: string): Promise<void> {
+  await Promise.all([
+    env.KV.delete(`widget_config:${clientId}`),
+    purgeWidgetConfigCache(clientId, env.BASE_URL),
+  ]);
+}
 
 type AdminEnv = {
   Bindings: Env;
@@ -182,7 +192,8 @@ admin.put('/shops/:id/plan', async (c) => {
   const shopId = c.req.param('id');
   const { plan } = await c.req.json<{ plan: string }>();
 
-  if (!['free', 'monthly', 'yearly'].includes(plan)) {
+  // shops.plan은 상품 유형('free' | 'plus')만 허용. 결제 주기는 subscriptions.billing_cycle에서 관리.
+  if (!['free', 'plus'].includes(plan)) {
     return c.json({ error: 'invalid_plan' }, 400);
   }
 
@@ -208,11 +219,11 @@ admin.put('/shops/:id/plan', async (c) => {
     `plan → ${plan}`,
   );
 
-  // KV 캐시 무효화
+  // 캐시 무효화 (KV + 엣지)
   const shop = await c.env.DB.prepare(
     'SELECT client_id FROM shops WHERE shop_id = ?',
   ).bind(shopId).first<{ client_id: string }>();
-  if (shop) await c.env.KV.delete(`widget_config:${shop.client_id}`);
+  if (shop) await invalidateShopCaches(c.env, shop.client_id);
 
   return c.json({ ok: true });
 });
@@ -226,10 +237,12 @@ admin.put('/shops/:id/status', async (c) => {
     return c.json({ error: 'invalid_action' }, 400);
   }
 
-  // Shop 존재 여부 확인
-  const existingShop = await c.env.DB.prepare('SELECT shop_id FROM shops WHERE shop_id = ?')
+  // Shop 존재 여부 확인 (client_id도 함께 조회해 캐시 무효화에 사용)
+  const existingShop = await c.env.DB.prepare(
+    'SELECT shop_id, client_id FROM shops WHERE shop_id = ?',
+  )
     .bind(shopId)
-    .first();
+    .first<{ shop_id: string; client_id: string }>();
   if (!existingShop) return c.json({ error: 'not_found' }, 404);
 
   if (action === 'suspend') {
@@ -254,6 +267,10 @@ admin.put('/shops/:id/status', async (c) => {
     shopId,
     null,
   );
+
+  // 캐시 무효화 — suspend 후 5분간 위젯이 살아있는 상태 방지
+  await invalidateShopCaches(c.env, existingShop.client_id);
+
   return c.json({ ok: true });
 });
 
@@ -364,6 +381,15 @@ admin.put('/owners/:id/status', async (c) => {
     null,
   );
 
+  // owner의 모든 shop에 대해 캐시 무효화 (KV + 엣지)
+  const ownerShops = await c.env.DB.prepare(
+    'SELECT client_id FROM shops WHERE owner_id = ?',
+  )
+    .bind(ownerId)
+    .all<{ client_id: string }>();
+  const clientIds = (ownerShops.results ?? []).map((r) => r.client_id).filter(Boolean);
+  await Promise.all(clientIds.map((cid) => invalidateShopCaches(c.env, cid)));
+
   return c.json({ ok: true });
 });
 
@@ -441,11 +467,11 @@ admin.put('/subscriptions/:id/cancel', async (c) => {
       .bind(sub.shop_id)
       .run();
 
-    // KV 캐시 무효화
+    // 캐시 무효화 (KV + 엣지)
     const shop = await c.env.DB.prepare(
       'SELECT client_id FROM shops WHERE shop_id = ?',
     ).bind(sub.shop_id).first<{ client_id: string }>();
-    if (shop) await c.env.KV.delete(`widget_config:${shop.client_id}`);
+    if (shop) await invalidateShopCaches(c.env, shop.client_id);
   }
 
   // 감사 로그
@@ -479,6 +505,18 @@ admin.get('/export/shops', async (c) => {
     created_at: string;
   }>();
 
+  const rowCount = result.results?.length ?? 0;
+
+  // PII(이메일) 포함 대량 다운로드는 감사 로그에 반드시 남긴다.
+  await recordAuditLog(
+    c.env.DB,
+    c.get('ownerId'),
+    'export_shops',
+    'admin',
+    null,
+    `rows=${rowCount}`,
+  );
+
   const header = '쇼핑몰명,Mall ID,플랫폼,플랜,소유자 이메일,상태,가입일\n';
   const rows = (result.results ?? []).map((r) =>
     `"${sanitizeCsvCell((r.shop_name || '').replace(/"/g, '""'))}","${sanitizeCsvCell(r.mall_id)}","${sanitizeCsvCell(r.platform)}","${sanitizeCsvCell(r.plan)}","${sanitizeCsvCell(r.owner_email)}","${sanitizeCsvCell(r.status)}","${sanitizeCsvCell(r.created_at)}"`,
@@ -511,6 +549,17 @@ admin.get('/export/stats', async (c) => {
     action: string;
     cnt: number;
   }>();
+
+  const rowCount = result.results?.length ?? 0;
+
+  await recordAuditLog(
+    c.env.DB,
+    c.get('ownerId'),
+    'export_stats',
+    'admin',
+    null,
+    `rows=${rowCount}`,
+  );
 
   const header = '날짜,쇼핑몰명,프로바이더,액션,건수\n';
   const rows = (result.results ?? []).map((r) =>

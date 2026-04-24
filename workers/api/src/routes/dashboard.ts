@@ -23,7 +23,6 @@ import { createToken } from '../services/jwt';
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth';
 import {
   getShopById,
-  createShop,
   updateShop,
   softDeleteShop,
   getMonthlySignupCount,
@@ -72,35 +71,11 @@ dashboard.get('/shops', async (c) => {
 });
 
 // ─── POST /shops ─────────────────────────────────────────────
-dashboard.post('/shops', async (c) => {
-  const ownerId = c.get('ownerId');
-  const body = await c.req.json<{
-    mall_id?: string;
-    platform?: string;
-    shop_name?: string;
-    shop_url?: string;
-    allowed_redirect_uris?: string[];
-  }>();
-
-  if (!body.mall_id || !body.platform) {
-    return c.json({ error: 'missing_fields', message: 'mall_id and platform are required' }, 400);
-  }
-
-  if (!['cafe24', 'imweb', 'godomall', 'shopby'].includes(body.platform)) {
-    return c.json({ error: 'invalid_platform' }, 400);
-  }
-
-  const shop = await createShop(c.env.DB, {
-    mall_id: body.mall_id,
-    platform: body.platform as 'cafe24' | 'imweb' | 'godomall' | 'shopby',
-    shop_name: body.shop_name,
-    shop_url: body.shop_url,
-    owner_id: ownerId,
-    allowed_redirect_uris: body.allowed_redirect_uris,
-  });
-
-  return c.json({ shop }, 201);
-});
+// shop 등록은 반드시 카페24 OAuth 콜백(/api/cafe24/callback)을 통해서만 진행된다.
+// 수동 등록은 경쟁사 mall_id로 가짜 shop을 만들 수 있는 경로가 되므로 비활성화.
+dashboard.post('/shops', (c) =>
+  c.json({ error: 'disabled', message: '카페24 앱 설치 흐름으로만 쇼핑몰을 등록할 수 있습니다.' }, 403),
+);
 
 // ─── GET /shops/:id ──────────────────────────────────────────
 dashboard.get('/shops/:id', async (c) => {

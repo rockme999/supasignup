@@ -9,7 +9,16 @@
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { generateId, generateSecret, timingSafeEqual } from '@supasignup/bg-core';
-import { Cafe24Client, verifyAppLaunchHmac, verifyWebhookHmac, PAYMENT_COMPLETE, REFUND_COMPLETE } from '@supasignup/cafe24-client';
+import {
+  Cafe24Client,
+  verifyAppLaunchHmac,
+  verifyWebhookHmac,
+  APP_DELETED,
+  APP_EXPIRED,
+  MEMBER_JOINED,
+  PAYMENT_COMPLETE,
+  REFUND_COMPLETE,
+} from '@supasignup/cafe24-client';
 import { hashPassword } from '../services/password';
 import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop, upsertCafe24Member } from '../db/queries';
@@ -18,17 +27,11 @@ import { issueCouponOnSignup } from '../services/coupon';
 import { probeSsoType } from './dashboard';
 import { purgeWidgetConfigCache } from './widget';
 
-// 카페24 회원 가입 이벤트
-const MEMBER_JOINED = 90083;
-
-// 앱 라이프사이클 이벤트
-// 90001: 앱 만료 — 구독 만료. 소프트 삭제가 아니라 plan을 free로 다운그레이드
-//         (유저가 앱을 계속 쓸 의사가 있을 수 있음 → 로그인 기능은 무료로 유지)
-// 90002: 앱 삭제 (레거시) — 유저가 명시적으로 탈퇴
-// 90077: 앱 삭제 (신규) — 유저가 명시적으로 탈퇴
-const APP_EXPIRED = 90001;
-const APP_UNINSTALLED_LEGACY = 90002;
-const APP_UNINSTALLED = 90077;
+// 회원 이벤트 (90032: 신규 회원 가입) / 앱 라이프사이클 이벤트 상수는
+// 모두 @supasignup/cafe24-client에서 공식 상수로 import
+// APP_DELETED(90077): 쇼핑몰에 설치된 앱이 삭제된 경우 → soft delete
+// APP_EXPIRED(90078): 쇼핑몰에 설치된 앱이 만료된 경우 → plan=free 다운그레이드
+//                    (유저가 앱을 계속 쓸 의사가 있을 수 있음 → 로그인 기능은 무료로 유지)
 
 /**
  * 쇼핑몰의 allowed_redirect_uris 목록을 생성.
@@ -277,30 +280,62 @@ cafe24.get('/callback', async (c) => {
 cafe24.post('/webhook', async (c) => {
   const body = await c.req.text();
 
-  // Log all headers and payload for debugging
+  // 헤더/바디 원문 console 로깅은 금지 — PII·시크릿 유출 위험.
+  // 필요한 정보는 webhook_events 테이블에 redact된 상태로만 저장한다.
   const headers: Record<string, string> = {};
   c.req.raw.headers.forEach((v, k) => { headers[k] = v; });
-  console.info('Webhook headers:', JSON.stringify(headers));
-  console.info('Webhook body:', body);
+
+  // 모든 웹훅을 DB에 기록하기 위한 상태값 — 라우트 끝에서 단일 INSERT 수행
+  const log: {
+    event_no: number | null;
+    mall_id: string | null;
+    shop_id: string | null;
+    auth_method: 'hmac' | 'api_key' | 'none';
+    auth_valid: boolean;
+    action: string | null;
+    note: string | null;
+  } = {
+    event_no: null,
+    mall_id: null,
+    shop_id: null,
+    auth_method: 'none',
+    auth_valid: false,
+    action: null,
+    note: null,
+  };
+  const headersJson = JSON.stringify(redactWebhookHeaders(headers));
 
   // Auth: HMAC signature or x-api-key
   const signature = c.req.header('X-Cafe24-Hmac-SHA256');
   const apiKey = c.req.header('x-api-key');
 
   if (signature) {
+    log.auth_method = 'hmac';
     const valid = await verifyWebhookHmac(body, signature, c.env.CAFE24_CLIENT_SECRET);
     if (!valid) {
       console.error('HMAC verification failed');
+      log.action = 'auth_failed';
+      log.note = 'HMAC verification failed';
+      await recordWebhookEvent(c.env.DB, { ...log, headers: headersJson, payload: body });
       return c.json({ error: 'invalid_signature' }, 401);
     }
+    log.auth_valid = true;
   } else if (apiKey) {
+    log.auth_method = 'api_key';
     const isValid = await timingSafeEqual(apiKey, c.env.CAFE24_WEBHOOK_API_KEY);
     if (!isValid) {
       console.error('API key mismatch');
+      log.action = 'auth_failed';
+      log.note = 'API key mismatch';
+      await recordWebhookEvent(c.env.DB, { ...log, headers: headersJson, payload: body });
       return c.json({ error: 'invalid_api_key' }, 401);
     }
+    log.auth_valid = true;
   } else {
     console.error('No authentication header found');
+    log.action = 'auth_failed';
+    log.note = 'missing_authentication';
+    await recordWebhookEvent(c.env.DB, { ...log, headers: headersJson, payload: body });
     return c.json({ error: 'missing_authentication' }, 401);
   }
 
@@ -308,11 +343,16 @@ cafe24.post('/webhook', async (c) => {
   try {
     payload = JSON.parse(body);
   } catch {
+    log.action = 'invalid_json';
+    await recordWebhookEvent(c.env.DB, { ...log, headers: headersJson, payload: body });
     return c.json({ error: 'invalid_json' }, 400);
   }
   const eventNo = payload.event_no;
+  log.event_no = typeof eventNo === 'number' ? eventNo : null;
+  const mallIdFromPayload = payload.resource?.mall_id;
+  log.mall_id = typeof mallIdFromPayload === 'string' ? mallIdFromPayload : null;
 
-  // ─── 앱 만료 (90001): 구독 만료 → plan을 free로 다운그레이드 ───
+  // ─── 앱 만료 (APP_EXPIRED=90078): 구독 만료 → plan을 free로 다운그레이드 ───
   // shop을 soft-delete하지 않는다. 유저가 앱을 계속 쓸 수 있도록 core(소셜 로그인)는 유지,
   // Plus 기능만 비활성화한다. Plus 설정값은 DB에 보존 — 재결제 시 자동 복원됨.
   if (eventNo === APP_EXPIRED) {
@@ -320,6 +360,7 @@ cafe24.post('/webhook', async (c) => {
     if (mallId) {
       const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
       if (shop) {
+        log.shop_id = shop.shop_id;
         await c.env.DB.batch([
           c.env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?")
             .bind(shop.shop_id),
@@ -332,23 +373,36 @@ cafe24.post('/webhook', async (c) => {
           purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
         ]);
         console.info(`Shop expired (plan→free): mall=${mallId}, shop_id=${shop.shop_id}`);
+        log.action = 'plan_downgraded';
+      } else {
+        log.action = 'shop_not_found';
       }
+    } else {
+      log.action = 'ignored';
+      log.note = 'no mall_id in payload';
     }
   }
 
-  // ─── 앱 삭제 (90002 레거시, 90077 신규): 명시적 탈퇴 → soft delete ───
-  if (eventNo === APP_UNINSTALLED_LEGACY || eventNo === APP_UNINSTALLED) {
+  // ─── 앱 삭제 (90077): 명시적 탈퇴 → soft delete ───
+  if (eventNo === APP_DELETED) {
     const mallId = payload.resource?.mall_id as string | undefined;
     if (mallId) {
       const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
       if (shop) {
+        log.shop_id = shop.shop_id;
         await softDeleteShop(c.env.DB, shop.shop_id);
         await Promise.all([
           c.env.KV.delete(`widget_config:${shop.client_id}`),
           purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
         ]);
         console.info(`Shop soft-deleted (uninstall event=${eventNo}): mall=${mallId}, shop_id=${shop.shop_id}`);
+        log.action = 'soft_deleted';
+      } else {
+        log.action = 'shop_not_found';
       }
+    } else {
+      log.action = 'ignored';
+      log.note = 'no mall_id in payload';
     }
   }
 
@@ -360,12 +414,13 @@ cafe24.post('/webhook', async (c) => {
       const sub = await c.env.DB
         .prepare("SELECT * FROM subscriptions WHERE payment_id = ? AND status = 'pending'")
         .bind(orderId)
-        .first<{ id: string; shop_id: string; plan: string }>();
+        .first<{ id: string; shop_id: string; billing_cycle: string }>();
 
       if (sub) {
-        // [M4] expires_at을 결제 확정 시점에 재계산
+        log.shop_id = sub.shop_id;
+        // [M4] expires_at을 결제 확정 시점에 재계산 — billing_cycle 기준으로 분기
         const expiresAt = new Date();
-        if (sub.plan === 'monthly') {
+        if (sub.billing_cycle === 'monthly') {
           expiresAt.setMonth(expiresAt.getMonth() + 1);
         } else {
           expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -373,9 +428,11 @@ cafe24.post('/webhook', async (c) => {
         await c.env.DB.batch([
           c.env.DB.prepare("UPDATE subscriptions SET status = 'active', started_at = datetime('now'), expires_at = ? WHERE id = ?")
             .bind(expiresAt.toISOString(), sub.id),
-          c.env.DB.prepare("UPDATE shops SET plan = ?, updated_at = datetime('now') WHERE shop_id = ?").bind(sub.plan, sub.shop_id),
+          c.env.DB.prepare("UPDATE shops SET plan = 'plus', updated_at = datetime('now') WHERE shop_id = ?").bind(sub.shop_id),
         ]);
-        console.info(`Payment complete: subscription=${sub.id}, shop=${sub.shop_id}, plan=${sub.plan}`);
+        console.info(`Payment complete: subscription=${sub.id}, shop=${sub.shop_id}, cycle=${sub.billing_cycle}`);
+        log.action = 'payment_complete';
+        log.note = `subscription=${sub.id}, cycle=${sub.billing_cycle}`;
       } else {
         // payment_id가 아직 저장되지 않은 경우를 대비하여 KV에 임시 저장 (5분 TTL)
         await c.env.KV.put(`webhook:payment:${orderId}`, JSON.stringify({
@@ -384,7 +441,12 @@ cafe24.post('/webhook', async (c) => {
           received_at: new Date().toISOString(),
         }), { expirationTtl: 300 });
         console.warn(`Payment webhook: no pending subscription for order_id=${orderId}, saved to KV for deferred processing`);
+        log.action = 'payment_deferred';
+        log.note = `no pending subscription for order_id=${orderId}`;
       }
+    } else {
+      log.action = 'ignored';
+      log.note = 'no order_id in payload';
     }
   }
 
@@ -396,6 +458,7 @@ cafe24.post('/webhook', async (c) => {
     if (mallId && memberId) {
       const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
       if (shop) {
+        log.shop_id = shop.shop_id;
         // cafe24_members 테이블에 회원 ID 저장 (upsert) — 실패해도 쿠폰 발급은 진행
         try {
           await upsertCafe24Member(c.env.DB, shop.shop_id, mallId, memberId);
@@ -409,7 +472,14 @@ cafe24.post('/webhook', async (c) => {
             console.error(`[Coupon] 웹훅 쿠폰 발급 예외: mall=${mallId}, member=${memberId}`, err);
           })
         );
+        log.action = 'member_joined';
+        log.note = `member_id=${memberId}`;
+      } else {
+        log.action = 'shop_not_found';
       }
+    } else {
+      log.action = 'ignored';
+      log.note = 'no mall_id/member_id in payload';
     }
   }
 
@@ -423,6 +493,7 @@ cafe24.post('/webhook', async (c) => {
         .first<{ id: string; shop_id: string }>();
 
       if (sub) {
+        log.shop_id = sub.shop_id;
         // 다른 active 구독이 남아있는지 확인 [M3]
         const otherActive = await c.env.DB
           .prepare("SELECT COUNT(*) as cnt FROM subscriptions WHERE shop_id = ? AND status = 'active' AND id != ?")
@@ -433,19 +504,117 @@ cafe24.post('/webhook', async (c) => {
           c.env.DB.prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?").bind(sub.id),
         ];
         // 다른 active가 없을 때만 plan을 free로 다운그레이드
-        if (!otherActive || otherActive.cnt === 0) {
+        const reverted = !otherActive || otherActive.cnt === 0;
+        if (reverted) {
           stmts.push(c.env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(sub.shop_id));
         }
         await c.env.DB.batch(stmts);
-        console.info(`Refund complete: subscription=${sub.id}, shop=${sub.shop_id}, reverted=${!otherActive || otherActive.cnt === 0}`);
+        console.info(`Refund complete: subscription=${sub.id}, shop=${sub.shop_id}, reverted=${reverted}`);
+        log.action = 'refund_complete';
+        log.note = `subscription=${sub.id}, reverted=${reverted}`;
       } else {
         console.warn(`Refund webhook: no active subscription for order_id=${orderId}`);
+        log.action = 'shop_not_found';
+        log.note = `no active subscription for order_id=${orderId}`;
       }
+    } else {
+      log.action = 'ignored';
+      log.note = 'no order_id in payload';
     }
   }
 
+  // 처리되지 않은 event_no도 기록 (향후 새 이벤트 타입 대응)
+  if (!log.action) {
+    log.action = 'ignored';
+    log.note = `unhandled event_no=${eventNo ?? 'null'}`;
+  }
+
+  await recordWebhookEvent(c.env.DB, { ...log, headers: headersJson, payload: body });
   return c.json({ ok: true });
 });
+
+// ─── Helper: 웹훅 이벤트 DB 기록 ────────────────────────────
+async function recordWebhookEvent(
+  db: D1Database,
+  data: {
+    event_no: number | null;
+    mall_id: string | null;
+    shop_id: string | null;
+    auth_method: 'hmac' | 'api_key' | 'none';
+    auth_valid: boolean;
+    headers: string;
+    payload: string;
+    action: string | null;
+    note: string | null;
+  }
+): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `INSERT INTO webhook_events
+         (id, platform, event_no, mall_id, shop_id, auth_method, auth_valid, headers, payload, action, note)
+         VALUES (?, 'cafe24', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        generateId(),
+        data.event_no,
+        data.mall_id,
+        data.shop_id,
+        data.auth_method,
+        data.auth_valid ? 1 : 0,
+        data.headers,
+        redactWebhookPayload(data.event_no, data.payload),
+        data.action,
+        data.note,
+      )
+      .run();
+  } catch (err) {
+    // 기록 실패는 웹훅 응답을 막지 않도록 조용히 삼킴
+    console.error('[Webhook] recordWebhookEvent failed:', err);
+  }
+}
+
+// PIPA 준수 — 회원 PII를 포함하는 이벤트는 저장 전에 필드를 redact한다.
+const PII_EVENT_NOS: ReadonlySet<number> = new Set([
+  90032, // 회원 가입 — name/email/phone/birthday 등 포함
+]);
+const PII_RESOURCE_FIELDS: readonly string[] = [
+  'name', 'nick_name', 'name_english', 'name_phonetic',
+  'email', 'phone', 'cellphone',
+  'birthday', 'gender', 'residence',
+  'recommend_id', 'member_authentication',
+];
+
+function redactWebhookPayload(eventNo: number | null, body: string): string {
+  if (eventNo === null || !PII_EVENT_NOS.has(eventNo)) return body;
+  try {
+    const payload = JSON.parse(body);
+    if (payload && typeof payload === 'object' && payload.resource && typeof payload.resource === 'object') {
+      for (const field of PII_RESOURCE_FIELDS) {
+        if (field in payload.resource) payload.resource[field] = '[redacted]';
+      }
+    }
+    return JSON.stringify(payload);
+  } catch {
+    return '[redacted-invalid-json]';
+  }
+}
+
+// HMAC 시그니처·API 키·쿠키·Authorization 헤더는 저장 금지 (웹훅 위조 공격 재료).
+const REDACTED_HEADER_NAMES: ReadonlySet<string> = new Set([
+  'authorization',
+  'cookie',
+  'x-api-key',
+  'x-cafe24-hmac-sha256',
+]);
+
+function redactWebhookHeaders(headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers)) {
+    out[k] = REDACTED_HEADER_NAMES.has(k.toLowerCase()) ? '[redacted]' : v;
+  }
+  return out;
+}
 
 // ─── Helper: default owner for auto-install ──────────────────
 

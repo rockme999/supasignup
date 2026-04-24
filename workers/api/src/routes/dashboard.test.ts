@@ -213,33 +213,19 @@ describe('GET /api/dashboard/shops', () => {
 });
 
 describe('POST /api/dashboard/shops', () => {
-  it('returns 400 for missing fields', async () => {
+  // 수동 shop 등록은 비활성화됨 — 카페24 OAuth 콜백(/api/cafe24/callback)으로만 생성.
+  // 경쟁사 mall_id로 가짜 shop을 만들 수 있는 경로를 막기 위한 의도된 차단.
+  it('is disabled — returns 403 regardless of payload', async () => {
     const { app, env } = createApp();
-    const auth = await getAuthHeader();
-    const resp = await app.request('/api/dashboard/shops', {
-      method: 'POST',
-      headers: { Authorization: auth, 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    }, env);
-    expect(resp.status).toBe(400);
-  });
-
-  it('creates shop with auto-generated client_id', async () => {
-    const { app, env, d1 } = createApp();
-    const newShop = {
-      shop_id: 'new_shop',
-      client_id: 'bg_auto123',
-      client_secret: 'secret_auto',
-      mall_id: 'newmall',
-    };
-    d1._setFirstSequence([null, newShop]); // createShop: INSERT then SELECT
     const auth = await getAuthHeader();
     const resp = await app.request('/api/dashboard/shops', {
       method: 'POST',
       headers: { Authorization: auth, 'Content-Type': 'application/json' },
       body: JSON.stringify({ mall_id: 'newmall', platform: 'cafe24' }),
     }, env);
-    expect(resp.status).toBe(201);
+    expect(resp.status).toBe(403);
+    const body = await resp.json() as Record<string, unknown>;
+    expect(body.error).toBe('disabled');
   });
 });
 

@@ -1191,7 +1191,7 @@ export const AdminInquiriesPage: FC<{
       </p>
     </div>
 
-    {/* 문의 데이터 (JSON 임베드) */}
+    {/* 문의 데이터 (JSON 임베드) — </script> 브레이크아웃 XSS 방지를 위해 '<'를 <로 치환 */}
     <script
       id="inquiry-data"
       type="application/json"
@@ -1212,7 +1212,7 @@ export const AdminInquiriesPage: FC<{
             customer_read_at: i.customer_read_at,
             admin_read_at: i.admin_read_at,
           })),
-        ),
+        ).replace(/</g, '\\u003c'),
       }}
     />
 

@@ -7,7 +7,7 @@
 
 import { Hono } from 'hono';
 import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
-import { DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
+import { DEFAULT_WIDGET_STYLE, safeParseStringArray, safeParseJsonObject } from '@supasignup/bg-core';
 import { getShopByClientId, isOverFreeLimit } from '../db/queries';
 
 const WIDGET_CONFIG_TTL = 300; // 5 minutes KV cache
@@ -79,7 +79,7 @@ widget.get('/config', async (c) => {
 
   const providers: ProviderName[] = overLimit
     ? []
-    : JSON.parse(shop.enabled_providers);
+    : (safeParseStringArray(shop.enabled_providers, `widget.enabled_providers shop_id=${shop.shop_id}`) as ProviderName[]);
 
   // Build SSO callback URI from mall_id for Cafe24 platform
   const ssoType = shop.sso_type || 'sso';
@@ -88,9 +88,8 @@ widget.get('/config', async (c) => {
     : undefined;
 
   // Parse widget style (fall back to defaults)
-  const style: WidgetStyle = shop.widget_style
-    ? JSON.parse(shop.widget_style)
-    : { ...DEFAULT_WIDGET_STYLE };
+  const parsedStyle = safeParseJsonObject<WidgetStyle>(shop.widget_style, null, `widget.widget_style shop_id=${shop.shop_id}`);
+  const style: WidgetStyle = parsedStyle ?? { ...DEFAULT_WIDGET_STYLE };
 
   const config = {
     client_id: shop.client_id,
@@ -100,9 +99,15 @@ widget.get('/config', async (c) => {
     sso_type: ssoType,
     style,
     plan: shop.plan,
-    banner_config: shop.plan !== 'free' && shop.banner_config ? JSON.parse(shop.banner_config) : null,
-    popup_config: shop.plan !== 'free' && shop.popup_config ? JSON.parse(shop.popup_config) : null,
-    escalation_config: shop.plan !== 'free' && shop.escalation_config ? JSON.parse(shop.escalation_config) : null,
+    banner_config: shop.plan !== 'free'
+      ? safeParseJsonObject(shop.banner_config, null, `widget.banner_config shop_id=${shop.shop_id}`)
+      : null,
+    popup_config: shop.plan !== 'free'
+      ? safeParseJsonObject(shop.popup_config, null, `widget.popup_config shop_id=${shop.shop_id}`)
+      : null,
+    escalation_config: shop.plan !== 'free'
+      ? safeParseJsonObject(shop.escalation_config, null, `widget.escalation_config shop_id=${shop.shop_id}`)
+      : null,
     // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
     kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
   };
@@ -122,6 +127,17 @@ widget.get('/config', async (c) => {
 });
 
 // ─── POST /event ─────────────────────────────────────────────
+// 유효한 이벤트 타입 (13종) — 모듈 상수로 빼서 allocation 회피
+const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'banner_click', 'banner_show',
+  'popup_show', 'popup_close', 'popup_signup',
+  'escalation_show', 'escalation_click', 'escalation_dismiss',
+  'kakao_channel_show', 'kakao_channel_click',
+  'page_view', 'oauth_start', 'signup_complete',
+]);
+const MAX_PAGE_URL_LEN = 2048;
+const MAX_EVENT_DATA_JSON_LEN = 4096;
+
 widget.post('/event', async (c) => {
   // IP 기반 rate limit: 1분당 최대 60건 (page_view 추가로 상향)
   const ip = c.req.header('cf-connecting-ip') || 'unknown';
@@ -148,24 +164,18 @@ widget.post('/event', async (c) => {
     return c.json({ error: 'missing_params' }, 400);
   }
 
-  // 유효한 이벤트 타입만 허용 (13종)
-  const validTypes = [
-    'banner_click',
-    'banner_show',
-    'popup_show',
-    'popup_close',
-    'popup_signup',
-    'escalation_show',
-    'escalation_click',
-    'escalation_dismiss',
-    'kakao_channel_show',
-    'kakao_channel_click',
-    'page_view',
-    'oauth_start',
-    'signup_complete',
-  ];
-  if (!validTypes.includes(body.event_type)) {
+  if (!VALID_EVENT_TYPES.has(body.event_type)) {
     return c.json({ error: 'invalid_event_type' }, 400);
+  }
+
+  // 페이로드 크기 제한 — 무제한 INSERT/스토리지 어뷰즈 방어
+  if (body.page_url && body.page_url.length > MAX_PAGE_URL_LEN) {
+    return c.json({ error: 'page_url_too_long' }, 400);
+  }
+  const eventData = body.event_data || {};
+  const eventDataJson = JSON.stringify(eventData);
+  if (eventDataJson.length > MAX_EVENT_DATA_JSON_LEN) {
+    return c.json({ error: 'event_data_too_large' }, 400);
   }
 
   // shop 조회
@@ -174,15 +184,22 @@ widget.post('/event', async (c) => {
     return c.json({ error: 'invalid_client_id' }, 404);
   }
 
+  // Origin 검증 — 남의 쇼핑몰 client_id로 가짜 이벤트 주입 차단
+  // (가장 악용이 쉬운 벡터: 경쟁사가 타겟 대시보드·AI 브리핑을 오염)
+  // 카페24 기본 도메인({mall_id}.cafe24.com) 또는 shop.shop_url에 등록된 커스텀 도메인만 허용.
+  const originHeader = c.req.header('Origin') ?? c.req.header('Referer') ?? '';
+  if (originHeader && !isOriginAllowedForShop(originHeader, shop.mall_id, shop.shop_url, shop.platform)) {
+    return c.json({ error: 'origin_not_allowed' }, 403);
+  }
+
   // funnel_events 테이블에 D1으로 영구 저장
   const eventId = crypto.randomUUID();
-  const eventData = body.event_data || {};
   const visitorId = (eventData as Record<string, unknown>).visitor_id as string | undefined || null;
   c.executionCtx.waitUntil(
     c.env.DB.prepare(
       'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url, visitor_id) VALUES (?, ?, ?, ?, ?, ?)'
     )
-      .bind(eventId, shop.shop_id, body.event_type, JSON.stringify(eventData), body.page_url || '', visitorId)
+      .bind(eventId, shop.shop_id, body.event_type, eventDataJson, body.page_url || '', visitorId)
       .run(),
   );
 
@@ -193,6 +210,38 @@ widget.post('/event', async (c) => {
 
   return c.json({ ok: true });
 });
+
+// Origin/Referer를 파싱해 shop에 허용된 host인지 판정.
+// - 카페24: {mall_id}.cafe24.com (PC) / m.{mall_id}.cafe24.com (모바일) 허용
+// - shop_url(custom 도메인)이 설정된 경우 해당 host도 허용
+// - 둘 다 매칭 안 되면 false
+function isOriginAllowedForShop(
+  originHeader: string,
+  mallId: string,
+  shopUrl: string | null,
+  platform: string,
+): boolean {
+  let host: string;
+  try {
+    host = new URL(originHeader).host.toLowerCase();
+  } catch {
+    return false;
+  }
+
+  if (platform === 'cafe24' && mallId) {
+    const m = mallId.toLowerCase();
+    if (host === `${m}.cafe24.com` || host === `m.${m}.cafe24.com`) return true;
+  }
+
+  if (shopUrl) {
+    try {
+      const shopHost = new URL(shopUrl).host.toLowerCase();
+      if (shopHost && (host === shopHost || host === `m.${shopHost}`)) return true;
+    } catch { /* invalid shop_url, fall through */ }
+  }
+
+  return false;
+}
 
 // ─── GET /hint ───────────────────────────────────────────────
 // Store provider hint in KV so authorize can auto-select provider

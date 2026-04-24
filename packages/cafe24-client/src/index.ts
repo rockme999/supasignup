@@ -27,8 +27,11 @@ export {
 // HMAC
 export { verifyAppLaunchHmac, verifyWebhookHmac } from "./hmac";
 
-// Constants -- App management
+// Constants -- Member / App management
 export {
+  // Member
+  MEMBER_JOINED,
+  // App lifecycle
   APP_DELETED,
   APP_EXPIRED,
   APP_RENEWED,

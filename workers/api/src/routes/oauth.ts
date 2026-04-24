@@ -22,6 +22,7 @@ import {
   generateCodeChallenge,
   decrypt,
   timingSafeEqual,
+  safeParseStringArray,
 } from '@supasignup/bg-core';
 import {
   getShopByClientId,
@@ -84,10 +85,8 @@ oauth.get('/authorize', async (c) => {
     return c.json({ error: 'invalid_client', message: 'Unknown client_id' }, 400);
   }
 
-  // Validate redirect_uri against whitelist
-  const allowedUris: string[] = shop.allowed_redirect_uris
-    ? JSON.parse(shop.allowed_redirect_uris)
-    : [];
+  // Validate redirect_uri against whitelist — 깨진 JSON이면 빈 배열로 폴백 후 400 반환
+  const allowedUris = safeParseStringArray(shop.allowed_redirect_uris, `shop.allowed_redirect_uris shop_id=${shop.shop_id}`);
   if (allowedUris.length === 0) {
     return c.json({ error: 'invalid_redirect_uri', message: 'No redirect URIs configured for this shop' }, 400);
   }
@@ -100,7 +99,7 @@ oauth.get('/authorize', async (c) => {
   // 카페24 앱 실행 시 백그라운드 프로빙(probeSsoType)에서 처리.
 
   // If no provider specified, check KV hint (set by widget before Cafe24 SSO trigger)
-  const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
+  const enabledProviders = safeParseStringArray(shop.enabled_providers, `shop.enabled_providers shop_id=${shop.shop_id}`);
   let hintVisitorId = '';
   let hintDevice = '';
   if (!provider) {
@@ -240,6 +239,14 @@ oauth.get('/callback/:provider', async (c) => {
     return c.html('<html><body><script>window.close();if(!window.closed)window.location.href="/";</script></body></html>');
   }
 
+  // OAuth state/PKCE 재사용 방지 — KV 값을 얻자마자 동기로 삭제해서 두 번째 동시 요청은
+  // 빈 값을 받도록 한다. (응답 이후 waitUntil로 미뤄 두면 race window가 생겨 auth_code가
+  // 중복 발급될 수 있음 → 계정 탈취 시나리오.)
+  await Promise.all([
+    c.env.KV.delete(`oauth_session:${state}`),
+    c.env.KV.delete(`pkce:${state}`),
+  ]);
+
   const session: OAuthSession = JSON.parse(sessionJson);
 
   if (session.provider !== provider || session.social_state !== state) {
@@ -286,13 +293,12 @@ oauth.get('/callback/:provider', async (c) => {
     redirectUrl.searchParams.set('bg_provider', provider);
   }
 
-  // Defer non-critical work to after response (recordStat + funnel + KV cleanup)
+  // Defer non-critical work to after response (recordStat + funnel)
+  // KV session/pkce 삭제는 이미 위에서 동기로 수행됨 (state 재사용 방지)
   c.executionCtx.waitUntil(
     Promise.all([
       recordStat(c.env.DB, session.shop_id, user.user_id, provider, action).catch(() => {}),
       recordFunnelSignup(c.env.DB, session.shop_id, provider, action, session.visitor_id, session.device).catch(() => {}),
-      c.env.KV.delete(`oauth_session:${state}`).catch(() => {}),
-      c.env.KV.delete(`pkce:${state}`).catch(() => {}),
     ])
   );
 
@@ -326,6 +332,12 @@ oauth.post('/callback/apple', async (c) => {
     // Session already consumed (duplicate callback) — close popup gracefully
     return c.html('<html><body><script>window.close();if(!window.closed)window.location.href="/";</script></body></html>');
   }
+
+  // OAuth state/PKCE 재사용 방지 — KV 값을 얻자마자 동기 삭제.
+  await Promise.all([
+    c.env.KV.delete(`oauth_session:${state}`),
+    c.env.KV.delete(`pkce:${state}`),
+  ]);
 
   const session: OAuthSession = JSON.parse(sessionJson);
 
@@ -392,12 +404,11 @@ oauth.post('/callback/apple', async (c) => {
   }
 
   // Defer non-critical work to after response
+  // KV session/pkce 삭제는 이미 위에서 동기로 수행됨 (state 재사용 방지)
   c.executionCtx.waitUntil(
     Promise.all([
       recordStat(c.env.DB, session.shop_id, user.user_id, provider, action).catch(() => {}),
       recordFunnelSignup(c.env.DB, session.shop_id, provider, action, session.visitor_id, session.device).catch(() => {}),
-      c.env.KV.delete(`oauth_session:${state}`).catch(() => {}),
-      c.env.KV.delete(`pkce:${state}`).catch(() => {}),
     ])
   );
 
@@ -809,7 +820,7 @@ oauth.get('/sso-start', async (c) => {
   }
 
   // 3. provider가 shop에서 활성화되어 있는지 확인
-  const enabledProviders: string[] = JSON.parse(shop.enabled_providers);
+  const enabledProviders = safeParseStringArray(shop.enabled_providers, `shop.enabled_providers sso-start shop_id=${shop.shop_id}`);
   if (!enabledProviders.includes(provider)) {
     return c.text('provider_disabled', 400);
   }
