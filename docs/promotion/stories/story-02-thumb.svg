@@ -1,0 +1,81 @@
+<svg width="444" height="320" viewBox="0 0 444 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1B4B"/>
+      <stop offset="50%" stop-color="#312E81"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="80%" cy="30%" r="55%">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bolt" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="50%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <radialGradient id="boltGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="inlineBoltGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/>
+    </radialGradient>
+
+    <symbol id="bolt-mini" viewBox="0 0 24 24"><path d="M14,3 L5,14 L11,14 L9,21 L19,10 L13,10 L15,3 Z" fill="currentColor"/></symbol>
+  </defs>
+
+  <!-- background -->
+  <rect width="444" height="320" fill="url(#bgMain)"/>
+  <rect width="444" height="320" fill="url(#bgGlow)"/>
+
+  <!-- decorative stars -->
+  <g fill="#fff">
+    <circle cx="35" cy="40" r="1.4" opacity="0.45"/>
+    <circle cx="55" cy="80" r="1" opacity="0.35"/>
+    <circle cx="410" cy="270" r="1.4" opacity="0.5"/>
+    <circle cx="60" cy="280" r="1.2" opacity="0.4"/>
+  </g>
+
+  <!-- TOP brand chip (left) -->
+  <g transform="translate(28, 28)">
+    <rect width="120" height="26" rx="13" fill="#FBBF24"/>
+    <g transform="translate(8, 5)" color="#1E1B4B"><use href="#bolt-mini" width="16" height="16"/></g>
+    <text x="65" y="18" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+          font-size="12" font-weight="900" fill="#1E1B4B" text-anchor="middle" letter-spacing="-0.3">  번개가입</text>
+  </g>
+
+  <!-- right top: STORY label -->
+  <text x="416" y="46" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+        font-size="11" font-weight="700" fill="#A5B4FC" text-anchor="end" letter-spacing="2">STORY · 02</text>
+
+  <!-- decorative bolt on right -->
+  <g transform="translate(310, 90)" opacity="0.95">
+    <ellipse cx="50" cy="60" rx="46" ry="50" fill="url(#boltGlow)"/>
+    <path d="M 60,12 L 28,68 L 50,68 L 40,108 L 78,52 L 56,52 L 64,12 Z"
+          fill="#000" opacity="0.35" transform="translate(2,3)"/>
+    <path d="M 60,12 L 28,68 L 50,68 L 40,108 L 78,52 L 56,52 L 64,12 Z"
+          fill="url(#bolt)" stroke="#FFE082" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+
+  <!-- MAIN headline -->
+  <text x="28" y="120" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+        font-size="30" font-weight="900" fill="#FFFFFF" letter-spacing="-1.6">로그인 버튼,</text>
+  <text x="28" y="156" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+        font-size="30" font-weight="900" fill="#FFFFFF" letter-spacing="-1.6">1분이면</text>
+
+  <text x="28" y="192" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+        font-size="30" font-weight="900" fill="#FBBF24" letter-spacing="-1.6">완성</text>
+
+  <!-- yellow underline accent -->
+  <rect x="28" y="208" width="48" height="3" fill="#FBBF24"/>
+
+  <!-- solution copy -->
+  <text x="28" y="244" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+        font-size="15" font-weight="700" fill="#FFFFFF" letter-spacing="-0.5">디자이너 없이 <tspan fill="#FBBF24">슬라이더 한 번</tspan>으로</text>
+
+  <!-- bottom bar: CAFE24 official -->
+  <text x="28" y="280" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif"
+        font-size="11" font-weight="600" fill="#A5B4FC" letter-spacing="-0.3">CAFE24 공식 앱 · 번개가입</text>
+</svg>
