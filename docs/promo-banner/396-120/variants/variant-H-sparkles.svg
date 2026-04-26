@@ -1,0 +1,56 @@
+<svg width="396" height="120" viewBox="0 0 396 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boltMain" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="40%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <linearGradient id="boltHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glowOuter" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFC107" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFC107" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 4-point sparkle symbol -->
+    <symbol id="sparkle" viewBox="-10 -10 20 20">
+      <path d="M 0,-9 L 2,-2 L 9,0 L 2,2 L 0,9 L -2,2 L -9,0 L -2,-2 Z" fill="currentColor"/>
+    </symbol>
+  </defs>
+
+  <rect width="396" height="120" fill="#FFF4F4"/>
+
+  <!-- TEXT AREA (unchanged) -->
+  <text x="20" y="32" font-family="Noto Sans CJK KR, sans-serif" font-size="14" font-weight="400" fill="#6B7280" letter-spacing="-0.4">월 <tspan fill="#E91E63" font-weight="700">0원</tspan>, <tspan fill="#E91E63" font-weight="700">무료</tspan>로 시작하세요</text>
+  <text x="20" y="68" font-family="Noto Sans CJK KR, sans-serif" font-size="26" font-weight="700" fill="#1F2937" letter-spacing="-1.2">회원가입이</text>
+  <text x="20" y="100" font-family="Noto Sans CJK KR, sans-serif" font-size="26" font-weight="700" letter-spacing="-1.2"><tspan fill="#E91E63">번개처럼</tspan> <tspan fill="#1F2937">끝난다</tspan></text>
+
+  <!-- ============ IMG AREA — Variant H: Sparkles ============ -->
+  <ellipse cx="320" cy="60" rx="62" ry="55" fill="url(#glowOuter)"/>
+
+  <!-- Sparkles around bolt -->
+  <g color="#FFB300" opacity="0.85">
+    <use href="#sparkle" x="262" y="22" width="14" height="14"/>
+    <use href="#sparkle" x="358" y="14" width="18" height="18"/>
+    <use href="#sparkle" x="370" y="78" width="12" height="12"/>
+    <use href="#sparkle" x="270" y="92" width="10" height="10"/>
+  </g>
+  <g color="#FFD54F" opacity="0.75">
+    <use href="#sparkle" x="362" y="48" width="9" height="9"/>
+    <use href="#sparkle" x="278" y="58" width="8" height="8"/>
+  </g>
+
+  <!-- Cast shadow -->
+  <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
+        fill="#000" opacity="0.22" transform="translate(3,4)"/>
+
+  <!-- Main bolt -->
+  <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
+        fill="url(#boltMain)" stroke="#E65100" stroke-width="0.9" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- Inner specular highlight -->
+  <path d="M 326,18 L 296,57 L 314,57 L 311,84"
+        fill="none" stroke="url(#boltHighlight)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+</svg>

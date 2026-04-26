@@ -1,0 +1,46 @@
+<svg width="396" height="120" viewBox="0 0 396 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boltMain" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="40%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <radialGradient id="glowOuter" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFC107" stop-opacity="0.40"/>
+      <stop offset="100%" stop-color="#FFC107" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="396" height="120" fill="#FFF4F4"/>
+
+  <!-- TEXT AREA (unchanged) -->
+  <text x="20" y="32" font-family="Noto Sans CJK KR, sans-serif" font-size="14" font-weight="400" fill="#6B7280" letter-spacing="-0.4">월 <tspan fill="#E91E63" font-weight="700">0원</tspan>, <tspan fill="#E91E63" font-weight="700">무료</tspan>로 시작하세요</text>
+  <text x="20" y="68" font-family="Noto Sans CJK KR, sans-serif" font-size="26" font-weight="700" fill="#1F2937" letter-spacing="-1.2">회원가입이</text>
+  <text x="20" y="100" font-family="Noto Sans CJK KR, sans-serif" font-size="26" font-weight="700" letter-spacing="-1.2"><tspan fill="#E91E63">번개처럼</tspan> <tspan fill="#1F2937">끝난다</tspan></text>
+
+  <!-- ============ IMG AREA — Variant F: Motion Echo ============ -->
+  <ellipse cx="320" cy="60" rx="62" ry="55" fill="url(#glowOuter)"/>
+
+  <!-- Echo bolt 2 (furthest back, most faded) -->
+  <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
+        fill="url(#boltMain)" opacity="0.18" transform="translate(-14, 0)"/>
+
+  <!-- Echo bolt 1 (mid back) -->
+  <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
+        fill="url(#boltMain)" opacity="0.38" transform="translate(-7, 0)"/>
+
+  <!-- Cast shadow -->
+  <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
+        fill="#000" opacity="0.20" transform="translate(3,4)"/>
+
+  <!-- Main bolt (sharp, dominant) -->
+  <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
+        fill="url(#boltMain)" stroke="#E65100" stroke-width="0.9" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- Speed lines (tiny horizontal) -->
+  <g stroke="#FF8F00" stroke-linecap="round" opacity="0.5">
+    <line x1="266" y1="36" x2="278" y2="36" stroke-width="1.5"/>
+    <line x1="262" y1="64" x2="276" y2="64" stroke-width="1.5"/>
+    <line x1="270" y1="92" x2="282" y2="92" stroke-width="1.5"/>
+  </g>
+</svg>

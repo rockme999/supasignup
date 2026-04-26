@@ -21,29 +21,31 @@
     </radialGradient>
   </defs>
 
-  <!-- background (Cafe24 guide BG: pink) -->
   <rect width="396" height="120" fill="#FFF4F4"/>
 
-  <!-- ============ TEXT AREA (left) ============ -->
-  <text x="20" y="32" font-family="Noto Sans CJK KR, sans-serif"
-        font-size="14" font-weight="400" fill="#6B7280" letter-spacing="-0.4">월 <tspan fill="#E91E63" font-weight="700">0원</tspan>, <tspan fill="#E91E63" font-weight="700">무료</tspan>로 시작하세요</text>
-  <text x="20" y="68" font-family="Noto Sans CJK KR, sans-serif"
-        font-size="26" font-weight="700" fill="#1F2937" letter-spacing="-1.2">회원가입이</text>
-  <text x="20" y="100" font-family="Noto Sans CJK KR, sans-serif"
-        font-size="26" font-weight="700" letter-spacing="-1.2"><tspan fill="#E91E63">번개처럼</tspan> <tspan fill="#1F2937">끝난다</tspan></text>
+  <!-- TEXT AREA (unchanged) -->
+  <text x="20" y="32" font-family="Noto Sans CJK KR, sans-serif" font-size="14" font-weight="400" fill="#6B7280" letter-spacing="-0.4">월 <tspan fill="#E91E63" font-weight="700">0원</tspan>, <tspan fill="#E91E63" font-weight="700">무료</tspan>로 시작하세요</text>
+  <text x="20" y="68" font-family="Noto Sans CJK KR, sans-serif" font-size="26" font-weight="700" fill="#1F2937" letter-spacing="-1.2">회원가입이</text>
+  <text x="20" y="100" font-family="Noto Sans CJK KR, sans-serif" font-size="26" font-weight="700" letter-spacing="-1.2"><tspan fill="#E91E63">번개처럼</tspan> <tspan fill="#1F2937">끝난다</tspan></text>
 
-  <!-- ============ IMG AREA — Premium Glow ============ -->
+  <!-- ============ IMG AREA — Variant E: Premium Glow ============ -->
+  <!-- Outer ambient glow -->
   <ellipse cx="320" cy="60" rx="62" ry="55" fill="url(#glowOuter)"/>
+  <!-- Inner hot glow -->
   <ellipse cx="320" cy="58" rx="32" ry="42" fill="url(#glowInner)"/>
 
+  <!-- Cast shadow -->
   <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
         fill="#000" opacity="0.22" transform="translate(3,4)"/>
 
+  <!-- Main bolt body -->
   <path d="M 326,14 L 290,58 L 316,58 L 310,108 L 354,56 L 328,56 L 326,14 Z"
         fill="url(#boltMain)" stroke="#E65100" stroke-width="0.8" stroke-linejoin="round" stroke-linecap="round"/>
 
+  <!-- Inner specular highlight (left edge, gives 3D feel) -->
   <path d="M 326,18 L 296,57 L 314,57 L 311,82"
         fill="none" stroke="url(#boltHighlight)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
 
+  <!-- Tiny sparkle at top tip -->
   <circle cx="326" cy="14" r="2.2" fill="#FFFFFF" opacity="0.85"/>
 </svg>
