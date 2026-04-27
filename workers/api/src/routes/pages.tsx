@@ -1006,7 +1006,7 @@ pages.get('/dashboard/ai-reports', async (c) => {
   ).bind(shop.shop_id).all<{ id: string; performance: string; strategy: string; actions: string; insight: string | null; source: string; created_at: string }>();
 
   return c.html(
-    <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} briefings={briefings.results ?? []} />
+    <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} briefings={(briefings.results ?? []).map(r => ({ ...r, insight: r.insight ?? undefined }))} />
   );
 });
 

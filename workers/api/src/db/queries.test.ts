@@ -83,6 +83,7 @@ const TEST_SHOP: Shop = {
   plan: 'free',
   sso_configured: 1,
   widget_style: null,
+  sso_type: 'sso',
   deleted_at: null,
   created_at: '2026-03-12',
   updated_at: '2026-03-12',
@@ -341,7 +342,7 @@ describe('getMonthlySignupCount', () => {
 describe('isOverFreeLimit', () => {
   it('returns false for paid plan', async () => {
     const db = createMockD1();
-    const paidShop = { ...TEST_SHOP, plan: 'monthly' as const };
+    const paidShop = { ...TEST_SHOP, plan: 'plus' as const };
     const result = await isOverFreeLimit(db as unknown as D1Database, paidShop);
     expect(result).toBe(false);
     // Should not even query the DB

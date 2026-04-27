@@ -324,7 +324,7 @@ const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
 export const BannerSettingsPage: FC<{
   shop: { plan: string; shop_name?: string | null } | null;
   shopId?: string;
-  bannerConfig?: { preset: number; text: string; borderRadius: number; icon: string; position: string; fullWidth?: boolean; paddingX?: number; height?: number; animation?: string } | null;
+  bannerConfig?: { preset: number; text: string; borderRadius: number; icon: string; position: string; fullWidth?: boolean; paddingX?: number; height?: number; animation?: string; opacity?: number; bold?: boolean; italic?: boolean; hideForReturning?: boolean; anchorSelector?: string } | null;
   isCafe24?: boolean;
 }> = ({ shop, shopId, bannerConfig, isCafe24 }) => {
   const isPlus = shop != null && shop.plan !== 'free';
@@ -445,7 +445,7 @@ export const BannerSettingsPage: FC<{
                         type="text"
                         id="bannerText"
                         value={bc.text || ''}
-                        maxlength="30"
+                        maxlength={30}
                         placeholder="번개가입으로 회원 혜택을 받으세요!"
                         style="width:320px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
                       />

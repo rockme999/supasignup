@@ -39,7 +39,7 @@ test.get('/store-info', async (c) => {
   }
 
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
   let tokenRefreshed = false;
 
   // 토큰 갱신 헬퍼
@@ -127,14 +127,14 @@ test.get('/coupons', async (c) => {
 
   const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
 
   // 토큰 갱신
   try {
-    await client.apiGet(mallId, accessToken, '/admin/store');
+    await client.apiGet(mallId!, accessToken, '/admin/store');
   } catch (err: any) {
     if (err?.statusCode === 401 && tokens.refresh_token) {
-      const newTokens = await client.refreshToken(mallId, tokens.refresh_token);
+      const newTokens = await client.refreshToken(mallId!, tokens.refresh_token);
       accessToken = newTokens.access_token;
       const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
       const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
@@ -146,7 +146,7 @@ test.get('/coupons', async (c) => {
   }
 
   try {
-    const coupons = await client.apiGet(mallId, accessToken, '/admin/coupons');
+    const coupons = await client.apiGet(mallId!, accessToken, '/admin/coupons');
     return c.json({ ok: true, data: coupons });
   } catch (err: any) {
     return c.json({ ok: false, error: String(err), status: err?.statusCode, detail: err?.detail }, 500);
@@ -167,14 +167,14 @@ test.post('/coupons/create-and-issue', async (c) => {
 
   const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
 
   // 토큰 갱신
   try {
-    await client.apiGet(mallId, accessToken, '/admin/store');
+    await client.apiGet(mallId!, accessToken, '/admin/store');
   } catch (err: any) {
     if (err?.statusCode === 401 && tokens.refresh_token) {
-      const newTokens = await client.refreshToken(mallId, tokens.refresh_token);
+      const newTokens = await client.refreshToken(mallId!, tokens.refresh_token);
       accessToken = newTokens.access_token;
       const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
       const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
@@ -282,12 +282,12 @@ test.get('/scripttags', async (c) => {
 
   const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
 
-  try { await client.apiGet(mallId, accessToken, '/admin/store'); }
+  try { await client.apiGet(mallId!, accessToken, '/admin/store'); }
   catch (err: any) {
     if (err?.statusCode === 401 && tokens.refresh_token) {
-      const nt = await client.refreshToken(mallId, tokens.refresh_token);
+      const nt = await client.refreshToken(mallId!, tokens.refresh_token);
       accessToken = nt.access_token;
       const ea = await encrypt(nt.access_token, c.env.ENCRYPTION_KEY);
       const er = await encrypt(nt.refresh_token, c.env.ENCRYPTION_KEY);
@@ -295,7 +295,7 @@ test.get('/scripttags', async (c) => {
     }
   }
 
-  const tags = await client.listScriptTags(mallId, accessToken);
+  const tags = await client.listScriptTags(mallId!, accessToken);
   return c.json({ ok: true, tags });
 });
 
@@ -309,12 +309,12 @@ test.delete('/scripttags/:script_no', async (c) => {
 
   const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
 
-  try { await client.apiGet(mallId, accessToken, '/admin/store'); }
+  try { await client.apiGet(mallId!, accessToken, '/admin/store'); }
   catch (err: any) {
     if (err?.statusCode === 401 && tokens.refresh_token) {
-      const nt = await client.refreshToken(mallId, tokens.refresh_token);
+      const nt = await client.refreshToken(mallId!, tokens.refresh_token);
       accessToken = nt.access_token;
       const ea = await encrypt(nt.access_token, c.env.ENCRYPTION_KEY);
       const er = await encrypt(nt.refresh_token, c.env.ENCRYPTION_KEY);
@@ -322,7 +322,7 @@ test.delete('/scripttags/:script_no', async (c) => {
     }
   }
 
-  await client.deleteScriptTag(mallId, accessToken, scriptNo);
+  await client.deleteScriptTag(mallId!, accessToken, scriptNo);
   return c.json({ ok: true, deleted: scriptNo });
 });
 
@@ -343,14 +343,14 @@ test.delete('/coupons/delete', async (c) => {
 
   const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
 
   // 토큰 갱신
   try {
-    await client.apiGet(mallId, accessToken, '/admin/store');
+    await client.apiGet(mallId!, accessToken, '/admin/store');
   } catch (err: any) {
     if (err?.statusCode === 401 && tokens.refresh_token) {
-      const newTokens = await client.refreshToken(mallId, tokens.refresh_token);
+      const newTokens = await client.refreshToken(mallId!, tokens.refresh_token);
       accessToken = newTokens.access_token;
       const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
       const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
@@ -443,14 +443,14 @@ test.post('/coupons/issue', async (c) => {
 
   const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
   const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
-  let accessToken = tokens.access_token;
+  let accessToken = tokens.access_token as string;
 
   // 토큰 갱신
   try {
-    await client.apiGet(mallId, accessToken, '/admin/store');
+    await client.apiGet(mallId!, accessToken, '/admin/store');
   } catch (err: any) {
     if (err?.statusCode === 401 && tokens.refresh_token) {
-      const newTokens = await client.refreshToken(mallId, tokens.refresh_token);
+      const newTokens = await client.refreshToken(mallId!, tokens.refresh_token);
       accessToken = newTokens.access_token;
       const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
       const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
