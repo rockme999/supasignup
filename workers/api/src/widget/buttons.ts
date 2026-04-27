@@ -634,6 +634,14 @@ export const WIDGET_JS = `(function() {
             var paths = iconSpan.querySelectorAll('path');
             for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', oFill); }
           }
+        } else if (isPlusPreset && provider !== 'google') {
+          // Plus 프리셋: 배경 톤에 따라 아이콘 fill 자동 결정 (구글 4색 제외)
+          // 다크 배경: glass, neon, liquid, gradient → 흰색
+          // 라이트 배경: soft, pulse → 검정
+          var PLUS_DARK_PRESETS = new Set(['glassmorphism','neon-glow','liquid-glass','gradient-flow']);
+          var plusIconFill = PLUS_DARK_PRESETS.has(preset) ? '#ffffff' : '#374151';
+          var paths = iconSpan.querySelectorAll('path');
+          for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', plusIconFill); }
         }
         btn.appendChild(iconSpan);
       } else {
