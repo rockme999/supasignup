@@ -588,10 +588,14 @@ export const WIDGET_JS = `(function() {
     var btn = document.createElement('a');
     var highlightClass = isHighlight ? (preset === 'icon-only' ? ' bg-btn-highlight-icon' : ' bg-btn-highlight') : '';
     btn.className = 'bg-btn' + highlightClass;
-    btn.style.backgroundColor = bgColor;
-    btn.style.color = textColor;
+    // Plus 프리셋은 CSS 클래스만으로 스타일 제어 — 인라인 color/bg/border 설정 생략
+    // (인라인 style이 남아 있으면 CSS !important와 충돌하여 브랜드 배경색이 잔존)
+    if (!isPlusPreset) {
+      btn.style.backgroundColor = bgColor;
+      btn.style.color = textColor;
+      if (border) btn.style.border = border;
+    }
     btn.style.transition = 'all 0.3s';
-    if (border) btn.style.border = border;
 
     if (preset === 'icon-only') {
       btn.style.width = '44px';
@@ -613,7 +617,8 @@ export const WIDGET_JS = `(function() {
       var w = buttonWidth;
       btn.style.width = w + 'px';
       btn.style.height = buttonHeight + 'px';
-      btn.style.borderRadius = borderRadius + 'px';
+      // Plus 프리셋은 CSS 클래스에서 border-radius 지정 — 인라인 override 생략
+      if (!isPlusPreset) btn.style.borderRadius = borderRadius + 'px';
       btn.style.justifyContent = justifyMap[align] || 'center';
       btn.style.marginBottom = buttonGap + 'px';
 
