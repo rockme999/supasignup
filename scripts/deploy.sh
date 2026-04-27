@@ -103,6 +103,134 @@ health_check_after_deploy() {
   return 0
 }
 
+# /version 엔드포인트에서 commit hash 추출.
+# 도달 불가하면 'unreachable', 응답 파싱 실패 시 'unknown'.
+fetch_remote_commit() {
+  local url=$1
+  local response
+  response=$(curl -s --max-time 5 "$url" 2>/dev/null) || { echo "unreachable"; return; }
+  echo "$response" | node -e "
+    let data='';
+    process.stdin.on('data', c => data += c);
+    process.stdin.on('end', () => {
+      try { console.log(JSON.parse(data).commit || 'unknown'); }
+      catch { console.log('unknown'); }
+    });
+  " 2>/dev/null || echo "unknown"
+}
+
+# 로컬 git HEAD vs 스테이징·프로덕션 /version 응답의 commit hash 비교.
+# 갭 발견 시 누락된 commit 메시지 표시. dirty 상태 자동 감지.
+check_commit_gap() {
+  echo ""
+  echo "=== 코드 commit 갭 감지 ==="
+
+  local local_sha
+  local_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  local local_dirty=""
+  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+    local_dirty=" (dirty)"
+  fi
+
+  local staging_sha prod_sha
+  staging_sha=$(fetch_remote_commit "https://bg-dev.suparain.kr/version")
+  prod_sha=$(fetch_remote_commit "https://bg.suparain.kr/version")
+
+  echo "  로컬 git HEAD:   $local_sha$local_dirty"
+  echo "  스테이징 commit: $staging_sha"
+  echo "  프로덕션 commit: $prod_sha"
+
+  # commit hash 비교 (dirty suffix 무시)
+  local staging_base="${staging_sha%-dirty}"
+  local prod_base="${prod_sha%-dirty}"
+
+  if [ "$staging_base" = "unreachable" ] || [ "$prod_base" = "unreachable" ]; then
+    warn "한쪽 환경 도달 불가 — 네트워크 또는 미배포 상태"
+    return
+  fi
+
+  if [ "$local_sha" = "$staging_base" ] && [ "$staging_base" = "$prod_base" ]; then
+    log "양 환경 + 로컬 일치 — 클린 baseline ($local_sha)"
+    [ -n "$local_dirty" ] && warn "단, 로컬은 uncommitted 변경 있음 (배포 시 -dirty suffix)"
+  else
+    if [ "$local_sha" != "$staging_base" ]; then
+      warn "로컬 → 스테이징 갭 (로컬 $local_sha vs 스테이징 $staging_base)"
+      if git rev-parse --verify "$staging_base" >/dev/null 2>&1; then
+        echo "    누락 commits (스테이징에 갈 것):"
+        git log --oneline "$staging_base..HEAD" | sed 's/^/      /'
+      fi
+    fi
+    if [ "$staging_base" != "$prod_base" ]; then
+      warn "스테이징 → 프로덕션 갭 (스테이징 $staging_base vs 프로덕션 $prod_base)"
+      if git rev-parse --verify "$prod_base" >/dev/null 2>&1 && git rev-parse --verify "$staging_base" >/dev/null 2>&1; then
+        echo "    누락 commits (프로덕션에 갈 것):"
+        git log --oneline "$prod_base..$staging_base" | sed 's/^/      /'
+      fi
+    fi
+  fi
+}
+
+# 마이그레이션 SQL 파일 정적 분석 — 위험 패턴 감지.
+# DROP TABLE / DROP COLUMN / RENAME / 가드 없는 CREATE TABLE / ALTER ADD COLUMN 발견 시 경고.
+# 차단은 하지 않고 정보 제공만. 실제 적용은 사용자 의식적 결정.
+check_migration_safety() {
+  echo ""
+  echo "=== 마이그레이션 SQL 안전성 검사 ==="
+
+  local migrations_dir="migrations"
+  if [ ! -d "$migrations_dir" ]; then
+    warn "migrations 디렉토리 없음"
+    return
+  fi
+
+  local risk_count=0
+  local total_count=0
+
+  for sql in "$migrations_dir"/*.sql; do
+    [ -f "$sql" ] || continue
+    total_count=$((total_count + 1))
+    local fname
+    fname=$(basename "$sql")
+    local risks=()
+
+    # 위험 패턴 (대소문자 무시)
+    grep -qiE "DROP[[:space:]]+TABLE" "$sql" && risks+=("DROP TABLE")
+    grep -qiE "DROP[[:space:]]+COLUMN" "$sql" && risks+=("DROP COLUMN")
+    grep -qiE "RENAME[[:space:]]+(TABLE|TO|COLUMN)" "$sql" && risks+=("RENAME (테이블 재생성 패턴)")
+
+    # CREATE TABLE without IF NOT EXISTS
+    if grep -qiE "^[[:space:]]*CREATE[[:space:]]+TABLE[[:space:]]+[^(I]" "$sql" \
+         || grep -qiE "^[[:space:]]*CREATE[[:space:]]+TABLE[[:space:]]+[^I]+\(" "$sql"; then
+      # IF NOT EXISTS 없는 CREATE TABLE 추정
+      if ! grep -qiE "CREATE[[:space:]]+TABLE[[:space:]]+IF[[:space:]]+NOT[[:space:]]+EXISTS" "$sql"; then
+        risks+=("CREATE TABLE without IF NOT EXISTS")
+      fi
+    fi
+
+    # ALTER TABLE ADD COLUMN — D1은 IF NOT EXISTS 가드 미지원, 재실행 시 에러
+    grep -qiE "ALTER[[:space:]]+TABLE.*ADD[[:space:]]+COLUMN" "$sql" \
+      && risks+=("ALTER TABLE ADD COLUMN (재실행 시 에러)")
+
+    if [ ${#risks[@]} -gt 0 ]; then
+      risk_count=$((risk_count + 1))
+      warn "$fname:"
+      for r in "${risks[@]}"; do
+        echo "    ⚠ $r"
+      done
+    fi
+  done
+
+  if [ "$risk_count" = "0" ]; then
+    log "모든 마이그레이션 SQL이 안전 패턴 ($total_count개 검사)"
+  else
+    echo ""
+    warn "$risk_count / $total_count 개 마이그레이션에 위험 패턴 발견"
+    echo "  ⓘ 이미 적용된 마이그레이션은 재실행되지 않으니 이전 적용분은 무시 가능."
+    echo "  ⓘ 새 마이그레이션 작성 시 IF NOT EXISTS 가드 + 파괴적 명령 회피 권장."
+    echo "  ⓘ 자세한 가이드: docs/DEPLOYMENT.md → '마이그레이션 작성 규칙'"
+  fi
+}
+
 # D1 테이블 목록 조회 헬퍼 (JSON 파싱 개선)
 get_tables() {
   local DB_NAME=$1
@@ -274,10 +402,12 @@ case "${1:-}" in
     echo "============================================"
     echo "  배포 전 환경 점검"
     echo "============================================"
+    check_commit_gap
     check_migrations
     compare_schemas
     check_schema_sync
     check_secrets
+    check_migration_safety
     ;;
 
   staging)
