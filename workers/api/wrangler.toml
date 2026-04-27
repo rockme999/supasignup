@@ -15,6 +15,11 @@ custom_domain = true
 
 [vars]
 BASE_URL = "https://bg.suparain.kr"
+# ── 빌드 메타데이터 (deploy.sh가 --var로 override) ────────────
+# 로컬 wrangler dev 시 그대로 사용됨. 실제 배포 시 git rev-parse + date로 주입.
+VERSION = "2.0.0"
+COMMIT_SHA = "unknown"
+BUILD_TIME = "unknown"
 
 # D1 Database (프로덕션)
 [[d1_databases]]
@@ -66,6 +71,9 @@ custom_domain = true
 
 [env.dev.vars]
 BASE_URL = "https://bg-dev.suparain.kr"
+VERSION = "2.0.0"
+COMMIT_SHA = "unknown"
+BUILD_TIME = "unknown"
 
 # D1 Database (스테이징)
 [[env.dev.d1_databases]]

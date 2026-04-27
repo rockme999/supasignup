@@ -17,6 +17,92 @@ warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 ask()  { echo -e "${YELLOW}[?]${NC} $1"; read -r REPLY; }
 
+# 빌드 메타데이터를 wrangler --var 플래그로 변환.
+# /version 엔드포인트가 노출하는 commit/version/built_at 값.
+# git이 dirty 상태(uncommitted changes)면 commit hash에 -dirty suffix.
+build_vars() {
+  local sha
+  sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+    sha="${sha}-dirty"
+  fi
+  local time
+  time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local ver
+  ver=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "unknown")
+  echo "--var COMMIT_SHA:$sha --var BUILD_TIME:$time --var VERSION:$ver"
+}
+
+# 가장 최근 배포의 version-id 추출 (롤백 대상).
+# wrangler 4.x는 deployments list 출력에서 'Version(s):' 줄 또는 별도 줄에 UUID 표시.
+# 시간순 정렬되어 마지막(tail -1)이 가장 최신.
+get_latest_version_id() {
+  local env_flag=${1:-}
+  npx wrangler deployments list $env_flag 2>&1 \
+    | grep -oE "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" \
+    | tail -1
+}
+
+# 배포 직전 호출 — 현재 운영 중인 version-id를 변수에 저장하고
+# 운영자가 즉시 복구 가능하도록 명시 출력.
+# 사용법: capture_rollback_target "스테이징|프로덕션" "--env dev|''"
+# 결과는 ROLLBACK_VERSION_ID 전역 변수에 저장.
+capture_rollback_target() {
+  local label=$1
+  local env_flag=${2:-}
+  log "이전 $label 버전 ID 캡처 (롤백 대비)..."
+  ROLLBACK_VERSION_ID=$(get_latest_version_id "$env_flag")
+  if [ -n "$ROLLBACK_VERSION_ID" ]; then
+    local rollback_cmd="npx wrangler rollback $ROLLBACK_VERSION_ID"
+    [ -n "$env_flag" ] && rollback_cmd="$rollback_cmd $env_flag"
+    echo "  ────────────────────────────────────────────────────────────"
+    echo "  사고 시 즉시 복구 명령:"
+    echo "    $rollback_cmd"
+    echo "  ────────────────────────────────────────────────────────────"
+  else
+    warn "이전 버전 ID 조회 실패 (첫 배포이거나 wrangler 출력 형식 변경)"
+    ROLLBACK_VERSION_ID=""
+  fi
+}
+
+# 배포 직후 호출 — health 엔드포인트를 30초 간격 3회(총 90초) 폴링.
+# 1회라도 실패하면 롤백 명령 강조 출력 후 함수는 1 반환 (스크립트 흐름은 계속).
+# 5분이 아닌 90초로 제한한 이유: 1인 운영자 시간 절감, 사고는 보통 첫 분 내 가시화.
+health_check_after_deploy() {
+  local url=$1
+  local rollback_id=${2:-}
+  local env_flag=${3:-}
+
+  echo ""
+  echo "=== 배포 후 헬스체크 (30초 간격 3회, 총 90초) ==="
+  local fail=0
+  for i in 1 2 3; do
+    sleep 30
+    if curl -fsS --max-time 10 "$url" >/dev/null 2>&1; then
+      log "  [$i/3] $url OK"
+    else
+      echo -e "  ${RED}[✗]${NC} [$i/3] $url 응답 실패"
+      fail=1
+    fi
+  done
+
+  if [ "$fail" = "1" ]; then
+    echo ""
+    echo -e "${RED}========================================${NC}"
+    echo -e "${RED}  헬스체크 실패 — 롤백 권장${NC}"
+    echo -e "${RED}========================================${NC}"
+    if [ -n "$rollback_id" ]; then
+      local rollback_cmd="npx wrangler rollback $rollback_id"
+      [ -n "$env_flag" ] && rollback_cmd="$rollback_cmd $env_flag"
+      echo "  실행 명령: $rollback_cmd"
+    fi
+    echo "  로그 확인: npx wrangler tail $env_flag"
+    return 1
+  fi
+  log "안정 운영 확인 (90초). 이후로는 직접 모니터링하세요."
+  return 0
+}
+
 # D1 테이블 목록 조회 헬퍼 (JSON 파싱 개선)
 get_tables() {
   local DB_NAME=$1
@@ -202,11 +288,21 @@ case "${1:-}" in
     log "스테이징 마이그레이션 적용..."
     npx wrangler d1 migrations apply bg-dev --env dev --remote
 
-    log "스테이징 Worker 배포..."
-    npx wrangler deploy --env dev
+    capture_rollback_target "스테이징" "--env dev"
+
+    log "빌드 메타데이터 생성..."
+    node ../../scripts/build-meta.mjs
+    node ../../scripts/build-changelog.mjs
+
+    log "스테이징 Worker 배포 (빌드 메타데이터 주입)..."
+    # shellcheck disable=SC2046
+    npx wrangler deploy --env dev $(build_vars)
 
     log "스테이징 배포 완료!"
-    echo "  → https://bg-dev.suparain.kr/health 에서 확인하세요"
+    echo "  → https://bg-dev.suparain.kr/health (헬스체크)"
+    echo "  → https://bg-dev.suparain.kr/version (배포 버전 확인)"
+
+    health_check_after_deploy "https://bg-dev.suparain.kr/health" "$ROLLBACK_VERSION_ID" "--env dev" || true
     ;;
 
   production)
@@ -234,11 +330,21 @@ case "${1:-}" in
     ask "스키마 검증을 확인했습니다. 프로덕션 Worker를 배포할까요? (yes/no)"
     [ "$REPLY" = "yes" ] || err "취소됨"
 
-    log "프로덕션 Worker 배포..."
-    npx wrangler deploy
+    capture_rollback_target "프로덕션" ""
+
+    log "빌드 메타데이터 생성..."
+    node ../../scripts/build-meta.mjs
+    node ../../scripts/build-changelog.mjs
+
+    log "프로덕션 Worker 배포 (빌드 메타데이터 주입)..."
+    # shellcheck disable=SC2046
+    npx wrangler deploy $(build_vars)
 
     log "프로덕션 배포 완료!"
-    echo "  → https://bg.suparain.kr/health 에서 확인하세요"
+    echo "  → https://bg.suparain.kr/health (헬스체크)"
+    echo "  → https://bg.suparain.kr/version (배포 버전 확인)"
+
+    health_check_after_deploy "https://bg.suparain.kr/health" "$ROLLBACK_VERSION_ID" "" || true
     ;;
 
   full)
@@ -259,10 +365,22 @@ case "${1:-}" in
     log "스테이징 마이그레이션 적용..."
     npx wrangler d1 migrations apply bg-dev --env dev --remote
 
-    log "스테이징 Worker 배포..."
-    npx wrangler deploy --env dev
+    capture_rollback_target "스테이징" "--env dev"
+    STAGING_ROLLBACK_ID=$ROLLBACK_VERSION_ID
+
+    log "빌드 메타데이터 생성..."
+    node ../../scripts/build-meta.mjs
+    node ../../scripts/build-changelog.mjs
+
+    log "스테이징 Worker 배포 (빌드 메타데이터 주입)..."
+    # shellcheck disable=SC2046
+    npx wrangler deploy --env dev $(build_vars)
 
     log "스테이징 배포 완료!"
+    echo "  → https://bg-dev.suparain.kr/version 에서 버전 확인 가능"
+
+    health_check_after_deploy "https://bg-dev.suparain.kr/health" "$STAGING_ROLLBACK_ID" "--env dev" || true
+
     ask "스테이징 테스트를 완료한 후 Enter를 누르세요. 프로덕션 배포를 진행할까요? (yes/no)"
     [ "$REPLY" = "yes" ] || err "취소됨"
 
@@ -279,10 +397,20 @@ case "${1:-}" in
     ask "프로덕션 Worker를 배포할까요? (yes/no)"
     [ "$REPLY" = "yes" ] || err "취소됨"
 
-    log "프로덕션 Worker 배포..."
-    npx wrangler deploy
+    capture_rollback_target "프로덕션" ""
+
+    log "빌드 메타데이터 생성..."
+    node ../../scripts/build-meta.mjs
+    node ../../scripts/build-changelog.mjs
+
+    log "프로덕션 Worker 배포 (빌드 메타데이터 주입)..."
+    # shellcheck disable=SC2046
+    npx wrangler deploy $(build_vars)
 
     log "전체 배포 완료!"
+    echo "  → https://bg.suparain.kr/version 에서 버전 확인 가능"
+
+    health_check_after_deploy "https://bg.suparain.kr/health" "$ROLLBACK_VERSION_ID" "" || true
     ;;
 
   *)

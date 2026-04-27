@@ -2,6 +2,7 @@
  * Shared layout for dashboard SSR pages.
  */
 import type { FC, PropsWithChildren } from 'hono/jsx';
+import { BUILD_VERSION, BUILD_COMMIT_SHA } from '../data/build-info';
 
 type LayoutProps = PropsWithChildren<{
   title: string;
@@ -155,6 +156,7 @@ const adminNavItems = [
   { path: '/supadmin/ai-reports', label: 'AI 보고서', icon: <IconSparkle /> },
   { path: '/supadmin/inquiries', label: '문의 관리', icon: <IconChat /> },
   { path: '/supadmin/monitoring', label: '시스템 모니터링', icon: <IconClipboard /> },
+  { path: '/supadmin/changelog', label: '변경사항 (개발자용)', icon: <IconBook /> },
 ];
 
 export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, isCafe24, children }) => {
@@ -541,6 +543,34 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .site-footer a { color: #94a3b8; }
         .site-footer a:hover { color: #64748b; text-decoration: underline; }
 
+        /* ── Version link (sidebar-footer) ──────────── */
+        .version-link {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          text-decoration: none !important;
+          margin-bottom: 8px;
+          opacity: 0.75;
+          transition: opacity 0.15s;
+        }
+        .version-link:hover { opacity: 1; text-decoration: none !important; }
+        .version-tag {
+          font-size: 12px;
+          font-weight: 700;
+          color: #475569;
+          letter-spacing: -0.01em;
+        }
+        .version-commit {
+          font-size: 10px;
+          color: #94a3b8;
+          font-family: monospace;
+          background: #f1f5f9;
+          border-radius: 3px;
+          padding: 1px 4px;
+        }
+        .version-link:hover .version-tag { color: #2563eb; }
+        .version-link:hover .version-commit { color: #64748b; }
+
         /* ── Toast notification ──────────────────── */
         .toast-container {
           position: fixed;
@@ -611,6 +641,10 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
               )}
             </nav>
             <div class="sidebar-footer">
+              <a href={isAdmin ? '/supadmin/changelog' : '/dashboard/changelog'} class="version-link">
+                <span class="version-tag">v{BUILD_VERSION}</span>
+                {isAdmin && <span class="version-commit">[{BUILD_COMMIT_SHA}]</span>}
+              </a>
               {isAdmin
                 ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>
                 : !isCafe24 && <a href="/dashboard/logout">로그아웃</a>}
@@ -650,6 +684,10 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
               </div>
             )}
             <div class="sidebar-footer">
+              <a href={isAdmin ? '/supadmin/changelog' : '/dashboard/changelog'} class="version-link">
+                <span class="version-tag">v{BUILD_VERSION}</span>
+                {isAdmin && <span class="version-commit">[{BUILD_COMMIT_SHA}]</span>}
+              </a>
               {isAdmin
                 ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>
                 : !isCafe24 && <a href="/dashboard/logout">로그아웃</a>}

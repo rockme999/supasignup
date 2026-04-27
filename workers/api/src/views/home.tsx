@@ -5,6 +5,8 @@ import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
 import { ProgressBar } from './charts';
 import { providerColors, providerDisplayNames, type HomeStats } from './shared';
+import { CHANGELOG_PUBLIC } from '../data/changelog';
+import { extractRecentHighlights, extractLatestSectionTitle } from '../utils/changelog-summary';
 
 type HomeShop = {
   shop_id: string;
@@ -183,6 +185,29 @@ export const HomePage: FC<{
           )}
         </div>
       </div>
+
+      {/* 최신 업데이트 */}
+      {(() => {
+        const highlights = extractRecentHighlights(CHANGELOG_PUBLIC, 5);
+        const sectionTitle = extractLatestSectionTitle(CHANGELOG_PUBLIC);
+        if (highlights.length === 0) return null;
+        return (
+          <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div>
+                <h2 style="margin-bottom:2px">🆕 최신 업데이트</h2>
+                {sectionTitle && <p style="font-size:12px;color:#94a3b8;margin:0">{sectionTitle}</p>}
+              </div>
+              <a href="/dashboard/changelog" style="font-size:13px;white-space:nowrap">전체 보기 →</a>
+            </div>
+            <ul style="margin:0;padding-left:18px;list-style:disc">
+              {highlights.map((item) => (
+                <li style="font-size:13px;color:#374151;margin:5px 0;line-height:1.5">{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* 퀵스타트 팝업 모달 */}
       <div id="quickstartModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">

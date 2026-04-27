@@ -13,8 +13,8 @@ import { providerColors, providerDisplayNames, inquiryStatusLabel } from './shar
 type AdminPlanCounts = {
   total: number;
   free: number;
-  monthly: number;
-  yearly: number;
+  cycleMonthly: number; // Plus 플랜 중 월간 결제 (billing_cycle='monthly')
+  cycleYearly: number;  // Plus 플랜 중 연간 결제 (billing_cycle='yearly')
 };
 
 type AdminTopShop = {
@@ -73,12 +73,12 @@ export const AdminHomePage: FC<{
         <div class="value">{planCounts.free.toLocaleString()}</div>
       </div>
       <div class="stat-card">
-        <div class="label">월간 구독</div>
-        <div class="value" style="color:#2563eb">{planCounts.monthly.toLocaleString()}</div>
+        <div class="label">Plus 월간</div>
+        <div class="value" style="color:#2563eb">{planCounts.cycleMonthly.toLocaleString()}</div>
       </div>
       <div class="stat-card">
-        <div class="label">연간 구독</div>
-        <div class="value" style="color:#059669">{planCounts.yearly.toLocaleString()}</div>
+        <div class="label">Plus 연간</div>
+        <div class="value" style="color:#059669">{planCounts.cycleYearly.toLocaleString()}</div>
       </div>
       <div class="stat-card">
         <div class="label">미답변 문의</div>
@@ -156,7 +156,7 @@ export const AdminHomePage: FC<{
                       <code>{shop.mall_id}</code>
                     </a>
                   </td>
-                  <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : shop.plan === 'monthly' ? '월간' : '연간'}</span></td>
+                  <td><span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span></td>
                   <td style="text-align:right;font-weight:600">{shop.total_signups.toLocaleString()}</td>
                   <td style="text-align:right;color:#2563eb">{shop.monthly_signups.toLocaleString()}</td>
                   <td style="text-align:right;color:#059669">{shop.daily_signups.toLocaleString()}</td>
@@ -448,9 +448,8 @@ export const AdminShopsPage: FC<{
                       data-shop-id={shop.shop_id}
                       style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
                     >
-                      <option value="free" selected={shop.plan === 'free'}>무료</option>
-                      <option value="monthly" selected={shop.plan === 'monthly'}>월간</option>
-                      <option value="yearly" selected={shop.plan === 'yearly'}>연간</option>
+                      <option value="free" selected={shop.plan === 'free'}>Free (무료)</option>
+                      <option value="plus" selected={shop.plan === 'plus'}>Plus (유료)</option>
                     </select>
                   </td>
                   <td>
@@ -540,6 +539,7 @@ type AdminSubscriptionRow = {
   mall_id: string;
   owner_email: string;
   plan: string;
+  billing_cycle: string; // 'monthly' | 'yearly' — 결제 주기
   status: string;
   started_at: string | null;
   expires_at: string | null;
@@ -595,8 +595,13 @@ export const AdminSubscriptionsPage: FC<{
                     <td style="font-size:13px">{sub.owner_email}</td>
                     <td>
                       <span class={`badge ${sub.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>
-                        {sub.plan === 'free' ? '무료' : sub.plan === 'monthly' ? '월간' : sub.plan === 'yearly' ? '연간' : sub.plan}
+                        {sub.plan === 'free' ? 'Free' : 'Plus'}
                       </span>
+                      {sub.plan !== 'free' && sub.billing_cycle && (
+                        <span class="badge badge-gray" style="margin-left:4px;font-size:11px">
+                          {sub.billing_cycle === 'monthly' ? '월간' : '연간'}
+                        </span>
+                      )}
                     </td>
                     <td><span class={`badge ${badgeClass}`}>{statusBadge}</span></td>
                     <td style="font-size:12px;color:#64748b">{sub.started_at ? sub.started_at.slice(0, 10) : '-'}</td>
@@ -1906,7 +1911,7 @@ export const AdminShopDetailPage: FC<{
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
         <a href="/supadmin/shops" style="color:#64748b;text-decoration:none;font-size:13px">← 목록으로</a>
         <h1 style="margin-bottom:0">{shop.shop_name || shop.mall_id}</h1>
-        <span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : shop.plan === 'monthly' ? '월간' : '연간'}</span>
+        <span class={`badge ${shop.plan === 'free' ? 'badge-gray' : 'badge-green'}`}>{shop.plan === 'free' ? 'Free' : 'Plus'}</span>
         {shop.deleted_at && <span class="badge badge-red">정지됨</span>}
       </div>
 

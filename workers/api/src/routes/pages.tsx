@@ -10,6 +10,10 @@ import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/b
 import { verifyToken } from '../services/jwt';
 import { buildSinceExpr, escapeLike, buildDateFilter } from '../db/stats-utils';
 import { hashPassword, verifyPassword } from '../services/password';
+import { renderMarkdown } from '../utils/markdown';
+import { CHANGELOG_PUBLIC, CHANGELOG_INTERNAL } from '../data/changelog';
+import { BUILD_VERSION, BUILD_COMMIT_SHA } from '../data/build-info';
+import { Layout } from '../views/layout';
 import {
   LoginPage,
   RegisterPage,
@@ -1451,8 +1455,8 @@ pages.get('/supadmin', async (c) => {
       planCounts={{
         total: planCounts?.total ?? 0,
         free: planCounts?.free_count ?? 0,
-        monthly: planCounts?.monthly_count ?? 0,
-        yearly: planCounts?.yearly_count ?? 0,
+        cycleMonthly: planCounts?.monthly_count ?? 0,
+        cycleYearly: planCounts?.yearly_count ?? 0,
       }}
       providerDistribution={providerResult.results ?? []}
       dailySignups={dailySignups.results ?? []}
@@ -1544,7 +1548,7 @@ pages.get('/supadmin/shops/:id', async (c) => {
 // GET /admin/subscriptions — 전체 구독 현황
 pages.get('/supadmin/subscriptions', async (c) => {
   const result = await c.env.DB.prepare(
-    `SELECT sub.id as subscription_id, sub.shop_id, sub.plan, sub.status, sub.started_at, sub.expires_at, sub.created_at,
+    `SELECT sub.id as subscription_id, sub.shop_id, sub.plan, sub.billing_cycle, sub.status, sub.started_at, sub.expires_at, sub.created_at,
             s.mall_id, s.shop_name, o.email as owner_email
      FROM subscriptions sub
      JOIN shops s ON sub.shop_id = s.shop_id
@@ -1552,7 +1556,7 @@ pages.get('/supadmin/subscriptions', async (c) => {
      ORDER BY sub.created_at DESC LIMIT 100`,
   ).all<{
     subscription_id: string; shop_id: string; shop_name: string; mall_id: string;
-    owner_email: string; plan: string; status: string;
+    owner_email: string; plan: string; billing_cycle: string; status: string;
     started_at: string | null; expires_at: string | null; created_at: string;
   }>();
 
@@ -1684,6 +1688,154 @@ pages.get('/supadmin/ai-reports/:shopId', async (c) => {
       shopIdentity={shop.shop_identity}
       briefings={briefings.results ?? []}
     />
+  );
+});
+
+// ─── Changelog (운영자용) ────────────────────────────────────
+
+pages.get('/dashboard/changelog', (c) => {
+  const isCafe24 = c.get('isCafe24');
+  const changelogHtml = renderMarkdown(CHANGELOG_PUBLIC);
+
+  return c.html(
+    <Layout
+      title="새로운 기능"
+      loggedIn={true}
+      currentPath="/dashboard/changelog"
+      isCafe24={isCafe24}
+    >
+      <style>{`
+        .changelog-page { max-width: 720px; margin: 0 auto; }
+        .changelog-version-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 10px;
+          padding: 10px 18px;
+          margin-bottom: 28px;
+        }
+        .changelog-version-badge .ver-label {
+          font-size: 12px;
+          color: #0369a1;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .changelog-version-badge .ver-num {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0c4a6e;
+          letter-spacing: -0.02em;
+        }
+        .changelog-content { line-height: 1.8; color: #1e293b; }
+        .changelog-content h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 32px 0 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .changelog-content h2 { font-size: 18px; font-weight: 700; color: #1e293b; margin: 28px 0 8px; }
+        .changelog-content h3 { font-size: 15px; font-weight: 600; color: #374151; margin: 20px 0 6px; }
+        .changelog-content p { margin: 8px 0; font-size: 14px; }
+        .changelog-content ul { margin: 6px 0 12px 20px; }
+        .changelog-content li { margin: 4px 0; font-size: 14px; }
+        .changelog-content strong { color: #0f172a; }
+        .changelog-content code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 12.5px; font-family: monospace; color: #be185d; }
+        .changelog-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 28px 0; }
+        .changelog-content a { color: #2563eb; }
+        .changelog-content a:hover { text-decoration: underline; }
+        .changelog-content blockquote { border-left: 3px solid #cbd5e1; padding: 8px 16px; margin: 12px 0; color: #64748b; font-size: 13px; background: #f8fafc; border-radius: 0 6px 6px 0; }
+      `}</style>
+      <div class="changelog-page">
+        <div class="page-header" style="margin-bottom:24px">
+          <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 4px">새로운 기능 &amp; 업데이트</h2>
+          <p style="font-size:13px;color:#64748b;margin:0">번개가입의 새로운 기능과 개선사항을 소개합니다.</p>
+        </div>
+        <div class="changelog-version-badge">
+          <span class="ver-label">현재 버전</span>
+          <span class="ver-num">v{BUILD_VERSION}</span>
+        </div>
+        <div
+          class="changelog-content"
+          dangerouslySetInnerHTML={{ __html: changelogHtml }}
+        />
+      </div>
+    </Layout>
+  );
+});
+
+// ─── Changelog (개발자용 — admin 전용) ──────────────────────
+
+pages.get('/supadmin/changelog', (c) => {
+  const changelogHtml = renderMarkdown(CHANGELOG_INTERNAL);
+
+  return c.html(
+    <Layout
+      title="변경사항 (개발자용)"
+      loggedIn={true}
+      isAdmin={true}
+      currentPath="/supadmin/changelog"
+    >
+      <style>{`
+        .changelog-page { max-width: 800px; margin: 0 auto; }
+        .changelog-version-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 10px;
+          padding: 10px 18px;
+          margin-bottom: 28px;
+        }
+        .changelog-version-badge .ver-label {
+          font-size: 12px;
+          color: #0369a1;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .changelog-version-badge .ver-num {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0c4a6e;
+          letter-spacing: -0.02em;
+        }
+        .changelog-version-badge .ver-commit {
+          font-size: 11px;
+          color: #64748b;
+          font-family: monospace;
+          background: #f1f5f9;
+          border-radius: 4px;
+          padding: 2px 6px;
+        }
+        .changelog-content { line-height: 1.8; color: #1e293b; }
+        .changelog-content h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 32px 0 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .changelog-content h2 { font-size: 18px; font-weight: 700; color: #1e293b; margin: 28px 0 8px; }
+        .changelog-content h3 { font-size: 15px; font-weight: 600; color: #374151; margin: 20px 0 6px; }
+        .changelog-content p { margin: 8px 0; font-size: 14px; }
+        .changelog-content ul { margin: 6px 0 12px 20px; }
+        .changelog-content li { margin: 4px 0; font-size: 14px; }
+        .changelog-content strong { color: #0f172a; }
+        .changelog-content code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 12.5px; font-family: monospace; color: #be185d; }
+        .changelog-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 28px 0; }
+        .changelog-content a { color: #2563eb; }
+        .changelog-content a:hover { text-decoration: underline; }
+        .changelog-content blockquote { border-left: 3px solid #cbd5e1; padding: 8px 16px; margin: 12px 0; color: #64748b; font-size: 13px; background: #f8fafc; border-radius: 0 6px 6px 0; }
+      `}</style>
+      <div class="changelog-page">
+        <div class="page-header" style="margin-bottom:24px">
+          <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 4px">변경사항 (개발자용)</h2>
+          <p style="font-size:13px;color:#64748b;margin:0">기술 상세·마이그레이션·보안 수정이 모두 포함된 내부 changelog.</p>
+        </div>
+        <div class="changelog-version-badge">
+          <span class="ver-label">현재 버전</span>
+          <span class="ver-num">v{BUILD_VERSION}</span>
+          <span class="ver-commit">[{BUILD_COMMIT_SHA}]</span>
+        </div>
+        <div
+          class="changelog-content"
+          dangerouslySetInnerHTML={{ __html: changelogHtml }}
+        />
+      </div>
+    </Layout>
   );
 });
 

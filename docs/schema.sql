@@ -35,6 +35,11 @@
 --                shops.plan은 FK 제약 회피를 위해 컬럼 교체(ADD→UPDATE→DROP→RENAME) 방식으로 이관되었고,
 --                그 부산물로 plan CHECK 제약이 제거됨. 'free' | 'plus' 검증은 billing.tsx / admin.ts /
 --                dashboard.ts 애플리케이션 레이어에서 수행.
+--   2026-04-27: d1_migrations 메타데이터 정합성 복구 — 0021~0027 7개 마이그레이션이 추적 테이블에
+--                기록되지 않은 상태(실제 테이블·데이터는 정상 적용됨, 메타데이터만 어긋남) 발견.
+--                양쪽 환경(bg-dev, bg-production)의 d1_migrations에 INSERT OR IGNORE로 메타 row만
+--                보강하여 wrangler 추적 시스템과 실제 DB 상태 일치 복구. 데이터·구조 변경 0.
+--                향후 동일 사고 방지를 위해 deploy.sh에 마이그레이션 추적 자동 검증 로직 추가 예정.
 
 -- ============================================================
 -- 1. owners — 운영자 계정

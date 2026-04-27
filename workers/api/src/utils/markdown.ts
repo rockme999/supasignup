@@ -31,6 +31,9 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (ch) => ESCAPE[ch] ?? ch);
 }
 
+/** renderMarkdown: mdToHtml의 alias — changelog 페이지 등에서 사용 */
+export const renderMarkdown = (md: string): string => mdToHtml(md);
+
 export function mdToHtml(md: string): string {
   if (!md) return '';
   // 1) 전체 escape 선행
@@ -95,8 +98,11 @@ export function mdToHtml(md: string): string {
   if (listType) out.push(`</${listType}>`);
   text = out.join('\n');
 
-  // 9) 단락·줄바꿈: 빈 줄로 단락 분리, 단락 내 \n → <br>. 블록 태그는 감싸지 않음.
-  const BLOCK_RE = /^<(ul|ol|pre|h[1-6]|blockquote|table)[\s>]/i;
+  // 9) 수평선 --- (줄 전체가 --- 만인 경우)
+  text = text.replace(/^---+$/gm, '<hr>');
+
+  // 10) 단락·줄바꿈: 빈 줄로 단락 분리, 단락 내 \n → <br>. 블록 태그는 감싸지 않음.
+  const BLOCK_RE = /^<(ul|ol|pre|h[1-6]|blockquote|table|hr)[\s>/]/i;
   text = text
     .split(/\n{2,}/)
     .map((block) => {

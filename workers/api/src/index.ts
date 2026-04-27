@@ -98,6 +98,20 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok', service: 'bg-api' });
 });
 
+// ── Version / build metadata ─────────────────────────────────
+// 배포된 코드의 정체(어느 commit, 언제 빌드, 어느 env)를 외부에서 검증.
+// wrangler deployments list가 commit hash를 안 박으므로 이 엔드포인트가
+// "지금 프로덕션이 어느 코드?"의 단일 답변 출처(SSOT)이다.
+app.get('/version', (c) => {
+  return c.json({
+    service: 'bg-api',
+    env: c.env.BASE_URL?.includes('-dev') ? 'staging' : 'production',
+    version: c.env.VERSION || 'unknown',
+    commit: c.env.COMMIT_SHA || 'unknown',
+    built_at: c.env.BUILD_TIME || 'unknown',
+  });
+});
+
 // ── Widget JS serving (ETag-based caching) ──────────────────
 // WIDGET_JS는 배포 시 고정되므로 빌드 타임에 해시를 생성하여 ETag로 사용.
 // 코드가 바뀌면 새 배포 → 새 ETag → 브라우저 캐시 자동 무효화.

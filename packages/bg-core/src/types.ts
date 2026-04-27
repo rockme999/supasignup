@@ -221,6 +221,12 @@ export interface Env {
   CF_API_TOKEN: string; // Cloudflare API Token (Analytics GraphQL용)
   BRIEFING_QUEUE: Queue; // Cloudflare Queue — 주간 브리핑 비동기 처리
   INQUIRY_ATTACHMENTS: R2Bucket; // R2 버킷 — 문의 첨부 이미지 (Phase 2)
+  // ── 빌드 메타데이터 (배포 시 deploy.sh가 --var로 주입) ────────
+  // 기본값은 wrangler.toml [vars]에 'unknown'으로 정의되어 있음.
+  // 실제 배포 시 git rev-parse / date 결과로 override.
+  VERSION: string;       // SemVer (예: '2.0.0') — workers/api/package.json 기준
+  COMMIT_SHA: string;    // git short hash (예: 'd8ab2bb') — 'unknown'이면 로컬 dev
+  BUILD_TIME: string;    // ISO 8601 UTC (예: '2026-04-27T08:30:00Z')
 }
 
 // Billing
