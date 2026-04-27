@@ -410,14 +410,15 @@ export const ProvidersPage: FC<{
   baseUrl: string;
   isCafe24?: boolean;
   widgetStyle?: WidgetStyle;
-}> = ({ shop, baseUrl, isCafe24, widgetStyle }) => {
+  newBadges?: Partial<Record<string, boolean>>;
+}> = ({ shop, baseUrl, isCafe24, widgetStyle, newBadges }) => {
   const providers = parseProviders(shop.enabled_providers);
   const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'telegram'];
   const futureProviders = ['facebook', 'x', 'line', 'toss', 'tiktok'];
   const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
 
   return (
-    <Layout title="소셜 프로바이더" loggedIn currentPath="/dashboard/settings/providers" isCafe24={isCafe24}>
+    <Layout title="소셜 프로바이더" loggedIn currentPath="/dashboard/settings/providers" isCafe24={isCafe24} newBadges={newBadges}>
       <h1>소셜 프로바이더</h1>
 
       <div class="provider-layout" style="display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start">

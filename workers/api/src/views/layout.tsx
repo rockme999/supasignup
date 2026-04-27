@@ -10,6 +10,12 @@ type LayoutProps = PropsWithChildren<{
   currentPath?: string;
   isAdmin?: boolean;
   isCafe24?: boolean;
+  /**
+   * What's New 인디케이터: path → NEW 여부.
+   * 예: { '/dashboard/settings/providers': true, '/dashboard/changelog': false }
+   * 해당 path의 nav 항목 옆에 빨간 점 배지를 표시함.
+   */
+  newBadges?: Partial<Record<string, boolean>>;
 }>;
 
 // SVG icon components (Heroicons outline style)
@@ -159,18 +165,22 @@ const adminNavItems = [
   { path: '/supadmin/changelog', label: '변경사항 (개발자용)', icon: <IconBook /> },
 ];
 
-export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, isCafe24, children }) => {
+export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin, isCafe24, newBadges, children }) => {
   const isActive = (item: NavItem) =>
     item.path === '/dashboard'
       ? currentPath === '/dashboard'
       : currentPath?.startsWith(item.path) ?? false;
 
-  const renderNavLink = (item: NavItem) => (
-    <a href={item.path} class={isActive(item) ? 'active' : ''}>
-      {item.icon} {item.label}
-      {item.plus && <span class="nav-plus-badge">Plus</span>}
-    </a>
-  );
+  const renderNavLink = (item: NavItem) => {
+    const showNew = !isAdmin && newBadges?.[item.path] === true;
+    return (
+      <a href={item.path} class={isActive(item) ? 'active' : ''}>
+        {item.icon} {item.label}
+        {item.plus && <span class="nav-plus-badge">Plus</span>}
+        {showNew && <span class="nav-new-dot" title="새로운 업데이트"></span>}
+      </a>
+    );
+  };
 
   const visibleSettingNavItems = settingNavItems;
 
@@ -531,6 +541,22 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           flex-shrink: 0;
         }
 
+        /* ── What's New 빨간 점 배지 ─────────────── */
+        .nav-new-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #ef4444;
+          flex-shrink: 0;
+          margin-left: auto;
+          box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(239,68,68,0.35);
+        }
+        /* Plus 배지와 NEW 점이 동시에 있을 때 — NEW 점은 Plus 배지 왼쪽에 */
+        .nav-plus-badge + .nav-new-dot,
+        .nav-new-dot + .nav-plus-badge {
+          margin-left: 4px;
+        }
+
         /* ── Site footer ─────────────────────────── */
         .site-footer {
           margin-top: 48px;
@@ -644,6 +670,9 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
               <a href={isAdmin ? '/supadmin/changelog' : '/dashboard/changelog'} class="version-link">
                 <span class="version-tag">v{BUILD_VERSION}</span>
                 {isAdmin && <span class="version-commit">[{BUILD_COMMIT_SHA}]</span>}
+                {!isAdmin && newBadges?.['/dashboard/changelog'] === true && (
+                  <span class="nav-new-dot" title="새로운 업데이트" style="margin-left:4px"></span>
+                )}
               </a>
               {isAdmin
                 ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>
@@ -687,6 +716,9 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
               <a href={isAdmin ? '/supadmin/changelog' : '/dashboard/changelog'} class="version-link">
                 <span class="version-tag">v{BUILD_VERSION}</span>
                 {isAdmin && <span class="version-commit">[{BUILD_COMMIT_SHA}]</span>}
+                {!isAdmin && newBadges?.['/dashboard/changelog'] === true && (
+                  <span class="nav-new-dot" title="새로운 업데이트" style="margin-left:4px"></span>
+                )}
               </a>
               {isAdmin
                 ? <a href="/supadmin/logout" style="color:#ef4444">로그아웃</a>

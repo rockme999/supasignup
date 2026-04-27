@@ -1,0 +1,56 @@
+/**
+ * What's New 인디케이터 — KV 키 패턴 및 비교 기준 시각 정의.
+ *
+ * KV 키 패턴: seen:{owner_id}:{key}
+ * 값: ISO 8601 UTC 시각 (마지막 방문 시각)
+ *
+ * NEW 표시 조건: KV 값이 없거나, 값이 비교 기준 시각보다 이전이면 NEW.
+ */
+
+/**
+ * 가장 최근 Plus 프리셋이 추가된 시각.
+ * Plus 프리셋 추가 시마다 이 상수를 갱신할 것.
+ * 1주차 출시: 글래스모피즘, 네온 글로우, 리퀴드 글래스, 그라디언트 플로우, 소프트 섀도우, 펄스 애니메이션 6종
+ */
+export const LATEST_PLUS_PRESET_ADDED = '2026-04-27T00:00:00Z';
+
+/** KV 키 접두사 */
+const SEEN_PREFIX = 'seen:';
+
+/** seen KV 키를 조합 */
+export function seenKey(ownerId: string, feature: string): string {
+  return `${SEEN_PREFIX}${ownerId}:${feature}`;
+}
+
+/** KV에서 seen 시각 조회 (없으면 null) */
+export async function getSeenAt(
+  kv: KVNamespace,
+  ownerId: string,
+  feature: string,
+): Promise<string | null> {
+  return kv.get(seenKey(ownerId, feature));
+}
+
+/**
+ * KV에 seen 시각을 현재 UTC 시각으로 갱신.
+ * 실패해도 페이지 렌더링에는 영향 없음 (호출자에서 try/catch 또는 waitUntil 처리).
+ */
+export async function markSeen(
+  kv: KVNamespace,
+  ownerId: string,
+  feature: string,
+): Promise<void> {
+  await kv.put(seenKey(ownerId, feature), new Date().toISOString());
+}
+
+/**
+ * seen 시각과 비교 기준 시각을 비교하여 NEW 여부를 반환.
+ *
+ * @param seenAt KV에서 읽은 마지막 seen 시각 (null = 한 번도 방문 안 함)
+ * @param referenceTime 비교 기준 시각 (ISO 8601 UTC)
+ * @returns true면 NEW 표시가 필요함
+ */
+export function isNew(seenAt: string | null, referenceTime: string): boolean {
+  if (!seenAt) return true;
+  return seenAt < referenceTime;
+}

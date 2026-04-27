@@ -12,7 +12,8 @@ import { buildSinceExpr, escapeLike, buildDateFilter } from '../db/stats-utils';
 import { hashPassword, verifyPassword } from '../services/password';
 import { renderMarkdown } from '../utils/markdown';
 import { CHANGELOG_PUBLIC, CHANGELOG_INTERNAL } from '../data/changelog';
-import { BUILD_VERSION, BUILD_COMMIT_SHA } from '../data/build-info';
+import { BUILD_VERSION, BUILD_COMMIT_SHA, BUILD_TIME } from '../data/build-info';
+import { LATEST_PLUS_PRESET_ADDED, getSeenAt, markSeen, isNew } from '../data/whats-new';
 import { Layout } from '../views/layout';
 import {
   LoginPage,
@@ -897,12 +898,32 @@ pages.get('/dashboard/settings/providers', async (c) => {
     try { widgetStyle = JSON.parse(shop.widget_style); } catch { /* use default */ }
   }
 
+  // What's New 인디케이터: seen 시각 조회 + 방문 기록 갱신 (병렬)
+  let newBadges: Partial<Record<string, boolean>> = {};
+  try {
+    const [seenPresets, seenChangelog] = await Promise.all([
+      getSeenAt(c.env.KV, ownerId, 'design-presets'),
+      getSeenAt(c.env.KV, ownerId, 'changelog'),
+    ]);
+    newBadges = {
+      '/dashboard/settings/providers': isNew(seenPresets, LATEST_PLUS_PRESET_ADDED),
+      '/dashboard/changelog': isNew(seenChangelog, BUILD_TIME),
+    };
+    // 이 페이지 방문 — design-presets seen 갱신 (비동기, 실패 무시)
+    c.executionCtx.waitUntil(
+      markSeen(c.env.KV, ownerId, 'design-presets').catch(() => {}),
+    );
+  } catch {
+    // KV 조회 실패 시 배지 표시 안 함 (페이지 렌더링 정상 진행)
+  }
+
   return c.html(
     <ProvidersPage
       shop={shop}
       baseUrl={c.env.BASE_URL}
       isCafe24={c.get('isCafe24')}
       widgetStyle={widgetStyle}
+      newBadges={newBadges}
     />
   );
 });
@@ -1693,9 +1714,29 @@ pages.get('/supadmin/ai-reports/:shopId', async (c) => {
 
 // ─── Changelog (운영자용) ────────────────────────────────────
 
-pages.get('/dashboard/changelog', (c) => {
+pages.get('/dashboard/changelog', async (c) => {
+  const ownerId = c.get('ownerId');
   const isCafe24 = c.get('isCafe24');
   const changelogHtml = renderMarkdown(CHANGELOG_PUBLIC);
+
+  // What's New 인디케이터: seen 시각 조회 + 방문 기록 갱신 (병렬)
+  let newBadges: Partial<Record<string, boolean>> = {};
+  try {
+    const [seenPresets, seenChangelog] = await Promise.all([
+      getSeenAt(c.env.KV, ownerId, 'design-presets'),
+      getSeenAt(c.env.KV, ownerId, 'changelog'),
+    ]);
+    newBadges = {
+      '/dashboard/settings/providers': isNew(seenPresets, LATEST_PLUS_PRESET_ADDED),
+      '/dashboard/changelog': isNew(seenChangelog, BUILD_TIME),
+    };
+    // 이 페이지 방문 — changelog seen 갱신 (비동기, 실패 무시)
+    c.executionCtx.waitUntil(
+      markSeen(c.env.KV, ownerId, 'changelog').catch(() => {}),
+    );
+  } catch {
+    // KV 조회 실패 시 배지 표시 안 함 (페이지 렌더링 정상 진행)
+  }
 
   return c.html(
     <Layout
@@ -1703,6 +1744,7 @@ pages.get('/dashboard/changelog', (c) => {
       loggedIn={true}
       currentPath="/dashboard/changelog"
       isCafe24={isCafe24}
+      newBadges={newBadges}
     >
       <style>{`
         .changelog-page { max-width: 720px; margin: 0 auto; }
