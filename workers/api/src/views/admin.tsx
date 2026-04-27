@@ -1250,7 +1250,7 @@ export const AdminInquiriesPage: FC<{
           />
           {/* AI 자동답변 디스클레이머 — status='auto_replied' 일 때만 표시 */}
           <div id="autoReplyDisclaimer" style="display:none;margin-top:10px;padding:10px 12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;font-size:12px;color:#6b7280;line-height:1.6">
-            🤖 <strong style="color:#7c3aed">AI 자동 답변</strong>입니다. 고객에게 동일 문구가 함께 표시됩니다. 내용이 부정확할 경우 "답변 수정" 으로 덮어쓸 수 있습니다.
+            <strong style="color:#7c3aed">AI 자동 답변</strong>입니다. 고객에게 동일 문구가 함께 표시됩니다. 내용이 부정확할 경우 "답변 수정" 으로 덮어쓸 수 있습니다.
           </div>
         </div>
 
@@ -1285,7 +1285,7 @@ export const AdminInquiriesPage: FC<{
             <span id="aiDraftUsageLabel" style="font-size:11px;color:#64748b"></span>
           </div>
           <div id="aiDraftLoading" style="display:none;font-size:12px;color:#7c3aed;margin-bottom:8px;padding:8px 10px;background:#faf5ff;border-radius:6px;border:1px solid #e9d5ff">
-            🤖 생성 중... 30~60초 소요됩니다. 잠시 기다려 주세요.
+            생성 중... 30~60초 소요됩니다. 잠시 기다려 주세요.
           </div>
           <textarea
             id="replyContent"

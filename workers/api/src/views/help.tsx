@@ -1428,7 +1428,7 @@ export const InquiryDetailPage: FC<{
           <div class="md-reply" style="font-size:14px;line-height:1.75" dangerouslySetInnerHTML={{ __html: mdToHtml(inquiry.reply) }} />
           {inquiry.status === 'auto_replied' && (
             <div style="margin-top:14px;padding:10px 12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;font-size:12px;color:#6b7280;line-height:1.6">
-              🤖 <strong style="color:#7c3aed">AI 자동 답변</strong>입니다. 내용이 정확하지 않을 수 있으니, 추가 확인이 필요하시면 다시 문의해 주세요.
+              <strong style="color:#7c3aed">AI 자동 답변</strong>입니다. 내용이 정확하지 않을 수 있으니, 추가 확인이 필요하시면 다시 문의해 주세요.
             </div>
           )}
         </div>

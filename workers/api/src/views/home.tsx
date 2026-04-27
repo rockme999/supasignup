@@ -173,7 +173,7 @@ export const HomePage: FC<{
           </a>
           {isPlus ? (
             <a href="/dashboard/ai-reports" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-              <span style="font-size:28px">🤖</span>
+              <span style="font-size:28px">✨</span>
               <span style="font-size:13px;font-weight:600">AI 보고서</span>
             </a>
           ) : (
