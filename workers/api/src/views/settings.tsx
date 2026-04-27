@@ -632,6 +632,29 @@ export const ProvidersPage: FC<{
           }
           .preset-card-plus { background:#fafbff; border-color:#e0e7ff; }
           .preset-card-plus.active { border-color:#6366f1; background:#ede9fe; }
+
+          /* ── Plus 프리셋 CSS (위젯 코드와 동기화) ── */
+          .bg-preset-glass{background:rgba(255,255,255,0.1)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border:1px solid rgba(255,255,255,0.22)!important;color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,0.12)!important;border-radius:12px!important}
+          .bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important}
+          .bg-preset-neon{background:transparent!important;border:1px solid rgba(99,102,241,0.55)!important;color:#a5b4fc!important;box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)!important;text-shadow:0 0 8px rgba(165,180,252,0.5)!important}
+          .bg-preset-neon:hover{border-color:rgba(99,102,241,0.9)!important;box-shadow:0 0 14px rgba(99,102,241,0.6),0 0 28px rgba(99,102,241,0.3),inset 0 0 14px rgba(99,102,241,0.12)!important;color:#e0e7ff!important;text-shadow:0 0 12px rgba(165,180,252,0.8)!important}
+          .bg-preset-liquid{position:relative!important;background:rgba(255,255,255,0.08)!important;backdrop-filter:blur(20px) saturate(180%)!important;-webkit-backdrop-filter:blur(20px) saturate(180%)!important;border:1px solid rgba(255,255,255,0.18)!important;border-radius:14px!important;color:rgba(255,255,255,0.92)!important;box-shadow:inset 0 0 20px rgba(255,255,255,0.07),0 8px 32px rgba(31,38,135,0.18),0 2px 6px rgba(0,0,0,0.18)!important;overflow:hidden!important}
+          .bg-preset-liquid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--bg-mx,50%) var(--bg-my,30%),rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.06) 45%,transparent 70%);pointer-events:none}
+          .bg-preset-liquid::after{content:"";position:absolute;top:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none}
+          .bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}
+          .bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;border-radius:12px!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}
+          .bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}
+          .bg-preset-soft{background:#ffffff!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;border-radius:14px!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}
+          .bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}
+          .bg-preset-pulse{background:#fff!important;border:1px solid #e5e7eb!important;color:#374151!important;border-radius:12px!important;box-shadow:0 1px 3px rgba(0,0,0,0.06)!important;animation:bg-pulseRing 2s ease-in-out infinite!important}
+          .bg-preset-pulse:hover{animation:none!important;transform:scale(1.02)!important;box-shadow:0 0 0 3px rgba(99,102,241,0.25),0 4px 16px rgba(99,102,241,0.2)!important;border-color:#6366f1!important;color:#4f46e5!important}
+          .bg-preset-pulse-d1{animation-delay:0s!important}
+          .bg-preset-pulse-d2{animation-delay:0.4s!important}
+          .bg-preset-pulse-d3{animation-delay:0.8s!important}
+          .bg-preset-pulse-d4{animation-delay:1.2s!important}
+          @keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}
+          /* 미리보기 버튼 공통 */
+          .bg-prv-btn{display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s ease;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
         `}} />
 
         {/* Detail sliders */}
@@ -935,13 +958,53 @@ export const ProvidersPage: FC<{
               container.appendChild(titleDiv);
             }
 
+            // Plus 프리셋 클래스 매핑
+            var PLUS_CLASS_MAP = {
+              'glassmorphism': 'bg-preset-glass',
+              'neon-glow': 'bg-preset-neon',
+              'liquid-glass': 'bg-preset-liquid',
+              'gradient-flow': 'bg-preset-gradient',
+              'soft-shadow': 'bg-preset-soft',
+              'pulse': 'bg-preset-pulse'
+            };
+            var plusClass = PLUS_CLASS_MAP[style.preset] || '';
+            var isPlusPreset = !!plusClass;
+            var pulseDelayClasses = ['bg-preset-pulse-d1','bg-preset-pulse-d2','bg-preset-pulse-d3','bg-preset-pulse-d4'];
+            var pulseIdx = 0;
+
             providers.forEach(function(p) {
               var btn = document.createElement('div');
               var color = providerColors[p] || '#999';
               var textColor = providerTextColors[p] || '#fff';
               var name = providerNames[p] || p;
 
-              // 프리셋별 색상 결정
+              // Plus 프리셋: CSS 클래스로 처리
+              if (isPlusPreset) {
+                var btnHeight = style.buttonHeight || 44;
+                var w = style.buttonWidth;
+                var justifyContent2 = justifyMap[style.align] || 'center';
+                var baseClass = 'bg-prv-btn ' + plusClass;
+                if (style.preset === 'pulse') {
+                  baseClass += ' ' + (pulseDelayClasses[pulseIdx % 4]);
+                  pulseIdx++;
+                }
+                btn.className = baseClass;
+                btn.style.cssText = 'width:' + w + 'px;height:' + btnHeight + 'px;padding:0 16px 0 ' + style.paddingLeft + 'px;gap:' + style.iconGap + 'px;justify-content:' + justifyContent2 + ';border-radius:' + style.borderRadius + 'px';
+                if (style.showIcon && providerIcons[p]) {
+                  var iconWrapP = document.createElement('span');
+                  iconWrapP.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
+                  iconWrapP.innerHTML = providerIcons[p];
+                  btn.appendChild(iconWrapP);
+                }
+                var textSpanP = document.createElement('span');
+                textSpanP.style.cssText = style.showIcon ? '' : 'width:100%;text-align:center';
+                textSpanP.textContent = style.buttonLabel.replace('{name}', name);
+                btn.appendChild(textSpanP);
+                container.appendChild(btn);
+                return;
+              }
+
+              // Free 프리셋별 색상 결정
               var isMono = style.preset === 'mono';
               var isOutline = style.preset === 'outline';
               var isOutlineMono = style.preset === 'outline-mono';
@@ -1100,6 +1163,21 @@ export const ProvidersPage: FC<{
                   }).catch(function() {});
                 }
               }
+            });
+          });
+
+          // 리퀴드 글래스 마우스 추적 광택 (미리보기 영역)
+          document.addEventListener('mousemove', function(e) {
+            document.querySelectorAll('#previewButtons .bg-preset-liquid').forEach(function(el) {
+              var rect = el.getBoundingClientRect();
+              el.style.setProperty('--bg-mx', ((e.clientX - rect.left) / rect.width * 100).toFixed(1) + '%');
+              el.style.setProperty('--bg-my', ((e.clientY - rect.top) / rect.height * 100).toFixed(1) + '%');
+            });
+          });
+          document.getElementById('previewFrame').addEventListener('mouseleave', function() {
+            document.querySelectorAll('#previewButtons .bg-preset-liquid').forEach(function(el) {
+              el.style.setProperty('--bg-mx', '50%');
+              el.style.setProperty('--bg-my', '30%');
             });
           });
 
