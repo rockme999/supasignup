@@ -1,26 +1,6 @@
 # 변경사항 (Changelog)
 
-번개가입(SupaSignup)의 모든 주요 변경사항이 이 문서에 기록됩니다.
-
-이 문서는 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 포맷을 따르며,
-프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 채택합니다.
-
-## 카테고리 표준
-
-- ✨ **신기능** (Added) — 새로 추가된 기능
-- 🚀 **개선** (Changed) — 기존 기능의 개선·변경
-- 🐛 **수정** (Fixed) — 버그 수정
-- 💎 **Plus 전용** (Plus) — Plus 플랜 한정 변경
-- 🔒 **보안** (Security) — 보안 관련 변경
-- ⚡ **성능** (Performance) — 성능 최적화
-- ⚠️ **주의** (Breaking) — 호환성 영향이 있는 변경
-- 🗑️ **제거** (Removed) — 제거된 기능
-
-## 버저닝 정책 (SemVer)
-
-- **MAJOR** (X.0.0): 사용자 가시 큰 변화 — UI 리뉴얼, 가격 정책, 호환성 영향
-- **MINOR** (0.X.0): 신기능 추가, 하위 호환되는 개선
-- **PATCH** (0.0.X): 버그 수정, 성능 개선, 문서·자산 갱신
+번개가입(SupaSignup) 개발자용 변경 이력 — 최신 변경이 위쪽.
 
 ---
 
@@ -151,6 +131,30 @@
 - 회원 PII AES-GCM 암호화 + 이메일 SHA-256 해시 인덱스
 - 위젯 마이페이지 소셜 연동
 - 9소셜 SVG 아이콘 + 모노톤 프리셋
+
+---
+
+## 포맷 / 정책 안내
+
+이 문서는 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 포맷을 따르며,
+프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/)을 채택합니다.
+
+### 카테고리 표준
+
+- ✨ **신기능** (Added) — 새로 추가된 기능
+- 🚀 **개선** (Changed) — 기존 기능의 개선·변경
+- 🐛 **수정** (Fixed) — 버그 수정
+- 💎 **Plus 전용** (Plus) — Plus 플랜 한정 변경
+- 🔒 **보안** (Security) — 보안 관련 변경
+- ⚡ **성능** (Performance) — 성능 최적화
+- ⚠️ **주의** (Breaking) — 호환성 영향이 있는 변경
+- 🗑️ **제거** (Removed) — 제거된 기능
+
+### 버저닝 정책 (SemVer)
+
+- **MAJOR** (X.0.0): 사용자 가시 큰 변화 — UI 리뉴얼, 가격 정책, 호환성 영향
+- **MINOR** (0.X.0): 신기능 추가, 하위 호환되는 개선
+- **PATCH** (0.0.X): 버그 수정, 성능 개선, 문서·자산 갱신
 
 ---
 
