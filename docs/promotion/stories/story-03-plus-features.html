@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스토리 #3 — 번개가입 Plus 기능 전격 공개 (프리뷰)</title>
+<style>
+  body { margin: 0; padding: 48px 20px; background: #f3f4f6; }
+  .preview-notice {
+    max-width: 720px; margin: 0 auto 24px; padding: 14px 18px;
+    background: #fffbeb; border: 1px dashed #fbbf24; border-radius: 8px;
+    font-family: 'Noto Sans KR','Malgun Gothic',sans-serif;
+    font-size: 13px; color: #78350f; line-height: 1.6;
+  }
+  .preview-notice b { color: #92400e; }
+</style>
+</head>
+<body>
+<div class="preview-notice">
+  <b>📋 로컬 프리뷰 전용 래퍼입니다.</b><br>
+  카페24 파트너센터 에디터에 붙여넣을 때는 아래 <code>&lt;div style="max-width:720px..."&gt; ... &lt;/div&gt;</code> 본문 블록만 복사하세요.
+  (이 래퍼 — <code>&lt;!DOCTYPE&gt;</code>, <code>&lt;html&gt;</code>, <code>&lt;head&gt;</code>, 이 노란 안내 박스 — 는 붙여넣지 않습니다.)
+</div>
+<!--
+  카페24 스토리 #3 본문 HTML
+  붙여넣는 위치: 파트너센터 > 프로모션 > 스토리 등록 > "스토리 상세 내용 등록" > 에디터 우측 상단 "코드 보기" 버튼 클릭 후 본 HTML 전체 복붙.
+  주의:
+    - 본문 이미지 가로 720px 이하 (style width 720px로 통일)
+    - 모든 <img>에 alt 속성 포함
+    - 이미지는 에디터에서 직접 업로드해서 src를 카페24 CDN 경로로 바꿔줄 것. 지금은 플레이스홀더 경로.
+-->
+<div style="max-width:720px;margin:0 auto;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;color:#1f2937;line-height:1.7;font-size:16px;">
+
+  <!-- 인트로 인용 -->
+  <blockquote style="margin:0 0 32px;padding:20px 24px;border-left:4px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff 0%,#fdf4ff 100%);color:#4c1d95;font-size:17px;line-height:1.65;">
+    소셜 로그인을 깔아도 <strong>가입이 곧 매출이 되지는 않습니다.</strong><br>
+    번개가입 <strong>Plus</strong>는 <strong>월 6,900원</strong>으로
+    가입 유도 위젯 3종 + AI 4종 + 카카오 채널 연동까지, <strong>가입을 매출로 바꾸는 도구</strong>를 한 번에 켜드립니다.
+  </blockquote>
+
+  <!-- 섹션: Plus가 해결하는 문제 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    소셜 로그인 깔았는데도 매출이 안 오르는 이유
+  </h2>
+  <p style="margin:0 0 16px;">
+    번개가입 무료 버전을 설치하면 카카오·네이버·구글·애플 등 6종 소셜 가입이 1클릭으로 끝납니다.
+    하지만 운영자분들이 곧 마주하는 다음 벽은 따로 있습니다.
+  </p>
+
+  <div style="display:block;margin:20px 0 8px;">
+    <div style="padding:18px 22px;margin-bottom:10px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#991b1b;letter-spacing:0.04em;margin-bottom:4px;">문제 1</div>
+      <div style="font-size:16px;font-weight:700;color:#7f1d1d;">방문자가 가입 자체를 시도조차 안 한다</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">버튼은 있어도 "회원이 되어야 할 이유"를 못 느끼면 그냥 떠납니다.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#9a3412;letter-spacing:0.04em;margin-bottom:4px;">문제 2</div>
+      <div style="font-size:16px;font-weight:700;color:#7c2d12;">가입은 했는데 다시 안 온다</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">첫 방문 가입은 끝났지만, 재방문 비회원은 여전히 그냥 빠져나갑니다.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#92400e;letter-spacing:0.04em;margin-bottom:4px;">문제 3</div>
+      <div style="font-size:16px;font-weight:700;color:#78350f;">배너·카피·통계를 매주 만들 사람이 없다</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">운영자 한 명이 상품·CS·마케팅을 다 떠안으면, 가입 유도는 매번 뒷전이 됩니다.</p>
+    </div>
+  </div>
+
+  <p style="margin:20px 0 0;padding:16px;background:#eef2ff;border-radius:8px;color:#3730a3;">
+    <strong>Plus는 이 세 가지 벽을 한 번에 무너뜨립니다.</strong> 가입 유도 위젯, 재방문 유도, 그리고 카피·전략을 대신 만드는 AI까지.
+  </p>
+
+  <!-- 섹션 1: 가입 유도 위젯 3종 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    1. 가입 유도 위젯 3종 — 떠나는 고객을 잡습니다
+  </h2>
+
+  <!-- 미니 배너 -->
+  <div style="margin:20px 0;padding:22px 24px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+    <div style="display:inline-block;padding:4px 10px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:700;border-radius:999px;letter-spacing:0.04em;margin-bottom:10px;">위젯 ① 미니 배너</div>
+    <div style="font-size:18px;font-weight:700;color:#111827;margin-bottom:6px;">로그인/가입 페이지 상하단에 "가입하면 받는 혜택"을 띄웁니다</div>
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">
+      "회원가입하면 3,000원 즉시 할인" 같은 카피와 색상·CTA 버튼을 운영자가 직접 입력. 슬라이드 카드 형태로 최대 4종까지 노출 가능합니다.
+    </p>
+    <figure style="margin:12px 0 0;text-align:center;">
+      <img src="../images/screenshots/mini-banner-sample.png" alt="번개가입 미니 배너가 쇼핑몰 로그인 페이지에 노출된 예시 캡쳐" style="width:100%;max-width:680px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+      <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 미니 배너가 쇼핑몰에 노출된 모습</figcaption>
+    </figure>
+  </div>
+
+  <!-- 이탈 팝업 -->
+  <div style="margin:20px 0;padding:22px 24px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+    <div style="display:inline-block;padding:4px 10px;background:#fdf4ff;color:#86198f;font-size:12px;font-weight:700;border-radius:999px;letter-spacing:0.04em;margin-bottom:10px;">위젯 ② 이탈 감지 팝업</div>
+    <div style="font-size:18px;font-weight:700;color:#111827;margin-bottom:6px;">고객이 떠나려는 그 순간 한 번만 잡습니다</div>
+    <p style="margin:0 0 12px;font-size:15px;color:#374151;">
+      PC에서는 마우스가 화면 위쪽으로 이탈할 때, 모바일에서는 빠른 위로 스크롤(뒤로가기 의도)이 감지될 때 — 정확히 그 순간만 가입 혜택 팝업을 띄웁니다.
+    </p>
+    <ul style="margin:8px 0 16px;padding-left:20px;color:#4b5563;font-size:14px;">
+      <li style="margin-bottom:4px;">하루 1회 등 노출 빈도를 운영자가 직접 제어</li>
+      <li style="margin-bottom:4px;">팝업과 가입 쿠폰이 연동되어, 가입하면 그 자리에서 쿠폰 즉시 발급</li>
+    </ul>
+    <figure style="margin:12px 0 0;text-align:center;">
+      <img src="../images/screenshots/exit-popup-sample.png" alt="번개가입 이탈 감지 팝업이 쇼핑몰 화면에 떠 있는 예시 캡쳐" style="width:100%;max-width:680px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+      <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 이탈 직전 노출되는 가입 혜택 팝업</figcaption>
+    </figure>
+  </div>
+
+  <!-- 재방문 에스컬레이션 -->
+  <div style="margin:20px 0;padding:22px 24px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+    <div style="display:inline-block;padding:4px 10px;background:#ecfeff;color:#0e7490;font-size:12px;font-weight:700;border-radius:999px;letter-spacing:0.04em;margin-bottom:10px;">위젯 ③ 재방문 비회원 에스컬레이션</div>
+    <div style="font-size:18px;font-weight:700;color:#111827;margin-bottom:6px;">올수록 강도를 높이는 단계별 가입 유도</div>
+    <p style="margin:0 0 12px;font-size:15px;color:#374151;">
+      비회원 방문 횟수에 따라 노출 형태와 메시지 강도를 자동 조절합니다. 운영자는 단계별 메시지만 한 번 정하면 됩니다.
+    </p>
+    <div style="overflow:hidden;border:1px solid #e5e7eb;border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead>
+          <tr>
+            <th style="padding:10px 12px;text-align:left;background:#1E1B4B;color:#ffffff;font-weight:700;">방문 횟수</th>
+            <th style="padding:10px 12px;text-align:left;background:#1E1B4B;color:#ffffff;font-weight:700;">노출 형태</th>
+            <th style="padding:10px 12px;text-align:left;background:#1E1B4B;color:#ffffff;font-weight:700;">메시지 예시</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#ffffff;color:#374151;">1~2회</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#ffffff;color:#374151;">작은 배너 (무시 가능)</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#ffffff;color:#374151;">"회원이 되면 더 많은 혜택이 있어요"</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fafafa;color:#374151;">3~4회</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fafafa;color:#374151;">중간 배너 + 쿠폰</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fafafa;color:#374151;">"3,000원 쿠폰이 기다리고 있어요!"</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;background:#ffffff;color:#374151;">5회 이상</td>
+            <td style="padding:10px 12px;background:#ffffff;color:#374151;">풀스크린 팝업</td>
+            <td style="padding:10px 12px;background:#ffffff;color:#374151;">"오늘만 5,000원 쿠폰! 지금 가입하세요"</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 섹션 2: AI 4종 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    2. AI 4종 — 카피·전략을 대신 만드는 AI 직원
+  </h2>
+  <p style="margin:0 0 16px;">
+    Plus의 AI는 단순 챗봇이 아닙니다. <strong>운영자의 쇼핑몰을 분석</strong>해서 그에 맞는 카피·전략·메시지를 직접 만들어주는 4가지 기능입니다.
+  </p>
+
+  <div style="display:block;margin:20px 0 8px;">
+    <div style="padding:18px 22px;margin-bottom:10px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#5b21b6;letter-spacing:0.04em;margin-bottom:4px;">AI ①</div>
+      <div style="font-size:17px;font-weight:700;color:#4c1d95;">쇼핑몰 정체성 자동 분석</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">설치 1회로 끝. 도메인·상품명·카테고리에서 업종·타겟 고객·톤앤매너를 추론해 이후 모든 AI 카피의 기준으로 사용합니다.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#5b21b6;letter-spacing:0.04em;margin-bottom:4px;">AI ②</div>
+      <div style="font-size:17px;font-weight:700;color:#4c1d95;">주간 AI 브리핑 (매주 1회 자동)</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">지난주 가입 성과 + 이번 주 액션 추천을 한 장으로. 운영자는 읽고 [적용] 버튼 한 번이면 됩니다.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#5b21b6;letter-spacing:0.04em;margin-bottom:4px;">AI ③</div>
+      <div style="font-size:17px;font-weight:700;color:#4c1d95;">맥락 기반 카피 생성 (월 10회)</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">미니 배너·이탈 팝업에 들어갈 카피를 쇼핑몰 톤에 맞춰 3~5개 후보로 제안. 클릭 한 번으로 즉시 적용.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:6px;">
+      <div style="font-size:13px;font-weight:700;color:#5b21b6;letter-spacing:0.04em;margin-bottom:4px;">AI ④</div>
+      <div style="font-size:17px;font-weight:700;color:#4c1d95;">재방문 비회원 맞춤 메시지</div>
+      <p style="margin:6px 0 0;font-size:14px;color:#4b5563;">에스컬레이션 단계별 메시지를 쇼핑몰 톤에 맞춰 자동 생성. 1회차는 부드럽게, 3회차는 단도직입으로.</p>
+    </div>
+  </div>
+
+  <!-- AI 브리핑 샘플 캡쳐 -->
+  <figure style="margin:20px 0 0;text-align:center;">
+    <img src="../images/screenshots/ai-briefing-sample.png" alt="번개가입 Plus 주간 AI 브리핑 카드 — 지난주 성과·이번 주 전략·AI 추천 카피가 한 장에 정리된 화면 캡쳐" style="width:100%;max-width:680px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+    <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 매주 월요일 아침 자동 생성되는 주간 AI 브리핑</figcaption>
+  </figure>
+
+  <!-- 섹션 3: 운영 보너스 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    3. 운영 보너스 — 채널·통계·브랜딩까지
+  </h2>
+
+  <div style="display:block;margin:20px 0 8px;">
+    <div style="padding:18px 22px;margin-bottom:10px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;">
+      <div style="font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;">💬 카카오 채널 자동 친구 추가</div>
+      <p style="margin:0;font-size:14px;color:#4b5563;">소셜 가입 완료 시 운영자의 카카오 비즈채널에 자동 친구 추가(고객 동의 시). 마케팅 메시지 발송 채널이 가입과 동시에 확보됩니다.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;">
+      <div style="font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;">📊 가입 전환 퍼널 통계</div>
+      <p style="margin:0;font-size:14px;color:#4b5563;">배너 노출 → 클릭 → 인증 시작 → 가입 완료 → 쿠폰 발급. 어느 단계에서 새는지 정확히 보여드립니다. 프로바이더별 가입 완료율 비교도.</p>
+    </div>
+    <div style="padding:18px 22px;margin-bottom:10px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;">
+      <div style="font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;">✨ "Powered by 번개가입" 브랜딩 제거</div>
+      <p style="margin:0;font-size:14px;color:#4b5563;">위젯 하단의 브랜딩 문구가 완전히 사라져 운영자 쇼핑몰 전용 위젯처럼 보입니다.</p>
+    </div>
+  </div>
+
+  <!-- 섹션: 가격 강조 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    이 모든 게 월 6,900원입니다
+  </h2>
+
+  <figure style="margin:0 0 20px;text-align:center;">
+    <img src="../images/screenshots/plus-upgrade-card.png" alt="번개가입 대시보드 Plus 업그레이드 카드 — 월간/연간 결제 토글과 월 6,900원 가격이 표시된 실제 화면 캡쳐" style="width:100%;max-width:680px;height:auto;border:1px solid #e5e7eb;border-radius:8px;">
+    <figcaption style="margin-top:8px;font-size:13px;color:#6b7280;">▲ 대시보드의 Plus 업그레이드 카드 (월간/연간 토글)</figcaption>
+  </figure>
+
+  <div style="margin:20px 0;padding:28px 24px;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);border-radius:14px;color:#ffffff;text-align:center;box-shadow:0 12px 28px rgba(79,70,229,0.25);">
+    <div style="font-size:14px;font-weight:700;letter-spacing:0.1em;opacity:0.85;margin-bottom:6px;">번개가입 PLUS</div>
+    <div style="font-size:48px;font-weight:900;letter-spacing:-0.02em;line-height:1.1;">월 6,900원</div>
+    <div style="margin-top:8px;font-size:14px;opacity:0.9;">연간 결제 시 <strong style="color:#fde68a;">79,000원 (월 환산 약 6,583원)</strong> · 약 5% 절감</div>
+  </div>
+
+  <p style="margin:0 0 12px;">
+    월 6,900원이 어느 정도인지 감이 안 잡히실 수 있어 비교를 준비했습니다.
+  </p>
+
+  <div style="margin:16px 0;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:15px;">
+      <thead>
+        <tr>
+          <th style="padding:12px 14px;text-align:left;background:#1E1B4B;color:#ffffff;font-weight:700;">비교 항목</th>
+          <th style="padding:12px 14px;text-align:right;background:#1E1B4B;color:#ffffff;font-weight:700;">대략 비용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#ffffff;color:#374151;">외주 디자인 배너 1건</td>
+          <td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#ffffff;text-align:right;color:#374151;">3만~10만 원</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#fafafa;color:#374151;">프리랜서 카피라이터 1시간</td>
+          <td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#fafafa;text-align:right;color:#374151;">2만~5만 원</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#ffffff;color:#374151;">디지털 광고 5분치 노출</td>
+          <td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#ffffff;text-align:right;color:#374151;">수천~수만 원</td>
+        </tr>
+        <tr>
+          <td style="padding:14px 16px;background:linear-gradient(135deg,#eef2ff 0%,#fdf4ff 100%);font-weight:800;color:#4338ca;border-left:4px solid #7c3aed;">⚡ 번개가입 Plus 한 달 (위젯 3종 + AI 4종 + 채널/퍼널/브랜딩)</td>
+          <td style="padding:14px 16px;background:linear-gradient(135deg,#eef2ff 0%,#fdf4ff 100%);text-align:right;font-weight:800;color:#4338ca;font-size:18px;">6,900원</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin:16px 0 0;padding:14px 18px;background:#f5f3ff;border-radius:8px;color:#5b21b6;font-size:15px;">
+    <strong>외주 카피 한 번 맡길 비용으로, AI가 매주 카피를 만들어주는 한 달이 옵니다.</strong>
+  </p>
+
+  <p style="margin:14px 0 0;font-size:14px;color:#6b7280;">
+    * 외주/광고 비용은 시장에서 일반적으로 통용되는 범위를 참고해 정리했습니다. 실제 비용은 작업 범위·플랫폼에 따라 달라질 수 있습니다.
+  </p>
+
+  <!-- 섹션: 무료 → Plus 전환 시점 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    Plus는 언제 켜는 게 좋을까요?
+  </h2>
+  <p style="margin:0 0 12px;">
+    번개가입은 무료로 충분히 써보고 결정하실 수 있게 설계되어 있습니다. 아래 신호 중 하나라도 보이면 Plus를 켜기 좋은 타이밍입니다.
+  </p>
+  <ul style="margin:0 0 20px;padding-left:22px;color:#374151;">
+    <li style="margin-bottom:8px;">소셜 가입 버튼은 노출됐는데 <strong>가입률이 기대보다 낮다</strong> → 미니 배너로 가입 이유를 부여</li>
+    <li style="margin-bottom:8px;">방문자가 가입 없이 <strong>그냥 떠나는 비율이 높다</strong> → 이탈 감지 팝업으로 마지막 한 번</li>
+    <li style="margin-bottom:8px;"><strong>재방문은 늘었는데 가입 전환이 안 된다</strong> → 에스컬레이션으로 단계별 강화</li>
+    <li style="margin-bottom:8px;"><strong>운영자 한 명이 카피·배너까지 다 떠안고 있다</strong> → AI 4종에 위임</li>
+  </ul>
+
+  <!-- CTA -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    먼저 무료로 설치, 필요할 때 Plus
+  </h2>
+  <p style="margin:0 0 16px;">
+    번개가입은 설치도 무료, 기본 사용도 무료입니다. 일단 설치해 소셜 가입 버튼을 띄워두고, Plus 기능이 필요하다고 느낄 때 대시보드에서 <strong>[Plus로 업그레이드]</strong> 한 번이면 모든 기능이 즉시 켜집니다.
+  </p>
+
+  <div style="margin:24px 0;text-align:center;">
+    <a href="https://store.cafe24.com/kr/apps/37087" target="_blank" style="display:inline-block;padding:18px 40px;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);border-radius:999px;color:#ffffff;font-size:20px;font-weight:800;text-decoration:none;letter-spacing:-0.01em;box-shadow:0 12px 28px rgba(79,70,229,0.35);">
+      ⚡ 무료로 설치하기 →
+    </a>
+    <div style="margin-top:12px;font-size:13px;color:#6b7280;">설치 무료 · 기본 사용 무료 · Plus는 월 6,900원</div>
+  </div>
+
+  <!-- 정리 -->
+  <h2 style="margin:48px 0 16px;font-size:24px;font-weight:700;color:#111827;border-bottom:3px solid #7c3aed;padding-bottom:8px;padding-left:14px;border-left:4px solid #7c3aed;">
+    정리하면
+  </h2>
+  <ul style="margin:0 0 24px;padding-left:22px;">
+    <li style="margin-bottom:8px;"><strong>가입 유도 위젯 3종</strong> — 미니 배너 / 이탈 팝업 / 재방문 에스컬레이션</li>
+    <li style="margin-bottom:8px;"><strong>AI 4종</strong> — 쇼핑몰 정체성 / 주간 브리핑 / 카피 생성 / 재방문 메시지</li>
+    <li style="margin-bottom:8px;"><strong>운영 보너스</strong> — 카카오 채널 / 퍼널 통계 / 브랜딩 제거</li>
+    <li style="margin-bottom:8px;"><strong>가격</strong> — 월 6,900원 (연간 결제 시 월 환산 약 6,583원)</li>
+  </ul>
+
+  <blockquote style="margin:32px 0 0;padding:20px 24px;border-left:4px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff 0%,#fdf4ff 100%);color:#4c1d95;font-size:17px;line-height:1.65;">
+    가입을 늘리고 싶다면 무료로 충분합니다.<br>
+    <strong>가입을 매출로 바꾸고 싶다면, 그게 Plus입니다.</strong> 월 6,900원. ⚡
+  </blockquote>
+
+</div>
+</body>
+</html>
