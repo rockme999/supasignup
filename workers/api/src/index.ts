@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import type { MiddlewareHandler } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { handleScheduled, generateBriefingForShop } from './services/scheduled';
+import { BUILD_COMMIT_SHA } from './data/build-info';
 
 import oauthRoutes from './routes/oauth';
 import widgetRoutes from './routes/widget';
@@ -93,9 +94,75 @@ app.onError((err, c) => {
   return c.json({ error: 'internal_server_error', message: 'An unexpected error occurred' }, 500);
 });
 
-// ── Health check ─────────────────────────────────────────────
-app.get('/health', (c) => {
-  return c.json({ status: 'ok', service: 'bg-api' });
+// ── Health check (DB / KV / R2 실시간 probe) ─────────────────
+app.get('/health', async (c) => {
+  const TIMEOUT_MS = 5000;
+
+  // DB probe: SELECT 1 (가장 가벼운 쿼리)
+  type CheckResult = { ok: boolean; ms: number; error?: string };
+
+  async function checkDB(): Promise<CheckResult> {
+    const t = Date.now();
+    try {
+      await c.env.DB.prepare('SELECT 1').first();
+      return { ok: true, ms: Date.now() - t };
+    } catch (e) {
+      return { ok: false, ms: Date.now() - t, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  // KV probe: get 호출 (값 null이어도 호출 자체가 성공이면 통과)
+  async function checkKV(): Promise<CheckResult> {
+    const t = Date.now();
+    try {
+      await c.env.KV.get('__healthcheck');
+      return { ok: true, ms: Date.now() - t };
+    } catch (e) {
+      return { ok: false, ms: Date.now() - t, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  // R2 probe: head 호출 (객체 없어도 OK, 네트워크/권한 오류만 실패)
+  async function checkR2(): Promise<CheckResult> {
+    const t = Date.now();
+    try {
+      await c.env.INQUIRY_ATTACHMENTS.head('__healthcheck');
+      return { ok: true, ms: Date.now() - t };
+    } catch (e) {
+      return { ok: false, ms: Date.now() - t, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  // 각 체크를 timeout과 경쟁 (어느 쪽이든 먼저 끝나면 resolve)
+  function withTimeout(p: Promise<CheckResult>): Promise<CheckResult> {
+    return Promise.race([
+      p,
+      new Promise<CheckResult>((resolve) =>
+        setTimeout(() => resolve({ ok: false, ms: TIMEOUT_MS, error: 'timeout' }), TIMEOUT_MS)
+      ),
+    ]);
+  }
+
+  const [db, kv, r2] = await Promise.all([
+    withTimeout(checkDB()),
+    withTimeout(checkKV()),
+    withTimeout(checkR2()),
+  ]);
+
+  const allOk = db.ok && kv.ok && r2.ok;
+  const commit = c.env.COMMIT_SHA || BUILD_COMMIT_SHA || 'unknown';
+  const env = c.env.BASE_URL?.includes('-dev') ? 'staging' : 'production';
+
+  return c.json(
+    {
+      ok: allOk,
+      env,
+      commit,
+      checks: { db, kv, r2 },
+      checked_at: new Date().toISOString(),
+    },
+    allOk ? 200 : 503
+  );
 });
 
 // ── Version / build metadata ─────────────────────────────────
