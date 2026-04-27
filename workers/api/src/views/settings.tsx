@@ -563,29 +563,76 @@ export const ProvidersPage: FC<{
       <div class="card">
         <h2>위젯 디자인</h2>
 
-        {/* Preset cards */}
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px" class="preset-grid-2x2">
-          <button class="preset-card" data-preset="default" type="button">
+        {/* Free 프리셋 — 5종 */}
+        <p style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px">기본 프리셋</p>
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:16px" class="preset-grid-2x2">
+          <button class="preset-card" data-preset="default" data-tier="free" type="button">
             <div class="preset-preview">컬러 버튼</div>
             <span>기본</span>
           </button>
-          <button class="preset-card" data-preset="mono" type="button">
+          <button class="preset-card" data-preset="mono" data-tier="free" type="button">
             <div class="preset-preview">흑백</div>
             <span>모노톤</span>
           </button>
-          <button class="preset-card" data-preset="outline" type="button">
+          <button class="preset-card" data-preset="outline" data-tier="free" type="button">
             <div class="preset-preview">테두리</div>
             <span>호버 채움</span>
           </button>
-          <button class="preset-card" data-preset="outline-mono" type="button">
+          <button class="preset-card" data-preset="outline-mono" data-tier="free" type="button">
             <div class="preset-preview">테두리 흑백</div>
             <span>호버 채움</span>
           </button>
-          <button class="preset-card" data-preset="icon-only" type="button">
+          <button class="preset-card" data-preset="icon-only" data-tier="free" type="button">
             <div class="preset-preview">아이콘만</div>
             <span>아이콘</span>
           </button>
         </div>
+
+        {/* Plus 프리셋 — 6종 */}
+        <p style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px">Plus 프리셋</p>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px">
+          <button class="preset-card preset-card-plus" data-preset="glassmorphism" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);color:#fff;backdrop-filter:blur(4px)">반투명</div>
+            <span>글래스모피즘</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="neon-glow" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:#0a0a14;color:#a5b4fc;border:1px solid rgba(99,102,241,0.5)">네온</div>
+            <span>네온 글로우</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="liquid-glass" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);color:rgba(255,255,255,0.9)">동적광택</div>
+            <span>리퀴드 글래스</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="gradient-flow" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:linear-gradient(135deg,#f093fb,#f5576c,#fda085);color:#fff">그라디언트</div>
+            <span>그라디언트 플로우</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="soft-shadow" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:#fff;color:#374151;box-shadow:0 4px 12px rgba(0,0,0,0.12)">부유감</div>
+            <span>소프트 섀도우</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="pulse" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:#fff;color:#4f46e5;border:1px solid #e5e7eb">펄스</div>
+            <span>펄스 애니메이션</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+        </div>
+
+        <style dangerouslySetInnerHTML={{__html: `
+          .plus-preset-badge {
+            position:absolute; top:6px; right:6px;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff; font-size:10px; font-weight:600;
+            padding:1px 7px; border-radius:20px;
+          }
+          .preset-card-plus { background:#fafbff; border-color:#e0e7ff; }
+          .preset-card-plus.active { border-color:#6366f1; background:#ede9fe; }
+        `}} />
 
         {/* Detail sliders */}
         <div style="display:grid; gap:16px">
@@ -715,6 +762,47 @@ export const ProvidersPage: FC<{
         </div>
       </div>
 
+      {/* Plus 업그레이드 결제 모달 */}
+      <div id="plusUpgradeModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:400px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
+          <h2 style="font-size:20px;font-weight:700;margin:0 0 6px;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+            Plus로 업그레이드하면
+          </h2>
+          <p style="font-size:14px;color:#374151;margin:0 0 20px">이 디자인이 그대로 적용됩니다.</p>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+            {/* 월간 옵션 */}
+            <label id="billingOptMonthly" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:border-color 0.15s">
+              <input type="radio" name="billingCycle" value="monthly" style="margin-top:2px;accent-color:#6366f1" />
+              <div>
+                <div style="font-size:15px;font-weight:600;color:#111827">월 6,900원</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:2px">매달 부담 없이 시작</div>
+              </div>
+            </label>
+            {/* 연간 옵션 (기본 선택) */}
+            <label id="billingOptYearly" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid #6366f1;border-radius:12px;cursor:pointer;background:#f5f3ff;transition:border-color 0.15s">
+              <input type="radio" name="billingCycle" value="yearly" checked style="margin-top:2px;accent-color:#6366f1" />
+              <div>
+                <div style="font-size:15px;font-weight:600;color:#111827">연 79,000원 <span style="font-size:11px;background:#6366f1;color:#fff;padding:1px 7px;border-radius:10px;font-weight:600;vertical-align:middle;margin-left:4px">추천</span></div>
+                <div style="font-size:12px;color:#6b7280;margin-top:2px">결제 공백 없이 1년 안심 운영</div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:2px">비슷한 가입 유도 앱들의 월 비용 수준의 연간 가격</div>
+              </div>
+            </label>
+          </div>
+
+          <div style="display:flex;gap:10px">
+            <button id="plusStartBtn" type="button" style="flex:1;padding:13px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">
+              Plus 시작하기
+            </button>
+            <button id="plusLaterBtn" type="button" style="padding:13px 18px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer">
+              나중에
+            </button>
+          </div>
+
+          <p id="plusModalError" style="display:none;font-size:12px;color:#ef4444;margin-top:10px;text-align:center"></p>
+        </div>
+      </div>
+
       <script dangerouslySetInnerHTML={{__html: `
         (function() {
           var widgetStyle = ${JSON.stringify(ws)};
@@ -725,6 +813,7 @@ export const ProvidersPage: FC<{
 
           var style = {
             preset: widgetStyle.preset,
+            presetTier: widgetStyle.presetTier || 'free',
             buttonWidth: widgetStyle.buttonWidth,
             buttonHeight: widgetStyle.buttonHeight || 45,
             buttonGap: widgetStyle.buttonGap,
@@ -740,6 +829,10 @@ export const ProvidersPage: FC<{
             customSelector: widgetStyle.customSelector || ''
           };
           var shopPlan = '${shop.plan}';
+          var shopId = null; // providerForm에서 읽음
+
+          // Plus 프리셋 식별자 집합
+          var PLUS_PRESETS = new Set(['glassmorphism','neon-glow','liquid-glass','gradient-flow','soft-shadow','pulse']);
 
           var providerIcons = ${JSON.stringify(Object.fromEntries(
             ['google','kakao','naver','apple','discord','facebook','x','line','telegram'].map(p => {
@@ -963,17 +1056,55 @@ export const ProvidersPage: FC<{
             }
           }
 
+          // Plus 프리셋 미리보기 배경 (프리셋별 컨테이너 배경)
+          var PLUS_PREVIEW_BG = {
+            'glassmorphism': 'linear-gradient(135deg,#667eea 0%,#764ba2 40%,#f093fb 100%)',
+            'neon-glow': '#0a0a14',
+            'liquid-glass': 'linear-gradient(160deg,#0f2027 0%,#203a43 50%,#2c5364 100%)',
+            'gradient-flow': '#f8f9fb',
+            'soft-shadow': '#f0f2f5',
+            'pulse': '#f8f9fb'
+          };
+
+          // 미리보기 프레임 배경 갱신
+          function updatePreviewBg(preset) {
+            var frame = document.getElementById('previewFrame');
+            if (!frame) return;
+            if (PLUS_PREVIEW_BG[preset]) {
+              frame.style.background = PLUS_PREVIEW_BG[preset];
+            } else {
+              frame.style.background = '#f8fafc';
+            }
+          }
+
           // Preset card click
           document.querySelectorAll('.preset-card').forEach(function(card) {
             card.addEventListener('click', function() {
               document.querySelectorAll('.preset-card').forEach(function(c) { c.classList.remove('active'); });
               this.classList.add('active');
               style.preset = this.dataset.preset;
+              style.presetTier = this.dataset.tier || 'free';
               document.getElementById('btnWidth').disabled = style.preset === 'icon-only';
+              updatePreviewBg(style.preset);
               renderPreview();
               markChanged();
+
+              // funnel 이벤트: Plus 프리셋 클릭 (미리보기 적용)
+              if (PLUS_PRESETS.has(style.preset)) {
+                var sid = document.getElementById('providerForm') ? document.getElementById('providerForm').dataset.shopId : null;
+                if (sid) {
+                  apiCall('POST', '/api/dashboard/widget/event-dashboard', {
+                    shop_id: sid,
+                    event_type: 'widget_style.preview_plus_preset',
+                    event_data: { preset: style.preset }
+                  }).catch(function() {});
+                }
+              }
             });
           });
+
+          // 초기 미리보기 배경 설정
+          updatePreviewBg(style.preset);
 
           // Slider input
           ['btnWidth', 'btnHeight', 'btnGap', 'btnRadius', 'btnIconGap', 'btnPaddingLeft'].forEach(function(id) {
@@ -1049,7 +1180,7 @@ export const ProvidersPage: FC<{
           });
 
           async function saveStyle() {
-            var shopId = document.getElementById('providerForm').dataset.shopId;
+            shopId = document.getElementById('providerForm').dataset.shopId;
             var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style);
             if (resp.ok) {
               styleChanged = false;
@@ -1061,10 +1192,126 @@ export const ProvidersPage: FC<{
             }
           }
 
+          // Plus 업그레이드 모달 표시
+          function showPlusUpgradeModal() {
+            var modal = document.getElementById('plusUpgradeModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+
+            // funnel 이벤트
+            var sid = document.getElementById('providerForm') ? document.getElementById('providerForm').dataset.shopId : null;
+            if (sid) {
+              apiCall('POST', '/api/dashboard/widget/event-dashboard', {
+                shop_id: sid,
+                event_type: 'widget_style.save_attempt_locked',
+                event_data: { preset: style.preset }
+              }).catch(function() {});
+              apiCall('POST', '/api/dashboard/widget/event-dashboard', {
+                shop_id: sid,
+                event_type: 'billing.upgrade_modal_shown',
+                event_data: { source: 'design_preview', preset: style.preset }
+              }).catch(function() {});
+            }
+          }
+
+          // 결제 모달 라디오 스타일 갱신
+          var radios = document.querySelectorAll('input[name="billingCycle"]');
+          radios.forEach(function(r) {
+            r.addEventListener('change', function() {
+              var mLabel = document.getElementById('billingOptMonthly');
+              var yLabel = document.getElementById('billingOptYearly');
+              if (!mLabel || !yLabel) return;
+              if (this.value === 'monthly') {
+                mLabel.style.border = '2px solid #6366f1';
+                mLabel.style.background = '#f5f3ff';
+                yLabel.style.border = '2px solid #e5e7eb';
+                yLabel.style.background = '#fff';
+              } else {
+                yLabel.style.border = '2px solid #6366f1';
+                yLabel.style.background = '#f5f3ff';
+                mLabel.style.border = '2px solid #e5e7eb';
+                mLabel.style.background = '#fff';
+              }
+            });
+          });
+
+          // 나중에 버튼
+          var laterBtn = document.getElementById('plusLaterBtn');
+          if (laterBtn) {
+            laterBtn.addEventListener('click', function() {
+              var modal = document.getElementById('plusUpgradeModal');
+              if (modal) modal.style.display = 'none';
+              // 미리보기는 그대로 유지 (style 변수는 건드리지 않음)
+            });
+          }
+
+          // Plus 시작하기 버튼 → 카페24 인앱결제 흐름
+          var plusStartBtn = document.getElementById('plusStartBtn');
+          if (plusStartBtn) {
+            plusStartBtn.addEventListener('click', async function() {
+              var modal = document.getElementById('plusUpgradeModal');
+              var errEl = document.getElementById('plusModalError');
+              var sid = document.getElementById('providerForm') ? document.getElementById('providerForm').dataset.shopId : null;
+              if (!sid) { if (errEl) { errEl.textContent = '쇼핑몰 정보를 찾을 수 없습니다.'; errEl.style.display = 'block'; } return; }
+
+              var selectedCycle = 'yearly';
+              var cycleRadios = document.querySelectorAll('input[name="billingCycle"]');
+              for (var cr = 0; cr < cycleRadios.length; cr++) {
+                if (cycleRadios[cr].checked) { selectedCycle = cycleRadios[cr].value; break; }
+              }
+
+              plusStartBtn.disabled = true;
+              plusStartBtn.textContent = '처리 중...';
+              if (errEl) errEl.style.display = 'none';
+
+              try {
+                var resp = await apiCall('POST', '/api/dashboard/billing/subscribe', {
+                  plan: selectedCycle,
+                  shop_id: sid
+                });
+                var data = await resp.json();
+                if (!resp.ok) {
+                  if (errEl) { errEl.textContent = data.message || '결제 주문 생성에 실패했습니다.'; errEl.style.display = 'block'; }
+                  plusStartBtn.disabled = false;
+                  plusStartBtn.textContent = 'Plus 시작하기';
+                  return;
+                }
+                // 카페24 결제창 팝업
+                if (modal) modal.style.display = 'none';
+                var popup = window.open(data.confirmation_url, 'plus_payment', 'width=520,height=700,scrollbars=yes');
+                // 결제 완료 감지 (팝업이 닫히면 reload)
+                var poll = setInterval(function() {
+                  if (!popup || popup.closed) {
+                    clearInterval(poll);
+                    // funnel 이벤트: 결제 완료 (실제 완료는 webhook에서 처리, 여기선 낙관적으로 기록)
+                    apiCall('POST', '/api/dashboard/widget/event-dashboard', {
+                      shop_id: sid,
+                      event_type: 'billing.upgrade_completed_via_design_preview',
+                      event_data: { preset: style.preset, plan: selectedCycle }
+                    }).catch(function() {});
+                    showToast('success', 'Plus 활성화 완료! 디자인이 적용됩니다.');
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                  }
+                }, 1000);
+              } catch (err) {
+                if (errEl) { errEl.textContent = '오류가 발생했습니다. 다시 시도해주세요.'; errEl.style.display = 'block'; }
+                plusStartBtn.disabled = false;
+                plusStartBtn.textContent = 'Plus 시작하기';
+              }
+            });
+          }
+
           // 저장 버튼
           var saveBtn = document.getElementById('saveStyleBtn');
           if (saveBtn) {
-            saveBtn.addEventListener('click', function() { saveStyle(); });
+            saveBtn.addEventListener('click', function() {
+              // Plus 프리셋 + free 플랜 → 결제 모달
+              if (PLUS_PRESETS.has(style.preset) && shopPlan === 'free') {
+                showPlusUpgradeModal();
+                return;
+              }
+              saveStyle();
+            });
           }
 
           // 기본값으로 되돌리기

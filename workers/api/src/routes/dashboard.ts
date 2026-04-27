@@ -197,10 +197,18 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
 
   const body = await c.req.json<Partial<WidgetStyle>>();
 
-  // Validate preset
-  const VALID_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only', 'mono', 'outline', 'outline-mono'];
+  // Validate preset (Free 5종 + Plus 6종)
+  const FREE_PRESETS: WidgetStyle['preset'][] = ['default', 'compact', 'icon-text', 'icon-only', 'mono', 'outline', 'outline-mono'];
+  const PLUS_PRESETS_LIST: WidgetStyle['preset'][] = ['glassmorphism', 'neon-glow', 'liquid-glass', 'gradient-flow', 'soft-shadow', 'pulse'];
+  const VALID_PRESETS = [...FREE_PRESETS, ...PLUS_PRESETS_LIST];
   if (body.preset !== undefined && !VALID_PRESETS.includes(body.preset)) {
     return c.json({ error: 'invalid_preset', message: `preset must be one of: ${VALID_PRESETS.join(', ')}` }, 400);
+  }
+
+  // Plus 프리셋 저장 시 플랜 검증 — free 플랜이면 Plus 프리셋 저장 불가
+  const isPlusPreset = body.preset !== undefined && PLUS_PRESETS_LIST.includes(body.preset);
+  if (isPlusPreset && shop.plan === 'free') {
+    return c.json({ error: 'plus_required', message: 'Plus 플랜이 필요합니다.' }, 403);
   }
 
   // Validate align
@@ -228,8 +236,13 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   // 무료 플랜은 showPoweredBy 끄기 불가
   const showPoweredBy = shop.plan === 'free' ? true : (body.showPoweredBy ?? currentStyle.showPoweredBy ?? true);
 
+  // presetTier 결정: Plus 프리셋이면 'plus', 아니면 'free'
+  const resolvedPreset = body.preset ?? currentStyle.preset;
+  const resolvedPresetTier: 'free' | 'plus' = PLUS_PRESETS_LIST.includes(resolvedPreset) ? 'plus' : 'free';
+
   const newStyle: WidgetStyle = {
-    preset: body.preset ?? currentStyle.preset,
+    preset: resolvedPreset,
+    presetTier: resolvedPresetTier,
     buttonWidth: body.buttonWidth ?? currentStyle.buttonWidth,
     buttonHeight: body.buttonHeight ?? currentStyle.buttonHeight ?? 44,
     buttonGap: body.buttonGap ?? currentStyle.buttonGap,
@@ -1067,5 +1080,43 @@ export async function probeSsoType(
     console.info(`[SSO Probe] ${shop.mall_id}: sso_type updated to ${detected.type}`);
   }
 }
+
+// ─── POST /widget/event-dashboard ────────────────────────────
+// 대시보드 내부에서 funnel_events를 기록하는 인증된 엔드포인트
+// 위젯용 /api/widget/event 는 Origin 검증이 있어 대시보드에서 사용 불가
+const DASHBOARD_FUNNEL_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'widget_style.preview_plus_preset',
+  'widget_style.save_attempt_locked',
+  'billing.upgrade_modal_shown',
+  'billing.upgrade_completed_via_design_preview',
+]);
+
+dashboard.post('/widget/event-dashboard', async (c) => {
+  const ownerId = c.get('ownerId');
+  const body = await c.req.json<{ shop_id: string; event_type: string; event_data?: Record<string, unknown> }>();
+
+  if (!body.shop_id || !body.event_type) {
+    return c.json({ error: 'missing_params' }, 400);
+  }
+  if (!DASHBOARD_FUNNEL_EVENT_TYPES.has(body.event_type)) {
+    return c.json({ error: 'invalid_event_type' }, 400);
+  }
+
+  const shop = await getShopById(c.env.DB, body.shop_id);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  const eventId = crypto.randomUUID();
+  c.executionCtx.waitUntil(
+    c.env.DB.prepare(
+      'INSERT INTO funnel_events (id, shop_id, event_type, event_data, page_url, visitor_id) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+      .bind(eventId, shop.shop_id, body.event_type, JSON.stringify(body.event_data || {}), '/dashboard/settings/providers', null)
+      .run()
+  );
+
+  return c.json({ ok: true });
+});
 
 export default dashboard;

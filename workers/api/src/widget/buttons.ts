@@ -105,7 +105,38 @@ export const WIDGET_JS = `(function() {
     '.bg-btn-highlight-icon{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6}',
     '.bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
     '.bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
-    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}'
+    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}',
+    /* ── Plus 프리셋: 글래스모피즘 ── */
+    '.bg-preset-glass{background:rgba(255,255,255,0.1)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border:1px solid rgba(255,255,255,0.22)!important;color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,0.12)!important;border-radius:12px!important}',
+    '.bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important}',
+    '.bg-preset-glass .bg-btn-icon{background:rgba(255,255,255,0.25);border-radius:50%}',
+    /* ── Plus 프리셋: 네온 글로우 ── */
+    '.bg-preset-neon{background:transparent!important;border:1px solid rgba(99,102,241,0.55)!important;color:#a5b4fc!important;box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)!important;text-shadow:0 0 8px rgba(165,180,252,0.5)!important}',
+    '.bg-preset-neon:hover{border-color:rgba(99,102,241,0.9)!important;box-shadow:0 0 14px rgba(99,102,241,0.6),0 0 28px rgba(99,102,241,0.3),inset 0 0 14px rgba(99,102,241,0.12)!important;color:#e0e7ff!important;text-shadow:0 0 12px rgba(165,180,252,0.8)!important}',
+    '.bg-preset-neon .bg-btn-icon{background:rgba(99,102,241,0.2);border-radius:50%;border:1px solid rgba(99,102,241,0.5);box-shadow:0 0 6px rgba(99,102,241,0.4)}',
+    /* ── Plus 프리셋: 리퀴드 글래스 ── */
+    '.bg-preset-liquid{position:relative!important;background:rgba(255,255,255,0.08)!important;backdrop-filter:blur(20px) saturate(180%)!important;-webkit-backdrop-filter:blur(20px) saturate(180%)!important;border:1px solid rgba(255,255,255,0.18)!important;border-radius:14px!important;color:rgba(255,255,255,0.92)!important;box-shadow:inset 0 0 20px rgba(255,255,255,0.07),0 8px 32px rgba(31,38,135,0.18),0 2px 6px rgba(0,0,0,0.18)!important;overflow:hidden!important}',
+    '.bg-preset-liquid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--bg-mx,50%) var(--bg-my,30%),rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.06) 45%,transparent 70%);pointer-events:none}',
+    '.bg-preset-liquid::after{content:"";position:absolute;top:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none}',
+    '.bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}',
+    '.bg-preset-liquid .bg-btn-icon{background:rgba(255,255,255,0.18);border-radius:50%;border:1px solid rgba(255,255,255,0.25)}',
+    /* ── Plus 프리셋: 그라디언트 플로우 ── */
+    '.bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;border-radius:12px!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
+    '.bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}',
+    '.bg-preset-gradient .bg-btn-icon{background:rgba(255,255,255,0.3);border-radius:50%}',
+    /* ── Plus 프리셋: 소프트 섀도우 ── */
+    '.bg-preset-soft{background:#ffffff!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;border-radius:14px!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}',
+    '.bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}',
+    '.bg-preset-soft .bg-btn-icon{background:#f3f4f6;border-radius:50%}',
+    /* ── Plus 프리셋: 펄스 애니메이션 ── */
+    '.bg-preset-pulse{background:#fff!important;border:1px solid #e5e7eb!important;color:#374151!important;border-radius:12px!important;box-shadow:0 1px 3px rgba(0,0,0,0.06)!important;animation:bg-pulseRing 2s ease-in-out infinite!important}',
+    '.bg-preset-pulse:hover{animation:none!important;transform:scale(1.02)!important;box-shadow:0 0 0 3px rgba(99,102,241,0.25),0 4px 16px rgba(99,102,241,0.2)!important;border-color:#6366f1!important;color:#4f46e5!important}',
+    '.bg-preset-pulse .bg-btn-icon{background:#ede9fe;border-radius:50%}',
+    '.bg-preset-pulse-d1{animation-delay:0s!important}',
+    '.bg-preset-pulse-d2{animation-delay:0.4s!important}',
+    '.bg-preset-pulse-d3{animation-delay:0.8s!important}',
+    '.bg-preset-pulse-d4{animation-delay:1.2s!important}',
+    '@keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}'
   ].join('\\n');
 
   // ─── 메타데이터 수집 헬퍼 ─────────────────────────────────────
@@ -462,6 +493,32 @@ export const WIDGET_JS = `(function() {
       powered.textContent = 'powered by 번개가입';
       this.container.appendChild(powered);
     }
+
+    // 리퀴드 글래스: 마우스 추적 광택 효과 초기화
+    if (preset === 'liquid-glass') {
+      this.initLiquidGlass(this.container);
+    }
+  };
+
+  // ─── Plus: 리퀴드 글래스 마우스 추적 광택 ────────────────────
+  BGWidget.prototype.initLiquidGlass = function(container) {
+    var btns = container.querySelectorAll('.bg-preset-liquid');
+    if (!btns.length) return;
+    container.addEventListener('mousemove', function(e) {
+      for (var i = 0; i < btns.length; i++) {
+        var rect = btns[i].getBoundingClientRect();
+        var x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1) + '%';
+        var y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1) + '%';
+        btns[i].style.setProperty('--bg-mx', x);
+        btns[i].style.setProperty('--bg-my', y);
+      }
+    });
+    container.addEventListener('mouseleave', function() {
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].style.setProperty('--bg-mx', '50%');
+        btns[i].style.setProperty('--bg-my', '30%');
+      }
+    });
   };
 
   BGWidget.prototype.sortProviders = function(providers) {
@@ -516,6 +573,17 @@ export const WIDGET_JS = `(function() {
     } else if (bgColor === '#f2f2f2' || bgColor === '#FFFFFF' || bgColor === '#ffffff') {
       border = '1px solid #dadce0';
     }
+
+    // Plus 프리셋 집합 — 아래에서 분기용
+    var PLUS_PRESET_CLASSES = {
+      'glassmorphism': 'bg-preset-glass',
+      'neon-glow': 'bg-preset-neon',
+      'liquid-glass': 'bg-preset-liquid',
+      'gradient-flow': 'bg-preset-gradient',
+      'soft-shadow': 'bg-preset-soft',
+      'pulse': 'bg-preset-pulse'
+    };
+    var isPlusPreset = PLUS_PRESET_CLASSES.hasOwnProperty(preset);
 
     var btn = document.createElement('a');
     var highlightClass = isHighlight ? (preset === 'icon-only' ? ' bg-btn-highlight-icon' : ' bg-btn-highlight') : '';
@@ -575,6 +643,18 @@ export const WIDGET_JS = `(function() {
       var label = document.createElement('span');
       label.textContent = buttonLabel.replace('{name}', info.name);
       btn.appendChild(label);
+    }
+
+    // Plus 프리셋 클래스 적용 + 버튼 인덱스별 딜레이(pulse)
+    if (isPlusPreset) {
+      var plusClass = PLUS_PRESET_CLASSES[preset];
+      btn.className = btn.className + ' ' + plusClass;
+      // pulse 순차 딜레이: 컨테이너 내 n번째 버튼 계산
+      if (preset === 'pulse') {
+        var pulseIdx = this.container ? this.container.querySelectorAll('.bg-btn').length : 0;
+        var delayClasses = ['bg-preset-pulse-d1', 'bg-preset-pulse-d2', 'bg-preset-pulse-d3', 'bg-preset-pulse-d4'];
+        btn.className = btn.className + ' ' + (delayClasses[pulseIdx] || delayClasses[0]);
+      }
     }
 
     // outline / outline-mono preset: hover fill effect

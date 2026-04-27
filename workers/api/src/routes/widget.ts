@@ -91,6 +91,14 @@ widget.get('/config', async (c) => {
   const parsedStyle = safeParseJsonObject<WidgetStyle>(shop.widget_style, null, `widget.widget_style shop_id=${shop.shop_id}`);
   const style: WidgetStyle = parsedStyle ?? { ...DEFAULT_WIDGET_STYLE };
 
+  // Plus 프리셋 보안: presetTier === 'plus' 이지만 shop.plan === 'free' 이면
+  // Free 기본 프리셋으로 fallback (운영자가 widget_style을 임의 수정해도 Plus 효과 차단)
+  const PLUS_PRESETS = new Set(['glassmorphism', 'neon-glow', 'liquid-glass', 'gradient-flow', 'soft-shadow', 'pulse']);
+  if (shop.plan === 'free' && PLUS_PRESETS.has(style.preset)) {
+    style.preset = 'default';
+    style.presetTier = 'free';
+  }
+
   const config = {
     client_id: shop.client_id,
     providers,
@@ -127,13 +135,18 @@ widget.get('/config', async (c) => {
 });
 
 // ─── POST /event ─────────────────────────────────────────────
-// 유효한 이벤트 타입 (13종) — 모듈 상수로 빼서 allocation 회피
+// 유효한 이벤트 타입 (17종) — 모듈 상수로 빼서 allocation 회피
 const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
   'banner_click', 'banner_show',
   'popup_show', 'popup_close', 'popup_signup',
   'escalation_show', 'escalation_click', 'escalation_dismiss',
   'kakao_channel_show', 'kakao_channel_click',
   'page_view', 'oauth_start', 'signup_complete',
+  // R4 Plus 전환 funnel 이벤트 4종
+  'widget_style.preview_plus_preset',       // Plus 프리셋 클릭 (미리보기 적용)
+  'widget_style.save_attempt_locked',        // 저장 클릭 시 결제 모달 노출
+  'billing.upgrade_modal_shown',             // 결제 모달 노출
+  'billing.upgrade_completed_via_design_preview', // 결제 모달 → 결제 완료
 ]);
 const MAX_PAGE_URL_LEN = 2048;
 const MAX_EVENT_DATA_JSON_LEN = 4096;

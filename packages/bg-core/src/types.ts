@@ -152,7 +152,10 @@ export interface WidgetConfig {
 }
 
 export interface WidgetStyle {
-  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono' | 'outline' | 'outline-mono';
+  preset: 'default' | 'compact' | 'icon-text' | 'icon-only' | 'mono' | 'outline' | 'outline-mono'
+    // Plus 전용 프리셋 6종
+    | 'glassmorphism' | 'neon-glow' | 'liquid-glass' | 'gradient-flow' | 'soft-shadow' | 'pulse';
+  presetTier?: 'free' | 'plus'; // optional — 없으면 'free' 기본값. Plus 프리셋 보안 검증용
   buttonWidth: number;
   buttonHeight: number; // 버튼 높이 (px)
   buttonGap: number;
