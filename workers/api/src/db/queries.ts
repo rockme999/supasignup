@@ -134,17 +134,19 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'banner_config',
   'popup_config',
   'escalation_config',
+  'exit_intent_config',
+  'live_counter_config',
 ]);
 
 export async function updateShop(
   db: D1Database,
   shopId: string,
-  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'exit_intent_config'>>,
+  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'exit_intent_config' | 'live_counter_config'>>,
 ): Promise<void> {
   const sets: string[] = [];
   const values: unknown[] = [];
 
-  const JSON_COLUMNS = new Set(['enabled_providers', 'allowed_redirect_uris', 'widget_style', 'coupon_config', 'banner_config', 'popup_config', 'escalation_config']);
+  const JSON_COLUMNS = new Set(['enabled_providers', 'allowed_redirect_uris', 'widget_style', 'coupon_config', 'banner_config', 'popup_config', 'escalation_config', 'exit_intent_config', 'live_counter_config']);
 
   for (const [key, value] of Object.entries(data)) {
     if (!ALLOWED_UPDATE_COLUMNS.has(key)) continue;

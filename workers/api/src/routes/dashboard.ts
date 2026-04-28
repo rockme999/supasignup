@@ -850,6 +850,68 @@ dashboard.put('/shops/:id/exit-intent-config', async (c) => {
   return c.json({ ok: true, exit_intent_config: newConfig });
 });
 
+// ─── GET /shops/:id/live-counter ────────────────────────────
+dashboard.get('/shops/:id/live-counter', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required' }, 403);
+  }
+
+  const config = shop.live_counter_config ? JSON.parse(shop.live_counter_config) : null;
+  return c.json({ ok: true, live_counter_config: config });
+});
+
+// ─── PUT /shops/:id/live-counter ────────────────────────────
+dashboard.put('/shops/:id/live-counter', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required', message: '라이브 카운터는 Plus 플랜에서만 사용할 수 있습니다.' }, 403);
+  }
+
+  const body = await c.req.json<{
+    enabled?: boolean;
+    position?: string;
+    show_toast?: boolean;
+    show_counter?: boolean;
+  }>();
+
+  const VALID_POSITIONS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+  const position = VALID_POSITIONS.includes(body.position ?? '') ? body.position : 'bottom-right';
+
+  const newConfig = {
+    enabled: body.enabled !== false,
+    position,
+    show_toast: body.show_toast !== false,
+    show_counter: body.show_counter !== false,
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    live_counter_config: JSON.stringify(newConfig),
+  });
+
+  // 위젯 config cache 무효화 (live_counter는 별도 엔드포인트지만 config 캐시도 갱신)
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+
+  return c.json({ ok: true, live_counter_config: newConfig });
+});
+
 // ─── PUT /shops/:id/kakao-channel ────────────────────────────
 
 dashboard.put('/shops/:id/kakao-channel', async (c) => {

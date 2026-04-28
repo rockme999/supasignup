@@ -43,6 +43,9 @@
 --   2026-04-27: shops.exit_intent_config 추가 (0028) — Exit-intent 쿠폰 게이트 설정 JSON
 --                { enabled, frequency_cap_hours, scroll_depth_threshold, coupon_type, headline, body }
 --   2026-04-27: ai_briefings.headline 추가 (0029) — 대시보드 홈 카드용 한 줄 요약 (AI 생성)
+--   2026-04-27: shops.live_counter_config 추가 (0030) — 라이브 가입자 카운터 설정 JSON
+--                { enabled, position, show_toast, show_counter }
+--                NULL = 기본값(활성). Plus 플랜만 동작. threshold(일 평균 ≥3명) 미달 시 자동 비활성.
 
 -- ============================================================
 -- 1. owners — 운영자 계정
@@ -90,6 +93,7 @@ CREATE TABLE IF NOT EXISTS shops (
   escalation_config      TEXT,                                    -- Plus: 에스컬레이션 설정 JSON
   ai_suggested_copy      TEXT,                                    -- Plus: AI 추천 카피 JSON
   exit_intent_config     TEXT,                                    -- Plus: Exit-intent 쿠폰 게이트 설정 JSON
+  live_counter_config    TEXT,                                    -- Plus: 라이브 가입자 카운터 설정 JSON
   auto_reply_inquiries   INTEGER NOT NULL DEFAULT 0,              -- AI 자동답변 on/off
   plan                   TEXT NOT NULL DEFAULT 'free',            -- 'free' | 'plus' (CHECK 없음, 앱 레이어 검증)
   UNIQUE(mall_id, platform)

@@ -270,6 +270,16 @@ const plusFeatureInfo: Record<string, { desc: string; highlights: string[]; prev
       <div><strong>키워드:</strong> 스트리트패션, 캐주얼, 데일리룩</div>
     </div>`,
   },
+  '라이브 가입자 카운터': {
+    desc: '방문자에게 오늘 가입자 수와 최근 가입 알림을 실시간으로 보여줍니다.',
+    highlights: ['오늘 가입자 수 sticky 카운터', '최근 30분 내 가입자 토스트 알림', '위치 선택 (우하단/좌하단 등)', '"카페24 공식 SupaSignup" 신뢰 배지 포함'],
+    preview: `<div style="position:relative;height:80px;background:#f8fafc;border-radius:8px;overflow:hidden">
+      <div style="position:absolute;bottom:8px;right:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+        <div style="font-size:11px;font-weight:600;color:#1e293b;margin-bottom:2px">오늘 12명이 가입했어요</div>
+        <div style="font-size:9px;color:#94a3b8">⚡ 카페24 공식 SupaSignup</div>
+      </div>
+    </div>`,
+  },
 };
 
 const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
@@ -2830,6 +2840,221 @@ export const AiBriefingPage: FC<{
             btn.setAttribute('data-original-text', btn.textContent);
           })();
         `}} />
+      )}
+    </Layout>
+  );
+};
+
+// ─── Live Counter Settings Page (Plus 전용) ──────────────────
+export const LiveCounterSettingsPage: FC<{
+  shop: { plan: string; shop_id: string; shop_name?: string | null } | null;
+  liveCounterConfig?: {
+    enabled?: boolean;
+    position?: string;
+    show_toast?: boolean;
+    show_counter?: boolean;
+  } | null;
+  isCafe24?: boolean;
+}> = ({ shop, liveCounterConfig, isCafe24 }) => {
+  const isPlus = shop != null && shop.plan !== 'free';
+  const lc = liveCounterConfig || {};
+  const enabled = lc.enabled !== false;
+  const position = lc.position || 'bottom-right';
+  const showToast = lc.show_toast !== false;
+  const showCounter = lc.show_counter !== false;
+
+  const positions = [
+    { value: 'bottom-right', label: '우하단' },
+    { value: 'bottom-left', label: '좌하단' },
+    { value: 'top-right', label: '우상단' },
+    { value: 'top-left', label: '좌상단' },
+  ];
+
+  return (
+    <Layout title="라이브 가입자 카운터" loggedIn currentPath="/dashboard/settings/live-counter" isCafe24={isCafe24}>
+      <h1>라이브 가입자 카운터</h1>
+      {!isPlus ? (
+        <PlusLockOverlay feature="라이브 가입자 카운터" />
+      ) : (
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <h2>라이브 가입자 카운터</h2>
+            <p style="font-size:13px;color:#64748b;margin-bottom:20px">
+              방문자 쇼핑몰에 오늘 가입자 수와 최근 가입 토스트를 표시합니다.
+              일 평균 가입자 3명 이상인 경우에만 자동으로 활성화됩니다.
+            </p>
+            <div id="lcSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
+
+            {/* 미리보기 */}
+            <div style="margin-bottom:20px">
+              <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+              <div style="position:relative;background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;height:160px;overflow:hidden">
+                <div style="position:absolute;bottom:16px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px">
+                  <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">오늘 12명이 가입했어요</div>
+                  <div style="font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:3px">
+                    <span>⚡</span> 카페24 공식 SupaSignup
+                  </div>
+                </div>
+                <div style="position:absolute;bottom:100px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;opacity:0.75">
+                  <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:2px">김O자님이 가입했어요</div>
+                  <div style="font-size:11px;color:#94a3b8">3분 전</div>
+                </div>
+                <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(45deg,#f9fafb 0px,#f9fafb 10px,#f1f5f9 10px,#f1f5f9 20px);opacity:0.4"></div>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#9ca3af">쇼핑몰 페이지</div>
+              </div>
+              <p style="font-size:11px;color:#94a3b8;margin-top:6px">
+                "카페24 공식 SupaSignup" 배지는 제거할 수 없습니다 (브랜드 신뢰도 차별화).
+              </p>
+            </div>
+
+            {/* 설정 */}
+            <div style="display:flex;flex-direction:column;gap:20px">
+              {/* 활성화 토글 */}
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">카운터 활성화</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div id="lcEnabledToggle" data-value={enabled ? 'true' : 'false'}
+                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${enabled ? 'linear-gradient(135deg,#2563eb 0%,#3b82f6 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                    <div style={`position:absolute;top:2px;${enabled ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                  </div>
+                  <span id="lcEnabledLabel" style="font-size:13px;color:#374151">{enabled ? '활성화됨' : '비활성화됨'}</span>
+                </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:6px">비활성화 시 카운터와 토스트 모두 표시되지 않습니다.</p>
+              </div>
+
+              {/* 위치 선택 */}
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">표시 위치</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  {positions.map(p => (
+                    <label id={`lc-pos-${p.value}`}
+                      style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${position === p.value ? '#2563eb' : '#e5e7eb'};background:${position === p.value ? '#eff6ff' : '#fff'};transition:all 0.15s`}>
+                      <input type="radio" name="lcPosition" value={p.value} checked={position === p.value} style="display:none" />
+                      {p.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 카운터 / 토스트 개별 토글 */}
+              <div style="display:flex;gap:24px">
+                <div>
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Sticky 카운터 표시</label>
+                  <div id="lcCounterToggle" data-value={showCounter ? 'true' : 'false'}
+                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${showCounter ? 'linear-gradient(135deg,#2563eb 0%,#3b82f6 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                    <div style={`position:absolute;top:2px;${showCounter ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                  </div>
+                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">오늘 가입자 수 표시</p>
+                </div>
+                <div>
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">가입 토스트 표시</label>
+                  <div id="lcToastToggle" data-value={showToast ? 'true' : 'false'}
+                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${showToast ? 'linear-gradient(135deg,#2563eb 0%,#3b82f6 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                    <div style={`position:absolute;top:2px;${showToast ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                  </div>
+                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">최근 30분 가입자 토스트</p>
+                </div>
+              </div>
+
+              {/* 저장 버튼 */}
+              <div>
+                <button id="lcSaveBtn" class="btn btn-primary" style="width:auto">설정 저장</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="border-left:3px solid #2563eb;background:#f0f9ff">
+            <h2 style="font-size:14px;color:#1e40af;margin-bottom:8px">threshold 안내</h2>
+            <p style="font-size:13px;color:#374151;line-height:1.7">
+              일 평균 가입자 수가 3명 미만이면 카운터가 노출되지 않습니다.
+              "오늘 0명 가입" 같은 빈약한 표시는 신뢰도를 해치기 때문입니다.
+              가입자 데이터가 쌓이면 자동으로 활성화됩니다.
+            </p>
+          </div>
+
+          <script dangerouslySetInnerHTML={{__html: `
+            (function() {
+              var shopId = '${shop.shop_id}';
+
+              // 토글 헬퍼
+              function makeToggle(id, onChange) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('click', function() {
+                  var cur = el.getAttribute('data-value') === 'true';
+                  var next = !cur;
+                  el.setAttribute('data-value', next ? 'true' : 'false');
+                  el.style.background = next ? 'linear-gradient(135deg,#2563eb 0%,#3b82f6 100%)' : '#d1d5db';
+                  var dot = el.querySelector('div');
+                  if (dot) { dot.style.right = next ? '2px' : ''; dot.style.left = next ? '' : '2px'; }
+                  if (onChange) onChange(next);
+                });
+              }
+
+              makeToggle('lcEnabledToggle', function(v) {
+                var lbl = document.getElementById('lcEnabledLabel');
+                if (lbl) lbl.textContent = v ? '활성화됨' : '비활성화됨';
+              });
+              makeToggle('lcCounterToggle', null);
+              makeToggle('lcToastToggle', null);
+
+              // 위치 라디오
+              document.querySelectorAll('input[name="lcPosition"]').forEach(function(input) {
+                input.addEventListener('change', function() {
+                  document.querySelectorAll('input[name="lcPosition"]').forEach(function(r) {
+                    var lbl = document.getElementById('lc-pos-' + r.value);
+                    if (lbl) {
+                      lbl.style.borderColor = r.checked ? '#2563eb' : '#e5e7eb';
+                      lbl.style.background = r.checked ? '#eff6ff' : '#fff';
+                    }
+                  });
+                });
+              });
+
+              // 저장
+              document.getElementById('lcSaveBtn').addEventListener('click', async function() {
+                var btn = this;
+                btn.disabled = true;
+                btn.textContent = '저장 중...';
+                var msgEl = document.getElementById('lcSaveMsg');
+
+                var enabled = document.getElementById('lcEnabledToggle').getAttribute('data-value') === 'true';
+                var showCounter = document.getElementById('lcCounterToggle').getAttribute('data-value') === 'true';
+                var showToast = document.getElementById('lcToastToggle').getAttribute('data-value') === 'true';
+                var position = document.querySelector('input[name="lcPosition"]:checked')?.value || 'bottom-right';
+
+                try {
+                  var resp = await fetch('/api/dashboard/shops/' + shopId + '/live-counter', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ enabled: enabled, position: position, show_toast: showToast, show_counter: showCounter })
+                  });
+                  var data = await resp.json();
+                  if (resp.ok) {
+                    msgEl.style.display = 'block';
+                    msgEl.style.background = '#f0fdf4';
+                    msgEl.style.color = '#166534';
+                    msgEl.style.border = '1px solid #bbf7d0';
+                    msgEl.textContent = '설정이 저장되었습니다.';
+                  } else {
+                    throw new Error(data.message || '저장 실패');
+                  }
+                } catch(e) {
+                  msgEl.style.display = 'block';
+                  msgEl.style.background = '#fef2f2';
+                  msgEl.style.color = '#991b1b';
+                  msgEl.style.border = '1px solid #fecaca';
+                  msgEl.textContent = '오류: ' + e.message;
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = '설정 저장';
+                  setTimeout(function() { msgEl.style.display = 'none'; }, 3000);
+                }
+              });
+            })();
+          `}} />
+        </div>
       )}
     </Layout>
   );

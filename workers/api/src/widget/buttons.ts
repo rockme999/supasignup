@@ -9,6 +9,7 @@
 
 import { getSmartTriggerJs } from './smart-triggers';
 import { getExitIntentJs } from './exit-intent';
+import { getLiveCounterJs } from './live-counter';
 
 export const WIDGET_JS = `(function() {
   'use strict';
@@ -405,6 +406,14 @@ export const WIDGET_JS = `(function() {
           // Exit-intent 쿠폰 게이트 (W2-1 + Smart trigger W2-2)
           if (config.exit_intent_config) {
             self.initExitIntent(config);
+          }
+          // 라이브 가입자 카운터 (R4 W3 Cycle2)
+          // 별도 /live-counter 엔드포인트를 fetch하여 threshold + 최근 가입자 데이터 획득
+          if (config.client_id) {
+            fetch(self.getApiBase() + '/api/widget/live-counter?client_id=' + encodeURIComponent(config.client_id))
+              .then(function(r) { return r.ok ? r.json() : null; })
+              .then(function(lc) { if (lc) { self.initLiveCounter({ live_counter: lc }); } })
+              .catch(function() {});
           }
         }
       })
@@ -1546,6 +1555,9 @@ export const WIDGET_JS = `(function() {
 
     // ─── Exit-intent 쿠폰 게이트 ─────────────────────────────────
     ` + getExitIntentJs() + `
+
+    // ─── 라이브 가입자 카운터 ─────────────────────────────────────
+    ` + getLiveCounterJs() + `
 
     // ─── Initialize ──────────────────────────────────────────────
 

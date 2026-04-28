@@ -7,8 +7,9 @@
 
 import { Hono } from 'hono';
 import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
-import { DEFAULT_WIDGET_STYLE, safeParseStringArray, safeParseJsonObject } from '@supasignup/bg-core';
+import { DEFAULT_WIDGET_STYLE, safeParseStringArray, safeParseJsonObject, decrypt } from '@supasignup/bg-core';
 import { getShopByClientId, isOverFreeLimit } from '../db/queries';
+import { maskName } from '../utils/mask';
 
 const WIDGET_CONFIG_TTL = 300; // 5 minutes KV cache
 const EDGE_CACHE_TTL = 300;   // 5 minutes edge cache (s-maxage)
@@ -160,6 +161,9 @@ const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
   'widget.exit_intent_signup',              // Exit-intent 모달에서 가입 완료
   'widget.exit_intent_dismissed',           // Exit-intent 모달 그냥 닫기
   'widget.scroll_trigger_fired',            // Smart trigger (scroll-depth) 발동
+  // R4 W3 Cycle2 라이브 가입자 카운터 funnel 이벤트 2종
+  'widget.live_counter_shown',              // 라이브 카운터 sticky UI 노출
+  'widget.live_toast_shown',               // 가입 토스트 1건 노출
 ]);
 const MAX_PAGE_URL_LEN = 2048;
 const MAX_EVENT_DATA_JSON_LEN = 4096;
@@ -268,6 +272,112 @@ function isOriginAllowedForShop(
 
   return false;
 }
+
+// ─── GET /live-counter ───────────────────────────────────────
+// Plus 전용 라이브 가입자 카운터 데이터 반환.
+// threshold 미달(일 평균 < 3명) 또는 config.enabled=false 시 showCounter/showToast=false.
+widget.get('/live-counter', async (c) => {
+  const clientId = c.req.query('client_id');
+  if (!clientId) {
+    return c.json({ error: 'missing_client_id' }, 400);
+  }
+
+  const shop = await getShopByClientId(c.env.DB, clientId);
+  if (!shop) {
+    return c.json({ error: 'invalid_client_id' }, 404);
+  }
+
+  // Plus 전용
+  if (shop.plan === 'free') {
+    return c.json({ showCounter: false, showToast: false, todayCount: 0, recentSignups: [] });
+  }
+
+  // live_counter_config 파싱
+  const lcConfig = safeParseJsonObject<{
+    enabled?: boolean;
+    position?: string;
+    show_toast?: boolean;
+    show_counter?: boolean;
+  }>(shop.live_counter_config ?? null, null, `live-counter.live_counter_config shop_id=${shop.shop_id}`);
+
+  // enabled=false 이면 즉시 비활성
+  if (lcConfig?.enabled === false) {
+    return c.json({ showCounter: false, showToast: false, todayCount: 0, recentSignups: [] });
+  }
+
+  const position = lcConfig?.position ?? 'bottom-right';
+  const showToastCfg = lcConfig?.show_toast !== false;
+  const showCounterCfg = lcConfig?.show_counter !== false;
+
+  // KST 자정 기준 오늘 시작 (UTC+9)
+  const nowUtc = new Date();
+  const kstOffset = 9 * 60 * 60 * 1000;
+  const kstNow = new Date(nowUtc.getTime() + kstOffset);
+  const kstToday = kstNow.toISOString().slice(0, 10); // YYYY-MM-DD KST
+  const todayStartUtc = new Date(`${kstToday}T00:00:00+09:00`).toISOString();
+
+  // 병렬 쿼리: 오늘 가입 수 + 최근 30분 가입자 5명 + 7일 평균 threshold
+  const [todayResult, recentResult, avgResult] = await Promise.all([
+    // 오늘(KST) 가입 수
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM shop_users WHERE shop_id = ? AND created_at >= ?`
+    ).bind(shop.shop_id, todayStartUtc).first<{ cnt: number }>(),
+
+    // 최근 30분 가입자 5명 (user_id + created_at, 이름은 users 테이블에서 join)
+    c.env.DB.prepare(
+      `SELECT su.created_at, u.name, su.user_id
+       FROM shop_users su
+       JOIN users u ON su.user_id = u.user_id
+       WHERE su.shop_id = ? AND su.created_at >= datetime('now', '-30 minutes')
+         AND u.name IS NOT NULL
+       ORDER BY su.created_at DESC LIMIT 5`
+    ).bind(shop.shop_id).all<{ created_at: string; name: string; user_id: string }>(),
+
+    // 7일 일 평균 가입자 수 (threshold: ≥3)
+    c.env.DB.prepare(
+      `SELECT COUNT(*) * 1.0 / 7 as daily_avg
+       FROM shop_users WHERE shop_id = ? AND created_at >= datetime('now', '-7 days')`
+    ).bind(shop.shop_id).first<{ daily_avg: number }>(),
+  ]);
+
+  const todayCount = todayResult?.cnt ?? 0;
+  const dailyAvg = avgResult?.daily_avg ?? 0;
+
+  // threshold 미달 → 비활성
+  if (dailyAvg < 3) {
+    return c.json({ showCounter: false, showToast: false, todayCount: 0, recentSignups: [] });
+  }
+
+  // 최근 가입자 이름 복호화 + 마스킹 + timeAgo 계산
+  const recentRaw = recentResult.results ?? [];
+  const recentSignups: Array<{ name: string; timeAgo: string }> = [];
+  const nowMs = Date.now();
+  for (const row of recentRaw) {
+    try {
+      const plainName = await decrypt(row.name, c.env.ENCRYPTION_KEY);
+      const masked = maskName(plainName);
+      // timeAgo: "n초 전" / "n분 전"
+      const diffSec = Math.max(0, Math.floor((nowMs - new Date(row.created_at).getTime()) / 1000));
+      const timeAgo = diffSec < 60
+        ? `${diffSec}초 전`
+        : `${Math.floor(diffSec / 60)}분 전`;
+      recentSignups.push({ name: masked, timeAgo });
+    } catch {
+      // 복호화 실패 시 skip
+    }
+  }
+
+  return c.json({
+    todayCount,
+    recentSignups,
+    showCounter: showCounterCfg,
+    showToast: showToastCfg && recentSignups.length > 0,
+    position,
+  }, 200, {
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Origin': '*',
+  });
+});
 
 // ─── GET /hint ───────────────────────────────────────────────
 // Store provider hint in KV so authorize can auto-select provider
