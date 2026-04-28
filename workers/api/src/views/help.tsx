@@ -468,7 +468,7 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 보고서</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">매주 월요일 자동으로 성과 분석 리포트를 생성합니다. 지난주 성과 요약, 이번 주 전략 제안, 실행 가능한 액션 3가지, AI 인사이트, 추천 마케팅 문구 7종이 포함됩니다.</p>
           </div>
-          <a href="/dashboard/ai-reports" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">보기 →</a>
+          <a href="/dashboard/ai-briefing" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">보기 →</a>
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
@@ -995,7 +995,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
           2. <strong>이번 주 전략 제안</strong> — 번개가입 기능 범위 내 실행 가능한 전략<br />
           3. <strong>실행 가능한 액션 3가지</strong> — 바로 적용 가능한 구체적 행동<br />
           4. <strong>AI 인사이트</strong> — 앱 범위 밖의 참고 트렌드<br /><br />
-          이전 보고서와 비교하여 변화 추이도 분석합니다. <a href="/dashboard/ai-reports" style="color:#2563eb">AI 보고서</a> 페이지에서 수동으로도 생성할 수 있습니다.
+          이전 브리핑과 비교하여 변화 추이도 분석합니다. <a href="/dashboard/ai-briefing" style="color:#2563eb">AI 브리핑</a> 페이지에서 수동으로도 생성할 수 있습니다.
         </div>
       </details>
 

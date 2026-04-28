@@ -180,9 +180,9 @@ export const HomePage: FC<{
             <span style="font-size:13px;font-weight:600">통계 분석</span>
           </a>
           {isPlus ? (
-            <a href="/dashboard/ai-reports" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <a href="/dashboard/ai-briefing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
               <span style="font-size:28px">✨</span>
-              <span style="font-size:13px;font-weight:600">AI 보고서</span>
+              <span style="font-size:13px;font-weight:600">AI 브리핑</span>
             </a>
           ) : (
             <a href="/dashboard/billing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #d1fae5;border-radius:12px;text-decoration:none;color:#374151;background:#f0fdf4;transition:border-color 0.15s" class="quick-link">

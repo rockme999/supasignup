@@ -147,7 +147,6 @@ const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/live-counter', label: '라이브 카운터', icon: <IconTrending />, plus: true },
   { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
   { path: '/dashboard/ai-briefing', label: 'AI 브리핑', icon: <IconSparkle /> },
-  { path: '/dashboard/ai-reports', label: 'AI 통계 분석', icon: <IconChartBar />, plus: true },
 ];
 
 const etcNavItems: NavItem[] = [

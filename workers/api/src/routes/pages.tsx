@@ -31,7 +31,6 @@ import {
   EscalationSettingsPage,
   KakaoSettingsPage,
   AiSettingsPage,
-  AiReportsPage,
   AiBriefingPage,
   ExitIntentSettingsPage,
   LiveCounterSettingsPage,
@@ -1170,20 +1169,9 @@ pages.get('/dashboard/settings/ai', async (c) => {
 
 // ─── AI Reports [Plus] ───────────────────────────────────────
 
-pages.get('/dashboard/ai-reports', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-
-  // 최신 브리핑 조회 (최대 8건)
-  const briefings = await c.env.DB.prepare(
-    `SELECT id, performance, strategy, actions, insight, source, created_at
-     FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 8`
-  ).bind(shop.shop_id).all<{ id: string; performance: string; strategy: string; actions: string; insight: string | null; source: string; created_at: string }>();
-
-  return c.html(
-    <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} briefings={(briefings.results ?? []).map(r => ({ ...r, insight: r.insight ?? undefined }))} />
-  );
+// /dashboard/ai-reports → /dashboard/ai-briefing (301 redirect)
+pages.get('/dashboard/ai-reports', (c) => {
+  return c.redirect('/dashboard/ai-briefing', 301);
 });
 
 // ─── AI Briefing Page ────────────────────────────────────────
@@ -1193,11 +1181,27 @@ pages.get('/dashboard/ai-briefing', async (c) => {
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
 
-  // 최신 브리핑 12건 조회
+  const PAGE_SIZE = 10;
+  const pageParam = parseInt(c.req.query('page') ?? '1', 10);
+  const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+
+  // 총 브리핑 건수
+  const countRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS cnt FROM ai_briefings WHERE shop_id = ?`
+  ).bind(shop.shop_id).first<{ cnt: number }>();
+  const totalCount = countRow?.cnt ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+
+  // 최신 브리핑 1건 (항상 page=1 기준, 위쪽 고정)
+  // history: page별 10건 (latest 제외, offset 기준)
+  // page=1 이면 latest=briefings[0], history=briefings[1..9]
+  // page>1 이면 latest는 null (헤더/성과는 page=1 것만), history=해당 페이지 구간
+  const offset = (safePage - 1) * PAGE_SIZE;
   const briefings = await c.env.DB.prepare(
     `SELECT id, performance, strategy, actions, insight, headline, source, created_at
-     FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 12`
-  ).bind(shop.shop_id).all<{
+     FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ).bind(shop.shop_id, PAGE_SIZE, offset).all<{
     id: string; performance: string; strategy: string; actions: string;
     insight: string | null; headline: string | null; source: string; created_at: string;
   }>();
@@ -1230,6 +1234,9 @@ pages.get('/dashboard/ai-briefing', async (c) => {
       briefings={(briefings.results ?? []).map(r => ({ ...r, insight: r.insight ?? null, headline: r.headline ?? null }))}
       isCafe24={c.get('isCafe24')}
       newBadges={newBadges}
+      page={safePage}
+      totalPages={totalPages}
+      totalCount={totalCount}
     />
   );
 });

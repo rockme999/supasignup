@@ -1,6 +1,8 @@
 /**
  * Plus-only feature pages: BannerSettingsPage, PopupSettingsPage, EscalationSettingsPage,
- * KakaoSettingsPage, AiSettingsPage, AiReportsPage + PlusLockOverlay.
+ * KakaoSettingsPage, AiSettingsPage, AiBriefingPage + PlusLockOverlay.
+ *
+ * AiReportsPage: deprecated — /dashboard/ai-reports는 /dashboard/ai-briefing으로 301 redirect됨.
  */
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
@@ -2619,10 +2621,15 @@ export const AiBriefingPage: FC<{
   briefings: AiBriefingRow[];
   isCafe24?: boolean;
   newBadges?: Partial<Record<string, boolean>>;
-}> = ({ shop, briefings, isCafe24, newBadges }) => {
+  page?: number;
+  totalPages?: number;
+  totalCount?: number;
+}> = ({ shop, briefings, isCafe24, newBadges, page = 1, totalPages = 1, totalCount = 0 }) => {
   const isPlus = shop.plan !== 'free';
-  const latest = briefings[0] ?? null;
-  const history = briefings.slice(1);
+  // page=1: latest=briefings[0], history=briefings[1..]
+  // page>1: latest=null (헤더/성과 영역 숨김), history=briefings[0..]
+  const latest = page === 1 ? (briefings[0] ?? null) : null;
+  const history = page === 1 ? briefings.slice(1) : briefings;
 
   // 이번 주 날짜 범위 (KST 기준 월요일~일요일)
   const now = new Date();
@@ -2640,20 +2647,38 @@ export const AiBriefingPage: FC<{
     return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth() + 1).padStart(2, '0')}.${String(kst.getUTCDate()).padStart(2, '0')} (KST)`;
   };
 
+  // 페이지네이션 헬퍼
+  const buildPageUrl = (p: number) => `/dashboard/ai-briefing?page=${p}`;
+
+  // 페이지네이션 번호 배열 생성 (최대 7개 노드, ... 포함)
+  const buildPageNumbers = (): Array<number | '...'> => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const nodes: Array<number | '...'> = [];
+    // 항상 1, 2 표시
+    nodes.push(1);
+    if (page > 4) nodes.push('...');
+    for (let p = Math.max(2, page - 1); p <= Math.min(totalPages - 1, page + 1); p++) {
+      nodes.push(p);
+    }
+    if (page < totalPages - 3) nodes.push('...');
+    nodes.push(totalPages);
+    return nodes;
+  };
+
   return (
     <Layout title="AI 브리핑" loggedIn currentPath="/dashboard/ai-briefing" isCafe24={isCafe24} newBadges={newBadges}>
+      {/* 페이지 헤더 */}
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-        <h1 style="margin-bottom:0">✨ AI 브리핑</h1>
-        {!isPlus && (
-          <a href="/dashboard/billing" class="btn btn-sm btn-outline" style="font-size:12px;white-space:nowrap">Plus로 더 풍부한 브리핑 보기</a>
-        )}
+        <h1 style="margin-bottom:0">AI 브리핑</h1>
       </div>
       <p style="font-size:14px;color:#64748b;margin-bottom:24px">
         {weekRange} 기준
       </p>
 
-      {/* 브리핑 없음 */}
-      {!latest && (
+      {/* 브리핑 없음 (page=1, 데이터 없음) */}
+      {page === 1 && !latest && totalCount === 0 && (
         <div class="card" style="text-align:center;padding:48px 24px">
           <div style="font-size:40px;margin-bottom:16px">📊</div>
           <h2 style="margin-bottom:8px">아직 브리핑이 없습니다</h2>
@@ -2676,7 +2701,7 @@ export const AiBriefingPage: FC<{
         </div>
       )}
 
-      {/* 최신 브리핑 상세 */}
+      {/* 최신 브리핑 상세 (page=1 && latest 있음) */}
       {latest && (() => {
         let actions: string[] = [];
         try { actions = JSON.parse(latest.actions); } catch { /* ignore */ }
@@ -2704,7 +2729,7 @@ export const AiBriefingPage: FC<{
               )}
             </div>
 
-            {/* 지난주 성과 */}
+            {/* 지난주 성과 — Free/Plus 모두 노출 */}
             <div class="card" style="margin-bottom:16px">
               <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
                 <span style="font-size:18px">📊</span> 지난주 성과
@@ -2712,45 +2737,118 @@ export const AiBriefingPage: FC<{
               <div style="font-size:14px;color:#374151;line-height:1.75;white-space:pre-wrap">{latest.performance}</div>
             </div>
 
-            {/* 이번 주 전략 */}
-            {latest.strategy && (
-              <div class="card" style="margin-bottom:16px">
-                <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-                  <span style="font-size:18px">💡</span> 이번 주 전략
-                </h2>
-                <div style="font-size:14px;color:#374151;line-height:1.75;white-space:pre-wrap">{latest.strategy}</div>
+            {/* Free: 이후 섹션 블러 + 결제 유도 / Plus: 풀 내용 */}
+            {!isPlus ? (
+              <div style="position:relative;margin-bottom:24px">
+                {/* 블러 영역 — 이번 주 전략 + 추천 액션 + AI 참고 의견 미리보기 */}
+                <div style="filter:blur(4px);pointer-events:none;user-select:none;display:grid;gap:16px">
+                  <div class="card" style="margin-bottom:0">
+                    <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                      <span style="font-size:18px">💡</span> 이번 주 전략
+                    </h2>
+                    <div style="font-size:14px;color:#374151;line-height:1.75">
+                      이번 주 전략은 Plus 플랜에서 확인하실 수 있습니다. 쇼핑몰 현황에 맞는 구체적인 실행 방향을 제시합니다.
+                    </div>
+                  </div>
+                  <div class="card" style="margin-bottom:0">
+                    <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                      <span style="font-size:18px">✅</span> 추천 액션
+                    </h2>
+                    <ul style="margin:0;padding-left:0;list-style:none;display:grid;gap:8px">
+                      {(['바로 실행 가능한 액션 1가지', '다음 주를 위한 준비 항목', '장기 개선 방향'].map((a, i) => (
+                        <li style="display:flex;gap:10px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:14px;color:#374151;line-height:1.5">
+                          <span style="font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;padding-top:1px">{i + 1}.</span>
+                          {a}
+                        </li>
+                      )))}
+                    </ul>
+                  </div>
+                  <div class="card" style="margin-bottom:0">
+                    <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                      <span style="font-size:18px">💡</span> AI 참고 의견
+                    </h2>
+                    <div style="font-size:13px;color:#64748b;line-height:1.7">
+                      시장 트렌드와 업종별 인사이트를 AI가 분석한 참고 의견입니다. 번개가입 범위 밖의 외부 요인도 함께 고려합니다.
+                    </div>
+                  </div>
+                </div>
+                {/* 결제 유도 오버레이 카드 */}
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(360px, calc(100% - 32px));background:#fff;border-radius:16px;padding:28px 24px;box-shadow:0 8px 40px rgba(0,0,0,0.18);border:1px solid #e0e7ff;text-align:center;z-index:10">
+                  <div style="font-size:18px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+                    Plus로 전체 인사이트 보기
+                  </div>
+                  <p style="font-size:13px;color:#374151;margin:0 0 16px;line-height:1.6">
+                    이번 주 전략 / 추천 액션 / AI 인사이트 /<br />과거 브리핑 이력까지 한눈에
+                  </p>
+                  {totalCount > 0 && (
+                    <p style="font-size:12px;color:#6366f1;font-weight:600;margin:0 0 16px">
+                      총 {totalCount}주 브리핑이 쌓여 있어요
+                    </p>
+                  )}
+                  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;text-align:left">
+                    <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer">
+                      <input type="radio" name="briefingBillingCycle" value="monthly" style="margin-top:2px;accent-color:#6366f1" />
+                      <div>
+                        <div style="font-size:14px;font-weight:600;color:#111827">월 6,900원</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:1px">매달 부담 없이 시작</div>
+                      </div>
+                    </label>
+                    <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid #6366f1;border-radius:10px;cursor:pointer;background:#f5f3ff">
+                      <input type="radio" name="briefingBillingCycle" value="yearly" checked style="margin-top:2px;accent-color:#6366f1" />
+                      <div>
+                        <div style="font-size:14px;font-weight:600;color:#111827">연 79,000원 <span style="font-size:10px;background:#6366f1;color:#fff;padding:1px 6px;border-radius:8px;font-weight:600;vertical-align:middle;margin-left:3px">추천</span></div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:1px">결제 공백 없이 1년 안심 운영</div>
+                      </div>
+                    </label>
+                  </div>
+                  <a href="/dashboard/billing" style="display:block;padding:13px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;text-align:center">
+                    Plus 시작하기
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Plus: 이번 주 전략 */}
+                {latest.strategy && (
+                  <div class="card" style="margin-bottom:16px">
+                    <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                      <span style="font-size:18px">💡</span> 이번 주 전략
+                    </h2>
+                    <div style="font-size:14px;color:#374151;line-height:1.75;white-space:pre-wrap">{latest.strategy}</div>
+                  </div>
+                )}
+
+                {/* Plus: 추천 액션 */}
+                {actions.length > 0 && (
+                  <div class="card" style="margin-bottom:16px">
+                    <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                      <span style="font-size:18px">✅</span> 추천 액션
+                    </h2>
+                    <ul style="margin:0;padding-left:0;list-style:none;display:grid;gap:8px">
+                      {actions.map((action, i) => (
+                        <li style="display:flex;gap:10px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:14px;color:#374151;line-height:1.5">
+                          <span style="font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;padding-top:1px">{i + 1}.</span>
+                          {action}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Plus: AI 참고 의견 */}
+                {latest.insight && (
+                  <div class="card" style="margin-bottom:16px;border-left:3px solid #a5b4fc;background:#fafafa">
+                    <h2 style="font-size:14px;color:#6366f1;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                      <span style="font-size:16px">💡</span> AI 참고 의견
+                      <span style="font-size:11px;font-weight:400;color:#94a3b8">(번개가입 범위 외 시장 인사이트)</span>
+                    </h2>
+                    <div style="font-size:13px;color:#64748b;line-height:1.7;white-space:pre-wrap">{latest.insight}</div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* 추천 액션 */}
-            {actions.length > 0 && (
-              <div class="card" style="margin-bottom:16px">
-                <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-                  <span style="font-size:18px">✅</span> 추천 액션
-                </h2>
-                <ul style="margin:0;padding-left:0;list-style:none;display:grid;gap:8px">
-                  {actions.map((action, i) => (
-                    <li style="display:flex;gap:10px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:14px;color:#374151;line-height:1.5">
-                      <span style="font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;padding-top:1px">{i + 1}.</span>
-                      {action}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* AI 참고 의견 */}
-            {latest.insight && (
-              <div class="card" style="margin-bottom:16px;border-left:3px solid #a5b4fc;background:#fafafa">
-                <h2 style="font-size:14px;color:#6366f1;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                  <span style="font-size:16px">💡</span> AI 참고 의견
-                  <span style="font-size:11px;font-weight:400;color:#94a3b8">(번개가입 범위 외 시장 인사이트)</span>
-                </h2>
-                <div style="font-size:13px;color:#64748b;line-height:1.7;white-space:pre-wrap">{latest.insight}</div>
-              </div>
-            )}
-
-            {/* 새 브리핑 생성 결과 영역 (동적) */}
+            {/* 새 브리핑 생성 로딩 영역 */}
             <div id="briefingLoading" style="display:none;text-align:center;padding:32px;color:#64748b;font-size:14px">
               AI가 분석 중입니다. 잠시 기다려주세요...
             </div>
@@ -2758,10 +2856,15 @@ export const AiBriefingPage: FC<{
         );
       })()}
 
-      {/* 과거 브리핑 이력 */}
-      {history.length > 0 && (
+      {/* 이전 브리핑 이력 — Plus만 */}
+      {isPlus && (history.length > 0 || page > 1) && (
         <div style="margin-top:32px">
-          <h2 style="font-size:15px;color:#64748b;font-weight:600;margin-bottom:12px">이전 브리핑 이력</h2>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <h2 style="font-size:15px;color:#64748b;font-weight:600;margin-bottom:0">이전 브리핑 이력</h2>
+            {totalCount > 0 && (
+              <span style="font-size:12px;color:#94a3b8">총 {totalCount}건</span>
+            )}
+          </div>
           <div style="display:grid;gap:10px">
             {history.map((b) => {
               let acts: string[] = [];
@@ -2800,6 +2903,63 @@ export const AiBriefingPage: FC<{
                 </details>
               );
             })}
+          </div>
+
+          {/* 페이지네이션 (Plus, totalPages > 1) */}
+          {totalPages > 1 && (
+            <div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:24px;flex-wrap:wrap">
+              {/* 이전 버튼 */}
+              {page > 1 ? (
+                <a href={buildPageUrl(page - 1)} style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#374151;text-decoration:none;background:#fff">
+                  이전
+                </a>
+              ) : (
+                <span style="padding:6px 14px;border:1px solid #f1f5f9;border-radius:8px;font-size:13px;color:#d1d5db;cursor:not-allowed;background:#fafafa">이전</span>
+              )}
+
+              {/* 페이지 번호 */}
+              {buildPageNumbers().map((n) =>
+                n === '...' ? (
+                  <span style="padding:6px 8px;font-size:13px;color:#9ca3af">...</span>
+                ) : n === page ? (
+                  <span style="padding:6px 12px;border:1px solid #6366f1;border-radius:8px;font-size:13px;color:#6366f1;font-weight:700;background:#eef2ff">{n}</span>
+                ) : (
+                  <a href={buildPageUrl(n as number)} style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#374151;text-decoration:none;background:#fff">{n}</a>
+                )
+              )}
+
+              {/* 다음 버튼 */}
+              {page < totalPages ? (
+                <a href={buildPageUrl(page + 1)} style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#374151;text-decoration:none;background:#fff">
+                  다음
+                </a>
+              ) : (
+                <span style="padding:6px 14px;border:1px solid #f1f5f9;border-radius:8px;font-size:13px;color:#d1d5db;cursor:not-allowed;background:#fafafa">다음</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Free: 이전 브리핑 이력 영역 블러 처리 (totalCount > 1일 때) */}
+      {!isPlus && totalCount > 1 && page === 1 && (
+        <div style="margin-top:32px;position:relative">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <h2 style="font-size:15px;color:#64748b;font-weight:600;margin-bottom:0">이전 브리핑 이력</h2>
+            <span style="font-size:12px;color:#6366f1;font-weight:600">총 {totalCount}주 브리핑이 쌓여 있어요</span>
+          </div>
+          <div style="filter:blur(4px);pointer-events:none;user-select:none;display:grid;gap:10px">
+            {[1, 2, 3].map((i) => (
+              <div class="card" style="margin-bottom:0;padding:16px 20px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:13px;font-weight:600;color:#374151">2024.0{i}.01 (KST)</span>
+                    <span class="badge badge-blue" style="font-size:10px">자동</span>
+                  </div>
+                  <span style="font-size:12px;color:#94a3b8">▼</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
