@@ -369,7 +369,7 @@ type AdminShopRow = {
   shop_id: string;
   shop_name: string;
   mall_id: string;
-  owner_email: string;
+  shop_url: string | null;
   plan: string;
   deleted_at: string | null;
   created_at: string;
@@ -425,7 +425,7 @@ export const AdminShopsPage: FC<{
               <tr>
                 <th>쇼핑몰명</th>
                 <th>Mall ID</th>
-                <th>소유자 이메일</th>
+                <th>도메인</th>
                 <th>플랜</th>
                 <th>상태</th>
                 <th>등록일</th>
@@ -441,7 +441,13 @@ export const AdminShopsPage: FC<{
                       <code style="font-size:12px">{shop.mall_id}</code>
                     </a>
                   </td>
-                  <td style="font-size:13px">{shop.owner_email}</td>
+                  <td style="font-size:12px">
+                    {shop.shop_url ? (
+                      <a href={shop.shop_url} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title={shop.shop_url}>
+                        {shop.shop_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                      </a>
+                    ) : <span style="color:#94a3b8">-</span>}
+                  </td>
                   <td>
                     <select
                       class="plan-select"

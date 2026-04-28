@@ -209,7 +209,7 @@ export const HomePage: FC<{
                 class="loss-card"
               >
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">PLUS</span>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
                   <span style="font-size:11px;color:#94a3b8">최근 7일</span>
                 </div>
                 <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
@@ -227,7 +227,7 @@ export const HomePage: FC<{
                 class="loss-card"
               >
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">PLUS</span>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
                   <span style="font-size:11px;color:#94a3b8">가입 7일 이상 경과</span>
                 </div>
                 <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
@@ -256,19 +256,21 @@ export const HomePage: FC<{
             style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;margin-bottom:16px;box-shadow:0 1px 4px rgba(99,102,241,0.06);transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s"
             class="ai-briefing-card"
           >
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-              <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">✨ AI 브리핑</span>
-              <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#a16207;background:#fef9c3;border-radius:4px;padding:2px 6px">PLUS</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">✨ AI 브리핑</span>
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
+              </div>
+              <span style="font-size:13px;color:#6366f1;font-weight:600;white-space:nowrap;flex-shrink:0">자세히 보기 →</span>
             </div>
             <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 8px;line-height:1.5">
               {headline || '이번 주 AI 인사이트가 준비됐습니다.'}
             </p>
             {performancePreview && (
-              <p style="font-size:13px;color:#475569;margin:0 0 10px;line-height:1.6;white-space:pre-line">
+              <p style="font-size:13px;color:#475569;margin:0;line-height:1.6;white-space:pre-line">
                 {performancePreview}{truncated ? '...' : ''}
               </p>
             )}
-            <span style="font-size:13px;color:#6366f1;font-weight:600">자세히 보기 →</span>
           </a>
         );
       })()}
