@@ -9,7 +9,7 @@ import { Hono } from 'hono';
 import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
 import { DEFAULT_WIDGET_STYLE, safeParseStringArray, safeParseJsonObject, decrypt } from '@supasignup/bg-core';
 import { getShopByClientId, isOverFreeLimit } from '../db/queries';
-import { maskName } from '../utils/mask';
+import { maskNamePublic } from '../utils/mask';
 
 const WIDGET_CONFIG_TTL = 300; // 5 minutes KV cache
 const EDGE_CACHE_TTL = 300;   // 5 minutes edge cache (s-maxage)
@@ -355,7 +355,7 @@ widget.get('/live-counter', async (c) => {
   for (const row of recentRaw) {
     try {
       const plainName = await decrypt(row.name, c.env.ENCRYPTION_KEY);
-      const masked = maskName(plainName);
+      const masked = maskNamePublic(plainName);
       // timeAgo: "n초 전" / "n분 전"
       const diffSec = Math.max(0, Math.floor((nowMs - new Date(row.created_at).getTime()) / 1000));
       const timeAgo = diffSec < 60
