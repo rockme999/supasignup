@@ -3048,19 +3048,20 @@ export const LiveCounterSettingsPage: FC<{
             {/* 미리보기 */}
             <div style="margin-bottom:20px">
               <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-              <div style="position:relative;background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;height:160px;overflow:hidden">
-                <div style="position:absolute;bottom:16px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px">
+              <div id="lcPreviewArea" style="position:relative;background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;height:160px;overflow:hidden">
+                <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(45deg,#f9fafb 0px,#f9fafb 10px,#f1f5f9 10px,#f1f5f9 20px);opacity:0.4"></div>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#9ca3af">쇼핑몰 페이지</div>
+                <div id="lcPreviewCounter" style="position:absolute;bottom:16px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;transition:all 0.2s">
                   <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">오늘 12명이 가입했어요</div>
                   <div style="font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:3px">
                     <span>⚡</span> 번개가입
                   </div>
                 </div>
-                <div style="position:absolute;bottom:100px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;opacity:0.75">
+                <div id="lcPreviewToast" style="position:absolute;bottom:100px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;opacity:0.75;transition:all 0.2s">
                   <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:2px">김O자님이 가입했어요</div>
                   <div style="font-size:11px;color:#94a3b8">3분 전</div>
                 </div>
-                <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(45deg,#f9fafb 0px,#f9fafb 10px,#f1f5f9 10px,#f1f5f9 20px);opacity:0.4"></div>
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#9ca3af">쇼핑몰 페이지</div>
+                <div id="lcPreviewDisabled" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#94a3b8;background:#fff;padding:8px 16px;border-radius:8px;border:1px dashed #cbd5e1">비활성화됨</div>
               </div>
               <p style="font-size:11px;color:#94a3b8;margin-top:6px">
                 "번개가입" 배지는 제거할 수 없습니다 (브랜드 신뢰도 차별화).
@@ -3151,12 +3152,45 @@ export const LiveCounterSettingsPage: FC<{
                 });
               }
 
+              // 미리보기 갱신 — 설정(enabled / position / show_counter / show_toast) 변경 시 즉시 반영
+              function updatePreview() {
+                var enabled = document.getElementById('lcEnabledToggle').getAttribute('data-value') === 'true';
+                var showCounter = document.getElementById('lcCounterToggle').getAttribute('data-value') === 'true';
+                var showToast = document.getElementById('lcToastToggle').getAttribute('data-value') === 'true';
+                var posInput = document.querySelector('input[name="lcPosition"]:checked');
+                var position = posInput ? posInput.value : 'bottom-right';
+                var counterEl = document.getElementById('lcPreviewCounter');
+                var toastEl = document.getElementById('lcPreviewToast');
+                var disabledEl = document.getElementById('lcPreviewDisabled');
+                if (!counterEl || !toastEl || !disabledEl) return;
+                // 위치 매핑 (카운터)
+                var posMap = {
+                  'bottom-right': { top: 'auto', bottom: '16px', left: 'auto', right: '16px' },
+                  'bottom-left':  { top: 'auto', bottom: '16px', left: '16px', right: 'auto' },
+                  'top-right':    { top: '16px', bottom: 'auto', left: 'auto', right: '16px' },
+                  'top-left':     { top: '16px', bottom: 'auto', left: '16px', right: 'auto' }
+                };
+                var p = posMap[position] || posMap['bottom-right'];
+                ['top','bottom','left','right'].forEach(function(k){ counterEl.style[k] = p[k]; });
+                // 토스트는 카운터에서 vertical offset (84px 정도)
+                var t = Object.assign({}, p);
+                if (position.indexOf('bottom') === 0) { t.bottom = '100px'; t.top = 'auto'; }
+                else { t.top = '100px'; t.bottom = 'auto'; }
+                ['top','bottom','left','right'].forEach(function(k){ toastEl.style[k] = t[k]; });
+                // 표시/숨김
+                counterEl.style.display = (enabled && showCounter) ? 'block' : 'none';
+                toastEl.style.display = (enabled && showToast) ? 'block' : 'none';
+                // enabled OFF 시 안내
+                disabledEl.style.display = enabled ? 'none' : 'block';
+              }
+
               makeToggle('lcEnabledToggle', function(v) {
                 var lbl = document.getElementById('lcEnabledLabel');
                 if (lbl) lbl.textContent = v ? '활성화됨' : '비활성화됨';
+                updatePreview();
               });
-              makeToggle('lcCounterToggle', null);
-              makeToggle('lcToastToggle', null);
+              makeToggle('lcCounterToggle', function() { updatePreview(); });
+              makeToggle('lcToastToggle', function() { updatePreview(); });
 
               // 위치 라디오
               document.querySelectorAll('input[name="lcPosition"]').forEach(function(input) {
@@ -3168,8 +3202,12 @@ export const LiveCounterSettingsPage: FC<{
                       lbl.style.background = r.checked ? '#eff6ff' : '#fff';
                     }
                   });
+                  updatePreview();
                 });
               });
+
+              // 초기 미리보기 동기화
+              updatePreview();
 
               // 저장
               document.getElementById('lcSaveBtn').addEventListener('click', async function() {
