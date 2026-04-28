@@ -10,7 +10,7 @@
  *      (위젯은 flag 값만 신뢰하면 됨 — 직접 계산 없음)
  *
  * UI 구성:
- *   A. Sticky 카운터 — 우하단(또는 설정 위치) 고정, 오늘 가입자 수 + "카페24 공식 SupaSignup" 배지
+ *   A. Sticky 카운터 — 우하단(또는 설정 위치) 고정, 오늘 가입자 수 + "번개가입" 배지
  *   B. 가입 토스트 — 최근 30분 내 가입자를 5초 간격으로 1명씩 최대 5명 순환
  *
  * funnel 이벤트:
@@ -65,7 +65,7 @@ export function getLiveCounterJs(): string {
     '      var flash = document.createElement("span");',
     '      flash.textContent = "⚡";',
     '      flash.style.cssText = "font-size:10px";',
-    '      var badgeTxt = document.createTextNode(" 카페24 공식 SupaSignup");',
+    '      var badgeTxt = document.createTextNode(" 번개가입");',
     '      badgeLine.appendChild(flash);',
     '      badgeLine.appendChild(badgeTxt);',
 
