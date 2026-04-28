@@ -106,26 +106,109 @@ export const HomePage: FC<{
         );
       })()}
 
-      {/* 소셜별 가입 현황 요약 */}
-      {stats && Object.keys(stats.by_provider).length > 0 && (
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div>
-              <h2 style="margin-bottom:2px">프로바이더별 가입 현황</h2>
-              <p style="font-size:12px;color:#94a3b8;margin:0">누적 기준 요약 — 상세 분석은 통계 페이지에서 확인하세요</p>
+      {/* 프로바이더별 가입 현황 (도넛 차트) + 손실 회피 카드 (Free + threshold 통과 시 우측 배치) */}
+      {stats && Object.keys(stats.by_provider).length > 0 && (() => {
+        const showA = !isPlus && lossAversion && lossAversion.missedSignupCount >= 10 && lossAversion.dataDays >= 7;
+        const showB = !isPlus && lossAversion && lossAversion.firstPurchaseGap.length >= 3;
+        const hasLossCards = showA || showB;
+        const entries = Object.entries(stats.by_provider).filter(([, v]) => (v ?? 0) > 0);
+        const total = stats.total_signups || 1;
+        const radius = 60;
+        const circumference = 2 * Math.PI * radius;
+        let offsetAcc = 0;
+        return (
+          <div style={hasLossCards ? "display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" : "margin-bottom:16px"}>
+            {/* 좌측: 도넛 차트 */}
+            <div class="card" style="margin-bottom:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div>
+                  <h2 style="margin-bottom:2px">프로바이더별 가입 현황</h2>
+                  <p style="font-size:12px;color:#94a3b8;margin:0">누적 기준 요약</p>
+                </div>
+                <a href="/dashboard/stats" style="font-size:13px;white-space:nowrap">상세 →</a>
+              </div>
+              <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+                <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0">
+                  <circle cx="80" cy="80" r={radius} fill="none" stroke="#f1f5f9" stroke-width="22" />
+                  {entries.map(([provider, count]) => {
+                    const portion = (count ?? 0) / total;
+                    const dash = portion * circumference;
+                    const dashOffset = -offsetAcc;
+                    offsetAcc += dash;
+                    return (
+                      <circle
+                        cx="80" cy="80" r={radius}
+                        fill="none"
+                        stroke={providerColors[provider] || '#94a3b8'}
+                        stroke-width="22"
+                        stroke-dasharray={`${dash} ${circumference - dash}`}
+                        stroke-dashoffset={dashOffset}
+                        transform="rotate(-90 80 80)"
+                      />
+                    );
+                  })}
+                  <text x="80" y="76" text-anchor="middle" font-size="22" font-weight="700" fill="#1e293b">{stats.total_signups.toLocaleString()}</text>
+                  <text x="80" y="96" text-anchor="middle" font-size="11" fill="#94a3b8">총 가입</text>
+                </svg>
+                <ul style="margin:0;padding:0;list-style:none;font-size:13px;flex:1;min-width:140px">
+                  {entries.map(([provider, count]) => {
+                    const pct = Math.round(((count ?? 0) / total) * 100);
+                    return (
+                      <li style="display:flex;align-items:center;gap:8px;padding:4px 0">
+                        <span style={`width:10px;height:10px;border-radius:2px;background:${providerColors[provider] || '#94a3b8'};display:inline-block;flex-shrink:0`}></span>
+                        <span style="color:#475569;flex:1">{providerDisplayNames[provider] || provider}</span>
+                        <span style="color:#1e293b;font-weight:600">{(count ?? 0).toLocaleString()}</span>
+                        <span style="color:#94a3b8;font-size:11px;width:36px;text-align:right">{pct}%</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </div>
-            <a href="/dashboard/stats" style="font-size:13px;white-space:nowrap">상세 통계 →</a>
+            {/* 우측: 손실 회피 카드 — 카드 A 위, 카드 B 아래 */}
+            {hasLossCards && (
+              <div style="display:flex;flex-direction:column;gap:12px">
+                {showA && (
+                  <a
+                    href="/dashboard/billing"
+                    style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer;flex:1"
+                    class="loss-card"
+                  >
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
+                      <span style="font-size:11px;color:#94a3b8">최근 7일</span>
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:4px">
+                      Plus로 가입 가능 회원 : {lossAversion!.missedSignupCount}명
+                    </div>
+                    <div style="font-size:12px;color:#64748b;line-height:1.5">
+                      로그인 페이지 진입했지만 가입까지 안 간 비회원
+                    </div>
+                  </a>
+                )}
+                {showB && (
+                  <a
+                    href="/dashboard/billing"
+                    style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer;flex:1"
+                    class="loss-card"
+                  >
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
+                      <span style="font-size:11px;color:#94a3b8">가입 7일 이상 경과</span>
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:4px">
+                      Plus로 첫구매 가능 회원 : {lossAversion!.firstPurchaseGap.length}명
+                    </div>
+                    <div style="font-size:12px;color:#64748b;line-height:1.5">
+                      {lossAversion!.firstPurchaseGap.join(', ')}
+                    </div>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
-          {Object.entries(stats.by_provider).map(([provider, count]) => (
-            <ProgressBar
-              label={providerDisplayNames[provider] || provider}
-              value={count}
-              max={stats.total_signups}
-              color={providerColors[provider]}
-            />
-          ))}
-        </div>
-      )}
+        );
+      })()}
 
       {/* 트리거 클릭 분포 요약 (7일) */}
       {funnelSummary && (() => {
@@ -195,61 +278,17 @@ export const HomePage: FC<{
         </div>
       </div>
 
-      {/* 손실 회피 카드 — Free 플랜 + threshold 통과 시만 노출 */}
-      {!isPlus && lossAversion && (() => {
-        const showA = lossAversion.missedSignupCount >= 10 && lossAversion.dataDays >= 7;
-        const showB = lossAversion.firstPurchaseGap.length >= 3;
-        if (!showA && !showB) return null;
-        return (
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px">
-            {showA && (
-              <a
-                href="/dashboard/billing"
-                style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer"
-                class="loss-card"
-              >
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
-                  <span style="font-size:11px;color:#94a3b8">최근 7일</span>
-                </div>
-                <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
-                  Plus로 가입 가능 회원 : {lossAversion.missedSignupCount}명
-                </div>
-                <div style="font-size:12px;color:#64748b;line-height:1.5">
-                  로그인 페이지 진입했지만 가입까지 안 간 비회원
-                </div>
-              </a>
-            )}
-            {showB && (
-              <a
-                href="/dashboard/billing"
-                style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer"
-                class="loss-card"
-              >
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
-                  <span style="font-size:11px;color:#94a3b8">가입 7일 이상 경과</span>
-                </div>
-                <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
-                  Plus로 첫구매 가능 회원 : {lossAversion.firstPurchaseGap.length}명
-                </div>
-                <div style="font-size:12px;color:#64748b;line-height:1.5">
-                  {lossAversion.firstPurchaseGap.join(', ')}
-                </div>
-              </a>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* AI 브리핑 카드 — 최신 브리핑이 있을 때만 노출. 헤드라인 + 지난주 성과 미리보기 */}
+      {/* AI 브리핑 카드 — 최신 브리핑이 있을 때만 노출. 헤드라인 + 지난주 성과 미리보기 + 생성일자 */}
       {latestBriefing && (() => {
         const headline = latestBriefing.headline?.trim();
-        // 지난주 성과 텍스트 — 처음 2~3줄 또는 ~140자까지 노출 (흥미 유발 + Plus 결제 동기)
         const performanceRaw = latestBriefing.performance?.trim() ?? '';
         const performanceLines = performanceRaw.split('\n').filter(l => l.trim()).slice(0, 3);
         const performancePreview = performanceLines.join('\n');
         const truncated = performancePreview.length < performanceRaw.length;
+        // 생성일자 KST 변환 — "YYYY.MM.DD" 형식
+        const d = new Date(latestBriefing.created_at);
+        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+        const createdAtStr = `${kst.getUTCFullYear()}.${String(kst.getUTCMonth() + 1).padStart(2, '0')}.${String(kst.getUTCDate()).padStart(2, '0')}`;
         return (
           <a
             href="/dashboard/ai-briefing"
@@ -263,14 +302,17 @@ export const HomePage: FC<{
               </div>
               <span style="font-size:13px;color:#6366f1;font-weight:600;white-space:nowrap;flex-shrink:0">자세히 보기 →</span>
             </div>
-            <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 8px;line-height:1.5">
-              {headline || '이번 주 AI 인사이트가 준비됐습니다.'}
-            </p>
+            {headline && (
+              <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 8px;line-height:1.5">
+                {headline}
+              </p>
+            )}
             {performancePreview && (
-              <p style="font-size:13px;color:#475569;margin:0;line-height:1.6;white-space:pre-line">
+              <p style="font-size:13px;color:#475569;margin:0 0 12px;line-height:1.6;white-space:pre-line">
                 {performancePreview}{truncated ? '...' : ''}
               </p>
             )}
+            <div style="font-size:11px;color:#94a3b8;margin-top:auto">{createdAtStr} (KST) 생성</div>
           </a>
         );
       })()}
