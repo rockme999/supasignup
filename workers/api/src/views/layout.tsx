@@ -146,7 +146,7 @@ const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/exit-intent', label: 'Exit-intent 쿠폰', icon: <IconBell />, plus: true },
   { path: '/dashboard/settings/live-counter', label: '라이브 카운터', icon: <IconTrending />, plus: true },
   { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
-  { path: '/dashboard/ai-briefing', label: 'AI 브리핑', icon: <IconSparkle /> },
+  { path: '/dashboard/ai-briefing', label: 'AI 브리핑', icon: <IconSparkle />, plus: true },
 ];
 
 const etcNavItems: NavItem[] = [

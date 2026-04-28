@@ -21,6 +21,7 @@ type HomeShop = {
 
 export type HomeBriefing = {
   headline: string | null;
+  performance: string | null;
   created_at: string;
 };
 
@@ -241,26 +242,33 @@ export const HomePage: FC<{
         );
       })()}
 
-      {/* AI 브리핑 카드 — 최신 브리핑이 있을 때만 노출 */}
+      {/* AI 브리핑 카드 — 최신 브리핑이 있을 때만 노출. 헤드라인 + 지난주 성과 미리보기 */}
       {latestBriefing && (() => {
         const headline = latestBriefing.headline?.trim();
+        // 지난주 성과 텍스트 — 처음 2~3줄 또는 ~140자까지 노출 (흥미 유발 + Plus 결제 동기)
+        const performanceRaw = latestBriefing.performance?.trim() ?? '';
+        const performanceLines = performanceRaw.split('\n').filter(l => l.trim()).slice(0, 3);
+        const performancePreview = performanceLines.join('\n');
+        const truncated = performancePreview.length < performanceRaw.length;
         return (
           <a
             href="/dashboard/ai-briefing"
-            style="display:block;text-decoration:none;padding:18px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;margin-bottom:16px;box-shadow:0 1px 4px rgba(99,102,241,0.06);transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s"
+            style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;margin-bottom:16px;box-shadow:0 1px 4px rgba(99,102,241,0.06);transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s"
             class="ai-briefing-card"
           >
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-              <div style="min-width:0">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">✨ AI 브리핑</span>
-                </div>
-                <p style="font-size:14px;font-weight:500;color:#1e293b;margin:0;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                  {headline || '이번 주 AI 인사이트가 준비됐습니다.'}
-                </p>
-              </div>
-              <span style="font-size:13px;color:#6366f1;font-weight:600;flex-shrink:0;white-space:nowrap">자세히 보기 →</span>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+              <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">✨ AI 브리핑</span>
+              <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#a16207;background:#fef9c3;border-radius:4px;padding:2px 6px">PLUS</span>
             </div>
+            <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 8px;line-height:1.5">
+              {headline || '이번 주 AI 인사이트가 준비됐습니다.'}
+            </p>
+            {performancePreview && (
+              <p style="font-size:13px;color:#475569;margin:0 0 10px;line-height:1.6;white-space:pre-line">
+                {performancePreview}{truncated ? '...' : ''}
+              </p>
+            )}
+            <span style="font-size:13px;color:#6366f1;font-weight:600">자세히 보기 →</span>
           </a>
         );
       })()}

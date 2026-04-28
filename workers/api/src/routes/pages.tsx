@@ -329,10 +329,10 @@ pages.get('/dashboard', async (c) => {
     ? getLossAversionCards(c.env, shop.shop_id)
     : Promise.resolve<LossAversionCards>({ missedSignupCount: 0, dataDays: 0, firstPurchaseGap: [] });
 
-  // 최신 AI 브리핑 (홈 카드용) — 모든 운영자 대상
+  // 최신 AI 브리핑 (홈 카드용) — 모든 운영자 대상. performance도 함께 조회해 카드 미리보기 노출
   const latestBriefingPromise = c.env.DB.prepare(
-    `SELECT headline, created_at FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
-  ).bind(shop.shop_id).first<{ headline: string | null; created_at: string }>();
+    `SELECT headline, performance, created_at FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(shop.shop_id).first<{ headline: string | null; performance: string | null; created_at: string }>();
 
   // 6 independent queries → single batch call
   const homeResults = await c.env.DB.batch([
@@ -412,7 +412,7 @@ pages.get('/dashboard', async (c) => {
 
   // latestBriefing: row 존재 → HomeBriefing, row 없으면 null (placeholder 표시)
   const latestBriefing = latestBriefingRow
-    ? { headline: latestBriefingRow.headline, created_at: latestBriefingRow.created_at }
+    ? { headline: latestBriefingRow.headline, performance: latestBriefingRow.performance, created_at: latestBriefingRow.created_at }
     : null;
 
   return c.html(
