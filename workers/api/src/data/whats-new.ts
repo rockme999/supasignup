@@ -14,6 +14,22 @@
  */
 export const LATEST_PLUS_PRESET_ADDED = '2026-04-27T00:00:00Z';
 
+/**
+ * AI 브리핑 What's New 인디케이터 기준.
+ * DB의 최신 ai_briefings.created_at과 비교하므로 정적 상수가 아닌 런타임 조회가 필요함.
+ * 이 함수는 운영자별 최신 브리핑 created_at을 DB에서 조회해 반환한다.
+ */
+export async function getLatestBriefingCreatedAt(
+  db: D1Database,
+  shopId: string,
+): Promise<string | null> {
+  const row = await db
+    .prepare('SELECT created_at FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1')
+    .bind(shopId)
+    .first<{ created_at: string }>();
+  return row?.created_at ?? null;
+}
+
 /** KV 키 접두사 */
 const SEEN_PREFIX = 'seen:';
 

@@ -19,13 +19,19 @@ type HomeShop = {
   coupon_enabled: boolean;
 };
 
+export type HomeBriefing = {
+  headline: string | null;
+  created_at: string;
+};
+
 export const HomePage: FC<{
   shop: HomeShop | null;
   stats: HomeStats | null;
   funnelSummary?: Record<string, number>;
   lossAversion?: LossAversionCards;
+  latestBriefing?: HomeBriefing | null;
   isCafe24?: boolean;
-}> = ({ shop, stats, funnelSummary, lossAversion, isCafe24 }) => {
+}> = ({ shop, stats, funnelSummary, lossAversion, latestBriefing, isCafe24 }) => {
   // 앱 미설치 상태
   if (!shop) {
     return (
@@ -234,6 +240,38 @@ export const HomePage: FC<{
           </div>
         );
       })()}
+
+      {/* AI 브리핑 카드 — 최신 브리핑이 있을 때만 노출 */}
+      {latestBriefing && (() => {
+        const headline = latestBriefing.headline?.trim();
+        return (
+          <a
+            href="/dashboard/ai-briefing"
+            style="display:block;text-decoration:none;padding:18px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;margin-bottom:16px;box-shadow:0 1px 4px rgba(99,102,241,0.06);transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s"
+            class="ai-briefing-card"
+          >
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="min-width:0">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">✨ AI 브리핑</span>
+                </div>
+                <p style="font-size:14px;font-weight:500;color:#1e293b;margin:0;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  {headline || '이번 주 AI 인사이트가 준비됐습니다.'}
+                </p>
+              </div>
+              <span style="font-size:13px;color:#6366f1;font-weight:600;flex-shrink:0;white-space:nowrap">자세히 보기 →</span>
+            </div>
+          </a>
+        );
+      })()}
+
+      {/* AI 브리핑 카드 — 데이터 없음 placeholder (가입 데이터 부족) */}
+      {latestBriefing === null && (
+        <div style="padding:14px 20px;background:#fafafa;border:1px dashed #cbd5e1;border-radius:10px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;font-weight:700;color:#94a3b8;background:#f1f5f9;border-radius:4px;padding:2px 6px;flex-shrink:0">✨ AI 브리핑</span>
+          <p style="font-size:13px;color:#94a3b8;margin:0">데이터 수집 중 — 가입이 누적되면 인사이트를 보여드릴게요</p>
+        </div>
+      )}
 
       {/* 최신 업데이트 */}
       {(() => {

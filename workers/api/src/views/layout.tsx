@@ -145,6 +145,7 @@ const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
   { path: '/dashboard/settings/exit-intent', label: 'Exit-intent 쿠폰', icon: <IconBell />, plus: true },
   { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
+  { path: '/dashboard/ai-briefing', label: 'AI 브리핑', icon: <IconSparkle /> },
   { path: '/dashboard/ai-reports', label: 'AI 보고서', icon: <IconSparkle />, plus: true },
 ];
 
@@ -460,6 +461,9 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
 
         /* ── Loss aversion cards (W2-3) ─────────── */
         .loss-card:hover { border-color:#818cf8 !important; box-shadow:0 4px 12px rgba(99,102,241,0.13) !important; }
+
+        /* ── AI 브리핑 카드 (W3-1) ──────────────── */
+        .ai-briefing-card:hover { border-color:#818cf8 !important; box-shadow:0 4px 12px rgba(99,102,241,0.12) !important; transform:translateY(-1px); text-decoration:none !important; }
 
         /* ── Widget customization ────────────────── */
         .preset-card { border:2px solid #e5e7eb; border-radius:8px; padding:12px 8px; text-align:center; cursor:pointer; background:#fff; transition:all 0.2s; font-size:12px; }

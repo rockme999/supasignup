@@ -501,7 +501,7 @@ ${prevBriefingText}
   - popupCta: 팝업 CTA 버튼 텍스트 (20자 이내)
 
 반드시 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
-{"performance":"지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)","strategy":"이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)","actions":["실행 가능한 액션 1","실행 가능한 액션 2","실행 가능한 액션 3"],"insight":"AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
+{"performance":"지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)","strategy":"이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)","actions":["실행 가능한 액션 1","실행 가능한 액션 2","실행 가능한 액션 3"],"insight":"AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)","headline":"홈 카드 한 줄 요약 (예: '신규 가입 47명 (+12%) · 이번 주 전략 3가지 도착', 40자 이내)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
 
   let rawBriefing = '';
   try {
@@ -515,7 +515,7 @@ ${prevBriefingText}
   }
 
   // AI 응답에서 JSON 추출 및 구조화
-  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string; copy?: AiCopy } | null = null;
+  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string; headline?: string; copy?: AiCopy } | null = null;
   try {
     const jsonMatch = rawBriefing.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -531,14 +531,15 @@ ${prevBriefingText}
       strategy: '',
       actions: [],
       insight: '',
+      headline: null as unknown as undefined,
     };
   }
 
   // DB에 브리핑 저장
   const briefingId = crypto.randomUUID();
   await c.env.DB.prepare(
-    `INSERT INTO ai_briefings (id, shop_id, performance, strategy, actions, insight, stats_json, source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'manual')`
+    `INSERT INTO ai_briefings (id, shop_id, performance, strategy, actions, insight, stats_json, source, headline)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?)`
   ).bind(
     briefingId,
     body.shop_id,
@@ -547,6 +548,7 @@ ${prevBriefingText}
     JSON.stringify(parsed.actions),
     parsed.insight ?? null,
     JSON.stringify(stats),
+    parsed.headline ?? null,
   ).run();
 
   // AI 추천 문구 저장 + 자동 적용 처리

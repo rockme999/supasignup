@@ -42,6 +42,7 @@
 --                향후 동일 사고 방지를 위해 deploy.sh에 마이그레이션 추적 자동 검증 로직 추가 예정.
 --   2026-04-27: shops.exit_intent_config 추가 (0028) — Exit-intent 쿠폰 게이트 설정 JSON
 --                { enabled, frequency_cap_hours, scroll_depth_threshold, coupon_type, headline, body }
+--   2026-04-27: ai_briefings.headline 추가 (0029) — 대시보드 홈 카드용 한 줄 요약 (AI 생성)
 
 -- ============================================================
 -- 1. owners — 운영자 계정
@@ -259,6 +260,7 @@ CREATE TABLE IF NOT EXISTS ai_briefings (
   insight     TEXT,
   stats_json  TEXT,
   source      TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'scheduled')),
+  headline    TEXT,                                    -- 홈 카드 한 줄 요약 (AI 생성)
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

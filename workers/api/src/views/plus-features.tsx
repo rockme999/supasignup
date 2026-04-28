@@ -2591,4 +2591,248 @@ export const ExitIntentSettingsPage: FC<{
   );
 };
 
+// ─── AI 브리핑 상세 페이지 (/dashboard/ai-briefing) ──────────────
+
+export type AiBriefingRow = {
+  id: string;
+  performance: string;
+  strategy: string;
+  actions: string;
+  insight?: string | null;
+  headline?: string | null;
+  source: string;
+  created_at: string;
+};
+
+export const AiBriefingPage: FC<{
+  shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
+  briefings: AiBriefingRow[];
+  isCafe24?: boolean;
+  newBadges?: Partial<Record<string, boolean>>;
+}> = ({ shop, briefings, isCafe24, newBadges }) => {
+  const isPlus = shop.plan !== 'free';
+  const latest = briefings[0] ?? null;
+  const history = briefings.slice(1);
+
+  // 이번 주 날짜 범위 (KST 기준 월요일~일요일)
+  const now = new Date();
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const dow = kstNow.getUTCDay();
+  const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(kstNow.getTime() - daysSinceMonday * 86400000);
+  const sunday = new Date(monday.getTime() + 6 * 86400000);
+  const fmt = (d: Date) => `${d.getUTCFullYear()}년 ${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
+  const weekRange = `${fmt(monday)} ~ ${fmt(sunday)}`;
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth() + 1).padStart(2, '0')}.${String(kst.getUTCDate()).padStart(2, '0')} (KST)`;
+  };
+
+  return (
+    <Layout title="AI 브리핑" loggedIn currentPath="/dashboard/ai-briefing" isCafe24={isCafe24} newBadges={newBadges}>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+        <h1 style="margin-bottom:0">✨ AI 브리핑</h1>
+        {!isPlus && (
+          <a href="/dashboard/billing" class="btn btn-sm btn-outline" style="font-size:12px;white-space:nowrap">Plus로 더 풍부한 브리핑 보기</a>
+        )}
+      </div>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">
+        {weekRange} 기준
+      </p>
+
+      {/* 브리핑 없음 */}
+      {!latest && (
+        <div class="card" style="text-align:center;padding:48px 24px">
+          <div style="font-size:40px;margin-bottom:16px">📊</div>
+          <h2 style="margin-bottom:8px">아직 브리핑이 없습니다</h2>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px">
+            매주 <strong>월요일 오전 9시(KST)</strong>에 자동으로 생성됩니다.
+          </p>
+          <p style="font-size:13px;color:#94a3b8">
+            가입 데이터가 누적될수록 더 정확한 인사이트를 제공합니다.
+          </p>
+          {isPlus && (
+            <button
+              id="generateBriefingBtn"
+              class="btn btn-primary"
+              style="margin-top:20px;width:auto"
+              data-shop-id={shop.shop_id}
+            >
+              지금 브리핑 생성하기
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 최신 브리핑 상세 */}
+      {latest && (() => {
+        let actions: string[] = [];
+        try { actions = JSON.parse(latest.actions); } catch { /* ignore */ }
+
+        return (
+          <div>
+            {/* 헤더 카드 */}
+            <div style="background:linear-gradient(135deg,#eff6ff 0%,#f5f3ff 100%);border:1px solid #c7d2fe;border-radius:12px;padding:20px 24px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6366f1;margin-bottom:6px">이번 주 AI 브리핑</div>
+                <div style="font-size:16px;font-weight:600;color:#1e293b;line-height:1.5">
+                  {latest.headline ?? '지난주 성과 분석 및 이번 주 전략이 준비됐습니다.'}
+                </div>
+                <div style="font-size:12px;color:#94a3b8;margin-top:6px">{formatDate(latest.created_at)} 생성</div>
+              </div>
+              {isPlus && (
+                <button
+                  id="generateBriefingBtn"
+                  class="btn btn-sm btn-outline"
+                  style="white-space:nowrap;flex-shrink:0"
+                  data-shop-id={shop.shop_id}
+                >
+                  새 브리핑 생성
+                </button>
+              )}
+            </div>
+
+            {/* 지난주 성과 */}
+            <div class="card" style="margin-bottom:16px">
+              <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                <span style="font-size:18px">📊</span> 지난주 성과
+              </h2>
+              <div style="font-size:14px;color:#374151;line-height:1.75;white-space:pre-wrap">{latest.performance}</div>
+            </div>
+
+            {/* 이번 주 전략 */}
+            {latest.strategy && (
+              <div class="card" style="margin-bottom:16px">
+                <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:18px">💡</span> 이번 주 전략
+                </h2>
+                <div style="font-size:14px;color:#374151;line-height:1.75;white-space:pre-wrap">{latest.strategy}</div>
+              </div>
+            )}
+
+            {/* 추천 액션 */}
+            {actions.length > 0 && (
+              <div class="card" style="margin-bottom:16px">
+                <h2 style="font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:18px">✅</span> 추천 액션
+                </h2>
+                <ul style="margin:0;padding-left:0;list-style:none;display:grid;gap:8px">
+                  {actions.map((action, i) => (
+                    <li style="display:flex;gap:10px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:14px;color:#374151;line-height:1.5">
+                      <span style="font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;padding-top:1px">{i + 1}.</span>
+                      {action}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* AI 참고 의견 */}
+            {latest.insight && (
+              <div class="card" style="margin-bottom:16px;border-left:3px solid #a5b4fc;background:#fafafa">
+                <h2 style="font-size:14px;color:#6366f1;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                  <span style="font-size:16px">💡</span> AI 참고 의견
+                  <span style="font-size:11px;font-weight:400;color:#94a3b8">(번개가입 범위 외 시장 인사이트)</span>
+                </h2>
+                <div style="font-size:13px;color:#64748b;line-height:1.7;white-space:pre-wrap">{latest.insight}</div>
+              </div>
+            )}
+
+            {/* 새 브리핑 생성 결과 영역 (동적) */}
+            <div id="briefingLoading" style="display:none;text-align:center;padding:32px;color:#64748b;font-size:14px">
+              AI가 분석 중입니다. 잠시 기다려주세요...
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 과거 브리핑 이력 */}
+      {history.length > 0 && (
+        <div style="margin-top:32px">
+          <h2 style="font-size:15px;color:#64748b;font-weight:600;margin-bottom:12px">이전 브리핑 이력</h2>
+          <div style="display:grid;gap:10px">
+            {history.map((b) => {
+              let acts: string[] = [];
+              try { acts = JSON.parse(b.actions); } catch { /* ignore */ }
+              return (
+                <details class="card" style="margin-bottom:0;padding:16px 20px">
+                  <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;list-style:none;user-select:none">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                      <span style="font-size:13px;font-weight:600;color:#374151">{formatDate(b.created_at)}</span>
+                      <span class={`badge ${b.source === 'scheduled' ? 'badge-blue' : 'badge-gray'}`} style="font-size:10px">
+                        {b.source === 'scheduled' ? '자동' : '수동'}
+                      </span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      {b.headline && (
+                        <span style="font-size:12px;color:#94a3b8;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{b.headline}</span>
+                      )}
+                      <span style="font-size:12px;color:#94a3b8">▼</span>
+                    </div>
+                  </summary>
+                  <div style="margin-top:14px;border-top:1px solid #f1f5f9;padding-top:14px">
+                    <div style="font-size:13px;color:#374151;margin-bottom:8px;line-height:1.65">
+                      <strong style="color:#1e293b">성과: </strong>{b.performance}
+                    </div>
+                    {b.strategy && (
+                      <div style="font-size:13px;color:#374151;margin-bottom:8px;line-height:1.65">
+                        <strong style="color:#1e293b">전략: </strong>{b.strategy}
+                      </div>
+                    )}
+                    {acts.length > 0 && (
+                      <div style="font-size:13px;color:#374151;line-height:1.65">
+                        <strong style="color:#1e293b">액션: </strong>{acts.join(' / ')}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 브리핑 생성 JS (Plus만) */}
+      {isPlus && (
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var btn = document.getElementById('generateBriefingBtn');
+            if (!btn) return;
+            btn.addEventListener('click', async function() {
+              var shopId = btn.getAttribute('data-shop-id');
+              btn.disabled = true;
+              btn.textContent = '생성 중...';
+              var loadingEl = document.getElementById('briefingLoading');
+              if (loadingEl) loadingEl.style.display = 'block';
+              try {
+                var resp = await fetch('/api/ai/briefing', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  body: JSON.stringify({ shop_id: shopId }),
+                });
+                if (resp.ok) {
+                  window.location.reload();
+                } else {
+                  var err = await resp.json();
+                  showToast('error', err.message || '브리핑 생성에 실패했습니다.');
+                }
+              } catch (e) {
+                showToast('error', '네트워크 오류가 발생했습니다.');
+              } finally {
+                btn.disabled = false;
+                btn.textContent = btn.getAttribute('data-original-text') || '새 브리핑 생성';
+                if (loadingEl) loadingEl.style.display = 'none';
+              }
+            });
+            btn.setAttribute('data-original-text', btn.textContent);
+          })();
+        `}} />
+      )}
+    </Layout>
+  );
+};
+
 // ─── Guide Page ──────────────────────────────────────────────

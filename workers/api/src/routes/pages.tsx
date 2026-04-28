@@ -14,7 +14,7 @@ import { renderMarkdown } from '../utils/markdown';
 import { maskName } from '../utils/mask';
 import { CHANGELOG_PUBLIC, CHANGELOG_INTERNAL } from '../data/changelog';
 import { BUILD_VERSION, BUILD_COMMIT_SHA, BUILD_TIME } from '../data/build-info';
-import { LATEST_PLUS_PRESET_ADDED, getSeenAt, markSeen, isNew } from '../data/whats-new';
+import { LATEST_PLUS_PRESET_ADDED, getSeenAt, markSeen, isNew, getLatestBriefingCreatedAt } from '../data/whats-new';
 import { Layout } from '../views/layout';
 import {
   LoginPage,
@@ -32,6 +32,7 @@ import {
   KakaoSettingsPage,
   AiSettingsPage,
   AiReportsPage,
+  AiBriefingPage,
   ExitIntentSettingsPage,
   QuickStartPage,
   GuidePage,
@@ -327,6 +328,11 @@ pages.get('/dashboard', async (c) => {
     ? getLossAversionCards(c.env, shop.shop_id)
     : Promise.resolve<LossAversionCards>({ missedSignupCount: 0, dataDays: 0, firstPurchaseGap: [] });
 
+  // 최신 AI 브리핑 (홈 카드용) — 모든 운영자 대상
+  const latestBriefingPromise = c.env.DB.prepare(
+    `SELECT headline, created_at FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(shop.shop_id).first<{ headline: string | null; created_at: string }>();
+
   // 6 independent queries → single batch call
   const homeResults = await c.env.DB.batch([
     // [0] Total signups / logins
@@ -397,8 +403,16 @@ pages.get('/dashboard', async (c) => {
     funnelCounts[row.event_type] = row.cnt;
   }
 
-  // 손실 회피 카드 데이터 수집 (batch와 병렬 실행 중)
-  const lossAversion = await lossAversionPromise;
+  // 손실 회피 카드 + 최신 브리핑 데이터 수집 (batch와 병렬 실행 중)
+  const [lossAversion, latestBriefingRow] = await Promise.all([
+    lossAversionPromise,
+    latestBriefingPromise,
+  ]);
+
+  // latestBriefing: row 존재 → HomeBriefing, row 없으면 null (placeholder 표시)
+  const latestBriefing = latestBriefingRow
+    ? { headline: latestBriefingRow.headline, created_at: latestBriefingRow.created_at }
+    : null;
 
   return c.html(
     <HomePage
@@ -420,6 +434,7 @@ pages.get('/dashboard', async (c) => {
       }}
       funnelSummary={funnelCounts}
       lossAversion={lossAversion}
+      latestBriefing={latestBriefing}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -1148,6 +1163,54 @@ pages.get('/dashboard/ai-reports', async (c) => {
 
   return c.html(
     <AiReportsPage shop={shop} isCafe24={c.get('isCafe24')} briefings={(briefings.results ?? []).map(r => ({ ...r, insight: r.insight ?? undefined }))} />
+  );
+});
+
+// ─── AI Briefing Page ────────────────────────────────────────
+
+pages.get('/dashboard/ai-briefing', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+
+  // 최신 브리핑 12건 조회
+  const briefings = await c.env.DB.prepare(
+    `SELECT id, performance, strategy, actions, insight, headline, source, created_at
+     FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 12`
+  ).bind(shop.shop_id).all<{
+    id: string; performance: string; strategy: string; actions: string;
+    insight: string | null; headline: string | null; source: string; created_at: string;
+  }>();
+
+  // What's New 배지 + ai-briefing seen 갱신
+  let newBadges: Partial<Record<string, boolean>> = {};
+  try {
+    const latestBriefingCreatedAt = await getLatestBriefingCreatedAt(c.env.DB, shop.shop_id);
+    const [seenPresets, seenChangelog, seenBriefing] = await Promise.all([
+      getSeenAt(c.env.KV, ownerId, 'design-presets'),
+      getSeenAt(c.env.KV, ownerId, 'changelog'),
+      getSeenAt(c.env.KV, ownerId, 'ai-briefing'),
+    ]);
+    newBadges = {
+      '/dashboard/settings/providers': isNew(seenPresets, LATEST_PLUS_PRESET_ADDED),
+      '/dashboard/changelog': isNew(seenChangelog, BUILD_TIME),
+      '/dashboard/ai-briefing': latestBriefingCreatedAt ? isNew(seenBriefing, latestBriefingCreatedAt) : false,
+    };
+    // 페이지 방문 → ai-briefing seen 갱신
+    c.executionCtx.waitUntil(
+      markSeen(c.env.KV, ownerId, 'ai-briefing').catch(() => {}),
+    );
+  } catch {
+    // KV 실패 시 배지 생략
+  }
+
+  return c.html(
+    <AiBriefingPage
+      shop={shop}
+      briefings={(briefings.results ?? []).map(r => ({ ...r, insight: r.insight ?? null, headline: r.headline ?? null }))}
+      isCafe24={c.get('isCafe24')}
+      newBadges={newBadges}
+    />
   );
 });
 

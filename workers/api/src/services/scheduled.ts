@@ -76,10 +76,10 @@ async function handleWeeklyBriefings(env: Env): Promise<void> {
   // UTC 기준 월요일(1) 0시대에만 실행
   if (now.getUTCDay() !== 1 || now.getUTCHours() !== 0) return;
 
-  // Plus 플랜 shop만 대상 (shop_identity가 있어야 의미 있는 브리핑 가능)
+  // 모든 플랜 shop 대상 (Free도 인사이트 노출 — Plus는 더 풍부한 브리핑)
   const shops = await env.DB.prepare(
     `SELECT shop_id, shop_name FROM shops
-     WHERE plan != 'free' AND deleted_at IS NULL AND shop_identity IS NOT NULL`
+     WHERE deleted_at IS NULL`
   ).all<{ shop_id: string; shop_name: string }>();
 
   const targets = shops.results ?? [];
@@ -115,8 +115,8 @@ export async function generateBriefingForShop(env: Env, shopId: string): Promise
     client_id: string;
   }>();
 
-  if (!shop || !shop.shop_identity) {
-    console.log(`[Queue] Skipping ${shopId}: shop not found or no identity`);
+  if (!shop) {
+    console.log(`[Queue] Skipping ${shopId}: shop not found`);
     return;
   }
 
@@ -197,14 +197,14 @@ export async function generateBriefingForShop(env: Env, shopId: string): Promise
   - popupBody: 이탈 감지 팝업 본문 (100자 이내, 혜택과 긴급성 강조)
   - popupCta: 팝업 CTA 버튼 텍스트 (20자 이내)
 
-JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actions":["액션1","액션2","액션3"],"insight":"앱 범위 밖 참고사항","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
+JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actions":["액션1","액션2","액션3"],"insight":"앱 범위 밖 참고사항","headline":"홈 카드 한 줄 요약 (예: '신규 가입 47명 (+12%) · 이번 주 전략 3가지 도착', 40자 이내)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
 
   const raw = await callAI(env, [
     { role: 'system', content: 'You are a Korean e-commerce marketing advisor. Always respond with valid JSON only, no markdown, no explanation.' },
     { role: 'user', content: prompt },
   ]);
 
-  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string; copy?: AiCopy } | null = null;
+  let parsed: { performance: string; strategy: string; actions: string[]; insight?: string; headline?: string; copy?: AiCopy } | null = null;
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
@@ -216,8 +216,8 @@ JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actio
 
   const briefingId = crypto.randomUUID();
   await env.DB.prepare(
-    `INSERT INTO ai_briefings (id, shop_id, performance, strategy, actions, insight, stats_json, source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')`
+    `INSERT INTO ai_briefings (id, shop_id, performance, strategy, actions, insight, stats_json, source, headline)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', ?)`
   ).bind(
     briefingId,
     shop.shop_id,
@@ -226,6 +226,7 @@ JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actio
     JSON.stringify(parsed.actions),
     parsed.insight ?? null,
     JSON.stringify(stats),
+    parsed.headline ?? null,
   ).run();
 
   // AI 추천 문구 저장 + 자동 적용 처리
