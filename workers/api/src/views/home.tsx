@@ -263,6 +263,7 @@ export const HomePage: FC<{
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                 <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">✨ AI 브리핑</span>
                 <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
+                <span style="font-size:11px;color:#94a3b8">{createdAtStr} (KST) 생성</span>
               </div>
               <span style="font-size:13px;color:#6366f1;font-weight:600;white-space:nowrap;flex-shrink:0">자세히 보기 →</span>
             </div>
@@ -272,11 +273,10 @@ export const HomePage: FC<{
               </p>
             )}
             {performancePreview && (
-              <p style="font-size:13px;color:#475569;margin:0 0 12px;line-height:1.6;white-space:pre-line">
+              <p style="font-size:13px;color:#475569;margin:0;line-height:1.6;white-space:pre-line">
                 {performancePreview}{truncated ? '...' : ''}
               </p>
             )}
-            <div style="font-size:11px;color:#94a3b8;margin-top:auto">{createdAtStr} (KST) 생성</div>
           </a>
         );
       })()}
