@@ -1605,8 +1605,8 @@ type AdminAiReportRow = {
 export const AdminAiReportsPage: FC<{
   shops: AdminAiReportRow[];
 }> = ({ shops }) => (
-  <Layout title="AI 보고서" loggedIn isAdmin currentPath="/supadmin/ai-reports">
-    <h1>AI 보고서 현황</h1>
+  <Layout title="AI 브리핑" loggedIn isAdmin currentPath="/supadmin/ai-reports">
+    <h1>AI 브리핑 현황</h1>
     <p style="font-size:14px;color:#64748b;margin-bottom:24px">
       전체 쇼핑몰의 AI 주간 브리핑 최신 현황입니다. 정체성 미설정 쇼핑몰은 <strong>🔄 분석</strong> 버튼으로 수동 트리거할 수 있습니다.
     </p>
@@ -1733,14 +1733,14 @@ export const AdminAiReportDetailPage: FC<{
     try { identity = JSON.parse(shopIdentity); } catch { identity = null; }
   }
   return (
-  <Layout title={`${shopName} — AI 보고서`} loggedIn isAdmin currentPath="/supadmin/ai-reports">
+  <Layout title={`${shopName} — AI 브리핑`} loggedIn isAdmin currentPath="/supadmin/ai-reports">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
       <a href="/supadmin/ai-reports" style="color:#64748b;text-decoration:none;font-size:13px">&larr; 목록으로</a>
       <h1 style="margin-bottom:0">{shopName}</h1>
       <a href={`https://${mallId}.cafe24.com`} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-size:13px" title="쇼핑몰을 새 탭에서 열기">
         <code style="font-size:12px;background:#f1f5f9;padding:2px 6px;border-radius:4px">{mallId}</code> ↗
       </a>
-      <span style="font-size:13px;color:#94a3b8">AI 보고서 ({briefings.length}건)</span>
+      <span style="font-size:13px;color:#94a3b8">AI 브리핑 ({briefings.length}건)</span>
     </div>
 
     {/* 쇼핑몰 정체성 카드 — 보고서 위에 요약 표시 (클릭 시 아래 상세 카드로 이동) */}
@@ -1784,7 +1784,7 @@ export const AdminAiReportDetailPage: FC<{
 
     {briefings.length === 0 ? (
       <div class="card">
-        <div class="empty-state"><p>이 쇼핑몰의 AI 보고서가 없습니다.</p></div>
+        <div class="empty-state"><p>이 쇼핑몰의 AI 브리핑가 없습니다.</p></div>
       </div>
     ) : (
       briefings.map((b) => {

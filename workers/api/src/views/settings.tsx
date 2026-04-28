@@ -1645,7 +1645,7 @@ export const GeneralSettingsPage: FC<{
             </label>
             <label for="autoApplyAiCopy" style={`font-size:13px;color:#475569;${shop.plan === 'free' ? 'opacity:0.5;cursor:not-allowed' : 'cursor:pointer'}`}>AI 추천 문구 자동 적용</label>
             {shop.plan === 'free' && <span class="badge badge-gray" style="margin-left:4px">Plus 전용</span>}
-            <span style="font-size:11px;color:#94a3b8">AI 보고서 생성 시 미니배너·팝업·에스컬레이션 문구를 자동으로 업데이트합니다</span>
+            <span style="font-size:11px;color:#94a3b8">AI 브리핑 생성 시 미니배너·팝업·에스컬레이션 문구를 자동으로 업데이트합니다</span>
           </div>
         </div>
 

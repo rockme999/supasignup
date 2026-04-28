@@ -161,7 +161,7 @@ const adminNavItems = [
   { path: '/supadmin', label: '대시보드', icon: <IconGrid /> },
   { path: '/supadmin/shops', label: '쇼핑몰 관리', icon: <IconBuilding /> },
   { path: '/supadmin/subscriptions', label: '구독/결제', icon: <IconCurrencyDollar /> },
-  { path: '/supadmin/ai-reports', label: 'AI 보고서', icon: <IconSparkle /> },
+  { path: '/supadmin/ai-reports', label: 'AI 브리핑', icon: <IconSparkle /> },
   { path: '/supadmin/inquiries', label: '문의 관리', icon: <IconChat /> },
   { path: '/supadmin/monitoring', label: '시스템 모니터링', icon: <IconClipboard /> },
   { path: '/supadmin/changelog', label: '변경사항 (개발자용)', icon: <IconBook /> },

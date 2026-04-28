@@ -128,7 +128,7 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge badge-green" style="font-size:11px">Plus</span>
-          <span>AI 보고서를 받으려면 기본 설정에서 쇼핑몰 정체성 AI 분석을 먼저 실행하세요</span>
+          <span>AI 브리핑를 받으려면 기본 설정에서 쇼핑몰 정체성 AI 분석을 먼저 실행하세요</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge badge-green" style="font-size:11px">Plus</span>
@@ -465,7 +465,7 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 보고서</p>
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 브리핑</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">매주 월요일 자동으로 성과 분석 리포트를 생성합니다. 지난주 성과 요약, 이번 주 전략 제안, 실행 가능한 액션 3가지, AI 인사이트, 추천 마케팅 문구 7종이 포함됩니다.</p>
           </div>
           <a href="/dashboard/ai-briefing" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">보기 →</a>
@@ -473,20 +473,20 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 정체성 분석</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 URL과 상품 정보를 AI가 분석하여 업종, 타겟 고객, 톤앤매너, 핵심 키워드를 자동 파악합니다. AI 보고서와 추천 문구의 정확도를 높이는 기반입니다.</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 URL과 상품 정보를 AI가 분석하여 업종, 타겟 고객, 톤앤매너, 핵심 키워드를 자동 파악합니다. AI 브리핑와 추천 문구의 정확도를 높이는 기반입니다.</p>
           </div>
           <a href="/dashboard/settings/general" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 추천 마케팅 문구</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">AI 보고서 생성 시 쇼핑몰 정체성에 맞는 마케팅 문구 7종이 자동 생성됩니다: 미니배너, 팝업(제목/본문/CTA), 에스컬레이션(토스트/배너/버튼). 각 설정 페이지에서 'AI 추천' 영역에 표시되며 원클릭 적용 가능합니다.</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">AI 브리핑 생성 시 쇼핑몰 정체성에 맞는 마케팅 문구 7종이 자동 생성됩니다: 미니배너, 팝업(제목/본문/CTA), 에스컬레이션(토스트/배너/버튼). 각 설정 페이지에서 'AI 추천' 영역에 표시되며 원클릭 적용 가능합니다.</p>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 자동 적용</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">기본 설정에서 'AI 추천 문구 자동 적용' 토글을 켜면, AI 보고서 생성 시 추천 문구가 미니배너/팝업/에스컬레이션에 자동 반영됩니다. 매주 자동 보고서와 함께 문구도 자동 업데이트됩니다.</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">기본 설정에서 'AI 추천 문구 자동 적용' 토글을 켜면, AI 브리핑 생성 시 추천 문구가 미니배너/팝업/에스컬레이션에 자동 반영됩니다. 매주 자동 보고서와 함께 문구도 자동 업데이트됩니다.</p>
           </div>
           <a href="/dashboard/settings/general" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
         </div>
@@ -625,7 +625,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Plus</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">월 6,900원 / 연 79,000원</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">미니배너, 이탈감지 팝업, 에스컬레이션, AI 보고서, 쿠폰 3종 등</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">미니배너, 이탈감지 팝업, 에스컬레이션, AI 브리핑, 쿠폰 3종 등</td>
               </tr>
             </tbody>
           </table>
@@ -983,7 +983,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 정체성 분석이란 무엇인가요?</summary>
         <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
           쇼핑몰 URL의 HTML과 판매 상품 정보를 AI가 분석하여 <strong>업종</strong>(패션/뷰티/식품 등), <strong>타겟 고객</strong>(20-30대 여성 등), <strong>톤앤매너</strong>(친근하고 캐주얼 등), <strong>핵심 키워드</strong>를 자동으로 파악합니다.<br /><br />
-          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a> 페이지에서 실행하며, 일일 10회까지 가능합니다. 이 정보가 AI 보고서와 추천 문구의 정확도를 높이는 기반이 됩니다.
+          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a> 페이지에서 실행하며, 일일 10회까지 가능합니다. 이 정보가 AI 브리핑와 추천 문구의 정확도를 높이는 기반이 됩니다.
         </div>
       </details>
 
@@ -1002,7 +1002,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
       <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 추천 마케팅 문구란 무엇인가요?</summary>
         <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
-          AI 보고서 생성 시 쇼핑몰 정체성에 맞는 <strong>마케팅 문구 7종</strong>이 자동 생성됩니다:<br /><br />
+          AI 브리핑 생성 시 쇼핑몰 정체성에 맞는 <strong>마케팅 문구 7종</strong>이 자동 생성됩니다:<br /><br />
           - 미니배너 문구<br />
           - 에스컬레이션 토스트 메시지<br />
           - 에스컬레이션 플로팅 배너 문구 + 버튼 텍스트<br />
@@ -1014,7 +1014,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
       <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 추천 문구 자동 적용이란?</summary>
         <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
-          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a>에서 <strong>'AI 추천 문구 자동 적용'</strong> 토글을 켜면, AI 보고서가 생성될 때마다 추천 문구가 미니배너, 이탈 감지 팝업, 에스컬레이션 설정에 자동 반영됩니다.<br /><br />
+          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a>에서 <strong>'AI 추천 문구 자동 적용'</strong> 토글을 켜면, AI 브리핑가 생성될 때마다 추천 문구가 미니배너, 이탈 감지 팝업, 에스컬레이션 설정에 자동 반영됩니다.<br /><br />
           매주 월요일 자동 보고서와 함께 마케팅 문구도 자동 업데이트되므로, 항상 최신 트렌드에 맞는 문구가 유지됩니다.
         </div>
       </details>

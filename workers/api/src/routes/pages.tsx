@@ -1863,7 +1863,7 @@ pages.get('/supadmin/inquiries', async (c) => {
   );
 });
 
-// GET /admin/ai-reports — AI 보고서 현황
+// GET /admin/ai-reports — AI 브리핑 현황
 pages.get('/supadmin/ai-reports', async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT s.shop_id, s.shop_name, s.mall_id, s.plan, s.shop_identity,
@@ -1892,7 +1892,7 @@ pages.get('/supadmin/ai-reports', async (c) => {
   );
 });
 
-// GET /supadmin/ai-reports/:shopId — 쇼핑몰별 AI 보고서 상세
+// GET /supadmin/ai-reports/:shopId — 쇼핑몰별 AI 브리핑 상세
 pages.get('/supadmin/ai-reports/:shopId', async (c) => {
   const shopId = c.req.param('shopId');
 

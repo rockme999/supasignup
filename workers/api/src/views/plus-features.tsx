@@ -15,12 +15,12 @@ export const AiReportsPage: FC<{
   const isPlus = shop.plan !== 'free';
 
   return (
-    <Layout title="AI 보고서" loggedIn currentPath="/dashboard/ai-reports" isCafe24={isCafe24}>
-      <h1 style="margin-bottom:4px">AI 보고서</h1>
+    <Layout title="AI 브리핑" loggedIn currentPath="/dashboard/ai-reports" isCafe24={isCafe24}>
+      <h1 style="margin-bottom:4px">AI 브리핑</h1>
       <p style="font-size:14px;color:#64748b;margin-bottom:24px">지난 주 성과를 분석하고 이번 주 전략을 AI가 생성합니다.</p>
 
       {!isPlus ? (
-        <PlusLockOverlay feature="AI 보고서" />
+        <PlusLockOverlay feature="AI 브리핑" />
       ) : (
         <div>
           {(!briefings || briefings.length === 0) ? (
@@ -253,7 +253,7 @@ const plusFeatureInfo: Record<string, { desc: string; highlights: string[]; prev
       </div>
     </div>`,
   },
-  'AI 보고서': {
+  'AI 브리핑': {
     desc: '매주 월요일 AI가 자동으로 성과 분석 리포트를 생성합니다.',
     highlights: ['지난주 성과 요약', '이번 주 전략 제안', '실행 가능한 액션 3가지', '추천 마케팅 문구 7종 자동 생성'],
     preview: `<div style="display:grid;gap:8px">

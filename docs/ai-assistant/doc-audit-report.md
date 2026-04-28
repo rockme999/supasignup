@@ -16,7 +16,7 @@
 | 5 | **정렬** | — | Guide 3종 | 좌/중앙/우 | **3종** |
 | 6 | **위젯 삽입 위치** | — | Guide 설명 | before / after / 커스텀 CSS 셀렉터 | **3옵션 + 추천 셀렉터**(`.login__button` / `.login__sns` / `.login__util` / `#member_login_module_id`) |
 | 7 | **퀵스타트 단계** | — | **QuickStart 4단계** vs **Guide "1. 시작하기" 5단계** | 동일 흐름 | **4단계**로 통일 (QuickStart 기준) |
-| 8 | **Plus 기능 수** | 일부 | Guide 8항목 | 배너·팝업·에스컬레이션·AI 보고서·AI 정체성·AI 추천 문구·AI 자동적용·쿠폰 3종·카카오 채널 | **Guide 8항목** 기준 유지 |
+| 8 | **Plus 기능 수** | 일부 | Guide 8항목 | 배너·팝업·에스컬레이션·AI 브리핑·AI 정체성·AI 추천 문구·AI 자동적용·쿠폰 3종·카카오 채널 | **Guide 8항목** 기준 유지 |
 | 9 | **AI 일일 호출 한도** | identity 10회만 명시 | 없음 | identity **10/일** · briefing **5/일** · escalation-copy **5/일** · copy **10/월** | 전체를 FAQ·Guide에 명시 |
 | 10 | **카카오 채널 (Plus)** | 없음 | Guide 있음 | 코드 구현 있음 (Plus 플랜만) | **FAQ에 Q 추가** |
 | 11 | **무료 플랜 제약** | 일부 | Guide 일부 | banner/popup/escalation null, kakao_channel 미반환, "powered by 번개가입" 강제 | FAQ에 요약 Q 추가 |

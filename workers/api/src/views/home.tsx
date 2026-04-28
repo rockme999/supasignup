@@ -319,7 +319,7 @@ export const HomePage: FC<{
             <a href="/dashboard/billing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #d1fae5;border-radius:12px;text-decoration:none;color:#374151;background:#f0fdf4;transition:border-color 0.15s" class="quick-link">
               <span style="font-size:28px">⚡</span>
               <span style="font-size:13px;font-weight:600">Plus 업그레이드</span>
-              <span style="font-size:11px;color:#16a34a">미니배너·AI 보고서</span>
+              <span style="font-size:11px;color:#16a34a">미니배너·AI 브리핑</span>
             </a>
           )}
         </div>
