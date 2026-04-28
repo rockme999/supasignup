@@ -274,11 +274,11 @@ const plusFeatureInfo: Record<string, { desc: string; highlights: string[]; prev
   },
   '라이브 가입자 카운터': {
     desc: '방문자에게 오늘 가입자 수와 최근 가입 알림을 실시간으로 보여줍니다.',
-    highlights: ['오늘 가입자 수 sticky 카운터', '최근 30분 내 가입자 토스트 알림', '위치 선택 (우하단/좌하단 등)', '"카페24 공식 SupaSignup" 신뢰 배지 포함'],
+    highlights: ['오늘 가입자 수 sticky 카운터', '최근 30분 내 가입자 토스트 알림', '위치 선택 (우하단/좌하단 등)', '"번개가입" 신뢰 배지 포함'],
     preview: `<div style="position:relative;height:80px;background:#f8fafc;border-radius:8px;overflow:hidden">
       <div style="position:absolute;bottom:8px;right:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
         <div style="font-size:11px;font-weight:600;color:#1e293b;margin-bottom:2px">오늘 12명이 가입했어요</div>
-        <div style="font-size:9px;color:#94a3b8">⚡ 카페24 공식 SupaSignup</div>
+        <div style="font-size:9px;color:#94a3b8">⚡ 번개가입</div>
       </div>
     </div>`,
   },
@@ -3052,7 +3052,7 @@ export const LiveCounterSettingsPage: FC<{
                 <div style="position:absolute;bottom:16px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px">
                   <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">오늘 12명이 가입했어요</div>
                   <div style="font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:3px">
-                    <span>⚡</span> 카페24 공식 SupaSignup
+                    <span>⚡</span> 번개가입
                   </div>
                 </div>
                 <div style="position:absolute;bottom:100px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;opacity:0.75">
@@ -3063,7 +3063,7 @@ export const LiveCounterSettingsPage: FC<{
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#9ca3af">쇼핑몰 페이지</div>
               </div>
               <p style="font-size:11px;color:#94a3b8;margin-top:6px">
-                "카페24 공식 SupaSignup" 배지는 제거할 수 없습니다 (브랜드 신뢰도 차별화).
+                "번개가입" 배지는 제거할 수 없습니다 (브랜드 신뢰도 차별화).
               </p>
             </div>
 
