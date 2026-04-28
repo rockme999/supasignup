@@ -458,6 +458,9 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .preview-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; border: none; cursor: default; }
         .preview-btn.kakao-btn { color: #191919; }
 
+        /* ── Loss aversion cards (W2-3) ─────────── */
+        .loss-card:hover { border-color:#818cf8 !important; box-shadow:0 4px 12px rgba(99,102,241,0.13) !important; }
+
         /* ── Widget customization ────────────────── */
         .preset-card { border:2px solid #e5e7eb; border-radius:8px; padding:12px 8px; text-align:center; cursor:pointer; background:#fff; transition:all 0.2s; font-size:12px; }
         .preset-card:hover { border-color:#93c5fd; }

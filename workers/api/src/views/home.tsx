@@ -7,6 +7,7 @@ import { ProgressBar } from './charts';
 import { providerColors, providerDisplayNames, type HomeStats } from './shared';
 import { CHANGELOG_PUBLIC } from '../data/changelog';
 import { extractRecentHighlights, extractLatestSectionTitle } from '../utils/changelog-summary';
+import type { LossAversionCards } from '../routes/pages';
 
 type HomeShop = {
   shop_id: string;
@@ -22,8 +23,9 @@ export const HomePage: FC<{
   shop: HomeShop | null;
   stats: HomeStats | null;
   funnelSummary?: Record<string, number>;
+  lossAversion?: LossAversionCards;
   isCafe24?: boolean;
-}> = ({ shop, stats, funnelSummary, isCafe24 }) => {
+}> = ({ shop, stats, funnelSummary, lossAversion, isCafe24 }) => {
   // 앱 미설치 상태
   if (!shop) {
     return (
@@ -185,6 +187,53 @@ export const HomePage: FC<{
           )}
         </div>
       </div>
+
+      {/* 손실 회피 카드 — Free 플랜 + threshold 통과 시만 노출 */}
+      {!isPlus && lossAversion && (() => {
+        const showA = lossAversion.missedSignupCount >= 10 && lossAversion.dataDays >= 7;
+        const showB = lossAversion.firstPurchaseGap.length >= 3;
+        if (!showA && !showB) return null;
+        return (
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px">
+            {showA && (
+              <a
+                href="/dashboard/billing"
+                style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer"
+                class="loss-card"
+              >
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">PLUS</span>
+                  <span style="font-size:11px;color:#94a3b8">최근 7일</span>
+                </div>
+                <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
+                  Plus로 추가 가입 회원 : {lossAversion.missedSignupCount}명
+                </div>
+                <div style="font-size:12px;color:#64748b;line-height:1.5">
+                  로그인 페이지 진입했지만 가입까지 안 간 비회원
+                </div>
+              </a>
+            )}
+            {showB && (
+              <a
+                href="/dashboard/billing"
+                style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer"
+                class="loss-card"
+              >
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#6366f1;background:#eef2ff;border-radius:4px;padding:2px 6px">PLUS</span>
+                  <span style="font-size:11px;color:#94a3b8">가입 7일 이상 경과</span>
+                </div>
+                <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
+                  Plus로 추가 첫구매 회원 : {lossAversion.firstPurchaseGap.length}명
+                </div>
+                <div style="font-size:12px;color:#64748b;line-height:1.5">
+                  {lossAversion.firstPurchaseGap.join(', ')}
+                </div>
+              </a>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 최신 업데이트 */}
       {(() => {

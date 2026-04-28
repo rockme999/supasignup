@@ -6,11 +6,12 @@
  */
 import { Hono } from 'hono';
 import type { Env, WidgetStyle } from '@supasignup/bg-core';
-import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD } from '@supasignup/bg-core';
+import { FREE_PLAN_MONTHLY_LIMIT, FREE_PLAN_WARN_THRESHOLD, decrypt } from '@supasignup/bg-core';
 import { verifyToken } from '../services/jwt';
 import { buildSinceExpr, escapeLike, buildDateFilter } from '../db/stats-utils';
 import { hashPassword, verifyPassword } from '../services/password';
 import { renderMarkdown } from '../utils/markdown';
+import { maskName } from '../utils/mask';
 import { CHANGELOG_PUBLIC, CHANGELOG_INTERNAL } from '../data/changelog';
 import { BUILD_VERSION, BUILD_COMMIT_SHA, BUILD_TIME } from '../data/build-info';
 import { LATEST_PLUS_PRESET_ADDED, getSeenAt, markSeen, isNew } from '../data/whats-new';
@@ -89,6 +90,96 @@ type ShopRow = {
   widget_style?: string | null;
   shop_identity?: string | null;
 };
+
+export type LossAversionCards = {
+  missedSignupCount: number;
+  dataDays: number;
+  firstPurchaseGap: string[];
+};
+
+/**
+ * W2-3 손실 회피 카드 데이터 조회.
+ *
+ * 카드 A (가입 의도 비회원):
+ *   최근 7일 내 'widget.exit_intent_shown' 또는 'page_view'+'signup_complete' 패턴 분석.
+ *   실제로는 exit_intent_shown을 본 visitor 중 signup_complete가 없는 visitor 카운트.
+ *   exit_intent 데이터가 없으면 fallback으로 page_view 진입 후 미전환 카운트.
+ *
+ * 카드 B (가입 후 첫구매 미전환):
+ *   7일 이상 전에 가입했지만 coupon_issues에 주문 기록이 없는 회원 (이름 복호화 + 마스킹).
+ *   카페24 주문 API 연동 전 단계 — 현재는 쿠폰 미사용(=첫구매 전) 회원으로 근사.
+ */
+export async function getLossAversionCards(
+  env: Env,
+  shopId: string,
+): Promise<LossAversionCards> {
+  // 병렬 조회
+  const [missedResult, dataAgeResult, firstPurchaseResult] = await Promise.all([
+    // 카드 A: exit_intent_shown 본 visitor 중 signup_complete 없는 수
+    // exit_intent 데이터가 충분하면 이를 사용, 아니면 page_view 기반 fallback
+    env.DB.prepare(`
+      SELECT COUNT(DISTINCT v.visitor_id) AS missed
+      FROM (
+        SELECT DISTINCT visitor_id FROM funnel_events
+        WHERE shop_id = ?
+          AND event_type IN ('widget.exit_intent_shown', 'page_view')
+          AND visitor_id IS NOT NULL
+          AND created_at >= datetime('now', '-7 days')
+      ) v
+      WHERE v.visitor_id NOT IN (
+        SELECT DISTINCT visitor_id FROM funnel_events
+        WHERE shop_id = ?
+          AND event_type = 'signup_complete'
+          AND visitor_id IS NOT NULL
+          AND created_at >= datetime('now', '-7 days')
+      )
+    `).bind(shopId, shopId).first<{ missed: number }>(),
+
+    // 데이터 수집 일수 (distinct date 기준)
+    env.DB.prepare(`
+      SELECT COUNT(DISTINCT date(created_at)) AS days
+      FROM funnel_events
+      WHERE shop_id = ?
+    `).bind(shopId).first<{ days: number }>(),
+
+    // 카드 B: 7일 이상 전 가입 + 쿠폰 미발급 (첫구매 근사) 회원 — 최대 5명
+    env.DB.prepare(`
+      SELECT u.name
+      FROM shop_users su
+      JOIN users u ON su.user_id = u.user_id
+      WHERE su.shop_id = ?
+        AND su.created_at < datetime('now', '-7 days')
+        AND su.user_id NOT IN (
+          SELECT DISTINCT ci.member_id
+          FROM coupon_issues ci
+          WHERE ci.shop_id = ?
+        )
+        AND u.name IS NOT NULL
+      ORDER BY su.created_at DESC
+      LIMIT 5
+    `).bind(shopId, shopId).all<{ name: string }>(),
+  ]);
+
+  // 카드 B 이름 복호화 + 마스킹
+  const rawNames = firstPurchaseResult.results ?? [];
+  const decryptedNames = await Promise.all(
+    rawNames.map(async (r) => {
+      try {
+        const plain = await decrypt(r.name, env.ENCRYPTION_KEY);
+        return maskName(plain);
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const maskedNames = decryptedNames.filter((n): n is string => n !== null);
+
+  return {
+    missedSignupCount: missedResult?.missed ?? 0,
+    dataDays: dataAgeResult?.days ?? 0,
+    firstPurchaseGap: maskedNames,
+  };
+}
 
 const pages = new Hono<PageEnv>();
 
@@ -231,6 +322,11 @@ pages.get('/dashboard', async (c) => {
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
   const billingMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 
+  // Free 플랜 — 손실 회피 카드 데이터 병렬 조회 (Plus는 불필요)
+  const lossAversionPromise = shop.plan === 'free'
+    ? getLossAversionCards(c.env, shop.shop_id)
+    : Promise.resolve<LossAversionCards>({ missedSignupCount: 0, dataDays: 0, firstPurchaseGap: [] });
+
   // 6 independent queries → single batch call
   const homeResults = await c.env.DB.batch([
     // [0] Total signups / logins
@@ -301,6 +397,9 @@ pages.get('/dashboard', async (c) => {
     funnelCounts[row.event_type] = row.cnt;
   }
 
+  // 손실 회피 카드 데이터 수집 (batch와 병렬 실행 중)
+  const lossAversion = await lossAversionPromise;
+
   return c.html(
     <HomePage
       shop={{
@@ -320,6 +419,7 @@ pages.get('/dashboard', async (c) => {
         by_provider: byProvider,
       }}
       funnelSummary={funnelCounts}
+      lossAversion={lossAversion}
       isCafe24={c.get('isCafe24')}
     />
   );
