@@ -243,7 +243,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
           color: #1e3a5f;
         }
         .sidebar-logo span { color: #2563eb; }
-        .sidebar nav { flex: 1; }
+        .sidebar nav { /* flex: 1 제거 — footer가 nav 바로 아래에 자연스럽게 위치하도록 */ }
         .sidebar nav a {
           display: flex;
           align-items: center;
@@ -268,7 +268,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .sidebar-footer {
           border-top: 1px solid #dbeafe;
           padding: 12px 20px;
-          margin-top: auto;
+          margin-top: 16px; /* 'auto' → 작은 공백. footer가 viewport 바닥으로 밀리지 않음 */
         }
         .sidebar-footer a { color: #94a3b8; font-size: 13px; }
 
@@ -513,7 +513,7 @@ export const Layout: FC<LayoutProps> = ({ title, loggedIn, currentPath, isAdmin,
         .mobile-nav-drawer nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin: 2px 8px; color: #475569; font-size: 14px; border-radius: 8px; transition: all 0.15s; }
         .mobile-nav-drawer nav a:hover { background: rgba(37,99,235,0.06); color: #1e3a5f; text-decoration: none; }
         .mobile-nav-drawer nav a.active { background: rgba(37,99,235,0.1); color: #2563eb; font-weight: 600; border-left: 3px solid #2563eb; padding-left: 9px; }
-        .mobile-nav-drawer .sidebar-footer { border-top: 1px solid #dbeafe; padding: 12px 20px; margin-top: auto; }
+        .mobile-nav-drawer .sidebar-footer { border-top: 1px solid #dbeafe; padding: 12px 20px; margin-top: 16px; }
         .mobile-nav-drawer .sidebar-footer a { color: #94a3b8; font-size: 13px; }
 
         @media (max-width: 768px) {
