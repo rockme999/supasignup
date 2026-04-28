@@ -242,42 +242,6 @@ export const HomePage: FC<{
         );
       })()}
 
-      {/* 빠른 설정 링크 */}
-      <div class="card">
-        <h2 style="margin-bottom:16px">빠른 설정</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
-          <a href="/dashboard/settings/sso-guide" style={`display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid ${!shop.sso_configured ? '#ef4444' : '#e5e7eb'};border-radius:12px;text-decoration:none;color:#374151;background:${!shop.sso_configured ? '#fef2f2' : 'transparent'};transition:border-color 0.15s`} class="quick-link">
-            <span style="font-size:28px">🔑</span>
-            <span style="font-size:13px;font-weight:600">SSO 설정 가이드{!shop.sso_configured ? ' !' : ' ✓'}</span>
-            {!shop.sso_configured && <span style="font-size:11px;color:#ef4444">설정 필요</span>}
-          </a>
-          <a href="/dashboard/settings/providers" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-            <span style="font-size:28px">🎨</span>
-            <span style="font-size:13px;font-weight:600">로그인 디자인</span>
-          </a>
-          <a href="/dashboard/settings/coupon" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-            <span style="font-size:28px">🎟️</span>
-            <span style="font-size:13px;font-weight:600">쿠폰 현황{shop.coupon_enabled ? ' ✓' : ''}</span>
-          </a>
-          <a href="/dashboard/stats" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-            <span style="font-size:28px">📊</span>
-            <span style="font-size:13px;font-weight:600">통계 분석</span>
-          </a>
-          {isPlus ? (
-            <a href="/dashboard/ai-briefing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
-              <span style="font-size:28px">✨</span>
-              <span style="font-size:13px;font-weight:600">AI 브리핑</span>
-            </a>
-          ) : (
-            <a href="/dashboard/billing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #d1fae5;border-radius:12px;text-decoration:none;color:#374151;background:#f0fdf4;transition:border-color 0.15s" class="quick-link">
-              <span style="font-size:28px">⚡</span>
-              <span style="font-size:13px;font-weight:600">Plus 업그레이드</span>
-              <span style="font-size:11px;color:#16a34a">미니배너·AI 보고서</span>
-            </a>
-          )}
-        </div>
-      </div>
-
       {/* AI 브리핑 카드 — 최신 브리핑이 있을 때만 노출. 헤드라인 + 지난주 성과 미리보기 + 생성일자 */}
       {latestBriefing && (() => {
         const headline = latestBriefing.headline?.trim();
@@ -324,6 +288,42 @@ export const HomePage: FC<{
           <p style="font-size:13px;color:#94a3b8;margin:0">데이터 수집 중 — 가입이 누적되면 인사이트를 보여드릴게요</p>
         </div>
       )}
+
+      {/* 빠른 실행 링크 */}
+      <div class="card">
+        <h2 style="margin-bottom:16px">빠른 실행</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+          <a href="/dashboard/settings/sso-guide" style={`display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid ${!shop.sso_configured ? '#ef4444' : '#e5e7eb'};border-radius:12px;text-decoration:none;color:#374151;background:${!shop.sso_configured ? '#fef2f2' : 'transparent'};transition:border-color 0.15s`} class="quick-link">
+            <span style="font-size:28px">🔑</span>
+            <span style="font-size:13px;font-weight:600">SSO 설정 가이드{!shop.sso_configured ? ' !' : ' ✓'}</span>
+            {!shop.sso_configured && <span style="font-size:11px;color:#ef4444">설정 필요</span>}
+          </a>
+          <a href="/dashboard/settings/providers" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">🎨</span>
+            <span style="font-size:13px;font-weight:600">로그인 디자인</span>
+          </a>
+          <a href="/dashboard/settings/coupon" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">🎟️</span>
+            <span style="font-size:13px;font-weight:600">쿠폰 현황{shop.coupon_enabled ? ' ✓' : ''}</span>
+          </a>
+          <a href="/dashboard/stats" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+            <span style="font-size:28px">📊</span>
+            <span style="font-size:13px;font-weight:600">통계 분석</span>
+          </a>
+          {isPlus ? (
+            <a href="/dashboard/ai-briefing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #e5e7eb;border-radius:12px;text-decoration:none;color:#374151;transition:border-color 0.15s" class="quick-link">
+              <span style="font-size:28px">✨</span>
+              <span style="font-size:13px;font-weight:600">AI 브리핑</span>
+            </a>
+          ) : (
+            <a href="/dashboard/billing" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border:1px solid #d1fae5;border-radius:12px;text-decoration:none;color:#374151;background:#f0fdf4;transition:border-color 0.15s" class="quick-link">
+              <span style="font-size:28px">⚡</span>
+              <span style="font-size:13px;font-weight:600">Plus 업그레이드</span>
+              <span style="font-size:11px;color:#16a34a">미니배너·AI 보고서</span>
+            </a>
+          )}
+        </div>
+      </div>
 
       {/* 최신 업데이트 */}
       {(() => {
