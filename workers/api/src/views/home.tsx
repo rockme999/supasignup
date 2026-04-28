@@ -212,7 +212,7 @@ export const HomePage: FC<{
                   <span style="font-size:11px;color:#94a3b8">최근 7일</span>
                 </div>
                 <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
-                  Plus로 추가 가입 회원 : {lossAversion.missedSignupCount}명
+                  Plus로 추가 가입 가능 회원 : {lossAversion.missedSignupCount}명
                 </div>
                 <div style="font-size:12px;color:#64748b;line-height:1.5">
                   로그인 페이지 진입했지만 가입까지 안 간 비회원
@@ -230,7 +230,7 @@ export const HomePage: FC<{
                   <span style="font-size:11px;color:#94a3b8">가입 7일 이상 경과</span>
                 </div>
                 <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px">
-                  Plus로 추가 첫구매 회원 : {lossAversion.firstPurchaseGap.length}명
+                  Plus로 첫구매 가능 회원 : {lossAversion.firstPurchaseGap.length}명
                 </div>
                 <div style="font-size:12px;color:#64748b;line-height:1.5">
                   {lossAversion.firstPurchaseGap.join(', ')}
