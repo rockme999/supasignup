@@ -24,6 +24,7 @@ export interface Shop {
   popup_config?: string | null; // Plus: 이탈 감지 팝업 설정 JSON
   escalation_config?: string | null; // Plus: 에스컬레이션 설정 JSON
   ai_suggested_copy?: string | null; // Plus: AI 브리핑 생성 추천 문구 JSON
+  exit_intent_config?: string | null; // Plus: Exit-intent 쿠폰 게이트 설정 JSON
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

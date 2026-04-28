@@ -769,6 +769,87 @@ dashboard.put('/shops/:id/coupon', async (c) => {
   return c.json({ ok: true, coupon_config: newConfig });
 });
 
+// ─── GET /shops/:id/exit-intent-config ──────────────────────
+dashboard.get('/shops/:id/exit-intent-config', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required', message: 'Exit-intent 쿠폰 게이트는 Plus 플랜에서만 사용할 수 있습니다.' }, 403);
+  }
+
+  const config = shop.exit_intent_config ? JSON.parse(shop.exit_intent_config) : null;
+  return c.json({ ok: true, exit_intent_config: config });
+});
+
+// ─── PUT /shops/:id/exit-intent-config ──────────────────────
+dashboard.put('/shops/:id/exit-intent-config', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan === 'free') {
+    return c.json({ error: 'plus_required', message: 'Exit-intent 쿠폰 게이트는 Plus 플랜에서만 사용할 수 있습니다.' }, 403);
+  }
+
+  const body = await c.req.json<{
+    enabled?: boolean;
+    frequency_cap_hours?: number;
+    scroll_depth_threshold?: number;
+    coupon_type?: string;
+    headline?: string;
+    body?: string;
+  }>();
+
+  // 검증
+  const VALID_CAP_HOURS = [1, 6, 24, 168]; // 1h / 6h / 24h / 7d
+  if (body.frequency_cap_hours !== undefined && !VALID_CAP_HOURS.includes(body.frequency_cap_hours)) {
+    return c.json({ error: 'invalid_frequency_cap_hours', message: `frequency_cap_hours must be one of: ${VALID_CAP_HOURS.join(', ')}` }, 400);
+  }
+  const VALID_COUPON_TYPES = ['shipping', 'amount', 'rate'];
+  if (body.coupon_type !== undefined && !VALID_COUPON_TYPES.includes(body.coupon_type)) {
+    return c.json({ error: 'invalid_coupon_type', message: `coupon_type must be one of: ${VALID_COUPON_TYPES.join(', ')}` }, 400);
+  }
+  if (body.headline && body.headline.length > 30) {
+    return c.json({ error: 'headline_too_long', message: 'headline must be 30 characters or less' }, 400);
+  }
+  if (body.body && body.body.length > 120) {
+    return c.json({ error: 'body_too_long', message: 'body must be 120 characters or less' }, 400);
+  }
+
+  // 기존 config 로드 후 병합
+  const existing = shop.exit_intent_config ? JSON.parse(shop.exit_intent_config) : {};
+  const newConfig = {
+    enabled: body.enabled !== undefined ? body.enabled : (existing.enabled !== false),
+    frequency_cap_hours: body.frequency_cap_hours ?? existing.frequency_cap_hours ?? 24,
+    scroll_depth_threshold: body.scroll_depth_threshold ?? existing.scroll_depth_threshold ?? 60,
+    coupon_type: body.coupon_type ?? existing.coupon_type ?? null,
+    headline: body.headline ?? existing.headline ?? '잠깐만요!',
+    body: body.body ?? existing.body ?? '지금 가입하면 {coupon} 즉시 받을 수 있어요.',
+  };
+
+  await updateShop(c.env.DB, shopId, {
+    exit_intent_config: JSON.stringify(newConfig),
+  });
+
+  // 위젯 캐시 무효화
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+
+  return c.json({ ok: true, exit_intent_config: newConfig });
+});
+
 // ─── PUT /shops/:id/kakao-channel ────────────────────────────
 
 dashboard.put('/shops/:id/kakao-channel', async (c) => {

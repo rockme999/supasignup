@@ -118,6 +118,14 @@ widget.get('/config', async (c) => {
       : null,
     // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
     kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
+    // exit_intent_config: Plus 플랜만 반환 (쿠폰 게이트 설정)
+    exit_intent_config: shop.plan !== 'free'
+      ? safeParseJsonObject(shop.exit_intent_config, null, `widget.exit_intent_config shop_id=${shop.shop_id}`)
+      : null,
+    // coupon_config: exit_intent 모달에서 쿠폰 레이블 표시용 (민감 정보 제외한 부분 반환)
+    coupon_config: shop.plan !== 'free'
+      ? safeParseJsonObject(shop.coupon_config, null, `widget.coupon_config shop_id=${shop.shop_id}`)
+      : null,
   };
 
   // Cache in KV + 에지 캐시 (waitUntil로 비동기화 — 응답 블로킹 없음)
@@ -135,18 +143,23 @@ widget.get('/config', async (c) => {
 });
 
 // ─── POST /event ─────────────────────────────────────────────
-// 유효한 이벤트 타입 (17종) — 모듈 상수로 빼서 allocation 회피
+// 유효한 이벤트 타입 (21종) — 모듈 상수로 빼서 allocation 회피
 const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
   'banner_click', 'banner_show',
   'popup_show', 'popup_close', 'popup_signup',
   'escalation_show', 'escalation_click', 'escalation_dismiss',
   'kakao_channel_show', 'kakao_channel_click',
   'page_view', 'oauth_start', 'signup_complete',
-  // R4 Plus 전환 funnel 이벤트 4종
+  // R4 W1 Plus 전환 funnel 이벤트 4종
   'widget_style.preview_plus_preset',       // Plus 프리셋 클릭 (미리보기 적용)
   'widget_style.save_attempt_locked',        // 저장 클릭 시 결제 모달 노출
   'billing.upgrade_modal_shown',             // 결제 모달 노출
   'billing.upgrade_completed_via_design_preview', // 결제 모달 → 결제 완료
+  // R4 W2 Smart trigger + Exit-intent funnel 이벤트 4종
+  'widget.exit_intent_shown',               // Exit-intent 모달 노출
+  'widget.exit_intent_signup',              // Exit-intent 모달에서 가입 완료
+  'widget.exit_intent_dismissed',           // Exit-intent 모달 그냥 닫기
+  'widget.scroll_trigger_fired',            // Smart trigger (scroll-depth) 발동
 ]);
 const MAX_PAGE_URL_LEN = 2048;
 const MAX_EVENT_DATA_JSON_LEN = 4096;

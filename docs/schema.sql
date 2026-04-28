@@ -40,6 +40,8 @@
 --                양쪽 환경(bg-dev, bg-production)의 d1_migrations에 INSERT OR IGNORE로 메타 row만
 --                보강하여 wrangler 추적 시스템과 실제 DB 상태 일치 복구. 데이터·구조 변경 0.
 --                향후 동일 사고 방지를 위해 deploy.sh에 마이그레이션 추적 자동 검증 로직 추가 예정.
+--   2026-04-27: shops.exit_intent_config 추가 (0028) — Exit-intent 쿠폰 게이트 설정 JSON
+--                { enabled, frequency_cap_hours, scroll_depth_threshold, coupon_type, headline, body }
 
 -- ============================================================
 -- 1. owners — 운영자 계정
@@ -86,6 +88,7 @@ CREATE TABLE IF NOT EXISTS shops (
   popup_config           TEXT,                                    -- Plus: 이탈 팝업 설정 JSON
   escalation_config      TEXT,                                    -- Plus: 에스컬레이션 설정 JSON
   ai_suggested_copy      TEXT,                                    -- Plus: AI 추천 카피 JSON
+  exit_intent_config     TEXT,                                    -- Plus: Exit-intent 쿠폰 게이트 설정 JSON
   auto_reply_inquiries   INTEGER NOT NULL DEFAULT 0,              -- AI 자동답변 on/off
   plan                   TEXT NOT NULL DEFAULT 'free',            -- 'free' | 'plus' (CHECK 없음, 앱 레이어 검증)
   UNIQUE(mall_id, platform)

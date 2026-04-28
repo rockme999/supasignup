@@ -2374,4 +2374,221 @@ export const AiSettingsPage: FC<{
   );
 };
 
+// ─── Exit-intent 쿠폰 게이트 설정 [Plus] ─────────────────────
+
+export const ExitIntentSettingsPage: FC<{
+  shop: { shop_id: string; plan: string } | null;
+  exitIntentConfig?: {
+    enabled?: boolean;
+    frequency_cap_hours?: number;
+    scroll_depth_threshold?: number;
+    coupon_type?: string | null;
+    headline?: string;
+    body?: string;
+  } | null;
+  isCafe24?: boolean;
+}> = ({ shop, exitIntentConfig, isCafe24 }) => {
+  const isPlus = shop != null && shop.plan !== 'free';
+  const shopId = shop?.shop_id || '';
+  const ei = exitIntentConfig ?? {};
+  const enabled = ei.enabled !== false;
+  const capHours = ei.frequency_cap_hours ?? 24;
+  const scrollDepth = ei.scroll_depth_threshold ?? 60;
+  const couponType = ei.coupon_type ?? '';
+  const headline = ei.headline ?? '잠깐만요!';
+  const bodyText = ei.body ?? '지금 가입하면 {coupon} 즉시 받을 수 있어요.';
+
+  return (
+    <Layout title="Exit-intent 쿠폰 게이트" loggedIn currentPath="/dashboard/settings/exit-intent" isCafe24={isCafe24}>
+      <h1>Exit-intent 쿠폰 게이트</h1>
+      {!isPlus
+        ? <PlusLockOverlay feature="Exit-intent 쿠폰 게이트" />
+        : (
+          <div>
+            <p style="font-size:13px;color:#64748b;margin-bottom:20px">
+              비회원이 페이지를 떠나려는 순간 가입 혜택을 한 번 더 노출합니다. PC는 마우스 이탈, 모바일은 빠른 스크롤 업으로 감지합니다.
+            </p>
+
+            <div class="card">
+              <h2>기본 설정</h2>
+              <div style="max-width:560px">
+                {/* ON/OFF 토글 */}
+                <div class="form-group" style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+                  <label style="font-size:14px;font-weight:600;color:#374151;min-width:120px">활성화</label>
+                  <div id="eiEnabledToggle" data-on={enabled ? 'true' : 'false'}
+                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${enabled ? '#2563eb' : '#d1d5db'}`}>
+                    <div id="eiEnabledKnob" style={`position:absolute;top:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s;${enabled ? 'right:2px' : 'left:2px'}`}></div>
+                  </div>
+                  <span id="eiEnabledLabel" style="font-size:13px;color:#374151">{enabled ? '활성화됨' : '비활성'}</span>
+                </div>
+
+                {/* Frequency cap */}
+                <div class="form-group" style="margin-bottom:20px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#374151">재노출 방지 시간 (Frequency cap)</label>
+                  <select id="eiCapHours" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:200px">
+                    <option value="1" selected={capHours === 1}>1시간</option>
+                    <option value="6" selected={capHours === 6}>6시간</option>
+                    <option value="24" selected={capHours === 24}>24시간 (권장)</option>
+                    <option value="168" selected={capHours === 168}>7일</option>
+                  </select>
+                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">같은 방문자에게 설정 시간 내 재노출하지 않습니다.</p>
+                </div>
+
+                {/* Scroll-depth */}
+                <div class="form-group" style="margin-bottom:20px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#374151">Scroll-depth 추가 트리거 (0 = 비활성)</label>
+                  <select id="eiScrollDepth" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:200px">
+                    <option value="0" selected={scrollDepth === 0}>사용 안함</option>
+                    <option value="30" selected={scrollDepth === 30}>30% 스크롤</option>
+                    <option value="50" selected={scrollDepth === 50}>50% 스크롤</option>
+                    <option value="60" selected={scrollDepth === 60}>60% 스크롤 (권장)</option>
+                    <option value="80" selected={scrollDepth === 80}>80% 스크롤</option>
+                  </select>
+                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">설정 시 이탈 감지 + 스크롤 깊이 양쪽에서 모달이 트리거됩니다.</p>
+                </div>
+
+                {/* 연동 쿠폰 */}
+                <div class="form-group" style="margin-bottom:20px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#374151">연동 쿠폰 종류</label>
+                  <select id="eiCouponType" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:200px">
+                    <option value="" selected={!couponType}>사용 안함</option>
+                    <option value="shipping" selected={couponType === 'shipping'}>무료배송 쿠폰</option>
+                    <option value="amount" selected={couponType === 'amount'}>정액할인 쿠폰</option>
+                    <option value="rate" selected={couponType === 'rate'}>정률할인 쿠폰</option>
+                  </select>
+                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">기본 설정의 쿠폰 활성화 여부와 연동됩니다. 선택한 쿠폰이 비활성이면 모달에 표시되지 않습니다.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:16px">
+              <h2>모달 문구 설정</h2>
+              <div style="max-width:560px">
+                {/* 헤드라인 */}
+                <div class="form-group" style="margin-bottom:16px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#374151">헤드라인 (최대 30자)</label>
+                  <input id="eiHeadline" type="text" value={headline} maxlength={30}
+                    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box" />
+                </div>
+
+                {/* 본문 */}
+                <div class="form-group" style="margin-bottom:16px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#374151">본문 (최대 120자, {'{coupon}'}은 쿠폰명으로 치환)</label>
+                  <textarea id="eiBody" maxlength={120} rows={3}
+                    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box;resize:vertical">
+                    {bodyText}
+                  </textarea>
+                </div>
+              </div>
+
+              {/* 미리보기 */}
+              <div style="margin-top:16px">
+                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">모달 미리보기</p>
+                <div style="background:#f8fafc;border:2px dashed #e5e7eb;border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center">
+                  <div id="eiPreviewCard" style="background:#fff;max-width:320px;width:100%;padding:24px 20px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center">
+                    <h3 id="eiPreviewTitle" style="font-size:20px;font-weight:700;color:#111827;margin:0 0 8px">{headline}</h3>
+                    <p id="eiPreviewBody" style="font-size:13px;color:#4b5563;margin:0 0 16px;line-height:1.5">{bodyText}</p>
+                    <div style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:600;margin-bottom:16px;display:inline-block">
+                      무료배송 쿠폰 (예시)
+                    </div>
+                    <div style="background:#03C75A;color:#fff;border-radius:10px;padding:11px;font-size:14px;font-weight:600;margin-bottom:8px">
+                      네이버로 가입하기
+                    </div>
+                    <div style="background:#FEE500;color:#191919;border-radius:10px;padding:11px;font-size:14px;font-weight:600;margin-bottom:12px">
+                      카카오로 가입하기
+                    </div>
+                    <button style="background:none;border:none;color:#9ca3af;font-size:13px;cursor:pointer">그냥 닫기</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;display:flex;gap:12px">
+              <button id="eiSaveBtn" class="btn btn-primary" style="min-width:120px">저장</button>
+              <span id="eiSaveResult" style="font-size:13px;color:#22c55e;display:none;align-items:center;gap:4px">저장되었습니다.</span>
+            </div>
+
+            <script dangerouslySetInnerHTML={{__html: `
+              (function() {
+                var shopId = '${shopId}';
+                var changed = false;
+
+                function markChanged() { changed = true; }
+
+                // 토글 동작
+                var toggle = document.getElementById('eiEnabledToggle');
+                var knob = document.getElementById('eiEnabledKnob');
+                var label = document.getElementById('eiEnabledLabel');
+                var isOn = toggle.dataset.on === 'true';
+
+                function setToggle(on) {
+                  isOn = on;
+                  toggle.dataset.on = on ? 'true' : 'false';
+                  toggle.style.background = on ? '#2563eb' : '#d1d5db';
+                  if (on) { knob.style.right = '2px'; knob.style.left = ''; }
+                  else { knob.style.left = '2px'; knob.style.right = ''; }
+                  label.textContent = on ? '활성화됨' : '비활성';
+                  markChanged();
+                }
+                toggle.addEventListener('click', function() { setToggle(!isOn); });
+
+                // 입력 필드 change 감지
+                ['eiCapHours','eiScrollDepth','eiCouponType','eiHeadline','eiBody'].forEach(function(id) {
+                  var el = document.getElementById(id);
+                  if (el) el.addEventListener('input', function() {
+                    markChanged();
+                    if (id === 'eiHeadline') document.getElementById('eiPreviewTitle').textContent = el.value || '잠깐만요!';
+                    if (id === 'eiBody') document.getElementById('eiPreviewBody').textContent = el.value;
+                  });
+                  if (el && el.tagName === 'SELECT') el.addEventListener('change', markChanged);
+                });
+
+                // 저장
+                document.getElementById('eiSaveBtn').addEventListener('click', async function() {
+                  var btn = this;
+                  btn.disabled = true;
+                  btn.textContent = '저장 중...';
+                  var result = document.getElementById('eiSaveResult');
+                  result.style.display = 'none';
+
+                  var payload = {
+                    enabled: isOn,
+                    frequency_cap_hours: parseInt(document.getElementById('eiCapHours').value, 10),
+                    scroll_depth_threshold: parseInt(document.getElementById('eiScrollDepth').value, 10),
+                    coupon_type: document.getElementById('eiCouponType').value || null,
+                    headline: document.getElementById('eiHeadline').value.trim() || '잠깐만요!',
+                    body: document.getElementById('eiBody').value.trim() || '지금 가입하면 즉시 혜택을 받을 수 있어요.',
+                  };
+
+                  try {
+                    var resp = await fetch('/api/dashboard/shops/' + shopId + '/exit-intent-config', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'same-origin',
+                      body: JSON.stringify(payload),
+                    });
+                    if (resp.ok) {
+                      changed = false;
+                      result.style.display = 'inline-flex';
+                      setTimeout(function() { result.style.display = 'none'; }, 3000);
+                    } else {
+                      var d = await resp.json();
+                      alert('저장 실패: ' + (d.message || d.error || '알 수 없는 오류'));
+                    }
+                  } catch (e) {
+                    alert('네트워크 오류가 발생했습니다.');
+                  } finally {
+                    btn.disabled = false;
+                    btn.textContent = '저장';
+                  }
+                });
+              })();
+            `}} />
+          </div>
+        )
+      }
+    </Layout>
+  );
+};
+
 // ─── Guide Page ──────────────────────────────────────────────

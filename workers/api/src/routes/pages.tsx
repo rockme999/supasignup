@@ -31,6 +31,7 @@ import {
   KakaoSettingsPage,
   AiSettingsPage,
   AiReportsPage,
+  ExitIntentSettingsPage,
   QuickStartPage,
   GuidePage,
   FaqPage,
@@ -60,7 +61,7 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
   return db.prepare(
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
             enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
-            shop_identity
+            shop_identity, exit_intent_config
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
     coupon_config: string | null;
@@ -68,6 +69,7 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
     widget_style: string | null;
     banner_config: string | null;
     shop_identity: string | null;
+    exit_intent_config: string | null;
   }>();
 }
 
@@ -998,6 +1000,24 @@ pages.get('/dashboard/settings/kakao', async (c) => {
     <KakaoSettingsPage
       shop={shop}
       kakaoChannelId={shop.kakao_channel_id ?? ''}
+      isCafe24={c.get('isCafe24')}
+    />
+  );
+});
+
+// ─── Settings: Exit-intent [Plus] ───────────────────────────
+
+pages.get('/dashboard/settings/exit-intent', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+  const exitIntentConfig = shop.exit_intent_config
+    ? JSON.parse(shop.exit_intent_config)
+    : null;
+  return c.html(
+    <ExitIntentSettingsPage
+      shop={shop}
+      exitIntentConfig={exitIntentConfig}
       isCafe24={c.get('isCafe24')}
     />
   );

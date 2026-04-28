@@ -7,6 +7,9 @@
  * Security: No innerHTML usage. All DOM is built with createElement + textContent.
  */
 
+import { getSmartTriggerJs } from './smart-triggers';
+import { getExitIntentJs } from './exit-intent';
+
 export const WIDGET_JS = `(function() {
   'use strict';
 
@@ -398,6 +401,10 @@ export const WIDGET_JS = `(function() {
           self.initEscalation(config);
           if (config.kakao_channel_id) {
             self.initKakaoChannel(config);
+          }
+          // Exit-intent 쿠폰 게이트 (W2-1 + Smart trigger W2-2)
+          if (config.exit_intent_config) {
+            self.initExitIntent(config);
           }
         }
       })
@@ -1533,6 +1540,12 @@ export const WIDGET_JS = `(function() {
       setTimeout(function() { toast.remove(); }, 300);
     }, 3000);
   };
+
+    // ─── Smart Trigger Engine ────────────────────────────────────
+    ` + getSmartTriggerJs() + `
+
+    // ─── Exit-intent 쿠폰 게이트 ─────────────────────────────────
+    ` + getExitIntentJs() + `
 
     // ─── Initialize ──────────────────────────────────────────────
 

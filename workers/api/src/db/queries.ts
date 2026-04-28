@@ -139,7 +139,7 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
 export async function updateShop(
   db: D1Database,
   shopId: string,
-  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config'>>,
+  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'exit_intent_config'>>,
 ): Promise<void> {
   const sets: string[] = [];
   const values: unknown[] = [];
