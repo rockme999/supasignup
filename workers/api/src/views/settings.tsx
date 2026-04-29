@@ -1491,8 +1491,8 @@ export const GeneralSettingsPage: FC<{
             </p>
           )}
 
-          {/* 3개 쿠폰 카드를 한 줄 가로 배치 (좁은 화면은 자동 줄바꿈) */}
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:12px;margin-bottom:16px">
+          {/* 3개 쿠폰 카드를 한 줄 가로 배치 (매우 좁은 화면만 줄바꿈) */}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-bottom:16px">
           {/* 무료배송 쿠폰 카드 */}
           <div id="couponCard_shipping" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
