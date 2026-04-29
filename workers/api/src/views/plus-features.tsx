@@ -3547,6 +3547,16 @@ export const CouponPackSettingsPage: FC<{
                 </tfoot>
               </table>
             </div>
+
+            {/* ── 안내 카드 (accordion 안 — 테이블 하단) ── */}
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid #fce7f3;background:#fdf2f8;border-radius:8px;padding:16px;border-left:3px solid #ec4899">
+              <h2 style="font-size:14px;color:#be185d;margin-bottom:8px">쿠폰팩 안내</h2>
+              <p style="font-size:13px;color:#374151;line-height:1.7">
+                쿠폰팩 활성화 시 5개의 단계별 할인 쿠폰(₩3,000 ~ ₩30,000)이 카페24에 등록됩니다.
+                신규 회원 가입 시 카페24가 자동으로 5장 모두를 즉시 발급합니다.
+                디자인/크기 변경은 즉시 저장되며, 위젯 렌더링에만 영향을 줍니다.
+              </p>
+            </div>
             </div>{/* /cpPackAccordionBody */}
           </div>
 
@@ -3719,16 +3729,6 @@ export const CouponPackSettingsPage: FC<{
                 저장하면 카페24에 자동 등록됩니다
               </span>
             )}
-          </div>
-
-          {/* ── 안내 카드 ── */}
-          <div class="card" style="border-left:3px solid #ec4899;background:#fdf2f8">
-            <h2 style="font-size:14px;color:#be185d;margin-bottom:8px">쿠폰팩 안내</h2>
-            <p style="font-size:13px;color:#374151;line-height:1.7">
-              쿠폰팩 활성화 시 5개의 단계별 할인 쿠폰(₩3,000 ~ ₩30,000)이 카페24에 등록됩니다.
-              신규 회원 가입 시 카페24가 자동으로 5장 모두를 즉시 발급합니다.
-              디자인/크기 변경은 즉시 저장되며, 위젯 렌더링에만 영향을 줍니다.
-            </p>
           </div>
 
           {/* CSS keyframes는 미리보기 영역에서 COUPON_PACK_CSS로 이미 주입됨 — 별도 style 블록 불필요 */}
