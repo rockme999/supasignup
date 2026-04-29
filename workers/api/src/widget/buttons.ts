@@ -142,6 +142,14 @@ export const WIDGET_JS = `(function() {
     '.bg-preset-pulse-d3{animation-delay:0.8s!important}',
     '.bg-preset-pulse-d4{animation-delay:1.2s!important}',
     '@keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}',
+    /* ── 모바일 자동 미세 애니메이션 keyframes ── */
+    '@keyframes bg-mobile-glass{0%,100%{backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}50%{backdrop-filter:blur(16px) saturate(165%);-webkit-backdrop-filter:blur(16px) saturate(165%)}}',
+    '@keyframes bg-mobile-neon{0%,100%{box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)}50%{box-shadow:0 0 14px rgba(99,102,241,0.5),inset 0 0 14px rgba(99,102,241,0.10)}}',
+    '@keyframes bg-mobile-liquid{0%,100%{opacity:1}50%{opacity:0.55}}',
+    '@keyframes bg-mobile-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}',
+    '@keyframes bg-mobile-soft{0%,100%{box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)}50%{box-shadow:0 2px 4px rgba(0,0,0,0.05),0 8px 20px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.05)}}',
+    /* ── 모바일 자동 미세 애니메이션 적용 (hover 없는 환경 + 모션 허용) ── */
+    '@media(hover:none)and(prefers-reduced-motion:no-preference){.bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
     /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) ── */
     '.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block}',
     '.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)}',
