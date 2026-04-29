@@ -1479,7 +1479,7 @@ export const GeneralSettingsPage: FC<{
     {shop && (<>
       <div class="card" id="couponSettingsCard">
         {/* 회원 가입 쿠폰 설정 */}
-        <div style="max-width:600px">
+        <div>
           <h2>회원 가입 쿠폰 설정</h2>
           <p style="font-size:13px;color:#64748b;margin-bottom:4px">
             설정을 저장하면 카페24에 쿠폰이 자동 생성되고, 회원가입 시 자동 발급됩니다.
@@ -1491,8 +1491,10 @@ export const GeneralSettingsPage: FC<{
             </p>
           )}
 
+          {/* 3개 쿠폰 카드를 한 줄 가로 배치 (좁은 화면은 자동 줄바꿈) */}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:12px;margin-bottom:16px">
           {/* 무료배송 쿠폰 카드 */}
-          <div id="couponCard_shipping" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+          <div id="couponCard_shipping" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="display:flex;align-items:center;gap:10px">
                 <label class="toggle" style="flex-shrink:0">
@@ -1517,7 +1519,7 @@ export const GeneralSettingsPage: FC<{
           </div>
 
           {/* 정액할인 쿠폰 카드 */}
-          <div id="couponCard_amount" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+          <div id="couponCard_amount" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="display:flex;align-items:center;gap:10px">
                 <label class="toggle" style="flex-shrink:0">
@@ -1568,7 +1570,7 @@ export const GeneralSettingsPage: FC<{
           </div>
 
           {/* 정률할인 쿠폰 카드 */}
-          <div id="couponCard_rate" style={`border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:16px${shop.plan === 'free' ? ';opacity:0.5;pointer-events:none' : ''}`}>
+          <div id="couponCard_rate" style={`border:1px solid #e5e7eb;border-radius:10px;padding:16px${shop.plan === 'free' ? ';opacity:0.5;pointer-events:none' : ''}`}>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="display:flex;align-items:center;gap:10px">
                 <label class="toggle" style="flex-shrink:0">
@@ -1618,6 +1620,7 @@ export const GeneralSettingsPage: FC<{
               </div>
             </div>
           </div>
+          </div>{/* /3개 쿠폰 카드 grid */}
 
           <button id="saveCouponConfigBtn" class="btn btn-primary btn-sm">쿠폰 설정 저장</button>
         </div>
