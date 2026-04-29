@@ -799,6 +799,12 @@ dashboard.put('/shops/:id/coupon', async (c) => {
     coupon_config: JSON.stringify(newConfig),
   });
 
+  // 위젯 캐시 무효화 (coupon_config가 widget/config에 포함되므로 반드시 퍼지)
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+
   // 백그라운드에서 카페24 쿠폰 생성 동기화
   const updatedShop = { ...shop, coupon_config: JSON.stringify(newConfig) };
   c.executionCtx.waitUntil(
@@ -960,9 +966,9 @@ dashboard.put('/shops/:id/kakao-channel', async (c) => {
   const shopId = c.req.param('id');
 
   const shop = await c.env.DB
-    .prepare('SELECT shop_id, plan FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
+    .prepare('SELECT shop_id, client_id, plan FROM shops WHERE shop_id = ? AND owner_id = ? AND deleted_at IS NULL')
     .bind(shopId, ownerId)
-    .first<{ shop_id: string; plan: string }>();
+    .first<{ shop_id: string; client_id: string; plan: string }>();
 
   if (!shop) return c.json({ error: 'not_found' }, 404);
 
@@ -977,6 +983,12 @@ dashboard.put('/shops/:id/kakao-channel', async (c) => {
     .prepare("UPDATE shops SET kakao_channel_id = ?, updated_at = datetime('now') WHERE shop_id = ?")
     .bind(channelId || null, shopId)
     .run();
+
+  // 위젯 캐시 무효화 (kakao_channel_id가 widget/config에 포함되므로 반드시 퍼지)
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
 
   return c.json({ ok: true });
 });
