@@ -1547,12 +1547,6 @@ export const GeneralSettingsPage: FC<{
               <span id="basicCouponAccordionArrow" style="font-size:14px;color:#94a3b8;transition:transform 0.2s;flex-shrink:0;margin-left:12px">&#9654;</span>
             </button>
           )}
-          {!isPlus && (
-            <p style="font-size:12px;color:#f59e0b;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:12px">
-              무료 플랜: 무료배송 또는 정액할인 중 <strong>1종만</strong> 기본값으로 발급 가능합니다.
-              <a href="/dashboard/billing" style="color:#2563eb;font-weight:600;margin-left:4px">Plus 업그레이드 →</a>
-            </p>
-          )}
           <div
             id="basicCouponAccordionBody"
             style={`${isPlus ? 'display:none;padding:16px;border-top:1px solid #e5e7eb' : ''}`}
