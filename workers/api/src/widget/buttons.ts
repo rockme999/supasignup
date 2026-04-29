@@ -143,7 +143,10 @@ export const WIDGET_JS = `(function() {
     '.bg-preset-pulse-d4{animation-delay:1.2s!important}',
     '@keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}',
     /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) ── */
-    '.bg-dark-wrap{background:#1a1a2e;padding:14px 16px;border-radius:12px;display:inline-block}'
+    '.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block}',
+    '.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)}',
+    '.bg-dark-wrap-neon-glow{background:#0a0a14}',
+    '.bg-dark-wrap-liquid-glass{background:linear-gradient(160deg,#0f2027,#203a43,#2c5364)}'
   ].join('\\n');
 
   // ─── Plus: 부모 트리 luminance 추적 (자동 다크 wrapper 판단) ─
@@ -537,12 +540,13 @@ export const WIDGET_JS = `(function() {
       this.initLiquidGlass(this.container);
     }
 
-    // Plus dark-bg 프리셋: 밝은 배경이면 자동으로 어두운 wrapper 클래스 부여
+    // Plus dark-bg 프리셋: 밝은 배경이면 자동으로 미리보기와 동일한 wrapper 배경 부여
     var DARK_BG_PRESETS = ['glassmorphism', 'neon-glow', 'liquid-glass'];
     if (DARK_BG_PRESETS.indexOf(preset) !== -1) {
       var lum = getEffectiveBgLuminance(this.container);
       if (lum > 0.6) {
         this.container.classList.add('bg-dark-wrap');
+        this.container.classList.add('bg-dark-wrap-' + preset);
       }
     }
   };
