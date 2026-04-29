@@ -30,6 +30,8 @@ import {
 import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
+import { registerCouponPack, unregisterCouponPack } from '../services/coupon-pack';
+import type { CouponPackConfig } from '../services/coupon-pack';
 import { autoReplyInquiry } from './ai';
 import { getGlobalAutoReplyEnabled } from './admin';
 
@@ -1260,6 +1262,115 @@ dashboard.post('/widget/event-dashboard', async (c) => {
   );
 
   return c.json({ ok: true });
+});
+
+// ─── PUT /shops/:id/coupon-pack ─────────────────────────────
+/**
+ * Plus 웰컴 쿠폰팩 활성화 / 비활성화.
+ *
+ * enabled=true : registerCouponPack() 호출 → coupon_config.pack 갱신 → 캐시 무효화
+ * enabled=false: unregisterCouponPack() 호출 → coupon_config.pack.enabled=false
+ *
+ * - Plus 플랜 전용 (Free → 403)
+ * - 기존 coupon_config 나머지 필드 변경 없음 (pack 필드 추가/수정만)
+ */
+dashboard.put('/shops/:id/coupon-pack', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan !== 'plus') {
+    return c.json(
+      { error: 'plus_required', message: '쿠폰팩은 Plus 플랜에서만 사용할 수 있습니다.' },
+      403,
+    );
+  }
+
+  const body = await c.req.json<{ enabled: boolean }>();
+  if (typeof body.enabled !== 'boolean') {
+    return c.json({ error: 'invalid_body', message: 'enabled(boolean) 필드가 필요합니다.' }, 400);
+  }
+
+  // 기존 coupon_config 파싱 (pack 외 필드 보존)
+  let existingConfig: CouponConfig & { pack?: CouponPackConfig } = {
+    ...DEFAULT_COUPON_CONFIG,
+  };
+  if (shop.coupon_config) {
+    try {
+      existingConfig = JSON.parse(shop.coupon_config) as CouponConfig & { pack?: CouponPackConfig };
+    } catch { /* 파싱 실패 시 기본값 사용 */ }
+  }
+
+  if (body.enabled) {
+    // ── 활성화: 5개 쿠폰 카페24 등록 ──────────────────────────
+    const result = await registerCouponPack(c.env, shop);
+
+    const now = new Date().toISOString();
+    const newPack: CouponPackConfig = {
+      enabled: result.items.length > 0, // 1개 이상 성공하면 활성 상태
+      registered_at: result.items.length > 0 ? now : (existingConfig.pack?.registered_at ?? null),
+      expire_days: existingConfig.pack?.expire_days ?? 30,
+      items: result.items,
+    };
+
+    const newConfig = { ...existingConfig, pack: newPack };
+
+    await c.env.DB
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(newConfig), shopId)
+      .run();
+
+    // KV + 엣지 캐시 무효화
+    await Promise.all([
+      c.env.KV.delete(`widget_config:${shop.client_id}`),
+      purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+    ]);
+
+    console.info(
+      `[CouponPack] 등록 결과: mall=${shop.mall_id}, 성공=${result.items.length}, 실패=${result.failures.length}`,
+    );
+
+    return c.json({
+      ok: true,
+      pack: newPack,
+      items: result.items,
+      failures: result.failures,
+    });
+
+  } else {
+    // ── 비활성화: 자동 발급 중지 ───────────────────────────────
+    // unregisterCouponPack은 예외를 던지지 않음 (내부 로그만)
+    await unregisterCouponPack(c.env, shop);
+
+    const newPack: CouponPackConfig = {
+      ...(existingConfig.pack ?? {
+        enabled: false,
+        registered_at: null,
+        expire_days: 30,
+        items: [],
+      }),
+      enabled: false,
+    };
+
+    const newConfig = { ...existingConfig, pack: newPack };
+
+    await c.env.DB
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(newConfig), shopId)
+      .run();
+
+    // KV + 엣지 캐시 무효화
+    await Promise.all([
+      c.env.KV.delete(`widget_config:${shop.client_id}`),
+      purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+    ]);
+
+    return c.json({ ok: true, pack: newPack, items: [], failures: [] });
+  }
 });
 
 export default dashboard;

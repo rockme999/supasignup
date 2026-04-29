@@ -46,6 +46,22 @@
 --   2026-04-27: shops.live_counter_config 추가 (0030) — 라이브 가입자 카운터 설정 JSON
 --                { enabled, position, show_toast, show_counter }
 --                NULL = 기본값(활성). Plus 플랜만 동작. threshold(일 평균 ≥3명) 미달 시 자동 비활성.
+--   2026-04-27: shops.coupon_config.pack 필드 추가 (마이그레이션 없음 — JSON 자유 확장) (Round 4 Phase A)
+--                coupon_config.pack = {
+--                  enabled: boolean,
+--                  registered_at: string | null,  -- 카페24 등록 시각 (ISO 8601)
+--                  expire_days: number,            -- 기본 30
+--                  items: [
+--                    { min_order: number, discount: number, cafe24_coupon_no?: string }
+--                  ]
+--                }
+--                Plus 플랜 전용 웰컴 쿠폰팩 5장 (₩55,000 가치):
+--                  3,000원 이상 → 3,000원 할인
+--                  50,000원 이상 → 5,000원 할인
+--                  70,000원 이상 → 7,000원 할인
+--                  100,000원 이상 → 10,000원 할인
+--                  200,000원 이상 → 30,000원 할인
+--                카페24 자동 발급(issue_type='A', issue_sub_type='J') 방식 — 가입 시 카페24가 자체 발급.
 
 -- ============================================================
 -- 1. owners — 운영자 계정
