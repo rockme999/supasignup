@@ -175,12 +175,12 @@ function buildBrandCard(variant: string, animClass: string, fmtAmount: string, i
   <div class="bg-cp-inner" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
     <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(255,255,255,0.25);border-right:1.5px dashed rgba(255,255,255,0.25);margin:0 11px;pointer-events:none;z-index:1"></div>
     ${starDots}
-    <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);pointer-events:none;z-index:2;filter:drop-shadow(0 0 8px rgba(255,220,40,0.7)) drop-shadow(0 0 18px rgba(255,180,0,0.45))">
-      <svg width="52" height="62" viewBox="0 0 52 62" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <div style="position:absolute;right:1em;top:50%;transform:translateY(-50%);pointer-events:none;z-index:2;filter:drop-shadow(0 0 0.5em rgba(255,220,40,0.7)) drop-shadow(0 0 1.125em rgba(255,180,0,0.45))">
+      <svg width="52" height="62" viewBox="0 0 52 62" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:3.25em;height:3.875em">
         <path d="M30 2L6 34H22L18 60L46 26H30L34 2Z" fill="#FFE033" stroke="#FFB800" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
     </div>
-    <div style="width:100%;padding-left:24px;padding-right:72px;position:relative;z-index:3">
+    <div style="width:100%;padding-left:1.5em;padding-right:4.5em;position:relative;z-index:3">
       <div style="font-size:2.125em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;color:#fff">${fmtAmount} 상당</div>
       <div style="font-size:0.8125em;font-weight:600;margin-bottom:4px;color:rgba(255,255,255,0.92)">신규 회원 웰컴 할인 쿠폰팩</div>
       <div style="font-size:0.625em;opacity:0.82;color:rgba(255,255,255,0.72)">번개가입, 번개지급 ${itemsCount}장</div>
