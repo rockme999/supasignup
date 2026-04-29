@@ -7,6 +7,7 @@
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
 import { buildCouponPackHtml, COUPON_PACK_CSS } from '../widget/coupon-pack';
+import { COUPON_PACK_DEFINITIONS } from '../services/coupon-pack';
 
 export const AiReportsPage: FC<{
   shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
@@ -3373,6 +3374,13 @@ export const CouponPackSettingsPage: FC<{
   const expireDays  = pc.expire_days ?? 30;
   const failures    = pc.failures ?? [];
 
+  // 쿠폰팩 구성 — COUPON_PACK_DEFINITIONS 기준으로 등록 상태 매핑
+  const registeredItems: Map<number, string | null> = new Map(
+    (pc.items ?? []).map(i => [i.min_order, i.cafe24_coupon_no ?? null])
+  );
+  const failedSet: Set<number> = new Set((pc.failures ?? []).map(f => f.min_order));
+  const totalDiscount = COUPON_PACK_DEFINITIONS.reduce((sum, d) => sum + d.discount, 0);
+
   const designs: Array<{ value: 'dark' | 'brand' | 'illust' | 'minimal'; label: string }> = [
     { value: 'dark',    label: '#1 다크' },
     { value: 'brand',   label: '#2 번개가입 브랜드' },
@@ -3616,6 +3624,75 @@ export const CouponPackSettingsPage: FC<{
                 <button id="cpSaveBtn" class="btn btn-primary" style="width:auto">설정 저장</button>
               </div>
 
+            </div>
+          </div>
+
+          {/* 쿠폰팩 구성 섹션 */}
+          <div class="card" style="margin-bottom:16px">
+            <h2 style="font-size:14px;font-weight:700;margin-bottom:4px">쿠폰팩 구성</h2>
+            <p style="font-size:12px;color:#64748b;margin-bottom:16px">내 가게에서 신규 회원에게 발급될 5장의 쿠폰 구성입니다.</p>
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                  <tr style="border-bottom:2px solid #e5e7eb">
+                    <th style="text-align:left;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">쿠폰 내용</th>
+                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">최소 주문</th>
+                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">할인</th>
+                    <th style="text-align:center;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">카페24 등록</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COUPON_PACK_DEFINITIONS.map((def, idx) => {
+                    const couponNo = registeredItems.get(def.min_order);
+                    const isFailed = failedSet.has(def.min_order);
+                    const isRegistered = couponNo != null;
+
+                    let statusCell;
+                    if (isFailed) {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px">
+                          <span style="color:#dc2626;font-weight:600" title="카페24 등록 실패">✗ 실패</span>
+                        </td>
+                      );
+                    } else if (isRegistered) {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px">
+                          <span style="color:#059669;font-weight:600">✓</span>
+                          <span style="font-size:11px;color:#94a3b8;margin-left:4px">#{couponNo}</span>
+                        </td>
+                      );
+                    } else {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px;color:#94a3b8">—</td>
+                      );
+                    }
+
+                    return (
+                      <tr style={`border-bottom:1px solid #f3f4f6;background:${idx % 2 === 0 ? '#fff' : '#fafafa'}`}>
+                        <td style="padding:8px 12px;color:#374151;font-weight:500">
+                          {def.min_order.toLocaleString()}원 이상 {def.discount.toLocaleString()}원 할인
+                        </td>
+                        <td style="text-align:right;padding:8px 12px;color:#6b7280">
+                          ₩{def.min_order.toLocaleString()}
+                        </td>
+                        <td style="text-align:right;padding:8px 12px;color:#2563eb;font-weight:600">
+                          ₩{def.discount.toLocaleString()}
+                        </td>
+                        {statusCell}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style="border-top:2px solid #e5e7eb;background:#f8fafc">
+                    <td colspan={2} style="padding:8px 12px;font-size:13px;font-weight:600;color:#374151">합계</td>
+                    <td style="text-align:right;padding:8px 12px;font-weight:700;color:#2563eb">
+                      ₩{totalDiscount.toLocaleString()}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
 
