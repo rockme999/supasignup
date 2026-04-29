@@ -22,6 +22,33 @@ export const WIDGET_JS = `(function() {
   // ─── 서버에서 주입된 BASE_URL (런타임에 치환됨) ─────────────
   var __MY_BASE_URL__ = '';
 
+  // ─── 디버그 헬퍼 (?bg_debug=1 또는 localStorage bg_debug=1) ─
+  function bgDebug() {
+    try {
+      if (window.location.search.indexOf('bg_debug=1') !== -1) return true;
+      return localStorage.getItem('bg_debug') === '1';
+    } catch (e) { return false; }
+  }
+  function bgLog() {
+    if (!bgDebug()) return;
+    try {
+      var args = ['[번개가입]'];
+      for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+      console.info.apply(console, args);
+    } catch (e) {}
+  }
+
+  // ─── viewport 기반 모바일 판단 ───────────────────────────────
+  // (UA 스푸핑/UA-reduction에 무관, 모바일 서브도메인 없는 환경에서 신뢰성 높음)
+  function isMobileViewport() {
+    try {
+      if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) return true;
+      return window.innerWidth <= 768;
+    } catch (e) {
+      return window.innerWidth <= 768;
+    }
+  }
+
   // ─── 유틸: HTML 이스케이프 (XSS 방지) ───────────────────────
   function escapeHtml(str) {
     return String(str)
@@ -284,6 +311,9 @@ export const WIDGET_JS = `(function() {
   }
 
   BGWidget.prototype.init = function() {
+    // [디버그 a] init 시작 — UA, viewport, href
+    bgLog('init: ua=', navigator.userAgent, 'vw=', window.innerWidth, 'vh=', window.innerHeight, 'isMobileViewport=', isMobileViewport(), 'href=', location.href);
+
     // Inject CSS
     var style = document.createElement('style');
     style.textContent = WIDGET_CSS;
@@ -311,6 +341,8 @@ export const WIDGET_JS = `(function() {
     }
 
     this.clientId = clientId;
+    // [디버그 b] clientId 추출 후
+    bgLog('init: clientId=', clientId);
 
     // Save last provider from URL (after OAuth callback)
     this.saveLastProvider();
@@ -319,7 +351,7 @@ export const WIDGET_JS = `(function() {
     try {
       this.lastProvider = localStorage.getItem('bg_last_provider');
     } catch (e) {
-      // Private browsing mode - graceful fallback
+      bgLog('error in init (localStorage):', e.message);
     }
 
     // SSO 팝업에서 돌아온 경우 → 부모에 알리고 자동 닫기
@@ -331,6 +363,8 @@ export const WIDGET_JS = `(function() {
 
     // Detect page type
     this.pageType = this.detectPageType();
+    // [디버그 c] pageType 결정 후
+    bgLog('init: pageType=', this.pageType);
 
     // 모든 페이지에서 config 로드 (미니배너 등 Plus 기능은 전 페이지 동작)
     if (this.pageType === 'login') {
@@ -466,15 +500,21 @@ export const WIDGET_JS = `(function() {
   BGWidget.prototype.loadConfig = function(clientId) {
     var self = this;
     var apiUrl = this.getApiBase() + '/api/widget/config?client_id=' + encodeURIComponent(clientId);
+    // [디버그 e] loadConfig 시작
+    bgLog('loadConfig: fetching', apiUrl);
 
     fetch(apiUrl, { credentials: 'omit', cache: 'no-store' })
       .then(function(resp) {
+        // [디버그 f] loadConfig 응답
+        bgLog('loadConfig: ok=', resp.ok, 'status=', resp.status);
         if (!resp.ok) throw new Error('Config load failed: HTTP ' + resp.status);
         return resp.json();
       })
       .then(function(config) {
         self.config = config;
         self.baseUrl = config.base_url || self.getApiBase();
+        // [디버그 f2] config 주요 필드
+        bgLog('config:', { plan: config.plan, preset: config.style && config.style.preset, providers_count: config.providers && config.providers.length, base_url: config.base_url });
 
         // 소셜 로그인 렌더링 (로그인/가입 페이지에서만)
         if (self.pageType === 'login' && config.providers && config.providers.length > 0) {
@@ -502,12 +542,13 @@ export const WIDGET_JS = `(function() {
             fetch(self.getApiBase() + '/api/widget/live-counter?client_id=' + encodeURIComponent(config.client_id))
               .then(function(r) { return r.ok ? r.json() : null; })
               .then(function(lc) { if (lc) { self.initLiveCounter({ live_counter: lc }); } })
-              .catch(function() {});
+              .catch(function(err) { bgLog('error in loadConfig (live-counter):', err.message); });
           }
         }
       })
       .catch(function(err) {
         console.warn('[번개가입] Failed to load config:', err.message);
+        bgLog('error in loadConfig:', err.message);
       });
   };
 
@@ -518,6 +559,9 @@ export const WIDGET_JS = `(function() {
   };
 
   BGWidget.prototype.render = function() {
+    // [디버그 g] render 시작
+    bgLog('render: container=', this.container, 'preset=', this.config && this.config.style && this.config.style.preset);
+
     // Find or create container
     // 컨테이너 식별: ID + class 둘 다 사용 (외부 ID 충돌 방지 위해 우선 class로 찾고, 보조로 ID).
     this.container = document.querySelector('.bg-widget') || document.querySelector('#bg-widget');
@@ -541,6 +585,7 @@ export const WIDGET_JS = `(function() {
         }
       } else {
         // 로그인/가입 페이지 영역을 찾지 못하면 렌더링하지 않음
+        bgLog('render: no target element found — aborting render');
         return;
       }
     }
@@ -565,12 +610,8 @@ export const WIDGET_JS = `(function() {
     } else if (!this.config.style) {
       console.warn('[번개가입] config.style is missing — preset will fallback to default');
     }
-    // URL에 ?bg_debug=1 있으면 적용된 preset/주요 옵션 콘솔 출력 (모바일 디버그용)
-    try {
-      if (window.location.search.indexOf('bg_debug=1') !== -1) {
-        console.log('[번개가입 debug] applied preset =', preset, 'style =', s, 'plan =', this.config && this.config.plan);
-      }
-    } catch (e) {}
+    // bgDebug() 헬퍼로 통일 (기존 직접 indexOf 패턴 교체)
+    bgLog('render: applied preset =', preset, 'style =', s, 'plan =', this.config && this.config.plan);
 
     // dark-wrap이 적용될 가능성이 있는 preset은 inline-flex로 배치 (inline-block + flex children)
     // — 일반 preset은 flex로 페이지 가운데 정렬.
@@ -646,6 +687,16 @@ export const WIDGET_JS = `(function() {
         bgSetImp(this.container, 'padding', '14px 16px');
         bgSetImp(this.container, 'border-radius', '12px');
       }
+    }
+
+    // [디버그 h] render 완료 — 적용된 computed style
+    if (bgDebug() && this.container) {
+      var dbgBtn = this.container.querySelector('.bg-btn');
+      if (dbgBtn) {
+        var cs = getComputedStyle(dbgBtn);
+        bgLog('render computed:', { borderRadius: cs.borderRadius, height: cs.height, background: cs.backgroundColor, padding: cs.padding, border: cs.border });
+      }
+      bgLog('render container className=', this.container.className, 'id=', this.container.id);
     }
   };
 
@@ -878,6 +929,9 @@ export const WIDGET_JS = `(function() {
       var mallMatch = config.sso_callback_uri.match(new RegExp('https://([^.]+)\\.cafe24\\.com'));
       var mallId = mallMatch ? mallMatch[1] : null;
 
+      // [디버그 i] startAuth 분기
+      bgLog('startAuth: branch=', (typeof MemberAction !== 'undefined' && MemberAction.snsLogin) ? 'PC-MemberAction' : 'else-popup', 'mallId=', mallId);
+
       // /oauth/sso-start: first-party 맥락으로 bg.suparain.kr 방문 → 쿠키 확정 세팅 →
       // Cafe24 SSO URL로 302. 기존의 cross-origin fetch로 Set-Cookie 시도는 ITP/3rd-party
       // 차단으로 쿠키가 저장되지 않아 /authorize가 KV 엣지 캐시의 이전 값을 읽는 레이스
@@ -959,8 +1013,14 @@ export const WIDGET_JS = `(function() {
 
     for (var i = 0; i < selectors.length; i++) {
       var el = document.querySelector(selectors[i]);
-      if (el) return el;
+      if (el) {
+        // [디버그 d] findLoginPage 결과
+        bgLog('init: target element=', el, 'selector matched=', selectors[i]);
+        return el;
+      }
     }
+    // [디버그 d] findLoginPage 실패
+    bgLog('init: target element= null (no selector matched)');
     return null;
   };
 
@@ -1405,8 +1465,8 @@ export const WIDGET_JS = `(function() {
       self.trackEvent('popup_show', {});
     }
 
-    // PC: mouseout (상단으로 마우스가 나갈 때)
-    if (!/Mobi|Android/i.test(navigator.userAgent)) {
+    // PC/모바일 분기: viewport 기반 (UA 스푸핑/UA-reduction 무관)
+    if (!isMobileViewport()) {
       document.addEventListener('mouseout', function(e) {
         if (e.clientY <= 0) showPopup();
       });

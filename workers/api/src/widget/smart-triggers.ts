@@ -86,7 +86,7 @@ export function getSmartTriggerJs(): string {
     '        try { callback(); } catch (e) {}',
     '      }',
     '      if (mode === "exit-intent") {',
-    '        var isMobile = /Mobi|Android/i.test(navigator.userAgent);',
+    '        var isMobile = (function() { try { if (window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches) return true; return window.innerWidth <= 768; } catch(e) { return window.innerWidth <= 768; } })();',
     '        if (!isMobile) {',
     '          document.addEventListener("mouseout", function(e) { if (e.clientY < 0) gate(); });',
     '        } else {',
