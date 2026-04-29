@@ -258,9 +258,7 @@ function buildMinimalCard(variant: string, animClass: string, fmtAmount: string,
   </svg>
   <div class="bg-cp-inner" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
     <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.15);border-right:1.5px dashed rgba(0,0,0,0.15);margin:0 11px;pointer-events:none;z-index:1"></div>
-    <div style="font-size:2.25em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#0f172a">
-      <span style="display:inline-block;border-bottom:2.5px solid #0f172a;padding-bottom:2px">${fmtAmount}</span>
-    </div>
+    <div style="font-size:2.25em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#0f172a">${fmtAmount}</div>
     <div style="font-size:0.6875em;font-weight:600;letter-spacing:0.0875em;text-transform:uppercase;margin-top:8px;margin-bottom:4px;position:relative;z-index:2;color:#374151">WELCOME COUPON PACK</div>
     <div style="font-size:0.625em;opacity:0.72;color:#94a3b8;margin-top:5px;position:relative;z-index:2">신규 회원 가입 즉시 지급</div>
   </div>
@@ -419,8 +417,7 @@ export function getCouponPackJs(): string {
     `        + '<path class="' + strokeClass4 + '" d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linejoin="round"/></svg>'`,
     `        + '<div class="bg-cp-inner" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">'`,
     `        + '<div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.15);border-right:1.5px dashed rgba(0,0,0,0.15);margin:0 11px;pointer-events:none;z-index:1"></div>'`,
-    `        + '<div style="font-size:36px;font-weight:800;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#0f172a">'`,
-    `        + '<span style="display:inline-block;border-bottom:2.5px solid #0f172a;padding-bottom:2px">' + fmtAmount + '</span></div>'`,
+    `        + '<div style="font-size:36px;font-weight:800;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#0f172a">' + fmtAmount + '</div>'`,
     `        + '<div style="font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;margin-top:8px;margin-bottom:4px;position:relative;z-index:2;color:#374151">WELCOME COUPON PACK</div>'`,
     `        + '<div style="font-size:10px;opacity:0.72;color:#94a3b8;margin-top:5px;position:relative;z-index:2">\\uc2e0\\uaddc \\ud68c\\uc6d0 \\uac00\\uc785 \\uc989\\uc2dc \\uc9c0\\uae09</div>'`,
     `        + '</div></div>';`,
