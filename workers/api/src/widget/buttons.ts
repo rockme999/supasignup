@@ -113,7 +113,7 @@ export const WIDGET_JS = `(function() {
     '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}',
     /* ── Plus 프리셋: 글래스모피즘 ── */
     '.bg-preset-glass{background:rgba(255,255,255,0.1)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border:1px solid rgba(255,255,255,0.22)!important;color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,0.12)!important}',
-    '.bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important}',
+    '.bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important;opacity:1!important}',
     '.bg-preset-glass .bg-btn-icon{background:rgba(255,255,255,0.25);border-radius:50%}',
     /* ── Plus 프리셋: 네온 글로우 ── */
     '.bg-preset-neon{background:transparent!important;border:1px solid rgba(99,102,241,0.55)!important;color:#a5b4fc!important;box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)!important;text-shadow:0 0 8px rgba(165,180,252,0.5)!important}',
@@ -128,7 +128,7 @@ export const WIDGET_JS = `(function() {
     /* ── Plus 프리셋: 그라디언트 플로우 ── */
     '.bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
     '.bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}',
-    '.bg-preset-gradient .bg-btn-icon{background:rgba(255,255,255,0.3);border-radius:50%}',
+    '.bg-preset-gradient .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 소프트 섀도우 ── */
     '.bg-preset-soft{background:#ffffff!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}',
     '.bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}',
