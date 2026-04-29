@@ -1015,10 +1015,10 @@ export const WIDGET_JS = `(function() {
       // 셀렉터를 정규화 (한 번만 계산)
       var resolvedSel = anchorSel;
       if (anchorSel.charAt(0) === '.' && anchorSel.indexOf(' ') >= 0) {
-        resolvedSel = anchorSel.split(/\s+/).join('.');
+        resolvedSel = anchorSel.split(/\\s+/).join('.');
       } else if (anchorSel.charAt(0) !== '#' && anchorSel.charAt(0) !== '.' && anchorSel.charAt(0) !== '[') {
         if (anchorSel.indexOf(' ') >= 0) {
-          resolvedSel = '.' + anchorSel.split(/\s+/).join('.');
+          resolvedSel = '.' + anchorSel.split(/\\s+/).join('.');
         }
       }
 
