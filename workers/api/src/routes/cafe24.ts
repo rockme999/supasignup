@@ -24,6 +24,8 @@ import { createToken } from '../services/jwt';
 import { createShop, getShopByMallId, updateShop, softDeleteShop, upsertCafe24Member } from '../db/queries';
 import { encrypt } from '@supasignup/bg-core';
 import { issueCouponOnSignup } from '../services/coupon';
+import { pauseCouponPack, resumeCouponPack, resolveCouponPackState } from '../services/coupon-pack';
+import type { CouponPackConfig } from '../services/coupon-pack';
 import { probeSsoType } from './dashboard';
 import { purgeWidgetConfigCache } from './widget';
 
@@ -367,6 +369,18 @@ cafe24.post('/webhook', async (c) => {
           c.env.DB.prepare("UPDATE subscriptions SET status = 'expired' WHERE shop_id = ? AND status = 'active'")
             .bind(shop.shop_id),
         ]);
+
+        // 쿠폰팩 정지 (state: active → paused) — 실패해도 plan 변경 롤백 안 함
+        try {
+          const pauseResult = await pauseCouponPack(c.env, shop);
+          if (pauseResult.success || pauseResult.failures.length < (shop.coupon_config ? 1 : 0)) {
+            // state를 paused로 갱신
+            await updateCouponPackState(c.env.DB, shop.shop_id, shop.coupon_config ?? null, 'paused');
+          }
+        } catch (e) {
+          console.error(`[CouponPack] 정지 예외 (plan→free): mall=${mallId}`, e);
+        }
+
         // widget_config 캐시 무효화 (KV + 엣지) — 이후 요청부터 plan=free 반영
         await Promise.all([
           c.env.KV.delete(`widget_config:${shop.client_id}`),
@@ -430,6 +444,24 @@ cafe24.post('/webhook', async (c) => {
             .bind(expiresAt.toISOString(), sub.id),
           c.env.DB.prepare("UPDATE shops SET plan = 'plus', updated_at = datetime('now') WHERE shop_id = ?").bind(sub.shop_id),
         ]);
+
+        // 쿠폰팩 재개 (state: paused → active) — 실패해도 plan 변경 롤백 안 함
+        // state=unregistered(운영자 명시 OFF)면 resumeCouponPack 내부에서 no-op 처리됨
+        try {
+          const shopForResume = await c.env.DB
+            .prepare('SELECT * FROM shops WHERE shop_id = ?')
+            .bind(sub.shop_id)
+            .first<{ coupon_config: string | null; platform_access_token: string | null; platform_refresh_token: string | null; owner_id: string; mall_id: string; shop_id: string }>();
+          if (shopForResume) {
+            const resumeResult = await resumeCouponPack(c.env, shopForResume as any);
+            if (resumeResult.success) {
+              await updateCouponPackState(c.env.DB, sub.shop_id, shopForResume.coupon_config, 'active');
+            }
+          }
+        } catch (e) {
+          console.error(`[CouponPack] 재개 예외 (plan→plus): shop=${sub.shop_id}`, e);
+        }
+
         console.info(`Payment complete: subscription=${sub.id}, shop=${sub.shop_id}, cycle=${sub.billing_cycle}`);
         log.action = 'payment_complete';
         log.note = `subscription=${sub.id}, cycle=${sub.billing_cycle}`;
@@ -532,6 +564,33 @@ cafe24.post('/webhook', async (c) => {
   await recordWebhookEvent(c.env.DB, { ...log, headers: headersJson, payload: body });
   return c.json({ ok: true });
 });
+
+// ─── Helper: coupon_config.pack.state 갱신 ───────────────────
+/**
+ * coupon_config JSON에서 pack.state만 갱신하고 DB에 저장한다.
+ * 나머지 pack 필드와 coupon_config의 다른 필드는 변경하지 않는다.
+ */
+async function updateCouponPackState(
+  db: D1Database,
+  shopId: string,
+  couponConfigRaw: string | null,
+  newState: import('../services/coupon-pack').CouponPackState,
+): Promise<void> {
+  if (!couponConfigRaw) return;
+  try {
+    const config = JSON.parse(couponConfigRaw) as { pack?: CouponPackConfig };
+    if (!config.pack) return;
+    config.pack.state = newState;
+    // enabled 필드를 state와 동기화 (호환성 유지)
+    config.pack.enabled = newState === 'active';
+    await db
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(config), shopId)
+      .run();
+  } catch (err) {
+    console.error(`[CouponPack] coupon_config state 갱신 실패: shop_id=${shopId}`, err);
+  }
+}
 
 // ─── Helper: 웹훅 이벤트 DB 기록 ────────────────────────────
 async function recordWebhookEvent(

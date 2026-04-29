@@ -11,6 +11,8 @@ import { rateLimitMiddleware } from '../middleware/auth';
 import { escapeLike } from '../db/stats-utils';
 import { draftInquiryReply, validateReply, PROMPT_VERSION, AI_MODEL, analyzeAndSaveShopIdentity } from './ai';
 import { purgeWidgetConfigCache } from './widget';
+import { pauseCouponPack, resumeCouponPack, resolveCouponPackState } from '../services/coupon-pack';
+import type { CouponPackConfig } from '../services/coupon-pack';
 
 // 관리자 조치로 shop 상태가 바뀐 후 위젯 config 캐시(KV + 엣지)를 모두 무효화한다.
 // 둘 다 지우지 않으면 엣지 s-maxage=300 때문에 최대 5분간 구 값이 서빙됨.
@@ -197,17 +199,36 @@ admin.put('/shops/:id/plan', async (c) => {
     return c.json({ error: 'invalid_plan' }, 400);
   }
 
-  // Shop 존재 여부 확인
-  const existingShop = await c.env.DB.prepare('SELECT shop_id FROM shops WHERE shop_id = ?')
+  // Shop 존재 여부 확인 (쿠폰팩 hook용으로 전체 레코드 조회)
+  const existingShop = await c.env.DB.prepare('SELECT * FROM shops WHERE shop_id = ?')
     .bind(shopId)
-    .first();
+    .first<{ shop_id: string; client_id: string; plan: string; coupon_config: string | null; platform_access_token: string | null; platform_refresh_token: string | null; owner_id: string; mall_id: string }>();
   if (!existingShop) return c.json({ error: 'not_found' }, 404);
+
+  const oldPlan = existingShop.plan;
 
   await c.env.DB.prepare(
     "UPDATE shops SET plan = ?, updated_at = datetime('now') WHERE shop_id = ?",
   )
     .bind(plan, shopId)
     .run();
+
+  // 쿠폰팩 정지/재개 hook — 실패해도 plan 변경 롤백 안 함
+  try {
+    if (plan === 'free' && oldPlan === 'plus') {
+      const pauseResult = await pauseCouponPack(c.env, existingShop as any);
+      if (pauseResult.success) {
+        await adminUpdateCouponPackState(c.env.DB, shopId, existingShop.coupon_config, 'paused');
+      }
+    } else if (plan === 'plus' && oldPlan === 'free') {
+      const resumeResult = await resumeCouponPack(c.env, existingShop as any);
+      if (resumeResult.success) {
+        await adminUpdateCouponPackState(c.env.DB, shopId, existingShop.coupon_config, 'active');
+      }
+    }
+  } catch (e) {
+    console.error(`[CouponPack] plan 변경 hook 예외: shop=${shopId}, ${oldPlan}→${plan}`, e);
+  }
 
   // 감사 로그
   await recordAuditLog(
@@ -220,10 +241,7 @@ admin.put('/shops/:id/plan', async (c) => {
   );
 
   // 캐시 무효화 (KV + 엣지)
-  const shop = await c.env.DB.prepare(
-    'SELECT client_id FROM shops WHERE shop_id = ?',
-  ).bind(shopId).first<{ client_id: string }>();
-  if (shop) await invalidateShopCaches(c.env, shop.client_id);
+  if (existingShop.client_id) await invalidateShopCaches(c.env, existingShop.client_id);
 
   return c.json({ ok: true });
 });
@@ -945,6 +963,28 @@ export async function getGlobalAutoReplyEnabled(env: Env): Promise<boolean> {
     "SELECT value FROM app_settings WHERE key = 'ai_auto_reply_global'"
   ).first<{ value: string }>();
   return row?.value === '1';
+}
+
+// ─── Helper: coupon_config.pack.state 갱신 ───────────────────
+async function adminUpdateCouponPackState(
+  db: D1Database,
+  shopId: string,
+  couponConfigRaw: string | null,
+  newState: import('../services/coupon-pack').CouponPackState,
+): Promise<void> {
+  if (!couponConfigRaw) return;
+  try {
+    const config = JSON.parse(couponConfigRaw) as { pack?: CouponPackConfig };
+    if (!config.pack) return;
+    config.pack.state = newState;
+    config.pack.enabled = newState === 'active';
+    await db
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(config), shopId)
+      .run();
+  } catch (err) {
+    console.error(`[CouponPack] coupon_config state 갱신 실패 (admin): shop_id=${shopId}`, err);
+  }
 }
 
 // ─── Helper: 감사 로그 기록 ──────────────────────────────────

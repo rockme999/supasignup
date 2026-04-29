@@ -31,7 +31,7 @@ import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
 import { registerCouponPack, unregisterCouponPack } from '../services/coupon-pack';
-import type { CouponPackConfig } from '../services/coupon-pack';
+import type { CouponPackConfig, CouponPackState } from '../services/coupon-pack';
 import { autoReplyInquiry } from './ai';
 import { getGlobalAutoReplyEnabled } from './admin';
 
@@ -1310,9 +1310,11 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     const result = await registerCouponPack(c.env, shop);
 
     const now = new Date().toISOString();
+    const packActive = result.items.length > 0;
     const newPack: CouponPackConfig = {
-      enabled: result.items.length > 0, // 1개 이상 성공하면 활성 상태
-      registered_at: result.items.length > 0 ? now : (existingConfig.pack?.registered_at ?? null),
+      enabled: packActive,
+      state: packActive ? 'active' : 'unregistered',
+      registered_at: packActive ? now : (existingConfig.pack?.registered_at ?? null),
       expire_days: existingConfig.pack?.expire_days ?? 30,
       items: result.items,
     };
@@ -1349,11 +1351,13 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     const newPack: CouponPackConfig = {
       ...(existingConfig.pack ?? {
         enabled: false,
+        state: 'unregistered' as CouponPackState,
         registered_at: null,
         expire_days: 30,
         items: [],
       }),
       enabled: false,
+      state: 'unregistered' as CouponPackState,
     };
 
     const newConfig = { ...existingConfig, pack: newPack };
