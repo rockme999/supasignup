@@ -10,6 +10,9 @@ import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
 import { DEFAULT_WIDGET_STYLE, safeParseStringArray, safeParseJsonObject, decrypt } from '@supasignup/bg-core';
 import { getShopByClientId, isOverFreeLimit } from '../db/queries';
 import { maskNamePublic } from '../utils/mask';
+import type { CouponPackConfig } from '../services/coupon-pack';
+import { resolveCouponPackState } from '../services/coupon-pack';
+import type { CouponConfig } from '../services/coupon';
 
 const WIDGET_CONFIG_TTL = 300; // 5 minutes KV cache
 const EDGE_CACHE_TTL = 300;   // 5 minutes edge cache (s-maxage)
@@ -127,6 +130,8 @@ widget.get('/config', async (c) => {
     coupon_config: shop.plan !== 'free'
       ? safeParseJsonObject(shop.coupon_config, null, `widget.coupon_config shop_id=${shop.shop_id}`)
       : null,
+    // coupon_pack: Plus 플랜 쿠폰팩 카드 위젯 표시용
+    coupon_pack: buildCouponPackField(shop.plan, shop.coupon_config ?? null),
   };
 
   // Cache in KV + 에지 캐시 (waitUntil로 비동기화 — 응답 블로킹 없음)
@@ -164,6 +169,9 @@ const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
   // R4 W3 Cycle2 라이브 가입자 카운터 funnel 이벤트 2종
   'widget.live_counter_shown',              // 라이브 카운터 sticky UI 노출
   'widget.live_toast_shown',               // 가입 토스트 1건 노출
+  // Phase C 쿠폰팩 카드 funnel 이벤트 2종
+  'widget.coupon_pack_shown',              // 쿠폰팩 카드 첫 노출 (이탈 팝업 내)
+  'widget.coupon_pack_clicked',            // 쿠폰팩 CTA 클릭
 ]);
 const MAX_PAGE_URL_LEN = 2048;
 const MAX_EVENT_DATA_JSON_LEN = 4096;
@@ -240,6 +248,49 @@ widget.post('/event', async (c) => {
 
   return c.json({ ok: true });
 });
+
+// ─── coupon_pack 응답 필드 빌더 ──────────────────────────────────
+// state === 'active'이면 위젯에 표시할 메타데이터를 반환, 그 외는 null.
+function buildCouponPackField(
+  plan: string,
+  couponConfigRaw: string | null,
+): {
+  active: boolean;
+  design: string;
+  anim_mode: boolean;
+  total_amount: number;
+  items_count: number;
+} | null {
+  // Plus 플랜이 아니면 노출하지 않음
+  if (plan === 'free' || !couponConfigRaw) return null;
+
+  let pack: CouponPackConfig | null = null;
+  try {
+    const parsed = JSON.parse(couponConfigRaw) as CouponConfig & { pack?: CouponPackConfig };
+    pack = parsed.pack ?? null;
+  } catch {
+    return null;
+  }
+
+  if (!pack) return null;
+
+  const state = resolveCouponPackState(pack);
+  if (state !== 'active') {
+    return { active: false, design: 'brand', anim_mode: true, total_amount: 0, items_count: 0 };
+  }
+
+  // total_amount: items 의 discount 합계
+  const totalAmount = (pack.items ?? []).reduce((sum, item) => sum + (item.discount ?? 0), 0);
+  const itemsCount = (pack.items ?? []).length;
+
+  return {
+    active: true,
+    design: pack.design ?? 'brand',
+    anim_mode: pack.anim_mode !== false,
+    total_amount: totalAmount > 0 ? totalAmount : 55000,
+    items_count: itemsCount > 0 ? itemsCount : 5,
+  };
+}
 
 // Origin/Referer를 파싱해 shop에 허용된 host인지 판정.
 // - 카페24: {mall_id}.cafe24.com (PC) / m.{mall_id}.cafe24.com (모바일) 허용

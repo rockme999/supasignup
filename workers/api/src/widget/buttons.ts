@@ -10,6 +10,7 @@
 import { getSmartTriggerJs } from './smart-triggers';
 import { getExitIntentJs } from './exit-intent';
 import { getLiveCounterJs } from './live-counter';
+import { getCouponPackJs } from './coupon-pack';
 
 export const WIDGET_JS = `(function() {
   'use strict';
@@ -1177,20 +1178,43 @@ export const WIDGET_JS = `(function() {
       body.innerHTML = escapeHtml(popupBody).replace(/\\n/g, '<br>');
       body.style.cssText = 'font-size:14px;color:#6b7280;text-align:center;margin:0 0 16px';
 
+      // Plus 쿠폰팩 카드 (pack.state === 'active' && plan === 'plus' 분기)
+      var cpConfig = config.coupon_pack;
+      var cpCardEl = null;
+      if (cpConfig && cpConfig.active && config.plan !== 'free') {
+        cpCardEl = self.renderCouponPackCard(cpConfig);
+        self.trackEvent('widget.coupon_pack_shown', {
+          design: cpConfig.design || 'brand',
+          anim_mode: cpConfig.anim_mode !== false,
+          total_amount: cpConfig.total_amount || 55000
+        });
+      }
+
       // CTA 버튼
       var ctaBtn = document.createElement('button');
-      ctaBtn.textContent = popupCta;
+      var ctaText = cpCardEl
+        ? '\\ud68c\\uc6d0\\uac00\\uc785 \\u2192'  // 회원가입 →
+        : popupCta;
+      ctaBtn.textContent = ctaText;
       var ctaR = Math.max(6, popupBorderRadius - 6);
       ctaBtn.style.cssText = 'display:block;width:100%;padding:14px;border-radius:' + ctaR + 'px;background:' + preset.ctaBg + ';color:' + (preset.ctaColor || '#fff') + ';font-size:16px;font-weight:700;cursor:pointer;border:' + (preset.ctaBorder || 'none');
       ctaBtn.addEventListener('click', function() {
         overlay.remove();
         self.trackEvent('popup_signup', {});
+        if (cpCardEl) {
+          self.trackEvent('widget.coupon_pack_clicked', {
+            design: cpConfig.design || 'brand',
+            total_amount: cpConfig.total_amount || 55000
+          });
+        }
         window.location.href = '/member/login.html';
       });
 
       modal.appendChild(closeBtn);
       modal.appendChild(title);
       modal.appendChild(body);
+      // 쿠폰팩 카드: body 아래, CTA 위에 배치 (핵심 비주얼)
+      if (cpCardEl) modal.appendChild(cpCardEl);
       modal.appendChild(ctaBtn);
       overlay.appendChild(modal);
 
@@ -1558,6 +1582,9 @@ export const WIDGET_JS = `(function() {
 
     // ─── 라이브 가입자 카운터 ─────────────────────────────────────
     ` + getLiveCounterJs() + `
+
+    // ─── 쿠폰팩 카드 렌더러 ──────────────────────────────────────
+    ` + getCouponPackJs() + `
 
     // ─── Initialize ──────────────────────────────────────────────
 
