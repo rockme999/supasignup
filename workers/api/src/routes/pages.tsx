@@ -99,6 +99,90 @@ export type LossAversionCards = {
   firstPurchaseGap: string[];
 };
 
+export type PlusPerformance = {
+  totalCaptured: number;
+  byTool: {
+    banner: number;
+    exit_intent: number;
+    popup: number;
+    escalation: number;
+  };
+};
+
+/**
+ * Plus 성과 지표 조회 — 도구별 attribution (최근 7일).
+ *
+ * - Exit-intent: widget.exit_intent_signup 직접 이벤트
+ * - 이탈 팝업: popup_signup 직접 이벤트
+ * - 미니배너: banner_click → 30분 이내 signup_complete (attribution)
+ * - 에스컬레이션: escalation_click → 30분 이내 signup_complete (attribution)
+ */
+export async function getPlusPerformance(
+  env: Env,
+  shopId: string,
+): Promise<PlusPerformance> {
+  const results = await env.DB.batch([
+    // [0] Exit-intent 직접 가입
+    env.DB.prepare(`
+      SELECT COUNT(DISTINCT visitor_id) AS n FROM funnel_events
+      WHERE shop_id = ? AND event_type = 'widget.exit_intent_signup'
+        AND created_at >= datetime('now', '-7 days')
+    `).bind(shopId),
+
+    // [1] 이탈 팝업 직접 가입
+    env.DB.prepare(`
+      SELECT COUNT(DISTINCT visitor_id) AS n FROM funnel_events
+      WHERE shop_id = ? AND event_type = 'popup_signup'
+        AND created_at >= datetime('now', '-7 days')
+    `).bind(shopId),
+
+    // [2] 미니배너 attribution: banner_click → 30분 내 signup_complete
+    env.DB.prepare(`
+      SELECT COUNT(DISTINCT b.visitor_id) AS n
+      FROM funnel_events b
+      JOIN funnel_events s
+        ON b.shop_id = s.shop_id
+        AND b.visitor_id = s.visitor_id
+        AND s.event_type = 'signup_complete'
+        AND s.created_at > b.created_at
+        AND s.created_at <= datetime(b.created_at, '+30 minutes')
+      WHERE b.shop_id = ? AND b.event_type = 'banner_click'
+        AND b.created_at >= datetime('now', '-7 days')
+        AND b.visitor_id IS NOT NULL
+    `).bind(shopId),
+
+    // [3] 에스컬레이션 attribution: escalation_click → 30분 내 signup_complete
+    env.DB.prepare(`
+      SELECT COUNT(DISTINCT b.visitor_id) AS n
+      FROM funnel_events b
+      JOIN funnel_events s
+        ON b.shop_id = s.shop_id
+        AND b.visitor_id = s.visitor_id
+        AND s.event_type = 'signup_complete'
+        AND s.created_at > b.created_at
+        AND s.created_at <= datetime(b.created_at, '+30 minutes')
+      WHERE b.shop_id = ? AND b.event_type = 'escalation_click'
+        AND b.created_at >= datetime('now', '-7 days')
+        AND b.visitor_id IS NOT NULL
+    `).bind(shopId),
+  ]);
+
+  const exitIntent = (results[0] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+  const popup = (results[1] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+  const banner = (results[2] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+  const escalation = (results[3] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+
+  return {
+    totalCaptured: exitIntent + popup + banner + escalation,
+    byTool: {
+      banner,
+      exit_intent: exitIntent,
+      popup,
+      escalation,
+    },
+  };
+}
+
 /**
  * W2-3 손실 회피 카드 데이터 조회.
  *
@@ -329,6 +413,11 @@ pages.get('/dashboard', async (c) => {
     ? getLossAversionCards(c.env, shop.shop_id)
     : Promise.resolve<LossAversionCards>({ missedSignupCount: 0, dataDays: 0, firstPurchaseGap: [] });
 
+  // Plus 플랜 — 성과 지표 조회 (Free는 불필요)
+  const plusPerformancePromise = shop.plan !== 'free'
+    ? getPlusPerformance(c.env, shop.shop_id)
+    : Promise.resolve<PlusPerformance>({ totalCaptured: 0, byTool: { banner: 0, exit_intent: 0, popup: 0, escalation: 0 } });
+
   // 최신 AI 브리핑 (홈 카드용) — 모든 운영자 대상. performance도 함께 조회해 카드 미리보기 노출
   const latestBriefingPromise = c.env.DB.prepare(
     `SELECT headline, performance, created_at FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
@@ -404,10 +493,11 @@ pages.get('/dashboard', async (c) => {
     funnelCounts[row.event_type] = row.cnt;
   }
 
-  // 손실 회피 카드 + 최신 브리핑 데이터 수집 (batch와 병렬 실행 중)
-  const [lossAversion, latestBriefingRow] = await Promise.all([
+  // 손실 회피 카드 + 최신 브리핑 + Plus 성과 지표 데이터 수집 (batch와 병렬 실행 중)
+  const [lossAversion, latestBriefingRow, plusPerformance] = await Promise.all([
     lossAversionPromise,
     latestBriefingPromise,
+    plusPerformancePromise,
   ]);
 
   // latestBriefing: row 존재 → HomeBriefing, row 없으면 null (placeholder 표시)
@@ -435,6 +525,7 @@ pages.get('/dashboard', async (c) => {
       }}
       funnelSummary={funnelCounts}
       lossAversion={lossAversion}
+      plusPerformance={plusPerformance.totalCaptured > 0 ? plusPerformance : null}
       latestBriefing={latestBriefing}
       isCafe24={c.get('isCafe24')}
     />

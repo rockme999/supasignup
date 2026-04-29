@@ -7,7 +7,7 @@ import { ProgressBar } from './charts';
 import { providerColors, providerDisplayNames, type HomeStats } from './shared';
 import { CHANGELOG_PUBLIC } from '../data/changelog';
 import { extractRecentHighlights, extractLatestSectionTitle } from '../utils/changelog-summary';
-import type { LossAversionCards } from '../routes/pages';
+import type { LossAversionCards, PlusPerformance } from '../routes/pages';
 
 type HomeShop = {
   shop_id: string;
@@ -30,9 +30,10 @@ export const HomePage: FC<{
   stats: HomeStats | null;
   funnelSummary?: Record<string, number>;
   lossAversion?: LossAversionCards;
+  plusPerformance?: PlusPerformance | null;
   latestBriefing?: HomeBriefing | null;
   isCafe24?: boolean;
-}> = ({ shop, stats, funnelSummary, lossAversion, latestBriefing, isCafe24 }) => {
+}> = ({ shop, stats, funnelSummary, lossAversion, plusPerformance, latestBriefing, isCafe24 }) => {
   // 앱 미설치 상태
   if (!shop) {
     return (
@@ -108,16 +109,17 @@ export const HomePage: FC<{
 
       {/* 프로바이더별 가입 현황 (도넛 차트) + 손실 회피 카드 (Free + threshold 통과 시 우측 배치) */}
       {stats && Object.keys(stats.by_provider).length > 0 && (() => {
-        const showA = !isPlus && lossAversion && lossAversion.missedSignupCount >= 10 && lossAversion.dataDays >= 7;
-        const showB = !isPlus && lossAversion && lossAversion.firstPurchaseGap.length >= 3;
-        const hasLossCards = showA || showB;
+        const showFreeCardA = !isPlus && lossAversion && lossAversion.missedSignupCount >= 10 && lossAversion.dataDays >= 7;
+        const showFreeCardB = !isPlus && lossAversion && lossAversion.firstPurchaseGap.length >= 3;
+        const showPlusPerf = isPlus && plusPerformance && plusPerformance.totalCaptured >= 1;
+        const hasRightColumn = showFreeCardA || showFreeCardB || showPlusPerf;
         const entries = Object.entries(stats.by_provider).filter(([, v]) => (v ?? 0) > 0);
         const total = stats.total_signups || 1;
         const radius = 60;
         const circumference = 2 * Math.PI * radius;
         let offsetAcc = 0;
         return (
-          <div style={hasLossCards ? "display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" : "margin-bottom:16px"}>
+          <div style={hasRightColumn ? "display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" : "margin-bottom:16px"}>
             {/* 좌측: 도넛 차트 */}
             <div class="card" style="margin-bottom:0">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -165,10 +167,11 @@ export const HomePage: FC<{
                 </ul>
               </div>
             </div>
-            {/* 우측: 손실 회피 카드 — 카드 A 위, 카드 B 아래 */}
-            {hasLossCards && (
+            {/* 우측: Free → 손실 회피 카드 / Plus → 성과 지표 카드 */}
+            {hasRightColumn && (
               <div style="display:flex;flex-direction:column;gap:12px">
-                {showA && (
+                {/* Free 카드 A — 가입 의도 비회원 */}
+                {showFreeCardA && (
                   <a
                     href="/dashboard/billing"
                     style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer;flex:1"
@@ -186,7 +189,8 @@ export const HomePage: FC<{
                     </div>
                   </a>
                 )}
-                {showB && (
+                {/* Free 카드 B — 첫구매 미전환 */}
+                {showFreeCardB && (
                   <a
                     href="/dashboard/billing"
                     style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer;flex:1"
@@ -201,6 +205,42 @@ export const HomePage: FC<{
                     </div>
                     <div style="font-size:12px;color:#64748b;line-height:1.5">
                       {lossAversion!.firstPurchaseGap.join(', ')}
+                    </div>
+                  </a>
+                )}
+                {/* Plus 카드 A — 합계 */}
+                {showPlusPerf && (
+                  <a
+                    href="/dashboard/stats"
+                    style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer;flex:1"
+                    class="loss-card"
+                  >
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
+                      <span style="font-size:11px;color:#94a3b8">최근 7일</span>
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:4px">
+                      Plus 도구로 추가 가입 : {plusPerformance!.totalCaptured}명
+                    </div>
+                    <div style="font-size:12px;color:#64748b;line-height:1.5">
+                      미니배너·Exit-intent·이탈 팝업·에스컬레이션 합계
+                    </div>
+                  </a>
+                )}
+                {/* Plus 카드 B — 도구별 분포 */}
+                {showPlusPerf && (
+                  <a
+                    href="/dashboard/stats"
+                    style="display:block;text-decoration:none;padding:20px 24px;background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;box-shadow:0 1px 4px rgba(99,102,241,0.07);transition:border-color 0.15s,box-shadow 0.15s;cursor:pointer;flex:1"
+                    class="loss-card"
+                  >
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:#fff;background:#ec4899;border-radius:4px;padding:2px 6px">PLUS</span>
+                      <span style="font-size:11px;color:#94a3b8">도구별 기여</span>
+                    </div>
+                    <div style="font-size:13px;color:#475569;line-height:1.8">
+                      미니배너 {plusPerformance!.byTool.banner} · Exit-intent {plusPerformance!.byTool.exit_intent}<br />
+                      이탈 팝업 {plusPerformance!.byTool.popup} · 에스컬레이션 {plusPerformance!.byTool.escalation}
                     </div>
                   </a>
                 )}
