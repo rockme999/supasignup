@@ -62,7 +62,8 @@ type PageEnv = {
 async function getOwnerShop(db: D1Database, ownerId: string) {
   return db.prepare(
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
-            enabled_providers, sso_configured, created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
+            enabled_providers, sso_configured, sso_type, sso_verified_at, sso_verified_slots,
+            created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
             shop_identity, exit_intent_config, live_counter_config
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
@@ -73,6 +74,9 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
     shop_identity: string | null;
     exit_intent_config: string | null;
     live_counter_config: string | null;
+    sso_type: string | null;
+    sso_verified_at: string | null;
+    sso_verified_slots: string | null;
   }>();
 }
 
@@ -86,6 +90,9 @@ type ShopRow = {
   plan: string;
   enabled_providers: string;
   sso_configured: number;
+  sso_type?: string | null;
+  sso_verified_at?: string | null;
+  sso_verified_slots?: string | null;
   created_at: string;
   coupon_config?: string | null;
   kakao_channel_id?: string | null;
