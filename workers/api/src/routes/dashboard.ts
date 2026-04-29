@@ -30,7 +30,7 @@ import {
 import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
-import { registerCouponPack, unregisterCouponPack, withPackDefaults, retryFailedPackItems } from '../services/coupon-pack';
+import { registerCouponPack, unregisterCouponPack, withPackDefaults, retryFailedPackItems, updatePackExpireDays, resolveCouponPackState } from '../services/coupon-pack';
 import type { CouponPackConfig, CouponPackState, CouponPackDesign } from '../services/coupon-pack';
 import { autoReplyInquiry } from './ai';
 import { getGlobalAutoReplyEnabled } from './admin';
@@ -1274,7 +1274,9 @@ dashboard.post('/widget/event-dashboard', async (c) => {
  * 선택 필드:
  *   design      : 'dark' | 'brand' | 'illust' | 'minimal' (기본 'brand')
  *   anim_mode   : boolean (기본 true)
- *   expire_days : 7~90 (기본 30) — 다음 register 시점에만 카페24 반영
+ *   expire_days : 7~90 (기본 30)
+ *                 state=active 이고 expire_days 변경 시 카페24 PUT 즉시 반영 (D-5)
+ *                 state!=active 이면 DB만 갱신 (다음 register 시 반영)
  *
  * - Plus 플랜 전용 (Free → 403)
  * - 기존 coupon_config 나머지 필드 변경 없음 (pack 필드 추가/수정만)
@@ -1335,11 +1337,53 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
 
   // 디자인/애니/만료일은 기존 값 유지 + body 덮어쓰기
   const prevPack = existingConfig.pack;
+  const prevState = prevPack ? resolveCouponPackState(prevPack) : 'unregistered';
   const mergedDesign: CouponPackDesign    = body.design    ?? prevPack?.design    ?? 'brand';
   const mergedAnim:   boolean             = body.anim_mode ?? prevPack?.anim_mode ?? true;
   const mergedExpiry: number              = body.expire_days ?? prevPack?.expire_days ?? 30;
+  const expireDaysChanged =
+    body.expire_days !== undefined && body.expire_days !== (prevPack?.expire_days ?? 30);
 
   if (body.enabled) {
+    // ── 활성화 경로 분기 ──────────────────────────────────────
+    // D-5: state=active + expire_days만 변경 → 카페24 PUT 즉시 반영, 재등록 없음
+    if (prevState === 'active' && expireDaysChanged) {
+      const expireResult = await updatePackExpireDays(c.env, shop, mergedExpiry);
+
+      // 전체 성공 시에만 coupon_config.pack.expire_days 갱신
+      const allSuccess = expireResult.failures.length === 0;
+      const newPack: CouponPackConfig = withPackDefaults({
+        ...(prevPack ?? {}),
+        expire_days: allSuccess ? mergedExpiry : (prevPack?.expire_days ?? 30),
+        design: mergedDesign,
+        anim_mode: mergedAnim,
+      });
+
+      const newConfig = { ...existingConfig, pack: newPack };
+
+      await c.env.DB
+        .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+        .bind(JSON.stringify(newConfig), shopId)
+        .run();
+
+      // KV + 엣지 캐시 무효화
+      await Promise.all([
+        c.env.KV.delete(`widget_config:${shop.client_id}`),
+        purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+      ]);
+
+      console.info(
+        `[CouponPack] expire_days 즉시 반영: mall=${shop.mall_id}, new_days=${mergedExpiry}, 성공=${expireResult.success.length}, 실패=${expireResult.failures.length}`,
+      );
+
+      return c.json({
+        ok: true,
+        pack: newPack,
+        items: prevPack?.items ?? [],
+        failures: expireResult.failures,
+      });
+    }
+
     // ── 활성화: 5개 쿠폰 카페24 등록 ──────────────────────────
     const result = await registerCouponPack(c.env, shop);
 

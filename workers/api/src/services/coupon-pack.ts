@@ -829,3 +829,162 @@ export async function unregisterCouponPack(
     }
   }
 }
+
+/** updatePackExpireDays 반환 타입 */
+export interface UpdateExpireDaysResult {
+  success: PackItem[];   // 카페24 PUT 성공 항목
+  failures: PackItem[];  // 카페24 PUT 실패 항목
+}
+
+/**
+ * 운영자가 expire_days를 변경할 때 카페24 쿠폰 마스터의
+ * available_day_from_issued 를 즉시 수정한다.
+ *
+ * - state=active 인 경우에만 호출부가 호출해야 함
+ * - 이미 발급된 쿠폰은 건드리지 않음 (카페24 마스터만 PUT)
+ * - 부분 실패 시 audit_logs에 'coupon_pack_expire_update_fail' 기록
+ * - 전체 성공 시에만 coupon_config.pack.expire_days 갱신은 **호출부 책임**
+ *
+ * @param env      Cloudflare Workers 환경 바인딩
+ * @param shop     대상 shop 레코드
+ * @param newDays  변경할 유효기간 (일수)
+ * @returns        { success: PackItem[], failures: PackItem[] }
+ */
+export async function updatePackExpireDays(
+  env: Env,
+  shop: Shop,
+  newDays: number,
+): Promise<UpdateExpireDaysResult> {
+  // pack.items 파싱
+  let pack: CouponPackConfig | null = null;
+  if (shop.coupon_config) {
+    try {
+      const config = JSON.parse(shop.coupon_config) as CouponConfig & { pack?: CouponPackConfig };
+      pack = config.pack ?? null;
+    } catch { /* 무시 */ }
+  }
+
+  if (!pack?.items?.length) {
+    console.info(`[CouponPack] updateExpireDays: items 없음, 스킵: mall=${shop.mall_id}`);
+    return { success: [], failures: [] };
+  }
+
+  const couponItems = pack.items.filter(i => !!i.cafe24_coupon_no);
+  if (couponItems.length === 0) {
+    console.info(`[CouponPack] updateExpireDays: cafe24_coupon_no 없음, 스킵: mall=${shop.mall_id}`);
+    return { success: [], failures: [] };
+  }
+
+  if (!shop.platform_access_token) {
+    console.error(`[CouponPack] updateExpireDays: access_token 없음: mall=${shop.mall_id}`);
+    return { success: [], failures: couponItems };
+  }
+
+  let tokens: { access_token: string | null; refresh_token: string | null };
+  try {
+    tokens = await decryptShopTokens(shop, env.ENCRYPTION_KEY);
+  } catch (err) {
+    console.error(`[CouponPack] updateExpireDays: 토큰 복호화 실패: mall=${shop.mall_id}`, err);
+    return { success: [], failures: couponItems };
+  }
+
+  if (!tokens.access_token) {
+    console.error(`[CouponPack] updateExpireDays: 복호화된 access_token이 null: mall=${shop.mall_id}`);
+    return { success: [], failures: couponItems };
+  }
+
+  let accessToken = tokens.access_token;
+  const successItems: PackItem[] = [];
+  const failureItems: PackItem[] = [];
+
+  for (const item of couponItems) {
+    const couponNo = item.cafe24_coupon_no!;
+
+    let resp: Response;
+    try {
+      resp = await fetch(
+        `https://${shop.mall_id}.cafe24api.com/api/v2/admin/coupons/${couponNo}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Cafe24-Api-Version': CAFE24_API_VERSION,
+          },
+          body: JSON.stringify({
+            shop_no: 1,
+            request: { available_day_from_issued: newDays },
+          }),
+        },
+      );
+    } catch (err) {
+      console.error(
+        `[CouponPack] updateExpireDays fetch 오류: mall=${shop.mall_id}, coupon_no=${couponNo}`, err,
+      );
+      failureItems.push(item);
+      continue;
+    }
+
+    // 401: 토큰 갱신 후 1회 재시도
+    if (resp.status === 401 && tokens.refresh_token) {
+      const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
+      if (newToken) {
+        accessToken = newToken;
+        try {
+          resp = await fetch(
+            `https://${shop.mall_id}.cafe24api.com/api/v2/admin/coupons/${couponNo}`,
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Cafe24-Api-Version': CAFE24_API_VERSION,
+              },
+              body: JSON.stringify({
+                shop_no: 1,
+                request: { available_day_from_issued: newDays },
+              }),
+            },
+          );
+        } catch (err2) {
+          console.error(
+            `[CouponPack] updateExpireDays 재시도 fetch 오류: mall=${shop.mall_id}, coupon_no=${couponNo}`, err2,
+          );
+          failureItems.push(item);
+          continue;
+        }
+      }
+    }
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      console.error(
+        `[CouponPack] updateExpireDays 실패: mall=${shop.mall_id}, coupon_no=${couponNo}, status=${resp.status}, detail=${text}`,
+      );
+      failureItems.push(item);
+      try {
+        await env.DB.prepare(
+          "INSERT INTO audit_logs (id, actor_id, action, target_type, target_id, detail, created_at) VALUES (?, ?, 'coupon_pack_expire_update_fail', 'shop', ?, ?, datetime('now'))",
+        ).bind(
+          crypto.randomUUID(),
+          shop.owner_id,
+          shop.shop_id,
+          JSON.stringify({ coupon_no: couponNo, new_days: newDays, status: resp.status, error: text }),
+        ).run();
+      } catch (err) {
+        console.error(`[CouponPack] audit_log 저장 실패 (expire update): mall=${shop.mall_id}`, err);
+      }
+      continue;
+    }
+
+    console.info(
+      `[CouponPack] updateExpireDays 성공: mall=${shop.mall_id}, coupon_no=${couponNo}, new_days=${newDays}`,
+    );
+    successItems.push(item);
+  }
+
+  console.info(
+    `[CouponPack] updateExpireDays 완료: mall=${shop.mall_id}, 성공=${successItems.length}, 실패=${failureItems.length}, new_days=${newDays}`,
+  );
+  return { success: successItems, failures: failureItems };
+}

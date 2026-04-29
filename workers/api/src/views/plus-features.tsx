@@ -3510,9 +3510,15 @@ export const CouponPackSettingsPage: FC<{
                 <p style="font-size:11px;color:#94a3b8;margin-top:6px">
                   회원이 쿠폰을 받은 날부터 며칠간 사용 가능한지 (카페24 available_day_from_issued) — 7~90일, 기본 30일
                 </p>
-                <p style="font-size:11px;color:#94a3b8;margin-top:2px">
-                  변경사항은 다음 쿠폰팩 등록 시점에 카페24에 반영됩니다.
-                </p>
+                {state === 'active' ? (
+                  <p style="font-size:11px;color:#059669;margin-top:2px">
+                    변경 시 카페24 쿠폰 마스터에 즉시 반영됩니다 (이미 발급된 쿠폰은 유지).
+                  </p>
+                ) : (
+                  <p style="font-size:11px;color:#94a3b8;margin-top:2px">
+                    변경사항은 다음 쿠폰팩 등록 시점에 카페24에 반영됩니다.
+                  </p>
+                )}
               </div>
 
               {/* 저장 버튼 */}
@@ -3638,14 +3644,19 @@ export const CouponPackSettingsPage: FC<{
                   });
                   var data = await resp.json();
                   if (resp.ok) {
-                    msgEl.style.display = 'block';
-                    msgEl.style.background = '#f0fdf4';
-                    msgEl.style.color = '#166534';
-                    msgEl.style.border = '1px solid #bbf7d0';
                     var failCnt = data.failures ? data.failures.length : 0;
-                    msgEl.textContent = failCnt > 0
-                      ? ('설정 저장 완료. ' + failCnt + '건 등록 실패 — 다시 활성화하면 재시도합니다.')
-                      : '설정이 저장되었습니다.';
+                    if (failCnt > 0) {
+                      msgEl.style.background = '#fffbeb';
+                      msgEl.style.color = '#92400e';
+                      msgEl.style.border = '1px solid #fde68a';
+                      msgEl.textContent = '설정 저장 완료. ' + failCnt + '건 카페24 반영 실패 — 잠시 후 다시 시도해 주세요.';
+                    } else {
+                      msgEl.style.background = '#f0fdf4';
+                      msgEl.style.color = '#166534';
+                      msgEl.style.border = '1px solid #bbf7d0';
+                      msgEl.textContent = '설정이 저장되었습니다.';
+                    }
+                    msgEl.style.display = 'block';
                   } else {
                     throw new Error(data.message || '저장 실패');
                   }
