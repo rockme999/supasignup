@@ -100,47 +100,50 @@ export const WIDGET_JS = `(function() {
   };
 
   var WIDGET_CSS = [
-    '.bg-widget{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:16px auto;padding:0}',
-    '.bg-widget-title{font-size:13px;color:#666;text-align:center;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:4px}',
-    '.bg-flash{font-size:16px}',
-    '.bg-btn{display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s ease;text-decoration:none;box-sizing:border-box}',
-    '.bg-btn:hover{opacity:.85}',
-    '.bg-btn-highlight{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6;font-weight:700;position:relative}',
-    '.bg-btn-highlight::after{content:"이전에 사용";position:absolute;top:-9px;right:8px;background:#3B82F6;color:#fff;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:500}',
-    '.bg-btn-highlight-icon{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6}',
-    '.bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
-    '.bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
-    '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-btn{font-size:15px}}',
-    /* ── Plus 프리셋: 글래스모피즘 ── */
-    '.bg-preset-glass{background:rgba(255,255,255,0.1)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border:1px solid rgba(255,255,255,0.22)!important;color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,0.12)!important}',
-    '.bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important;opacity:1!important}',
-    '.bg-preset-glass .bg-btn-icon{background:transparent}',
+    /* ── Specificity 강화: 카페24 모바일 스킨이 .member a 등에 !important 룰을 깔고 있어
+       인라인 style이 무시되는 사례가 있어 #bg-widget 자손 selector로 base 룰을 실어줌. ── */
+    '#bg-widget.bg-widget{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:16px auto;padding:0;box-sizing:border-box}',
+    '#bg-widget .bg-widget-title{font-size:13px;color:#666;text-align:center;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:4px}',
+    '#bg-widget .bg-flash{font-size:16px}',
+    /* a.bg-btn: 모바일 스킨이 .member a/.xans-* a 에 강제하는 height/border/border-radius/text-decoration/background 등을 모두 차단 */
+    '#bg-widget a.bg-btn,#bg-widget .bg-btn{display:flex!important;align-items:center;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s ease;text-decoration:none!important;box-sizing:border-box!important;line-height:1!important;background-image:none}',
+    '#bg-widget .bg-btn:hover{opacity:.85}',
+    '#bg-widget .bg-btn-highlight{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6;font-weight:700;position:relative}',
+    '#bg-widget .bg-btn-highlight::after{content:"이전에 사용";position:absolute;top:-9px;right:8px;background:#3B82F6;color:#fff;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:500}',
+    '#bg-widget .bg-btn-highlight-icon{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6}',
+    '#bg-widget .bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
+    '#bg-widget .bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
+    '@media(max-width:480px){#bg-widget.bg-widget{margin:12px 8px}#bg-widget .bg-btn{font-size:15px}}',
+    /* ── Plus 프리셋: 글래스모피즘 — #bg-widget prefix로 specificity ↑ ── */
+    '#bg-widget .bg-preset-glass{background:rgba(255,255,255,0.1)!important;background-image:none!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border:1px solid rgba(255,255,255,0.22)!important;color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,0.12)!important}',
+    '#bg-widget .bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important;opacity:1!important}',
+    '#bg-widget .bg-preset-glass .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 네온 글로우 ── */
-    '.bg-preset-neon{background:transparent!important;border:1px solid rgba(99,102,241,0.55)!important;color:#a5b4fc!important;box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)!important;text-shadow:0 0 8px rgba(165,180,252,0.5)!important}',
-    '.bg-preset-neon:hover{border-color:rgba(99,102,241,0.9)!important;box-shadow:0 0 14px rgba(99,102,241,0.6),0 0 28px rgba(99,102,241,0.3),inset 0 0 14px rgba(99,102,241,0.12)!important;color:#e0e7ff!important;text-shadow:0 0 12px rgba(165,180,252,0.8)!important}',
-    '.bg-preset-neon .bg-btn-icon{background:transparent}',
+    '#bg-widget .bg-preset-neon{background:transparent!important;background-image:none!important;border:1px solid rgba(99,102,241,0.55)!important;color:#a5b4fc!important;box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)!important;text-shadow:0 0 8px rgba(165,180,252,0.5)!important}',
+    '#bg-widget .bg-preset-neon:hover{border-color:rgba(99,102,241,0.9)!important;box-shadow:0 0 14px rgba(99,102,241,0.6),0 0 28px rgba(99,102,241,0.3),inset 0 0 14px rgba(99,102,241,0.12)!important;color:#e0e7ff!important;text-shadow:0 0 12px rgba(165,180,252,0.8)!important}',
+    '#bg-widget .bg-preset-neon .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 리퀴드 글래스 ── */
-    '.bg-preset-liquid{position:relative!important;background:rgba(255,255,255,0.08)!important;backdrop-filter:blur(20px) saturate(180%)!important;-webkit-backdrop-filter:blur(20px) saturate(180%)!important;border:1px solid rgba(255,255,255,0.18)!important;color:rgba(255,255,255,0.92)!important;box-shadow:inset 0 0 20px rgba(255,255,255,0.07),0 8px 32px rgba(31,38,135,0.18),0 2px 6px rgba(0,0,0,0.18)!important;overflow:hidden!important}',
-    '.bg-preset-liquid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--bg-mx,50%) var(--bg-my,30%),rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.06) 45%,transparent 70%);pointer-events:none}',
-    '.bg-preset-liquid::after{content:"";position:absolute;top:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none}',
-    '.bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}',
-    '.bg-preset-liquid .bg-btn-icon{background:transparent}',
+    '#bg-widget .bg-preset-liquid{position:relative!important;background:rgba(255,255,255,0.08)!important;background-image:none!important;backdrop-filter:blur(20px) saturate(180%)!important;-webkit-backdrop-filter:blur(20px) saturate(180%)!important;border:1px solid rgba(255,255,255,0.18)!important;color:rgba(255,255,255,0.92)!important;box-shadow:inset 0 0 20px rgba(255,255,255,0.07),0 8px 32px rgba(31,38,135,0.18),0 2px 6px rgba(0,0,0,0.18)!important;overflow:hidden!important}',
+    '#bg-widget .bg-preset-liquid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--bg-mx,50%) var(--bg-my,30%),rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.06) 45%,transparent 70%);pointer-events:none}',
+    '#bg-widget .bg-preset-liquid::after{content:"";position:absolute;top:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none}',
+    '#bg-widget .bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}',
+    '#bg-widget .bg-preset-liquid .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 그라디언트 플로우 ── */
-    '.bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
-    '.bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}',
-    '.bg-preset-gradient .bg-btn-icon{background:transparent}',
+    '#bg-widget .bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
+    '#bg-widget .bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}',
+    '#bg-widget .bg-preset-gradient .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 소프트 섀도우 ── */
-    '.bg-preset-soft{background:#ffffff!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}',
-    '.bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}',
-    '.bg-preset-soft .bg-btn-icon{background:#f3f4f6;border-radius:50%}',
+    '#bg-widget .bg-preset-soft{background:#ffffff!important;background-image:none!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}',
+    '#bg-widget .bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}',
+    '#bg-widget .bg-preset-soft .bg-btn-icon{background:#f3f4f6;border-radius:50%}',
     /* ── Plus 프리셋: 펄스 애니메이션 ── */
-    '.bg-preset-pulse{background:#fff!important;border:1px solid #e5e7eb!important;color:#374151!important;box-shadow:0 1px 3px rgba(0,0,0,0.06)!important;animation:bg-pulseRing 2s ease-in-out infinite!important}',
-    '.bg-preset-pulse:hover{animation:none!important;transform:scale(1.02)!important;box-shadow:0 0 0 3px rgba(99,102,241,0.25),0 4px 16px rgba(99,102,241,0.2)!important;border-color:#6366f1!important;color:#4f46e5!important}',
-    '.bg-preset-pulse .bg-btn-icon{background:#ede9fe;border-radius:50%}',
-    '.bg-preset-pulse-d1{animation-delay:0s!important}',
-    '.bg-preset-pulse-d2{animation-delay:0.4s!important}',
-    '.bg-preset-pulse-d3{animation-delay:0.8s!important}',
-    '.bg-preset-pulse-d4{animation-delay:1.2s!important}',
+    '#bg-widget .bg-preset-pulse{background:#fff!important;background-image:none!important;border:1px solid #e5e7eb!important;color:#374151!important;box-shadow:0 1px 3px rgba(0,0,0,0.06)!important;animation:bg-pulseRing 2s ease-in-out infinite!important}',
+    '#bg-widget .bg-preset-pulse:hover{animation:none!important;transform:scale(1.02)!important;box-shadow:0 0 0 3px rgba(99,102,241,0.25),0 4px 16px rgba(99,102,241,0.2)!important;border-color:#6366f1!important;color:#4f46e5!important}',
+    '#bg-widget .bg-preset-pulse .bg-btn-icon{background:#ede9fe;border-radius:50%}',
+    '#bg-widget .bg-preset-pulse-d1{animation-delay:0s!important}',
+    '#bg-widget .bg-preset-pulse-d2{animation-delay:0.4s!important}',
+    '#bg-widget .bg-preset-pulse-d3{animation-delay:0.8s!important}',
+    '#bg-widget .bg-preset-pulse-d4{animation-delay:1.2s!important}',
     '@keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}',
     /* ── 모바일 자동 미세 애니메이션 keyframes ── */
     '@keyframes bg-mobile-glass{0%,100%{backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}50%{backdrop-filter:blur(16px) saturate(165%);-webkit-backdrop-filter:blur(16px) saturate(165%)}}',
@@ -150,13 +153,22 @@ export const WIDGET_JS = `(function() {
     '@keyframes bg-mobile-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}',
     '@keyframes bg-mobile-soft{0%,100%{box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)}50%{box-shadow:0 2px 4px rgba(0,0,0,0.05),0 8px 20px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.05)}}',
     /* ── 모바일 자동 미세 애니메이션 적용 (hover 없는 환경 + 모션 허용) — 공백 추가로 iOS Safari/Android 호환 ── */
-    '@media (hover: none) and (prefers-reduced-motion: no-preference){.bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
+    '@media (hover: none) and (prefers-reduced-motion: no-preference){#bg-widget .bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}#bg-widget .bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}#bg-widget .bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}#bg-widget .bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}#bg-widget .bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
     /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) ── */
-    '.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto}',
-    '.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)}',
-    '.bg-dark-wrap-neon-glow{background:#0a0a14}',
-    '.bg-dark-wrap-liquid-glass{background:linear-gradient(160deg,#0f2027,#203a43,#2c5364)}'
+    '#bg-widget.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto}',
+    '#bg-widget.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)}',
+    '#bg-widget.bg-dark-wrap-neon-glow{background:#0a0a14}',
+    '#bg-widget.bg-dark-wrap-liquid-glass{background:linear-gradient(160deg,#0f2027,#203a43,#2c5364)}'
   ].join('\\n');
+
+  // ─── 모바일 스킨 대응: 인라인 style을 !important로 강제 적용 ────
+  // 카페24 모바일 스킨이 .member a 등에 height/border-radius/padding/text-decoration 을
+  // !important로 강제하는 사례가 있어, 위젯 인라인 style이 무시되어 "기본 버튼"으로
+  // 보이는 모바일 한정 버그가 보고됨. setProperty('...', 'important') 로 우회.
+  function bgSetImp(el, prop, val) {
+    try { el.style.setProperty(prop, val, 'important'); }
+    catch (e) { el.style[prop] = val; }
+  }
 
   // ─── Plus: 부모 트리 luminance 추적 (자동 다크 wrapper 판단) ─
   function getEffectiveBgLuminance(el) {
@@ -447,9 +459,9 @@ export const WIDGET_JS = `(function() {
     var self = this;
     var apiUrl = this.getApiBase() + '/api/widget/config?client_id=' + encodeURIComponent(clientId);
 
-    fetch(apiUrl)
+    fetch(apiUrl, { credentials: 'omit', cache: 'no-store' })
       .then(function(resp) {
-        if (!resp.ok) throw new Error('Config load failed');
+        if (!resp.ok) throw new Error('Config load failed: HTTP ' + resp.status);
         return resp.json();
       })
       .then(function(config) {
@@ -531,19 +543,32 @@ export const WIDGET_JS = `(function() {
     var buttonWidth = s.buttonWidth || 280;
     var preset = s.preset || 'default';
 
+    // 진단 로그: config 또는 style 누락 (모바일 스킨에서 fetch 실패 가능성 확인용)
+    if (!this.config) {
+      console.warn('[번개가입] render() called without config — preset will fallback to default');
+    } else if (!this.config.style) {
+      console.warn('[번개가입] config.style is missing — preset will fallback to default');
+    }
+    // URL에 ?bg_debug=1 있으면 적용된 preset/주요 옵션 콘솔 출력 (모바일 디버그용)
+    try {
+      if (window.location.search.indexOf('bg_debug=1') !== -1) {
+        console.log('[번개가입 debug] applied preset =', preset, 'style =', s, 'plan =', this.config && this.config.plan);
+      }
+    } catch (e) {}
+
     if (preset === 'icon-only') {
       // icon-only: icons laid out in a row
-      this.container.style.display = 'flex';
-      this.container.style.flexDirection = 'row';
-      this.container.style.flexWrap = 'wrap';
-      this.container.style.alignItems = 'center';
-      this.container.style.justifyContent = 'center';
-      this.container.style.maxWidth = 'none';
+      bgSetImp(this.container, 'display', 'flex');
+      bgSetImp(this.container, 'flex-direction', 'row');
+      bgSetImp(this.container, 'flex-wrap', 'wrap');
+      bgSetImp(this.container, 'align-items', 'center');
+      bgSetImp(this.container, 'justify-content', 'center');
+      bgSetImp(this.container, 'max-width', 'none');
     } else {
-      this.container.style.display = 'flex';
-      this.container.style.flexDirection = 'column';
-      this.container.style.alignItems = 'center';
-      this.container.style.maxWidth = (buttonWidth + 32) + 'px';
+      bgSetImp(this.container, 'display', 'flex');
+      bgSetImp(this.container, 'flex-direction', 'column');
+      bgSetImp(this.container, 'align-items', 'center');
+      bgSetImp(this.container, 'max-width', (buttonWidth + 32) + 'px');
     }
 
     // Title (showTitle: default false)
@@ -686,19 +711,21 @@ export const WIDGET_JS = `(function() {
     // Plus 프리셋은 CSS 클래스만으로 스타일 제어 — 인라인 color/bg/border 설정 생략
     // (인라인 style이 남아 있으면 CSS !important와 충돌하여 브랜드 배경색이 잔존)
     if (!isPlusPreset) {
-      btn.style.backgroundColor = bgColor;
-      btn.style.color = textColor;
-      if (border) btn.style.border = border;
+      bgSetImp(btn, 'background-color', bgColor);
+      bgSetImp(btn, 'color', textColor);
+      if (border) bgSetImp(btn, 'border', border);
     }
-    btn.style.transition = 'all 0.3s';
+    bgSetImp(btn, 'transition', 'all 0.3s');
+    // 카페24 모바일 스킨 일부가 .member a {text-decoration:underline!important} 를 깔아둠 → 강제 제거
+    bgSetImp(btn, 'text-decoration', 'none');
 
     if (preset === 'icon-only') {
-      btn.style.width = '44px';
-      btn.style.height = '44px';
-      btn.style.borderRadius = Math.min(borderRadius, 22) + 'px';
-      btn.style.justifyContent = 'center';
-      btn.style.margin = '4px';
-      btn.style.padding = '0';
+      bgSetImp(btn, 'width', '44px');
+      bgSetImp(btn, 'height', '44px');
+      bgSetImp(btn, 'border-radius', Math.min(borderRadius, 22) + 'px');
+      bgSetImp(btn, 'justify-content', 'center');
+      bgSetImp(btn, 'margin', '4px');
+      bgSetImp(btn, 'padding', '0');
 
       var iconOnly = document.createElement('span');
       iconOnly.className = 'bg-btn-icon';
@@ -710,15 +737,17 @@ export const WIDGET_JS = `(function() {
       btn.appendChild(iconOnly);
     } else {
       var w = buttonWidth;
-      btn.style.width = w + 'px';
-      btn.style.height = buttonHeight + 'px';
-      btn.style.borderRadius = borderRadius + 'px';
-      btn.style.justifyContent = justifyMap[align] || 'center';
-      btn.style.marginBottom = buttonGap + 'px';
+      bgSetImp(btn, 'width', w + 'px');
+      bgSetImp(btn, 'height', buttonHeight + 'px');
+      bgSetImp(btn, 'border-radius', borderRadius + 'px');
+      bgSetImp(btn, 'justify-content', justifyMap[align] || 'center');
+      bgSetImp(btn, 'margin-bottom', buttonGap + 'px');
+      bgSetImp(btn, 'padding-top', '0');
+      bgSetImp(btn, 'padding-bottom', '0');
 
       if (showIcon) {
-        btn.style.gap = iconGap + 'px';
-        btn.style.paddingLeft = paddingLeft + 'px';
+        bgSetImp(btn, 'gap', iconGap + 'px');
+        bgSetImp(btn, 'padding-left', paddingLeft + 'px');
 
         var iconSpan = document.createElement('span');
         iconSpan.className = 'bg-btn-icon';
@@ -744,7 +773,7 @@ export const WIDGET_JS = `(function() {
         }
         btn.appendChild(iconSpan);
       } else {
-        btn.style.justifyContent = 'center';
+        bgSetImp(btn, 'justify-content', 'center');
       }
 
       var label = document.createElement('span');
@@ -776,16 +805,16 @@ export const WIDGET_JS = `(function() {
         ? ((originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor)
         : '#d1d5db';
       btn.addEventListener('mouseenter', function() {
-        this.style.backgroundColor = hoverBg;
-        this.style.color = '#fff';
-        this.style.borderColor = hoverBg;
+        bgSetImp(this, 'background-color', hoverBg);
+        bgSetImp(this, 'color', '#fff');
+        bgSetImp(this, 'border-color', hoverBg);
         var ps = this.querySelectorAll('path');
         for (var j = 0; j < ps.length; j++) { ps[j].setAttribute('fill', '#fff'); }
       });
       btn.addEventListener('mouseleave', function() {
-        this.style.backgroundColor = '#ffffff';
-        this.style.color = '#333333';
-        this.style.borderColor = restoreBorder;
+        bgSetImp(this, 'background-color', '#ffffff');
+        bgSetImp(this, 'color', '#333333');
+        bgSetImp(this, 'border-color', restoreBorder);
         var saved = this.getAttribute('data-icon-html');
         var ic = this.querySelector('.bg-btn-icon');
         if (saved && ic) { ic.innerHTML = saved; }
