@@ -1,21 +1,32 @@
 /**
- * Exit-intent 쿠폰 게이트 — BGWidget.prototype.initExitIntent 정의
+ * DEPRECATED — 2026-04-29 이탈 팝업(initExitPopup)으로 흡수됨.
+ * 1개월 후 삭제 예정 (2026-05-29).
  *
- * buttons.ts WIDGET_JS IIFE 내부에 인라인 삽입됨.
- * 의존: PROVIDERS, escapeHtml, BGWidget (IIFE 스코프), window.__BG_TRIGGERS__
+ * Exit-intent 단독 기능 폐기 (D1=A 결정):
+ *   - initExitIntent() 호출 제거 (buttons.ts loadConfig 참조)
+ *   - exit_intent_config는 데이터 보존 (롤백 옵션). 차후 마이그레이션에서 컬럼 삭제.
+ *   - 위젯은 이제 popup_config 기준으로만 동작.
  *
- * 작동 조건:
- *   1. shop.plan === 'plus'
- *   2. 비회원 (isUserLoggedIn() === false)
- *   3. exit_intent_config.enabled === true
- *   4. shouldShowEvent('exit_intent', capHours) 통과
- *
- * funnel 이벤트:
- *   widget.exit_intent_shown / widget.exit_intent_signup / widget.exit_intent_dismissed
- *   widget.scroll_trigger_fired
- *   widget.coupon_pack_shown (source:'exit_intent') / widget.coupon_pack_clicked (source:'exit_intent')
+ * @deprecated Use initExitPopup in buttons.ts instead.
  */
 export function getExitIntentJs(): string {
+  // DEPRECATED: 이 함수는 더 이상 buttons.ts에서 호출되지 않습니다.
+  // 이탈 팝업(initExitPopup)으로 기능이 흡수되었습니다.
+  return [
+    '  // ─── Exit-intent (DEPRECATED — initExitPopup으로 흡수됨) ────',
+    '  BGWidget.prototype.initExitIntent = function() {',
+    '    // DEPRECATED: 이 메서드는 호출되지 않습니다. initExitPopup을 사용하세요.',
+    '    if (typeof console !== "undefined" && console.warn) {',
+    '      console.warn("[번개가입] initExitIntent is deprecated. Use initExitPopup.");',
+    '    }',
+    '  };',
+  ].join('\n');
+}
+
+/*
+ * 아래는 레거시 구현 보관 (롤백 참조용) — 2026-05-29 이후 전체 삭제 예정.
+ *
+function getExitIntentJsLegacy(): string {
   return [
     '  // ─── Exit-intent 쿠폰 게이트 ─────────────────────────────────',
     '  BGWidget.prototype.initExitIntent = function(config) {',
@@ -170,3 +181,4 @@ export function getExitIntentJs(): string {
     '  };',
   ].join('\n');
 }
+*/

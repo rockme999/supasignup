@@ -10,7 +10,7 @@
 import { getSmartTriggerJs } from './smart-triggers';
 import { getExitIntentJs } from './exit-intent';
 import { getLiveCounterJs } from './live-counter';
-import { getCouponPackJs } from './coupon-pack';
+import { getCouponPackJs, getSingleCouponCardJs } from './coupon-pack';
 
 export const WIDGET_JS = `(function() {
   'use strict';
@@ -404,10 +404,8 @@ export const WIDGET_JS = `(function() {
           if (config.kakao_channel_id) {
             self.initKakaoChannel(config);
           }
-          // Exit-intent 쿠폰 게이트 (W2-1 + Smart trigger W2-2)
-          if (config.exit_intent_config) {
-            self.initExitIntent(config);
-          }
+          // Exit-intent 쿠폰 게이트 (DEPRECATED D1=A, 2026-04-29):
+          // initExitIntent() 호출 제거 — initExitPopup으로 흡수됨.
           // 라이브 가입자 카운터 (R4 W3 Cycle2)
           // 별도 /live-counter 엔드포인트를 fetch하여 threshold + 최근 가입자 데이터 획득
           if (config.client_id) {
@@ -1100,6 +1098,9 @@ export const WIDGET_JS = `(function() {
     var enabled = pc ? pc.enabled !== false : true;
     if (!enabled) return;
 
+    // 비회원만 팝업 표시
+    if (self.isUserLoggedIn()) return;
+
     var allPages = pc ? pc.allPages === true : false;
     // allPages가 아니면 로그인/가입 페이지에서만 동작
     if (!allPages && this.pageType !== 'login') return;
@@ -1110,7 +1111,22 @@ export const WIDGET_JS = `(function() {
     var popupIcon = pc ? (pc.icon != null ? pc.icon : '\uD83C\uDF81') : '\uD83C\uDF81';
     var popupBorderRadius = pc && pc.borderRadius != null ? pc.borderRadius : 16;
     var popupOpacity = pc && pc.opacity != null ? pc.opacity : 100;
-    var cooldownMs = ((pc && pc.cooldownHours ? pc.cooldownHours : 24)) * 60 * 60 * 1000;
+
+    // frequency_cap_hours 통합 (cooldownHours 하위 호환 fallback)
+    var capHours = (pc && pc.frequency_cap_hours != null)
+      ? pc.frequency_cap_hours
+      : (pc && pc.cooldownHours ? pc.cooldownHours : 24);
+    var cooldownMs = capHours * 60 * 60 * 1000;
+
+    // scroll_depth_threshold (0이면 비활성, Exit-intent에서 이식)
+    var scrollDepthThreshold = (pc && typeof pc.scroll_depth_threshold === 'number' && pc.scroll_depth_threshold > 0)
+      ? pc.scroll_depth_threshold
+      : 0;
+
+    // 쿠폰 모드 (D2=A: none / single / pack)
+    var couponMode = (pc && pc.coupon_mode) ? pc.coupon_mode : 'none';
+    var couponType = (pc && pc.coupon_type) ? pc.coupon_type : '';
+
     var presetIdx = pc && pc.preset != null ? pc.preset : 0;
     var popupPresets = [
       { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
@@ -1178,22 +1194,34 @@ export const WIDGET_JS = `(function() {
       body.innerHTML = escapeHtml(popupBody).replace(/\\n/g, '<br>');
       body.style.cssText = 'font-size:14px;color:#6b7280;text-align:center;margin:0 0 16px';
 
-      // Plus 쿠폰팩 카드 (pack.state === 'active')
-      var cpConfig = config.coupon_pack;
-      var cpCardEl = null;
-      if (cpConfig && cpConfig.active) {
-        cpCardEl = self.renderCouponPackCard(cpConfig);
-        self.trackEvent('widget.coupon_pack_shown', {
-          source: 'exit_popup',
-          design: cpConfig.design || 'brand',
-          anim_mode: cpConfig.anim_mode !== false,
-          total_amount: cpConfig.total_amount || 55000
-        });
+      // 쿠폰 카드 노출 (D2=A 쿠폰 모드 분기)
+      // couponMode, couponType은 showPopup 외부 스코프에서 참조
+      var couponCardEl = null;
+
+      if (couponMode === 'pack') {
+        // pack: Plus 전용 쿠폰팩 카드 (coupon_pack.active 필요)
+        var cpConfig = config.coupon_pack;
+        if (cpConfig && cpConfig.active) {
+          couponCardEl = self.renderCouponPackCard(cpConfig);
+          self.trackEvent('widget.coupon_pack_shown', {
+            source: 'exit_popup',
+            design: cpConfig.design || 'brand',
+            anim_mode: cpConfig.anim_mode !== false,
+            total_amount: cpConfig.total_amount || 55000
+          });
+        }
+      } else if (couponMode === 'single') {
+        // single: 단일 쿠폰 그래픽 카드 (Free 포함)
+        var couponCfg = config.coupon_config || {};
+        if (couponType && couponCfg[couponType] && couponCfg[couponType].enabled) {
+          couponCardEl = self.renderSingleCouponCard(couponType, couponCfg[couponType]);
+        }
       }
+      // couponMode === 'none' 또는 미설정: 카드 미노출
 
       // CTA 버튼
       var ctaBtn = document.createElement('button');
-      var ctaText = cpCardEl
+      var ctaText = couponCardEl
         ? '\\ud68c\\uc6d0\\uac00\\uc785 \\u2192'  // 회원가입 →
         : popupCta;
       ctaBtn.textContent = ctaText;
@@ -1202,11 +1230,12 @@ export const WIDGET_JS = `(function() {
       ctaBtn.addEventListener('click', function() {
         overlay.remove();
         self.trackEvent('popup_signup', {});
-        if (cpCardEl) {
+        if (couponMode === 'pack' && couponCardEl) {
+          var cpCfg = config.coupon_pack;
           self.trackEvent('widget.coupon_pack_clicked', {
             source: 'exit_popup',
-            design: cpConfig.design || 'brand',
-            total_amount: cpConfig.total_amount || 55000
+            design: (cpCfg && cpCfg.design) || 'brand',
+            total_amount: (cpCfg && cpCfg.total_amount) || 55000
           });
         }
         window.location.href = '/member/login.html';
@@ -1215,8 +1244,8 @@ export const WIDGET_JS = `(function() {
       modal.appendChild(closeBtn);
       modal.appendChild(title);
       modal.appendChild(body);
-      // 쿠폰팩 카드 (Plus 플랜, state=active): body 아래, CTA 위에 배치 (핵심 비주얼)
-      if (cpCardEl) modal.appendChild(cpCardEl);
+      // 쿠폰 카드 (single/pack): body 아래, CTA 위에 배치 (핵심 비주얼)
+      if (couponCardEl) modal.appendChild(couponCardEl);
       modal.appendChild(ctaBtn);
       overlay.appendChild(modal);
 
@@ -1251,6 +1280,20 @@ export const WIDGET_JS = `(function() {
         }
         lastScrollY = currentY;
       }, { passive: true });
+    }
+
+    // scroll_depth_threshold 추가 트리거 (Exit-intent에서 이식, 0이면 비활성)
+    if (scrollDepthThreshold > 0) {
+      var triggers = window.__BG_TRIGGERS__;
+      if (triggers) {
+        triggers.registerTrigger(
+          { eventKey: 'exit_popup_scroll', mode: 'scroll-depth', threshold: scrollDepthThreshold, capHours: capHours },
+          function() {
+            self.trackEvent('widget.scroll_trigger_fired', { threshold: scrollDepthThreshold, source: 'exit_popup' });
+            showPopup();
+          }
+        );
+      }
     }
   };
 
@@ -1587,6 +1630,9 @@ export const WIDGET_JS = `(function() {
 
     // ─── 쿠폰팩 카드 렌더러 ──────────────────────────────────────
     ` + getCouponPackJs() + `
+
+    // ─── 단일 쿠폰 카드 렌더러 (coupon_mode='single') ────────────
+    ` + getSingleCouponCardJs() + `
 
     // ─── Initialize ──────────────────────────────────────────────
 

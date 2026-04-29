@@ -391,3 +391,63 @@ export function getCouponPackJs(): string {
     '  };',
   ].join('\n');
 }
+
+// ─── 단일 쿠폰 카드 렌더러 (coupon_mode='single') ────────────────
+
+/**
+ * 단일 쿠폰 그래픽 카드를 렌더링하는 위젯 IIFE 코드를 반환한다.
+ *
+ * BGWidget.prototype.renderSingleCouponCard(couponType, couponDef) → HTMLElement
+ *   couponType: 'shipping' | 'amount' | 'rate'
+ *   couponDef: 쿠폰 설정 객체 (discount_amount, discount_rate 등)
+ *
+ * Free 운영자도 사용 가능 (Free 플랜 단일 쿠폰 1장 발급 흐름과 일치).
+ */
+export function getSingleCouponCardJs(): string {
+  return [
+    '  BGWidget.prototype.renderSingleCouponCard = function(couponType, couponDef) {',
+    '    var wrap = document.createElement("div");',
+    '    wrap.style.cssText = "display:flex;justify-content:center;margin:16px 0 8px";',
+    '',
+    '    var couponLabel = "";',
+    '    var accentColor = "#2563eb";',
+    '    var bgColor = "#eff6ff";',
+    '    var borderColor = "#bfdbfe";',
+    '    var icon = "\\uD83C\\uDF81";', // 🎁
+    '',
+    '    if (couponType === "shipping") {',
+    '      couponLabel = "\\ubb34\\ub8cc\\ubc30\\uc1a1 \\ucfe0\\ud3f0";', // 무료배송 쿠폰
+    '      accentColor = "#059669";',
+    '      bgColor = "#ecfdf5";',
+    '      borderColor = "#a7f3d0";',
+    '      icon = "\\uD83D\\uDE9A";', // 🚚
+    '    } else if (couponType === "amount") {',
+    '      var amt = couponDef && couponDef.discount_amount ? couponDef.discount_amount.toLocaleString() + "\\uc6d0" : "";', // 원
+    '      couponLabel = amt ? amt + " \\ud560\\uc778 \\ucfe0\\ud3f0" : "\\ud560\\uc778 \\ucfe0\\ud3f0";', // 할인 쿠폰
+    '      accentColor = "#ea580c";',
+    '      bgColor = "#fff7ed";',
+    '      borderColor = "#fed7aa";',
+    '      icon = "\\uD83D\\uDCB0";', // 💰
+    '    } else if (couponType === "rate") {',
+    '      var rate = couponDef && couponDef.discount_rate ? couponDef.discount_rate + "%" : "";',
+    '      couponLabel = rate ? rate + " \\ud560\\uc778 \\ucfe0\\ud3f0" : "\\ud560\\uc778 \\ucfe0\\ud3f0";',
+    '      accentColor = "#7c3aed";',
+    '      bgColor = "#f5f3ff";',
+    '      borderColor = "#ddd6fe";',
+    '      icon = "\\uD83C\\uDFF7";', // 🏷
+    '    }',
+    '',
+    '    if (!couponLabel) { return null; }',
+    '',
+    '    wrap.innerHTML = \'<div style="position:relative;width:300px;height:100px;flex-shrink:0;background:\' + bgColor + \';border:1.5px solid \' + borderColor + \';border-radius:12px;display:flex;align-items:center;gap:16px;padding:0 20px;box-sizing:border-box;overflow:hidden"\'',
+    '      + \'><div style="position:absolute;left:0;top:0;width:6px;height:100%;background:\' + accentColor + \';border-radius:12px 0 0 12px"></div>\'',
+    '      + \'<div style="font-size:28px;flex-shrink:0">\' + icon + \'</div>\'',
+    '      + \'<div><div style="font-size:15px;font-weight:700;color:\' + accentColor + \';margin-bottom:4px">\' + couponLabel + \'</div>\'',
+    '      + \'<div style="font-size:11px;color:#6b7280">가입 즉시 자동 지급</div></div>\'',
+    '      + \'<div style="position:absolute;right:0;top:0;bottom:0;width:3px;border-right:1.5px dashed \' + borderColor + \'"></div>\'',
+    '      + \'</div>\';',
+    '',
+    '    return wrap;',
+    '  };',
+  ].join('\n');
+}
