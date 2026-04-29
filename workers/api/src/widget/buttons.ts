@@ -410,9 +410,9 @@ export const WIDGET_JS = `(function() {
         for (var qi = 0; qi < pairs.length; qi++) {
           var eq = pairs[qi].indexOf('=');
           if (eq === -1) continue;
-          var key = decodeURIComponent(pairs[qi].slice(0, eq).replace(/\+/g, ' '));
+          var key = decodeURIComponent(pairs[qi].slice(0, eq).replace(/\\+/g, ' '));
           if (key === 'bg_provider') {
-            provider = decodeURIComponent(pairs[qi].slice(eq + 1).replace(/\+/g, ' '));
+            provider = decodeURIComponent(pairs[qi].slice(eq + 1).replace(/\\+/g, ' '));
             break;
           }
         }
@@ -427,7 +427,7 @@ export const WIDGET_JS = `(function() {
           for (var qi2 = 0; qi2 < allPairs.length; qi2++) {
             var eq2 = allPairs[qi2].indexOf('=');
             var k2 = eq2 !== -1 ? allPairs[qi2].slice(0, eq2) : allPairs[qi2];
-            if (decodeURIComponent(k2.replace(/\+/g, ' ')) !== 'bg_provider') {
+            if (decodeURIComponent(k2.replace(/\\+/g, ' ')) !== 'bg_provider') {
               newPairs.push(allPairs[qi2]);
             }
           }
