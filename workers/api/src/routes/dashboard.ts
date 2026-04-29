@@ -335,6 +335,12 @@ dashboard.put('/shops/:id/popup', async (c) => {
     icon?: string;
     allPages?: boolean;
     cooldownHours?: number;
+    // D2=A: 쿠폰 모드 (2026-04-29 추가)
+    coupon_mode?: 'none' | 'single' | 'pack';
+    coupon_type?: 'shipping' | 'amount' | 'rate';
+    // Exit-intent 흡수 (D1=A, 2026-04-29)
+    scroll_depth_threshold?: number;
+    frequency_cap_hours?: number;
   }>();
 
   if (body.title && body.title.length > 20) {
@@ -343,6 +349,31 @@ dashboard.put('/shops/:id/popup', async (c) => {
   if (body.body && body.body.length > 100) {
     return c.json({ error: 'body_too_long' }, 400);
   }
+
+  // 쿠폰 모드 검증
+  const VALID_COUPON_MODES = ['none', 'single', 'pack'] as const;
+  const VALID_COUPON_TYPES_POPUP = ['shipping', 'amount', 'rate'] as const;
+  if (body.coupon_mode !== undefined && !VALID_COUPON_MODES.includes(body.coupon_mode as typeof VALID_COUPON_MODES[number])) {
+    return c.json({ error: 'invalid_coupon_mode', message: 'coupon_mode must be none, single, or pack' }, 400);
+  }
+  if (body.coupon_type !== undefined && !VALID_COUPON_TYPES_POPUP.includes(body.coupon_type as typeof VALID_COUPON_TYPES_POPUP[number])) {
+    return c.json({ error: 'invalid_coupon_type', message: 'coupon_type must be shipping, amount, or rate' }, 400);
+  }
+  if (body.scroll_depth_threshold !== undefined) {
+    const sdt = body.scroll_depth_threshold;
+    if (typeof sdt !== 'number' || sdt < 0 || sdt > 100) {
+      return c.json({ error: 'invalid_scroll_depth_threshold', message: 'scroll_depth_threshold must be 0-100' }, 400);
+    }
+  }
+  if (body.frequency_cap_hours !== undefined) {
+    const fch = body.frequency_cap_hours;
+    if (typeof fch !== 'number' || fch < 1 || fch > 168) {
+      return c.json({ error: 'invalid_frequency_cap_hours', message: 'frequency_cap_hours must be 1-168' }, 400);
+    }
+  }
+
+  // 기존 저장값 로드 (새 필드 누락 시 기존값 보존)
+  const existing = shop.popup_config ? JSON.parse(shop.popup_config) : {};
 
   const popupConfig = {
     enabled: body.enabled !== false,
@@ -354,7 +385,14 @@ dashboard.put('/shops/:id/popup', async (c) => {
     opacity: Math.min(Math.max(body.opacity ?? 100, 10), 100),
     icon: body.icon ?? '🎁',
     allPages: body.allPages === true,
-    cooldownHours: Math.min(Math.max(body.cooldownHours ?? 24, 1), 168),
+    // frequency_cap_hours로 통합 (cooldownHours 하위 호환 유지)
+    frequency_cap_hours: Math.min(Math.max(body.frequency_cap_hours ?? body.cooldownHours ?? existing.frequency_cap_hours ?? existing.cooldownHours ?? 24, 1), 168),
+    cooldownHours: Math.min(Math.max(body.cooldownHours ?? body.frequency_cap_hours ?? existing.cooldownHours ?? existing.frequency_cap_hours ?? 24, 1), 168),
+    // D2=A 쿠폰 모드
+    coupon_mode: (body.coupon_mode ?? existing.coupon_mode ?? 'none') as 'none' | 'single' | 'pack',
+    coupon_type: (body.coupon_type ?? existing.coupon_type ?? null) as 'shipping' | 'amount' | 'rate' | null,
+    // Exit-intent 흡수
+    scroll_depth_threshold: body.scroll_depth_threshold ?? existing.scroll_depth_threshold ?? 0,
   };
 
   await updateShop(c.env.DB, shopId, {

@@ -122,11 +122,10 @@ widget.get('/config', async (c) => {
       : null,
     // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
     kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
-    // exit_intent_config: Plus 플랜만 반환 (쿠폰 게이트 설정)
-    exit_intent_config: shop.plan !== 'free'
-      ? safeParseJsonObject(shop.exit_intent_config, null, `widget.exit_intent_config shop_id=${shop.shop_id}`)
-      : null,
-    // coupon_config: exit_intent 모달에서 쿠폰 레이블 표시용 (민감 정보 제외한 부분 반환)
+    // exit_intent_config: DEPRECATED (D1=A, 2026-04-29) — 위젯은 더 이상 이 필드를 사용하지 않음.
+    // 데이터 보존 목적으로 null 반환 (차후 마이그레이션에서 컬럼 삭제 예정).
+    exit_intent_config: null,
+    // coupon_config: 이탈 팝업 coupon_mode='single' 카드 레이블 표시용 (민감 정보 제외)
     coupon_config: shop.plan !== 'free'
       ? safeParseJsonObject(shop.coupon_config, null, `widget.coupon_config shop_id=${shop.shop_id}`)
       : null,
