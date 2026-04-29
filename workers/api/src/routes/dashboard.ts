@@ -356,7 +356,8 @@ dashboard.put('/shops/:id/popup', async (c) => {
   if (body.coupon_mode !== undefined && !VALID_COUPON_MODES.includes(body.coupon_mode as typeof VALID_COUPON_MODES[number])) {
     return c.json({ error: 'invalid_coupon_mode', message: 'coupon_mode must be none, single, or pack' }, 400);
   }
-  if (body.coupon_type !== undefined && !VALID_COUPON_TYPES_POPUP.includes(body.coupon_type as typeof VALID_COUPON_TYPES_POPUP[number])) {
+  // coupon_type: null은 none/pack 모드에서 허용 (coupon_type을 명시적으로 지우는 경우)
+  if (body.coupon_type !== undefined && body.coupon_type !== null && !VALID_COUPON_TYPES_POPUP.includes(body.coupon_type as typeof VALID_COUPON_TYPES_POPUP[number])) {
     return c.json({ error: 'invalid_coupon_type', message: 'coupon_type must be shipping, amount, or rate' }, 400);
   }
   if (body.scroll_depth_threshold !== undefined) {
