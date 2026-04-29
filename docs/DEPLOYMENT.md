@@ -73,6 +73,8 @@ git log --oneline -5            # 최근 commit 확인
 - 마이그레이션 추가된 경우: 새 테이블·컬럼이 D1에 정상 반영됐는지 (`./scripts/deploy.sh check`)
 - 결제·OAuth 같은 외부 통합이 영향 받는 변경이면: 카페24 dev 앱으로 실제 흐름 테스트
 
+**위젯(`/widget/buttons.js`) 변경이 포함된 경우 추가 점검** — 카페24 ScriptTag URL의 `vs` 파라미터 고정 + endpoint 캐시 결합으로 새 코드가 모바일에 도달 못 하는 함정 있음. 모바일에서 `?bg_debug=1` URL로 접속 + USB inspect 콘솔에서 `[번개가입]` 로그 확인 + Network 탭 "Disable cache" 토글로 강제 fresh 검증 필수. 상세: [widget-staging-to-prod-traps.md](widget-staging-to-prod-traps.md).
+
 검증 OK시 다음 단계. **반드시 검증 후** 프로덕션 배포.
 
 ### 5. 프로덕션 배포
