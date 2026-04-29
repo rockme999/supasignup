@@ -34,7 +34,6 @@ import {
   AiBriefingPage,
   ExitIntentSettingsPage,
   LiveCounterSettingsPage,
-  CouponPackSettingsPage,
   QuickStartPage,
   GuidePage,
   FaqPage,
@@ -1058,6 +1057,17 @@ pages.get('/dashboard/settings/general', async (c) => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let couponConfig: any = null;
+  let packConfig: {
+    state?: string;
+    registered_at?: string | null;
+    expire_days?: number;
+    items?: Array<{ min_order: number; discount: number; cafe24_coupon_no?: string }>;
+    design?: string;
+    anim_mode?: boolean;
+    size?: string;
+    failures?: Array<{ min_order: number; discount: number }>;
+  } | null = null;
+
   if (shop?.coupon_config) {
     try {
       const parsed = JSON.parse(shop.coupon_config);
@@ -1065,6 +1075,7 @@ pages.get('/dashboard/settings/general', async (c) => {
       if (parsed?.shipping && parsed?.amount && parsed?.rate) {
         couponConfig = parsed;
       }
+      packConfig = parsed?.pack ?? null;
     } catch { /* ignore */ }
   }
 
@@ -1074,6 +1085,7 @@ pages.get('/dashboard/settings/general', async (c) => {
       name={owner.name}
       shop={shop ?? null}
       couponConfig={couponConfig}
+      packConfig={packConfig}
       isCafe24={c.get('isCafe24')}
     />
   );
@@ -1249,37 +1261,10 @@ pages.get('/dashboard/settings/live-counter', async (c) => {
   );
 });
 
-// ─── Settings: Coupon Pack [Plus] ───────────────────────────
+// ─── Settings: Coupon Pack [Plus] — redirect to General Settings ────────────
 
-pages.get('/dashboard/settings/coupon-pack', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-
-  let packConfig: {
-    state?: string;
-    registered_at?: string | null;
-    expire_days?: number;
-    items?: Array<{ min_order: number; discount: number; cafe24_coupon_no?: string }>;
-    design?: string;
-    anim_mode?: boolean;
-    failures?: Array<{ min_order: number; discount: number }>;
-  } | null = null;
-
-  if (shop.coupon_config) {
-    try {
-      const parsed = JSON.parse(shop.coupon_config) as { pack?: typeof packConfig };
-      packConfig = parsed?.pack ?? null;
-    } catch { /* ignore */ }
-  }
-
-  return c.html(
-    <CouponPackSettingsPage
-      shop={shop}
-      packConfig={packConfig}
-      isCafe24={c.get('isCafe24')}
-    />
-  );
+pages.get('/dashboard/settings/coupon-pack', (c) => {
+  return c.redirect('/dashboard/settings/general#couponSettingsCard', 301);
 });
 
 // ─── Settings: AI [Plus] ─────────────────────────────────────

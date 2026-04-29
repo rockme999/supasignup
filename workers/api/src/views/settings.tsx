@@ -15,6 +15,8 @@ import {
   type WidgetStyle,
   type CouponConfigUI,
 } from './shared';
+import { buildCouponPackHtml, COUPON_PACK_CSS } from '../widget/coupon-pack';
+import { COUPON_PACK_DEFINITIONS } from '../services/coupon-pack';
 
 export const SsoGuidePage: FC<{
   shop: ShopDetail;
@@ -1471,160 +1473,546 @@ export const GeneralSettingsPage: FC<{
   name: string;
   shop: ShopSummary | null;
   couponConfig?: CouponConfigUI | null;
+  packConfig?: {
+    state?: string;
+    registered_at?: string | null;
+    expire_days?: number;
+    items?: Array<{ min_order: number; discount: number; cafe24_coupon_no?: string }>;
+    design?: string;
+    anim_mode?: boolean;
+    size?: string;
+    failures?: Array<{ min_order: number; discount: number }>;
+  } | null;
   isCafe24?: boolean;
-}> = ({ email, name, shop, couponConfig, isCafe24 }) => (
+}> = ({ email, name, shop, couponConfig, packConfig, isCafe24 }) => {
+  // 쿠폰팩 관련 계산
+  const isPlus = shop != null && shop.plan !== 'free';
+  const pc = packConfig || {};
+  const cpState       = pc.state ?? 'unregistered';
+  const isActiveUi    = cpState !== 'unregistered';
+  const cpDesign      = (pc.design ?? 'brand') as 'dark' | 'brand' | 'illust' | 'minimal';
+  const cpAnimMode    = pc.anim_mode !== false;
+  const cpSize        = (pc.size ?? 'md') as 'lg' | 'md' | 'sm' | 'xs';
+  const cpExpireDays  = pc.expire_days ?? 30;
+  const cpFailures    = pc.failures ?? [];
+  const cpIsNewShop   = cpState === 'unregistered' && (pc.items ?? []).length === 0;
+
+  const cpRegisteredItems: Map<number, string | null> = new Map(
+    (pc.items ?? []).map(i => [i.min_order, i.cafe24_coupon_no ?? null])
+  );
+  const cpFailedSet: Set<number> = new Set((pc.failures ?? []).map(f => f.min_order));
+  const cpTotalDiscount = COUPON_PACK_DEFINITIONS.reduce((sum, d) => sum + d.discount, 0);
+
+  const cpDesigns: Array<{ value: 'dark' | 'brand' | 'illust' | 'minimal'; label: string }> = [
+    { value: 'dark',    label: '#1 다크' },
+    { value: 'brand',   label: '#2 번개가입 브랜드' },
+    { value: 'illust',  label: '#3 밝은 일러스트' },
+    { value: 'minimal', label: '#4 미니멀' },
+  ];
+
+  const cpSizes: Array<{ value: 'lg' | 'md' | 'sm' | 'xs'; label: string; scale: string }> = [
+    { value: 'lg', label: '큼', scale: '100%' },
+    { value: 'md', label: '보통', scale: '85%' },
+    { value: 'sm', label: '작음', scale: '70%' },
+    { value: 'xs', label: '매우 작음', scale: '55%' },
+  ];
+
+  return (
   <Layout title="기본 설정" loggedIn currentPath="/dashboard/settings/general" isCafe24={isCafe24}>
     <h1>기본 설정</h1>
 
     {shop && (<>
       <div class="card" id="couponSettingsCard">
-        {/* 회원 가입 쿠폰 설정 */}
-        <div>
-          <h2>회원 가입 쿠폰 설정</h2>
-          <p style="font-size:13px;color:#64748b;margin-bottom:4px">
-            설정을 저장하면 카페24에 쿠폰이 자동 생성되고, 회원가입 시 자동 발급됩니다.
-          </p>
-          {shop.plan === 'free' && (
+        {/* 회원 가입 쿠폰 설정 헤더 */}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <h2 style="margin:0">회원 가입 쿠폰 설정</h2>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin-bottom:12px">
+          설정을 저장하면 카페24에 쿠폰이 자동 생성되고, 회원가입 시 자동 발급됩니다.
+        </p>
+
+        {/* ── 기본 쿠폰 3종: Plus accordion(접힘), Free 펼침 — 단일 HTML 렌더 ── */}
+        <div id="basicCouponWrapper" style={`margin-bottom:16px${isPlus ? ';border:1px solid #e5e7eb;border-radius:8px' : ''}`}>
+          {isPlus && (
+            <button
+              id="basicCouponAccordionBtn"
+              aria-expanded="false"
+              style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:12px 16px;margin:0"
+            >
+              <div style="text-align:left">
+                <span style="font-size:14px;font-weight:600;color:#374151">기본 쿠폰 (무료배송 / 정액할인 / 정률할인)</span>
+                <span style="font-size:12px;color:#94a3b8;margin-left:8px">쿠폰팩 이용 시 기본 쿠폰은 선택사항입니다</span>
+              </div>
+              <span id="basicCouponAccordionArrow" style="font-size:14px;color:#94a3b8;transition:transform 0.2s;flex-shrink:0;margin-left:12px">&#9654;</span>
+            </button>
+          )}
+          {!isPlus && (
             <p style="font-size:12px;color:#f59e0b;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:12px">
               무료 플랜: 무료배송 또는 정액할인 중 <strong>1종만</strong> 기본값으로 발급 가능합니다.
               <a href="/dashboard/billing" style="color:#2563eb;font-weight:600;margin-left:4px">Plus 업그레이드 →</a>
             </p>
           )}
-
-          {/* 3개 쿠폰 카드를 한 줄 가로 배치 (매우 좁은 화면만 줄바꿈) */}
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-bottom:16px">
-          {/* 무료배송 쿠폰 카드 */}
-          <div id="couponCard_shipping" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="display:flex;align-items:center;gap:10px">
-                <label class="toggle" style="flex-shrink:0">
-                  <input type="checkbox" id="coupon_shipping_enabled" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <strong style="font-size:14px">무료배송 쿠폰</strong>
+          <div
+            id="basicCouponAccordionBody"
+            style={`${isPlus ? 'display:none;padding:16px;border-top:1px solid #e5e7eb' : ''}`}
+          >
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-bottom:16px">
+            {/* 무료배송 쿠폰 카드 */}
+            <div id="couponCard_shipping" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <label class="toggle" style="flex-shrink:0">
+                    <input type="checkbox" id="coupon_shipping_enabled" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <strong style="font-size:14px">무료배송 쿠폰</strong>
+                </div>
+                <span id="coupon_shipping_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
               </div>
-              <span id="coupon_shipping_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
+              <div id="couponDetail_shipping" style="display:grid;gap:10px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
+                  <select id="coupon_shipping_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="3">3일</option>
+                    <option value="7">7일</option>
+                    <option value="20">20일</option>
+                    <option value="30" selected>30일</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div id="couponDetail_shipping" style="display:grid;gap:10px">
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
-                <select id="coupon_shipping_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="3">3일</option>
-                  <option value="7">7일</option>
-                  <option value="20">20일</option>
-                  <option value="30" selected>30일</option>
-                </select>
+            {/* 정액할인 쿠폰 카드 */}
+            <div id="couponCard_amount" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <label class="toggle" style="flex-shrink:0">
+                    <input type="checkbox" id="coupon_amount_enabled" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <strong style="font-size:14px">정액할인 쿠폰</strong>
+                </div>
+                <span id="coupon_amount_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
               </div>
+              <div id="couponDetail_amount" style="display:grid;gap:10px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">할인금액</label>
+                  <select id="coupon_amount_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="1000">1,000원</option>
+                    <option value="2000">2,000원</option>
+                    <option value="3000" selected>3,000원</option>
+                    <option value="5000">5,000원</option>
+                    <option value="10000">10,000원</option>
+                    <option value="custom">직접 입력</option>
+                  </select>
+                  <input type="number" id="coupon_amount_custom" placeholder="금액 입력" min="100" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
+                  <span style="font-size:13px;color:#64748b">원</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
+                  <select id="coupon_amount_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="3">3일</option>
+                    <option value="7">7일</option>
+                    <option value="10">10일</option>
+                    <option value="20">20일</option>
+                    <option value="30" selected>30일</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">최소구매</label>
+                  <select id="coupon_amount_minorder_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="0" selected>없음</option>
+                    <option value="10000">10,000원</option>
+                    <option value="30000">30,000원</option>
+                    <option value="50000">50,000원</option>
+                    <option value="custom">직접 입력</option>
+                  </select>
+                  <input type="number" id="coupon_amount_minorder_custom" placeholder="금액 입력" min="0" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
+                  <span id="coupon_amount_minorder_unit" style="font-size:13px;color:#64748b;display:none">원 이상</span>
+                </div>
+              </div>
+            </div>
+            {/* 정률할인 쿠폰 카드 */}
+            <div id="couponCard_rate" style={`border:1px solid #e5e7eb;border-radius:10px;padding:16px${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <label class="toggle" style="flex-shrink:0">
+                    <input type="checkbox" id="coupon_rate_enabled" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <strong style="font-size:14px">정률할인 쿠폰</strong>
+                  {!isPlus && <span class="badge badge-gray" style="margin-left:4px">Plus 전용</span>}
+                </div>
+                <span id="coupon_rate_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
+              </div>
+              <div id="couponDetail_rate" style="display:grid;gap:10px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">할인율</label>
+                  <select id="coupon_rate_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="5">5%</option>
+                    <option value="7">7%</option>
+                    <option value="10" selected>10%</option>
+                    <option value="15">15%</option>
+                    <option value="20">20%</option>
+                    <option value="custom">직접 입력</option>
+                  </select>
+                  <input type="number" id="coupon_rate_custom" placeholder="숫자 입력" min="1" max="100" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:90px" />
+                  <span style="font-size:13px;color:#64748b">%</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
+                  <select id="coupon_rate_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="3">3일</option>
+                    <option value="7" selected>7일</option>
+                    <option value="10">10일</option>
+                    <option value="20">20일</option>
+                    <option value="30">30일</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <label style="font-size:13px;color:#475569;min-width:64px">최소구매</label>
+                  <select id="coupon_rate_minorder_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                    <option value="0" selected>없음</option>
+                    <option value="10000">10,000원</option>
+                    <option value="30000">30,000원</option>
+                    <option value="50000">50,000원</option>
+                    <option value="custom">직접 입력</option>
+                  </select>
+                  <input type="number" id="coupon_rate_minorder_custom" placeholder="금액 입력" min="0" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
+                  <span id="coupon_rate_minorder_unit" style="font-size:13px;color:#64748b;display:none">원 이상</span>
+                </div>
+              </div>
+            </div>
+            </div>{/* /3개 쿠폰 카드 grid */}
+            <button id="saveCouponConfigBtn" class="btn btn-primary btn-sm">쿠폰 설정 저장</button>
+          </div>{/* /basicCouponAccordionBody */}
+        </div>{/* /basicCouponWrapper */}
+
+        {/* ────────────────────────────────────────
+            쿠폰팩 섹션 (Plus 전용, Free에게는 결제 안내)
+        ──────────────────────────────────────── */}
+        <div style="border-top:1px solid #f0f0f0;margin-top:24px;padding-top:24px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <h2 style="margin:0;font-size:16px">쿠폰팩</h2>
+            <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px;background:linear-gradient(135deg,#db2777,#ec4899);color:#fff;letter-spacing:0.3px">Plus</span>
+          </div>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px">
+            신규 회원에게 5장의 단계별 할인 쿠폰을 자동 발급합니다
+          </p>
+
+          {/* 저장 피드백 */}
+          <div id="cpSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
+
+          {/* 부분 실패 배지 + 재시도 버튼 */}
+          {cpFailures.length > 0 && (
+            <div id="cpRetryBadge" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#991b1b;font-weight:500">
+              <span>&#9888; {cpFailures.length}건 등록 실패 — 재시도 버튼을 클릭해 실패 항목을 다시 등록할 수 있습니다</span>
+              <button id="cpRetryBtn" class="btn" style="white-space:nowrap;font-size:12px;padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">
+                재시도
+              </button>
+            </div>
+          )}
+
+          {/* ── 미리보기 카드 ── */}
+          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <p style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;margin:0">미리보기</p>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div id="cpEnabledToggle" data-value={isActiveUi ? 'true' : 'false'}
+                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${isActiveUi ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                  <div style={`position:absolute;top:2px;${isActiveUi ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                </div>
+                <span id="cpEnabledLabel" style="font-size:12px;font-weight:600;color:#374151">{isActiveUi ? '활성화됨' : '비활성화됨'}</span>
+              </div>
+            </div>
+
+            <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
+            <div style={`display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:24px${!isPlus ? ';filter:blur(2px);pointer-events:none' : ''}`}>
+              {(['dark', 'brand', 'illust', 'minimal'] as const).map(d =>
+                (['static', 'anim'] as const).map(v =>
+                  (['lg', 'md', 'sm', 'xs'] as const).map(s => {
+                    const animVal = v === 'anim';
+                    const isVisible = cpDesign === d && cpAnimMode === animVal && cpSize === s;
+                    return (
+                      <div
+                        id={`cp-prev-${d}-${v}-${s}`}
+                        style={`display:${isVisible ? 'block' : 'none'}`}
+                        dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: d, anim_mode: animVal, size: s })}}
+                      />
+                    );
+                  })
+                )
+              )}
+            </div>
+            {!isPlus && (
+              <div style="text-align:center;margin-top:10px;font-size:13px;color:#db2777;font-weight:500">
+                Plus 플랜으로 업그레이드하면 쿠폰팩을 활성화할 수 있습니다.
+                <a href="/dashboard/billing" style="color:#2563eb;font-weight:600;margin-left:4px">Plus 보기 →</a>
+              </div>
+            )}
+            {isPlus && cpIsNewShop && (
+              <p style="font-size:11px;color:#db2777;margin-top:10px;font-weight:500">
+                저장하면 카페24에 자동 등록됩니다
+              </p>
+            )}
+          </div>
+
+          {/* ── 쿠폰팩 구성 (accordion) ── */}
+          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+            <button
+              id="cpPackAccordionBtn"
+              aria-expanded="false"
+              style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin:0"
+            >
+              <div>
+                <h2 style="font-size:14px;font-weight:700;margin-bottom:2px;text-align:left">쿠폰팩 구성</h2>
+                <p style="font-size:12px;color:#64748b;margin:0;text-align:left">내 가게에서 신규 회원에게 발급될 5장의 쿠폰 구성입니다.</p>
+              </div>
+              <span id="cpPackAccordionArrow" style="font-size:14px;color:#94a3b8;transition:transform 0.2s;flex-shrink:0;margin-left:12px">&#9654;</span>
+            </button>
+            <div id="cpPackAccordionBody" style="display:none;margin-top:16px">
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                  <tr style="border-bottom:2px solid #e5e7eb">
+                    <th style="text-align:left;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">쿠폰 내용</th>
+                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">최소 주문</th>
+                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">할인</th>
+                    <th style="text-align:center;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">카페24 등록</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COUPON_PACK_DEFINITIONS.map((def, idx) => {
+                    const couponNo = cpRegisteredItems.get(def.min_order);
+                    const isFailed = cpFailedSet.has(def.min_order);
+                    const isRegistered = couponNo != null;
+
+                    let statusCell;
+                    if (isFailed) {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px">
+                          <span style="color:#dc2626;font-weight:600" title="카페24 등록 실패">&#10007; 실패</span>
+                        </td>
+                      );
+                    } else if (isRegistered) {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px">
+                          <span style="color:#059669;font-weight:600">&#10003;</span>
+                          <span style="font-size:11px;color:#94a3b8;margin-left:4px">#{couponNo}</span>
+                        </td>
+                      );
+                    } else {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px;color:#94a3b8">—</td>
+                      );
+                    }
+
+                    return (
+                      <tr style={`border-bottom:1px solid #f3f4f6;background:${idx % 2 === 0 ? '#fff' : '#fafafa'}`}>
+                        <td style="padding:8px 12px;color:#374151;font-weight:500">
+                          {def.min_order.toLocaleString()}원 이상 {def.discount.toLocaleString()}원 할인
+                        </td>
+                        <td style="text-align:right;padding:8px 12px;color:#6b7280">
+                          &#x20A9;{def.min_order.toLocaleString()}
+                        </td>
+                        <td style="text-align:right;padding:8px 12px;color:#2563eb;font-weight:600">
+                          &#x20A9;{def.discount.toLocaleString()}
+                        </td>
+                        {statusCell}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style="border-top:2px solid #e5e7eb;background:#f8fafc">
+                    <td colspan={2} style="padding:8px 12px;font-size:13px;font-weight:600;color:#374151">합계</td>
+                    <td style="text-align:right;padding:8px 12px;font-weight:700;color:#2563eb">
+                      &#x20A9;{cpTotalDiscount.toLocaleString()}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div style="margin-top:16px;padding:16px;background:#fdf2f8;border-radius:8px;border-left:3px solid #ec4899">
+              <h2 style="font-size:14px;color:#be185d;margin-bottom:8px">쿠폰팩 안내</h2>
+              <p style="font-size:13px;color:#374151;line-height:1.7">
+                쿠폰팩 활성화 시 5개의 단계별 할인 쿠폰(&#x20A9;3,000 ~ &#x20A9;30,000)이 카페24에 등록됩니다.
+                신규 회원 가입 시 카페24가 자동으로 5장 모두를 즉시 발급합니다.
+                디자인/크기 변경은 즉시 저장되며, 위젯 렌더링에만 영향을 줍니다.
+              </p>
+            </div>
+            </div>{/* /cpPackAccordionBody */}
+          </div>
+
+          {/* ── 옵션 카드 ── */}
+          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <h2 style="font-size:14px;font-weight:700;margin:0">옵션</h2>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:12px;color:#374151;font-weight:500">&#10024; 반짝 효과</span>
+                <div id="cpAnimToggle" data-value={cpAnimMode ? 'true' : 'false'}
+                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${cpAnimMode ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                  <div style={`position:absolute;top:2px;${cpAnimMode ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                </div>
+                <span id="cpAnimLabel" style="font-size:12px;font-weight:600;color:#374151">{cpAnimMode ? 'ON' : 'OFF'}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:24px">
+
+              {/* 디자인 선택 */}
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">디자인</label>
+                <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+                  {cpDesigns.map(d => (
+                    <label id={`cp-design-${d.value}`}
+                      style={`display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:10px;cursor:pointer;border:2px solid ${cpDesign === d.value ? '#ec4899' : '#e5e7eb'};background:${cpDesign === d.value ? '#fdf2f8' : '#fff'};transition:all 0.15s;position:relative;flex:1;min-width:0${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                      <input type="radio" name="cpDesign" value={d.value} checked={cpDesign === d.value} style="display:none" />
+                      {cpDesign === d.value && (
+                        <span style="position:absolute;top:4px;right:6px;font-size:11px;color:#ec4899">&#10003;</span>
+                      )}
+                      <div class={`cp-thumb cp-thumb-${d.value}`} style="width:150px;height:70px;border-radius:6px;overflow:hidden;position:relative;flex-shrink:0">
+                        {d.value === 'dark' && (
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                            <defs>
+                              <mask id="tm-dark">
+                                <rect width="300" height="140" fill="white"/>
+                                <circle cx="0" cy="70" r="13" fill="black"/>
+                                <circle cx="300" cy="70" r="13" fill="black"/>
+                              </mask>
+                            </defs>
+                            <rect width="300" height="140" rx="12" fill="#0f0f0f" mask="url(#tm-dark)"/>
+                            <text x="150" y="60" text-anchor="middle" fill="#f0d080" font-size="28" font-weight="800">5만원 상당</text>
+                            <text x="150" y="82" text-anchor="middle" fill="#e5e7eb" font-size="12" font-weight="600">신규 회원 웰컴 쿠폰</text>
+                            <text x="150" y="100" text-anchor="middle" fill="#9ca3af" font-size="9">가입 즉시 사용 가능</text>
+                          </svg>
+                        )}
+                        {d.value === 'brand' && (
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                            <defs>
+                              <linearGradient id="tm-brand-g" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#db2777"/>
+                                <stop offset="50%" stop-color="#ec4899"/>
+                                <stop offset="100%" stop-color="#f472b6"/>
+                              </linearGradient>
+                              <mask id="tm-brand">
+                                <rect width="300" height="140" fill="white"/>
+                                <circle cx="0" cy="70" r="13" fill="black"/>
+                                <circle cx="300" cy="70" r="13" fill="black"/>
+                              </mask>
+                            </defs>
+                            <rect width="300" height="140" rx="12" fill="url(#tm-brand-g)" mask="url(#tm-brand)"/>
+                            <text x="130" y="55" text-anchor="middle" fill="white" font-size="28" font-weight="800">5만원 상당</text>
+                            <text x="130" y="78" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="12" font-weight="600">신규 회원 웰컴 쿠폰</text>
+                            <text x="130" y="97" text-anchor="middle" fill="rgba(255,255,255,0.72)" font-size="9">번개가입, 번개지급</text>
+                            <path d="M248 18L232 44h10l-4 22l18-28h-12l4-20z" fill="#FFE033" stroke="#FFB800" stroke-width="1" stroke-linejoin="round"/>
+                          </svg>
+                        )}
+                        {d.value === 'illust' && (
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                            <defs>
+                              <mask id="tm-illust">
+                                <rect width="300" height="140" fill="white"/>
+                                <circle cx="0" cy="70" r="13" fill="black"/>
+                                <circle cx="300" cy="70" r="13" fill="black"/>
+                              </mask>
+                              <linearGradient id="tm-strip" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#34d399"/>
+                                <stop offset="50%" stop-color="#a78bfa"/>
+                                <stop offset="100%" stop-color="#f472b6"/>
+                              </linearGradient>
+                            </defs>
+                            <rect width="300" height="140" rx="12" fill="#ffffff" mask="url(#tm-illust)"/>
+                            <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
+                            <rect x="0" y="0" width="300" height="4" fill="url(#tm-strip)"/>
+                            <text x="140" y="58" text-anchor="middle" fill="#059669" font-size="28" font-weight="800">5만원 상당</text>
+                            <text x="140" y="80" text-anchor="middle" fill="#374151" font-size="12" font-weight="600">신규 회원 웰컴 쿠폰</text>
+                            <text x="140" y="98" text-anchor="middle" fill="#6b7280" font-size="9">가입 즉시 사용 가능해요!</text>
+                            <rect x="240" y="47" width="36" height="25" rx="3" fill="#fce7f3" stroke="#f9a8d4" stroke-width="1.2"/>
+                            <rect x="237" y="43" width="40" height="7" rx="2" fill="#fbcfe8" stroke="#f9a8d4" stroke-width="1.2"/>
+                            <circle cx="258" cy="43" r="3.5" fill="#ec4899"/>
+                          </svg>
+                        )}
+                        {d.value === 'minimal' && (
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                            <defs>
+                              <mask id="tm-minimal">
+                                <rect width="300" height="140" fill="white"/>
+                                <circle cx="0" cy="70" r="13" fill="black"/>
+                                <circle cx="300" cy="70" r="13" fill="black"/>
+                              </mask>
+                            </defs>
+                            <rect width="300" height="140" rx="12" fill="#f8fafc" mask="url(#tm-minimal)"/>
+                            <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+                            <text x="150" y="62" text-anchor="middle" fill="#0f172a" font-size="32" font-weight="800">&#x20A9;55,000</text>
+                            <text x="150" y="84" text-anchor="middle" fill="#374151" font-size="10" font-weight="600" letter-spacing="1.2">WELCOME COUPON PACK</text>
+                            <text x="150" y="102" text-anchor="middle" fill="#94a3b8" font-size="9">신규 회원 가입 즉시 지급</text>
+                          </svg>
+                        )}
+                      </div>
+                      <span style="font-size:12px;font-weight:600;color:#374151">{d.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 크기 조절 */}
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">카드 크기</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  {cpSizes.map(s => (
+                    <label id={`cp-size-${s.value}`}
+                      style={`display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;cursor:pointer;border:2px solid ${cpSize === s.value ? '#ec4899' : '#e5e7eb'};background:${cpSize === s.value ? '#fdf2f8' : '#fff'};transition:all 0.15s${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                      <input type="radio" name="cpSize" value={s.value} checked={cpSize === s.value} style="display:none" />
+                      <span style={`font-size:12px;font-weight:700;color:${cpSize === s.value ? '#be185d' : '#374151'}`}>{s.label}</span>
+                      <span style="font-size:10px;color:#94a3b8">{s.scale}</span>
+                    </label>
+                  ))}
+                </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:6px">이탈 팝업 안에서의 카드 표시 크기입니다</p>
+              </div>
+
+              {/* 만료 일수 */}
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px" htmlFor="cpExpireDays">쿠폰 만료 일수</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input
+                    id="cpExpireDays"
+                    type="number"
+                    min="7"
+                    max="90"
+                    value={cpExpireDays}
+                    disabled={!isPlus}
+                    style={`width:80px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center${!isPlus ? ';opacity:0.5' : ''}`}
+                  />
+                  <span style="font-size:13px;color:#374151">일</span>
+                </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:6px">
+                  회원이 쿠폰을 받은 날부터 며칠간 사용 가능한지 — 7~90일, 기본 30일
+                </p>
+                {isPlus && cpState === 'active' && (
+                  <p style="font-size:11px;color:#059669;margin-top:2px">
+                    변경 시 카페24 쿠폰 마스터에 즉시 반영됩니다 (이미 발급된 쿠폰은 유지).
+                  </p>
+                )}
+              </div>
+
             </div>
           </div>
 
-          {/* 정액할인 쿠폰 카드 */}
-          <div id="couponCard_amount" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="display:flex;align-items:center;gap:10px">
-                <label class="toggle" style="flex-shrink:0">
-                  <input type="checkbox" id="coupon_amount_enabled" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <strong style="font-size:14px">정액할인 쿠폰</strong>
-              </div>
-              <span id="coupon_amount_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
-            </div>
-            <div id="couponDetail_amount" style="display:grid;gap:10px">
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">할인금액</label>
-                <select id="coupon_amount_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="1000">1,000원</option>
-                  <option value="2000">2,000원</option>
-                  <option value="3000" selected>3,000원</option>
-                  <option value="5000">5,000원</option>
-                  <option value="10000">10,000원</option>
-                  <option value="custom">직접 입력</option>
-                </select>
-                <input type="number" id="coupon_amount_custom" placeholder="금액 입력" min="100" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
-                <span style="font-size:13px;color:#64748b">원</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
-                <select id="coupon_amount_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="3">3일</option>
-                  <option value="7">7일</option>
-                  <option value="10">10일</option>
-                  <option value="20">20일</option>
-                  <option value="30" selected>30일</option>
-                </select>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">최소구매</label>
-                <select id="coupon_amount_minorder_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="0" selected>없음</option>
-                  <option value="10000">10,000원</option>
-                  <option value="30000">30,000원</option>
-                  <option value="50000">50,000원</option>
-                  <option value="custom">직접 입력</option>
-                </select>
-                <input type="number" id="coupon_amount_minorder_custom" placeholder="금액 입력" min="0" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
-                <span id="coupon_amount_minorder_unit" style="font-size:13px;color:#64748b;display:none">원 이상</span>
-              </div>
-            </div>
+          {/* ── 쿠폰팩 저장 버튼 ── */}
+          <div style="margin-bottom:8px">
+            <button id="cpSaveBtn" class="btn btn-primary" style={`width:auto${!isPlus ? ';opacity:0.7' : ''}`}>
+              {isPlus ? '쿠폰팩 설정 저장' : 'Plus로 업그레이드하면 사용 가능'}
+            </button>
+            {isPlus && cpIsNewShop && (
+              <span id="cpNewShopHint" style="font-size:12px;color:#db2777;margin-left:12px;font-weight:500">
+                저장하면 카페24에 자동 등록됩니다
+              </span>
+            )}
           </div>
+        </div>{/* /쿠폰팩 섹션 */}
 
-          {/* 정률할인 쿠폰 카드 */}
-          <div id="couponCard_rate" style={`border:1px solid #e5e7eb;border-radius:10px;padding:16px${shop.plan === 'free' ? ';opacity:0.5;pointer-events:none' : ''}`}>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="display:flex;align-items:center;gap:10px">
-                <label class="toggle" style="flex-shrink:0">
-                  <input type="checkbox" id="coupon_rate_enabled" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <strong style="font-size:14px">정률할인 쿠폰</strong>
-                {shop.plan === 'free' && <span class="badge badge-gray" style="margin-left:4px">Plus 전용</span>}
-              </div>
-              <span id="coupon_rate_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
-            </div>
-            <div id="couponDetail_rate" style="display:grid;gap:10px">
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">할인율</label>
-                <select id="coupon_rate_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="5">5%</option>
-                  <option value="7">7%</option>
-                  <option value="10" selected>10%</option>
-                  <option value="15">15%</option>
-                  <option value="20">20%</option>
-                  <option value="custom">직접 입력</option>
-                </select>
-                <input type="number" id="coupon_rate_custom" placeholder="숫자 입력" min="1" max="100" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:90px" />
-                <span style="font-size:13px;color:#64748b">%</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">사용기간</label>
-                <select id="coupon_rate_expire" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="3">3일</option>
-                  <option value="7" selected>7일</option>
-                  <option value="10">10일</option>
-                  <option value="20">20일</option>
-                  <option value="30">30일</option>
-                </select>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px">
-                <label style="font-size:13px;color:#475569;min-width:64px">최소구매</label>
-                <select id="coupon_rate_minorder_preset" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-                  <option value="0" selected>없음</option>
-                  <option value="10000">10,000원</option>
-                  <option value="30000">30,000원</option>
-                  <option value="50000">50,000원</option>
-                  <option value="custom">직접 입력</option>
-                </select>
-                <input type="number" id="coupon_rate_minorder_custom" placeholder="금액 입력" min="0" style="display:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:110px" />
-                <span id="coupon_rate_minorder_unit" style="font-size:13px;color:#64748b;display:none">원 이상</span>
-              </div>
-            </div>
-          </div>
-          </div>{/* /3개 쿠폰 카드 grid */}
-
-          <button id="saveCouponConfigBtn" class="btn btn-primary btn-sm">쿠폰 설정 저장</button>
-        </div>
-      </div>
+      </div>{/* /couponSettingsCard */}
 
       <div class="card">
         <h2>쇼핑몰 정체성 (AI 분석)</h2>
@@ -2023,6 +2411,259 @@ export const GeneralSettingsPage: FC<{
               } catch(e) { showToast('error', '오류: ' + e.message); }
               finally { btn.disabled = false; btn.textContent = '쿠폰 설정 저장'; }
             });
+
+            // ─── 기본 쿠폰 accordion (Plus만) ────────────────────
+            (function() {
+              var btn = document.getElementById('basicCouponAccordionBtn');
+              if (!btn) return; // Free 플랜에는 버튼 없음
+              var body = document.getElementById('basicCouponAccordionBody');
+              var arrow = document.getElementById('basicCouponAccordionArrow');
+              if (!body || !arrow) return;
+              btn.addEventListener('click', function() {
+                var isOpen = btn.getAttribute('aria-expanded') === 'true';
+                if (isOpen) {
+                  btn.setAttribute('aria-expanded', 'false');
+                  body.style.display = 'none';
+                  arrow.style.transform = '';
+                  arrow.textContent = '\\u25BA';
+                } else {
+                  btn.setAttribute('aria-expanded', 'true');
+                  body.style.display = 'block';
+                  arrow.style.transform = 'rotate(90deg)';
+                  arrow.textContent = '\\u25BC';
+                }
+              });
+            })();
+
+          })();
+        `}} />
+      </div>
+
+      {/* ─── 쿠폰팩 JS (별도 script 블록) ─── */}
+      <div style="display:none">
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var shopId = '${shop!.shop_id}';
+            var IS_PLUS = ${isPlus ? 'true' : 'false'};
+
+            /* ── 쿠폰팩 구성 accordion ── */
+            (function() {
+              var btn = document.getElementById('cpPackAccordionBtn');
+              var body = document.getElementById('cpPackAccordionBody');
+              var arrow = document.getElementById('cpPackAccordionArrow');
+              if (!btn || !body || !arrow) return;
+              btn.addEventListener('click', function() {
+                var isOpen = btn.getAttribute('aria-expanded') === 'true';
+                if (isOpen) {
+                  btn.setAttribute('aria-expanded', 'false');
+                  body.style.display = 'none';
+                  arrow.style.transform = '';
+                  arrow.textContent = '\\u25BA';
+                } else {
+                  btn.setAttribute('aria-expanded', 'true');
+                  body.style.display = 'block';
+                  arrow.style.transform = 'rotate(90deg)';
+                  arrow.textContent = '\\u25BC';
+                }
+              });
+            })();
+
+            /* ── 공통 토글 헬퍼 ── */
+            function makeToggle(id, color, onChange) {
+              var el = document.getElementById(id);
+              if (!el) return;
+              el.addEventListener('click', function() {
+                var cur = el.getAttribute('data-value') === 'true';
+                var next = !cur;
+                el.setAttribute('data-value', String(next));
+                el.style.background = next ? color : '#d1d5db';
+                var dot = el.querySelector('div');
+                if (dot) { dot.style.right = next ? '2px' : ''; dot.style.left = next ? '' : '2px'; }
+                if (onChange) onChange(next);
+              });
+            }
+
+            /* ── 미리보기 갱신 (design × anim × size) ── */
+            function updatePreview() {
+              var designInput = document.querySelector('input[name="cpDesign"]:checked');
+              var d = designInput ? designInput.value : 'brand';
+              var anim = document.getElementById('cpAnimToggle').getAttribute('data-value') === 'true';
+              var sizeInput = document.querySelector('input[name="cpSize"]:checked');
+              var sz = sizeInput ? sizeInput.value : 'lg';
+              var designs = ['dark','brand','illust','minimal'];
+              var variants = ['static','anim'];
+              var szList = ['lg','md','sm','xs'];
+              designs.forEach(function(dv) {
+                variants.forEach(function(vv) {
+                  szList.forEach(function(sv) {
+                    var el = document.getElementById('cp-prev-' + dv + '-' + vv + '-' + sv);
+                    if (!el) return;
+                    var show = dv === d && ((anim && vv === 'anim') || (!anim && vv === 'static')) && sv === sz;
+                    el.style.display = show ? 'block' : 'none';
+                  });
+                });
+              });
+            }
+
+            /* ── 디자인 라디오 ── */
+            document.querySelectorAll('input[name="cpDesign"]').forEach(function(input) {
+              input.addEventListener('change', function() {
+                document.querySelectorAll('input[name="cpDesign"]').forEach(function(r) {
+                  var lbl = document.getElementById('cp-design-' + r.value);
+                  if (lbl) {
+                    lbl.style.borderColor = r.checked ? '#ec4899' : '#e5e7eb';
+                    lbl.style.background = r.checked ? '#fdf2f8' : '#fff';
+                    var chk = lbl.querySelector('span[style*="position:absolute"]');
+                    if (chk) chk.style.display = r.checked ? 'inline' : 'none';
+                  }
+                });
+                updatePreview();
+              });
+            });
+
+            /* 체크마크 초기화 */
+            document.querySelectorAll('input[name="cpDesign"]').forEach(function(r) {
+              var lbl = document.getElementById('cp-design-' + r.value);
+              if (lbl) {
+                var chk = lbl.querySelector('span');
+                if (chk && chk.style && chk.style.position === 'absolute') {
+                  chk.style.display = r.checked ? 'inline' : 'none';
+                }
+              }
+            });
+
+            /* ── 크기 라디오 ── */
+            document.querySelectorAll('input[name="cpSize"]').forEach(function(input) {
+              input.addEventListener('change', function() {
+                document.querySelectorAll('input[name="cpSize"]').forEach(function(r) {
+                  var lbl = document.getElementById('cp-size-' + r.value);
+                  if (lbl) {
+                    lbl.style.borderColor = r.checked ? '#ec4899' : '#e5e7eb';
+                    lbl.style.background = r.checked ? '#fdf2f8' : '#fff';
+                    var span = lbl.querySelector('span');
+                    if (span) span.style.color = r.checked ? '#be185d' : '#374151';
+                  }
+                });
+                updatePreview();
+              });
+            });
+
+            /* ── 토글 등록 ── */
+            makeToggle('cpEnabledToggle', 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)', function(v) {
+              var lbl = document.getElementById('cpEnabledLabel');
+              if (lbl) lbl.textContent = v ? '활성화됨' : '비활성화됨';
+            });
+            makeToggle('cpAnimToggle', 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)', function(v) {
+              var lbl = document.getElementById('cpAnimLabel');
+              if (lbl) lbl.textContent = v ? 'ON' : 'OFF';
+              updatePreview();
+            });
+
+            /* 초기 미리보기 */
+            updatePreview();
+
+            /* ── 저장 ── */
+            document.getElementById('cpSaveBtn').addEventListener('click', async function() {
+              /* Free 플랜: Plus 결제 안내 */
+              if (!IS_PLUS) {
+                window.location.href = '/dashboard/billing';
+                return;
+              }
+              var btn = this;
+              btn.disabled = true;
+              btn.textContent = '저장 중...';
+              var msgEl = document.getElementById('cpSaveMsg');
+
+              var enabled  = document.getElementById('cpEnabledToggle').getAttribute('data-value') === 'true';
+              var animMode = document.getElementById('cpAnimToggle').getAttribute('data-value') === 'true';
+              var designEl = document.querySelector('input[name="cpDesign"]:checked');
+              var design   = designEl ? designEl.value : 'brand';
+              var sizeEl   = document.querySelector('input[name="cpSize"]:checked');
+              var size     = sizeEl ? sizeEl.value : 'lg';
+              var expireDaysVal = parseInt(document.getElementById('cpExpireDays').value, 10);
+              if (isNaN(expireDaysVal) || expireDaysVal < 7 || expireDaysVal > 90) {
+                expireDaysVal = 30;
+              }
+
+              try {
+                var resp = await fetch('/api/dashboard/shops/' + shopId + '/coupon-pack', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  body: JSON.stringify({ enabled: enabled, design: design, anim_mode: animMode, size: size, expire_days: expireDaysVal })
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                  var failCnt = data.failures ? data.failures.length : 0;
+                  if (failCnt > 0) {
+                    msgEl.style.background = '#fffbeb';
+                    msgEl.style.color = '#92400e';
+                    msgEl.style.border = '1px solid #fde68a';
+                    msgEl.textContent = '설정 저장 완료. ' + failCnt + '건 카페24 반영 실패 — 잠시 후 다시 시도해 주세요.';
+                  } else {
+                    msgEl.style.background = '#f0fdf4';
+                    msgEl.style.color = '#166534';
+                    msgEl.style.border = '1px solid #bbf7d0';
+                    msgEl.textContent = '설정이 저장되었습니다.';
+                  }
+                  msgEl.style.display = 'block';
+                  var hint = document.getElementById('cpNewShopHint');
+                  if (hint) hint.style.display = 'none';
+                } else {
+                  throw new Error(data.message || '저장 실패');
+                }
+              } catch(e) {
+                msgEl.style.display = 'block';
+                msgEl.style.background = '#fef2f2';
+                msgEl.style.color = '#991b1b';
+                msgEl.style.border = '1px solid #fecaca';
+                msgEl.textContent = '오류: ' + e.message;
+              } finally {
+                btn.disabled = false;
+                btn.textContent = IS_PLUS ? '쿠폰팩 설정 저장' : 'Plus로 업그레이드하면 사용 가능';
+                setTimeout(function() { msgEl.style.display = 'none'; }, 4000);
+              }
+            });
+
+            /* ── 재시도 버튼 ── */
+            var retryBtn = document.getElementById('cpRetryBtn');
+            if (retryBtn) {
+              retryBtn.addEventListener('click', async function() {
+                var btn = this;
+                btn.disabled = true;
+                btn.textContent = '재시도 중...';
+                var msgEl = document.getElementById('cpSaveMsg');
+                try {
+                  var resp = await fetch('/api/dashboard/shops/' + shopId + '/coupon-pack/retry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                  });
+                  var data = await resp.json();
+                  if (resp.ok) {
+                    msgEl.style.display = 'block';
+                    msgEl.style.background = '#f0fdf4';
+                    msgEl.style.color = '#166534';
+                    msgEl.style.border = '1px solid #bbf7d0';
+                    var stillFailed = data.failures ? data.failures.length : 0;
+                    msgEl.textContent = stillFailed > 0
+                      ? ('재시도 완료. 아직 ' + stillFailed + '건 실패 — 카페24 토큰을 확인해주세요.')
+                      : '모든 항목 등록 완료! 페이지를 새로고침합니다.';
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                  } else {
+                    throw new Error(data.message || '재시도 실패');
+                  }
+                } catch(e) {
+                  msgEl.style.display = 'block';
+                  msgEl.style.background = '#fef2f2';
+                  msgEl.style.color = '#991b1b';
+                  msgEl.style.border = '1px solid #fecaca';
+                  msgEl.textContent = '오류: ' + e.message;
+                  btn.disabled = false;
+                  btn.textContent = '재시도';
+                }
+              });
+            }
           })();
         `}} />
       </div>
@@ -2057,7 +2698,8 @@ export const GeneralSettingsPage: FC<{
     )}
 
   </Layout>
-);
+  );
+};
 
 export const CouponSettingsPage: FC<{
   shop: { shop_id: string; shop_name: string; plan: string };
