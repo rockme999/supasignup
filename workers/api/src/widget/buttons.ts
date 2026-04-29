@@ -141,8 +141,31 @@ export const WIDGET_JS = `(function() {
     '.bg-preset-pulse-d2{animation-delay:0.4s!important}',
     '.bg-preset-pulse-d3{animation-delay:0.8s!important}',
     '.bg-preset-pulse-d4{animation-delay:1.2s!important}',
-    '@keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}'
+    '@keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}',
+    /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) ── */
+    '.bg-dark-wrap{background:#1a1a2e;padding:14px 16px;border-radius:12px;display:inline-block}'
   ].join('\\n');
+
+  // ─── Plus: 부모 트리 luminance 추적 (자동 다크 wrapper 판단) ─
+  function getEffectiveBgLuminance(el) {
+    var node = el;
+    while (node && node !== document.documentElement) {
+      var bg = window.getComputedStyle(node).backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+        var m = bg.match(/rgba?\\(([^)]+)\\)/);
+        if (m) {
+          var p = m[1].split(',').map(function(x) { return parseFloat(x.trim()); });
+          // 알파값이 0.5 이하면 투명으로 간주하고 계속 올라감
+          if (p[3] === undefined || p[3] > 0.5) {
+            return (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255;
+          }
+        }
+      }
+      node = node.parentElement;
+    }
+    // 모든 부모가 transparent → 흰색(밝은 배경)으로 가정
+    return 1.0;
+  }
 
   // ─── 메타데이터 수집 헬퍼 ─────────────────────────────────────
   function bgDetectDevice() {
@@ -512,6 +535,15 @@ export const WIDGET_JS = `(function() {
     // 리퀴드 글래스: 마우스 추적 광택 효과 초기화
     if (preset === 'liquid-glass') {
       this.initLiquidGlass(this.container);
+    }
+
+    // Plus dark-bg 프리셋: 밝은 배경이면 자동으로 어두운 wrapper 클래스 부여
+    var DARK_BG_PRESETS = ['glassmorphism', 'neon-glow', 'liquid-glass'];
+    if (DARK_BG_PRESETS.indexOf(preset) !== -1) {
+      var lum = getEffectiveBgLuminance(this.container);
+      if (lum > 0.6) {
+        this.container.classList.add('bg-dark-wrap');
+      }
     }
   };
 

@@ -653,19 +653,9 @@ export const ProvidersPage: FC<{
         {/* Plus 프리셋 — 6종 */}
         <p style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px">Plus 프리셋</p>
         <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px">
-          <button class="preset-card preset-card-plus" data-preset="glassmorphism" data-tier="plus" type="button" style="position:relative">
-            <div class="preset-preview" style="background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);color:#fff;backdrop-filter:blur(4px)">반투명</div>
-            <span>글래스모피즘</span>
-            <span class="plus-preset-badge">&#10022; Plus</span>
-          </button>
-          <button class="preset-card preset-card-plus" data-preset="neon-glow" data-tier="plus" type="button" style="position:relative">
-            <div class="preset-preview" style="background:#0a0a14;color:#a5b4fc;border:1px solid rgba(99,102,241,0.5)">네온</div>
-            <span>네온 글로우</span>
-            <span class="plus-preset-badge">&#10022; Plus</span>
-          </button>
-          <button class="preset-card preset-card-plus" data-preset="liquid-glass" data-tier="plus" type="button" style="position:relative">
-            <div class="preset-preview" style="background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);color:rgba(255,255,255,0.9)">동적광택</div>
-            <span>리퀴드 글래스</span>
+          <button class="preset-card preset-card-plus" data-preset="soft-shadow" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:#fff;color:#374151;box-shadow:0 4px 12px rgba(0,0,0,0.12)">부유감</div>
+            <span>소프트 섀도우</span>
             <span class="plus-preset-badge">&#10022; Plus</span>
           </button>
           <button class="preset-card preset-card-plus" data-preset="gradient-flow" data-tier="plus" type="button" style="position:relative">
@@ -673,14 +663,27 @@ export const ProvidersPage: FC<{
             <span>그라디언트 플로우</span>
             <span class="plus-preset-badge">&#10022; Plus</span>
           </button>
-          <button class="preset-card preset-card-plus" data-preset="soft-shadow" data-tier="plus" type="button" style="position:relative">
-            <div class="preset-preview" style="background:#fff;color:#374151;box-shadow:0 4px 12px rgba(0,0,0,0.12)">부유감</div>
-            <span>소프트 섀도우</span>
-            <span class="plus-preset-badge">&#10022; Plus</span>
-          </button>
           <button class="preset-card preset-card-plus" data-preset="pulse" data-tier="plus" type="button" style="position:relative">
             <div class="preset-preview" style="background:#fff;color:#4f46e5;border:1px solid #e5e7eb">펄스</div>
             <span>펄스 애니메이션</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="glassmorphism" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);color:#fff;backdrop-filter:blur(4px)">반투명</div>
+            <span>글래스모피즘</span>
+            <span style="font-size:10px;color:#94a3b8;margin-top:2px">🌙 어두운 배경 권장</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="neon-glow" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:#0a0a14;color:#a5b4fc;border:1px solid rgba(99,102,241,0.5)">네온</div>
+            <span>네온 글로우</span>
+            <span style="font-size:10px;color:#94a3b8;margin-top:2px">🌙 어두운 배경 권장</span>
+            <span class="plus-preset-badge">&#10022; Plus</span>
+          </button>
+          <button class="preset-card preset-card-plus" data-preset="liquid-glass" data-tier="plus" type="button" style="position:relative">
+            <div class="preset-preview" style="background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);color:rgba(255,255,255,0.9)">동적광택</div>
+            <span>리퀴드 글래스</span>
+            <span style="font-size:10px;color:#94a3b8;margin-top:2px">🌙 어두운 배경 권장</span>
             <span class="plus-preset-badge">&#10022; Plus</span>
           </button>
         </div>
