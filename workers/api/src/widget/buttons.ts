@@ -15,12 +15,14 @@ import { getCouponPackJs, getSingleCouponCardJs } from './coupon-pack';
 export const WIDGET_JS = `(function() {
   'use strict';
 
-  // 중복 실행 방지 — 카페24 ScriptTag 로더가 동일 스크립트를 2회 로딩하는 경우 대응
-  if (window.__BG_WIDGET_LOADED__) return;
-  window.__BG_WIDGET_LOADED__ = true;
-
   // ─── 서버에서 주입된 BASE_URL (런타임에 치환됨) ─────────────
   var __MY_BASE_URL__ = '';
+
+  // 중복 실행 방지 — 같은 환경(BASE_URL)의 스크립트가 2회 로드되는 경우만 차단.
+  // prod + dev 두 ScriptTag가 같은 가게에 박힌 경우 둘 다 실행되어야 하므로 키를 분리.
+  var __BG_GUARD_KEY__ = '__BG_WIDGET_LOADED_' + (__MY_BASE_URL__ || 'unknown').replace(/[^a-z0-9]/gi, '_') + '__';
+  if (window[__BG_GUARD_KEY__]) return;
+  window[__BG_GUARD_KEY__] = true;
 
   // ─── 디버그 헬퍼 (?bg_debug=1 또는 localStorage bg_debug=1) ─
   function bgDebug() {
