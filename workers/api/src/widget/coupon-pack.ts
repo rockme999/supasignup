@@ -44,6 +44,12 @@ function getSizeDimensions(size: string): { w: number; h: number; scale: number 
   return { w: Math.round(300 * scale), h: Math.round(140 * scale), scale };
 }
 
+/**
+ * size별 base font-size (px) — 16px × scale
+ * outer wrapper에 font-size로 설정하고 inner는 em으로 비례 유지.
+ */
+const SIZE_BASE_FONT: Record<string, number> = { lg: 16, md: 13.6, sm: 11.2, xs: 8.8 };
+
 export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   const design = opts.design ?? 'brand';
   const animMode = opts.anim_mode !== false;
@@ -59,7 +65,8 @@ export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   const variant = animMode ? 'a' : 's';
 
   const { w, h } = getSizeDimensions(size);
-  return buildCardHtml(design, variant, fmtAmountMoney, fmtAmountWon, itemsCount, w, h);
+  const baseFont = SIZE_BASE_FONT[size] ?? 16;
+  return buildCardHtml(design, variant, fmtAmountMoney, fmtAmountWon, itemsCount, w, h, baseFont);
 }
 
 /** 디자인 번호 매핑 */
@@ -82,26 +89,27 @@ function buildCardHtml(
   itemsCount: number,
   w: number,
   h: number,
+  baseFont: number,
 ): string {
   // CSS 셀렉터 .bg-cp-card-{N}-anim 과 일치하도록 숫자 기반으로 생성
   const num = DESIGN_NUM[design];
   const animClass = variant === 'a' ? ` bg-cp-card-${num}-anim` : '';
 
   switch (design) {
-    case 'dark':   return buildDarkCard(variant, animClass, fmtAmountWon, itemsCount, w, h);
-    case 'brand':  return buildBrandCard(variant, animClass, fmtAmountWon, itemsCount, w, h);
-    case 'illust': return buildIllustCard(variant, animClass, fmtAmountWon, itemsCount, w, h);
-    case 'minimal':return buildMinimalCard(variant, animClass, fmtAmountMoney, itemsCount, w, h);
+    case 'dark':   return buildDarkCard(variant, animClass, fmtAmountWon, itemsCount, w, h, baseFont);
+    case 'brand':  return buildBrandCard(variant, animClass, fmtAmountWon, itemsCount, w, h, baseFont);
+    case 'illust': return buildIllustCard(variant, animClass, fmtAmountWon, itemsCount, w, h, baseFont);
+    case 'minimal':return buildMinimalCard(variant, animClass, fmtAmountMoney, itemsCount, w, h, baseFont);
   }
 }
 
 // ────────────────────────────────────────────────────────────────
 // #1 다크 — 검정 배경 + 금색 타이포
 // ────────────────────────────────────────────────────────────────
-function buildDarkCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number): string {
+function buildDarkCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number, baseFont: number): string {
   // mask id에 width suffix 추가 → 동일 페이지 다중 size 카드 간 id 충돌 방지
   const maskId = `bg-cp-1${variant}-${w}`;
-  return `<div class="bg-cp-card bg-cp-card-1${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  return `<div class="bg-cp-card bg-cp-card-1${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0;font-size:${baseFont}px">
   <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;display:block">
     <defs>
       <mask id="${maskId}">
@@ -114,9 +122,9 @@ function buildDarkCard(variant: string, animClass: string, fmtAmount: string, it
   </svg>
   <div class="bg-cp-inner bg-cp-inner-1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
     <div class="bg-cp-divider bg-cp-divider-1" style="position:absolute;inset:0;border-left:1.5px dashed rgba(255,255,255,0.13);border-right:1.5px dashed rgba(255,255,255,0.13);margin:0 11px;pointer-events:none;z-index:1"></div>
-    <div class="bg-cp-amount" style="font-size:32px;font-weight:800;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#f0d080">${fmtAmount} 상당</div>
-    <div class="bg-cp-title" style="font-size:13px;font-weight:600;letter-spacing:0.2px;margin-bottom:4px;position:relative;z-index:2;color:#e5e7eb">신규 회원 웰컴 할인 쿠폰팩</div>
-    <div class="bg-cp-desc" style="font-size:10px;font-weight:400;opacity:0.72;letter-spacing:0.1px;text-align:center;padding:0 20px;position:relative;z-index:2;color:#9ca3af">가입 즉시 ${itemsCount}장 자동 지급!</div>
+    <div class="bg-cp-amount" style="font-size:2em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#f0d080">${fmtAmount} 상당</div>
+    <div class="bg-cp-title" style="font-size:0.8125em;font-weight:600;letter-spacing:0.0125em;margin-bottom:4px;position:relative;z-index:2;color:#e5e7eb">신규 회원 웰컴 할인 쿠폰팩</div>
+    <div class="bg-cp-desc" style="font-size:0.625em;font-weight:400;opacity:0.72;letter-spacing:0.00625em;text-align:center;padding:0 20px;position:relative;z-index:2;color:#9ca3af">가입 즉시 ${itemsCount}장 자동 지급!</div>
   </div>
 </div>`;
 }
@@ -124,7 +132,7 @@ function buildDarkCard(variant: string, animClass: string, fmtAmount: string, it
 // ────────────────────────────────────────────────────────────────
 // #2 번개가입 브랜드 — 핑크 그라디언트
 // ────────────────────────────────────────────────────────────────
-function buildBrandCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number): string {
+function buildBrandCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number, baseFont: number): string {
   const maskId = `bg-cp-2${variant}-${w}`;
   const gradId = `bg-cp-pg-${variant}-${w}`;
 
@@ -150,7 +158,7 @@ function buildBrandCard(variant: string, animClass: string, fmtAmount: string, i
        <span style="position:absolute;font-size:9px;color:rgba(255,255,255,0.9);animation:bg-cp-starPop 2s ease-in-out infinite;pointer-events:none;z-index:5;bottom:11px;left:42px;animation-delay:1.65s">✦</span>`
     : '';
 
-  return `<div class="bg-cp-card bg-cp-card-2${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  return `<div class="bg-cp-card bg-cp-card-2${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0;font-size:${baseFont}px">
   <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;display:block">
     <defs>
       <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -173,9 +181,9 @@ function buildBrandCard(variant: string, animClass: string, fmtAmount: string, i
       </svg>
     </div>
     <div style="width:100%;padding-left:24px;padding-right:72px;position:relative;z-index:3">
-      <div style="font-size:34px;font-weight:800;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;color:#fff">${fmtAmount} 상당</div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:rgba(255,255,255,0.92)">신규 회원 웰컴 할인 쿠폰팩</div>
-      <div style="font-size:10px;opacity:0.82;color:rgba(255,255,255,0.72)">번개가입, 번개지급 ${itemsCount}장</div>
+      <div style="font-size:2.125em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;color:#fff">${fmtAmount} 상당</div>
+      <div style="font-size:0.8125em;font-weight:600;margin-bottom:4px;color:rgba(255,255,255,0.92)">신규 회원 웰컴 할인 쿠폰팩</div>
+      <div style="font-size:0.625em;opacity:0.82;color:rgba(255,255,255,0.72)">번개가입, 번개지급 ${itemsCount}장</div>
     </div>
   </div>
 </div>`;
@@ -184,11 +192,11 @@ function buildBrandCard(variant: string, animClass: string, fmtAmount: string, i
 // ────────────────────────────────────────────────────────────────
 // #3 밝은 일러스트 — 흰 배경 + 민트/핑크 액센트
 // ────────────────────────────────────────────────────────────────
-function buildIllustCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number): string {
+function buildIllustCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number, baseFont: number): string {
   const maskId = `bg-cp-3${variant}-${w}`;
   // 반짝: 색띠 background-size/animation은 CSS keyframe에서 처리
   // (인라인 style에서는 animation 이름만 참조)
-  return `<div class="bg-cp-card bg-cp-card-3${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  return `<div class="bg-cp-card bg-cp-card-3${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0;font-size:${baseFont}px">
   <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;display:block">
     <defs>
       <mask id="${maskId}">
@@ -222,9 +230,9 @@ function buildIllustCard(variant: string, animClass: string, fmtAmount: string, 
       <circle cx="11" cy="11" r="3" fill="#fff"/>
     </svg>
     <div style="position:relative;z-index:2;text-align:center">
-      <div style="font-size:32px;font-weight:800;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;color:#059669">${fmtAmount} 상당</div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:#374151">신규 회원 웰컴 할인 쿠폰팩</div>
-      <div style="font-size:10px;opacity:0.72;color:#6b7280">가입 즉시 ${itemsCount}장 사용 가능해요!</div>
+      <div style="font-size:2em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;color:#059669">${fmtAmount} 상당</div>
+      <div style="font-size:0.8125em;font-weight:600;margin-bottom:4px;color:#374151">신규 회원 웰컴 할인 쿠폰팩</div>
+      <div style="font-size:0.625em;opacity:0.72;color:#6b7280">가입 즉시 ${itemsCount}장 사용 가능해요!</div>
     </div>
   </div>
 </div>`;
@@ -233,9 +241,9 @@ function buildIllustCard(variant: string, animClass: string, fmtAmount: string, 
 // ────────────────────────────────────────────────────────────────
 // #4 미니멀 — 회색 배경 + 검정 아웃라인 + 큰 타이포
 // ────────────────────────────────────────────────────────────────
-function buildMinimalCard(variant: string, animClass: string, fmtAmount: string, _itemsCount: number, w: number, h: number): string {
+function buildMinimalCard(variant: string, animClass: string, fmtAmount: string, _itemsCount: number, w: number, h: number, baseFont: number): string {
   const maskId = `bg-cp-4${variant}-${w}`;
-  return `<div class="bg-cp-card bg-cp-card-4${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  return `<div class="bg-cp-card bg-cp-card-4${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0;font-size:${baseFont}px">
   <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" overflow="visible" style="position:absolute;inset:0;display:block">
     <defs>
       <mask id="${maskId}">
@@ -250,11 +258,11 @@ function buildMinimalCard(variant: string, animClass: string, fmtAmount: string,
   </svg>
   <div class="bg-cp-inner" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
     <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.15);border-right:1.5px dashed rgba(0,0,0,0.15);margin:0 11px;pointer-events:none;z-index:1"></div>
-    <div style="font-size:36px;font-weight:800;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#0f172a">
+    <div style="font-size:2.25em;font-weight:800;letter-spacing:-0.03125em;line-height:1;margin-bottom:6px;position:relative;z-index:2;color:#0f172a">
       <span style="display:inline-block;border-bottom:2.5px solid #0f172a;padding-bottom:2px">${fmtAmount}</span>
     </div>
-    <div style="font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;margin-top:8px;margin-bottom:4px;position:relative;z-index:2;color:#374151">WELCOME COUPON PACK</div>
-    <div style="font-size:10px;opacity:0.72;color:#94a3b8;margin-top:5px;position:relative;z-index:2">신규 회원 가입 즉시 지급</div>
+    <div style="font-size:0.6875em;font-weight:600;letter-spacing:0.0875em;text-transform:uppercase;margin-top:8px;margin-bottom:4px;position:relative;z-index:2;color:#374151">WELCOME COUPON PACK</div>
+    <div style="font-size:0.625em;opacity:0.72;color:#94a3b8;margin-top:5px;position:relative;z-index:2">신규 회원 가입 즉시 지급</div>
   </div>
 </div>`;
 }
