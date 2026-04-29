@@ -40,13 +40,14 @@ export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   const totalAmount = opts.total_amount ?? 55000;
   const itemsCount = opts.items_count ?? 5;
 
-  // 금액 포맷 (₩55,000)
-  const fmtAmount = '₩' + totalAmount.toLocaleString('ko-KR');
+  // 금액 포맷: minimal은 ₩55,000, 나머지는 "5만원 상당" 형식 (시안 텍스트 통일)
+  const fmtAmountMoney = '₩' + totalAmount.toLocaleString('ko-KR');
+  const fmtAmountWon = Math.floor(totalAmount / 10000) + '만원';
 
   // 각 디자인별로 mask id suffix를 고정 (정적: s, 반짝: a)
   const variant = animMode ? 'a' : 's';
 
-  const cardHtml = buildCardHtml(design, variant, fmtAmount, itemsCount);
+  const cardHtml = buildCardHtml(design, variant, fmtAmountMoney, fmtAmountWon, itemsCount);
   return cardHtml;
 }
 
@@ -54,16 +55,17 @@ export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
 function buildCardHtml(
   design: 'dark' | 'brand' | 'illust' | 'minimal',
   variant: 's' | 'a',
-  fmtAmount: string,
+  fmtAmountMoney: string,
+  fmtAmountWon: string,
   itemsCount: number,
 ): string {
   const animClass = variant === 'a' ? ` bg-cp-${design}-anim` : '';
 
   switch (design) {
-    case 'dark':   return buildDarkCard(variant, animClass, fmtAmount, itemsCount);
-    case 'brand':  return buildBrandCard(variant, animClass, fmtAmount, itemsCount);
-    case 'illust': return buildIllustCard(variant, animClass, fmtAmount, itemsCount);
-    case 'minimal':return buildMinimalCard(variant, animClass, fmtAmount, itemsCount);
+    case 'dark':   return buildDarkCard(variant, animClass, fmtAmountWon, itemsCount);
+    case 'brand':  return buildBrandCard(variant, animClass, fmtAmountWon, itemsCount);
+    case 'illust': return buildIllustCard(variant, animClass, fmtAmountWon, itemsCount);
+    case 'minimal':return buildMinimalCard(variant, animClass, fmtAmountMoney, itemsCount);
   }
 }
 
@@ -282,7 +284,10 @@ export function getCouponPackJs(): string {
     '    var animMode = cp.anim_mode !== false;',
     '    var totalAmount = cp.total_amount || 55000;',
     '    var itemsCount = cp.items_count || 5;',
-    '    var fmtAmount = "\\u20a9" + totalAmount.toLocaleString();',
+    '    // minimal: ₩55,000 / 나머지: 5만원 상당 (시안 텍스트 통일 2026-04-29)',
+    '    var fmtAmountMoney = "\\u20a9" + totalAmount.toLocaleString();',
+    '    var fmtAmountWon = Math.floor(totalAmount / 10000) + "\\ub9cc\\uc6d0";',
+    '    var fmtAmount = (design === "minimal") ? fmtAmountMoney : fmtAmountWon;',
     '    var variant = animMode ? "a" : "s";',
     '',
     '    var wrap = document.createElement("div");',
