@@ -172,9 +172,6 @@ const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
   // Phase C 쿠폰팩 카드 funnel 이벤트 2종
   'widget.coupon_pack_shown',              // 쿠폰팩 카드 첫 노출 (이탈 팝업 내)
   'widget.coupon_pack_clicked',            // 쿠폰팩 CTA 클릭
-  // Phase D-1/D-4 exit-intent 통합 + Free 업셀 funnel 이벤트 2종
-  'widget.plus_upsell_shown',              // Free 사용자에게 업그레이드 카드 노출
-  'widget.plus_upsell_clicked',            // Plus 업셀 CTA 클릭
 ]);
 const MAX_PAGE_URL_LEN = 2048;
 const MAX_EVENT_DATA_JSON_LEN = 4096;

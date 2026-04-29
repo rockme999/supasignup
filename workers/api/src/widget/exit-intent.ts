@@ -14,7 +14,6 @@
  *   widget.exit_intent_shown / widget.exit_intent_signup / widget.exit_intent_dismissed
  *   widget.scroll_trigger_fired
  *   widget.coupon_pack_shown (source:'exit_intent') / widget.coupon_pack_clicked (source:'exit_intent')
- *   widget.plus_upsell_shown (source:'exit_intent') / widget.plus_upsell_clicked (source:'exit_intent')
  */
 export function getExitIntentJs(): string {
   return [
@@ -85,8 +84,7 @@ export function getExitIntentJs(): string {
     '      // Plus 쿠폰팩 카드 (pack.state === \'active\' && plan !== \'free\' 분기)',
     '      var cpConfig = config.coupon_pack;',
     '      var cpCardEl = null;',
-    '      var isFreePlan = !config.plan || config.plan === "free";',
-    '      if (cpConfig && cpConfig.active && !isFreePlan) {',
+    '      if (cpConfig && cpConfig.active) {',
     '        cpCardEl = self.renderCouponPackCard(cpConfig);',
     '        self.trackEvent("widget.coupon_pack_shown", {',
     '          source: "exit_intent",',
@@ -94,10 +92,6 @@ export function getExitIntentJs(): string {
     '          anim_mode: cpConfig.anim_mode !== false,',
     '          total_amount: cpConfig.total_amount || 55000',
     '        });',
-    '      } else if (isFreePlan) {',
-    '        // Free 플랜: Plus 업그레이드 유도 카드',
-    '        cpCardEl = self.renderPlusUpsellCard(config);',
-    '        self.trackEvent("widget.plus_upsell_shown", { source: "exit_intent" });',
     '      }',
     '      var btnWrap = document.createElement("div");',
     '      btnWrap.style.cssText = "display:flex;flex-direction:column;gap:8px;margin-bottom:14px";',
@@ -115,7 +109,7 @@ export function getExitIntentJs(): string {
     '        iconEl.innerHTML = pInfo.icon;',
     '        pBtn.appendChild(iconEl);',
     '        var lbl = document.createElement("span");',
-    '        var btnText = (cpCardEl && !isFreePlan) ? "\\ud68c\\uc6d0\\uac00\\uc785 \\u2192" : pInfo.name + "\\ub85c \\uac00\\uc785\\ud558\\uae30";',  // "회원가입 →" or "OO로 가입하기"
+    '        var btnText = cpCardEl ? "\\ud68c\\uc6d0\\uac00\\uc785 \\u2192" : pInfo.name + "\\ub85c \\uac00\\uc785\\ud558\\uae30";',  // "회원가입 →" or "OO로 가입하기"
     '        lbl.textContent = btnText;',
     '        pBtn.appendChild(lbl);',
     '        pBtn.addEventListener("mouseenter", function() { this.style.opacity = "0.85"; });',
@@ -124,7 +118,7 @@ export function getExitIntentJs(): string {
     '          pBtn.addEventListener("click", function() {',
     '            overlay.remove();',
     '            self.trackEvent("widget.exit_intent_signup", { provider: provider });',
-    '            if (cpCardEl && !isFreePlan) {',
+    '            if (cpCardEl) {',
     '              self.trackEvent("widget.coupon_pack_clicked", {',
     '                source: "exit_intent",',
     '                design: cpConfig.design || "brand",',
@@ -147,7 +141,7 @@ export function getExitIntentJs(): string {
     '      modal.appendChild(titleEl);',
     '      modal.appendChild(bodyEl);',
     '      if (badgeEl) modal.appendChild(badgeEl);',
-    '      // 쿠폰팩 카드 또는 Plus 업셀 카드: body 아래, 소셜 버튼 위에 배치',
+    '      // 쿠폰팩 카드 (Plus 플랜, state=active): body 아래, 소셜 버튼 위에 배치',
     '      if (cpCardEl) modal.appendChild(cpCardEl);',
     '      modal.appendChild(btnWrap);',
     '      modal.appendChild(dismissLink);',
