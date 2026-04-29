@@ -1177,6 +1177,39 @@ export const PopupSettingsPage: FC<{
                       <span id="popupCooldownValue" style="font-size:13px;min-width:48px;text-align:right;color:#374151">24시간</span>
                     </div>
                   </div>
+                  {/* ── 스크롤 깊이 트리거 (Exit-intent에서 이식) ── */}
+                  <div style="margin-bottom:16px">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupScrollDepth">스크롤 깊이 추가 트리거 <span style="font-weight:400;color:#94a3b8">설정 시 이탈 감지 + 스크롤 양쪽에서 팝업 발동</span></label>
+                    <select id="popupScrollDepth" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:200px">
+                      <option value="0">사용 안함</option>
+                      <option value="30">30% 스크롤</option>
+                      <option value="50">50% 스크롤</option>
+                      <option value="60">60% 스크롤</option>
+                      <option value="80">80% 스크롤</option>
+                    </select>
+                  </div>
+                  {/* ── 쿠폰 모드 (D2=A) ── */}
+                  <div style="margin-bottom:16px;padding:16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px">
+                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:12px;color:#374151">쿠폰 카드 표시 모드</label>
+                    <div style="margin-bottom:12px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCouponMode">쿠폰 모드</label>
+                      <select id="popupCouponMode" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:220px">
+                        <option value="none">없음 (쿠폰 카드 미노출)</option>
+                        <option value="single">단일 쿠폰 카드</option>
+                        <option value="pack">쿠폰팩 카드 (Plus 전용)</option>
+                      </select>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">팝업에 쿠폰 그래픽 카드를 노출합니다. "쿠폰팩"은 Plus 플랜 + 쿠폰팩 활성화 시 동작합니다.</p>
+                    </div>
+                    <div id="popupCouponTypeRow" style="display:none;margin-bottom:4px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCouponType">쿠폰 종류 <span style="font-weight:400;color:#94a3b8">(단일 쿠폰 모드일 때만)</span></label>
+                      <select id="popupCouponType" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:220px">
+                        <option value="shipping">무료배송 쿠폰</option>
+                        <option value="amount">정액 할인 쿠폰</option>
+                        <option value="rate">정률 할인 쿠폰</option>
+                      </select>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">선택한 쿠폰이 기본 설정에서 활성화되어 있어야 카드가 표시됩니다.</p>
+                    </div>
+                  </div>
                   <div style="display:flex;gap:8px">
                     <button id="popupSaveBtn" style="flex:1;padding:10px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">저장</button>
                     <button id="popupResetBtn" style="padding:10px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:14px;cursor:pointer">기본값 되돌리기</button>
@@ -1188,7 +1221,7 @@ export const PopupSettingsPage: FC<{
             <script dangerouslySetInnerHTML={{__html: `
               (function() {
                 var SHOP_ID = '${shopId}';
-                var DEFAULTS = { enabled: true, title: '잠깐만요!', body: '지금 가입하면 특별 혜택을 드려요!', ctaText: '혜택 받고 가입하기', preset: 0, borderRadius: 16, opacity: 100, icon: '🎁', allPages: false, cooldownHours: 24 };
+                var DEFAULTS = { enabled: true, title: '잠깐만요!', body: '지금 가입하면 특별 혜택을 드려요!', ctaText: '혜택 받고 가입하기', preset: 0, borderRadius: 16, opacity: 100, icon: '🎁', allPages: false, cooldownHours: 24, frequency_cap_hours: 24, scroll_depth_threshold: 0, coupon_mode: 'none', coupon_type: '' };
                 var popupPresets = [
                   { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #ec4899)' },
                   { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
@@ -1309,8 +1342,36 @@ export const PopupSettingsPage: FC<{
                 }
                 cooldownSlider.addEventListener('input', function() {
                   state.cooldownHours = parseInt(this.value);
+                  state.frequency_cap_hours = state.cooldownHours;
                   document.getElementById('popupCooldownValue').textContent = formatCooldown(state.cooldownHours);
                 });
+
+                // ── 스크롤 깊이 트리거 ──
+                var scrollDepthSel = document.getElementById('popupScrollDepth');
+                if (scrollDepthSel) {
+                  scrollDepthSel.addEventListener('change', function() {
+                    state.scroll_depth_threshold = parseInt(this.value);
+                  });
+                }
+
+                // ── 쿠폰 모드 ──
+                var couponModeSel = document.getElementById('popupCouponMode');
+                var couponTypeRow = document.getElementById('popupCouponTypeRow');
+                var couponTypeSel = document.getElementById('popupCouponType');
+                function updateCouponTypeRowVisibility() {
+                  if (couponTypeRow) couponTypeRow.style.display = (state.coupon_mode === 'single') ? 'block' : 'none';
+                }
+                if (couponModeSel) {
+                  couponModeSel.addEventListener('change', function() {
+                    state.coupon_mode = this.value;
+                    updateCouponTypeRowVisibility();
+                  });
+                }
+                if (couponTypeSel) {
+                  couponTypeSel.addEventListener('change', function() {
+                    state.coupon_type = this.value;
+                  });
+                }
 
                 // ── 미리보기 바인딩 ──
                 function bindPreview(inputId, previewId, stateKey, defaultText) {
@@ -1361,6 +1422,12 @@ export const PopupSettingsPage: FC<{
                   document.getElementById('popupPreviewIconBg').style.display = state.icon ? 'flex' : 'none';
                   renderEnabled();
                   renderAllPages();
+                  // 스크롤 깊이
+                  if (scrollDepthSel) scrollDepthSel.value = String(state.scroll_depth_threshold || 0);
+                  // 쿠폰 모드
+                  if (couponModeSel) couponModeSel.value = state.coupon_mode || 'none';
+                  if (couponTypeSel && state.coupon_type) couponTypeSel.value = state.coupon_type;
+                  updateCouponTypeRowVisibility();
                 }
 
                 // ── 저장 ──
@@ -1382,6 +1449,10 @@ export const PopupSettingsPage: FC<{
                       icon: state.icon,
                       allPages: state.allPages,
                       cooldownHours: state.cooldownHours,
+                      frequency_cap_hours: state.frequency_cap_hours || state.cooldownHours,
+                      scroll_depth_threshold: state.scroll_depth_threshold || 0,
+                      coupon_mode: state.coupon_mode || 'none',
+                      coupon_type: (state.coupon_mode === 'single') ? (state.coupon_type || 'shipping') : null,
                     })
                   })
                   .then(function(r) { return r.json(); })
@@ -1419,7 +1490,12 @@ export const PopupSettingsPage: FC<{
                       state.opacity = c.opacity != null ? c.opacity : DEFAULTS.opacity;
                       state.icon = c.icon != null ? c.icon : DEFAULTS.icon;
                       state.allPages = c.allPages === true;
-                      state.cooldownHours = c.cooldownHours || DEFAULTS.cooldownHours;
+                      // frequency_cap_hours 우선, cooldownHours fallback
+                      state.cooldownHours = c.frequency_cap_hours || c.cooldownHours || DEFAULTS.cooldownHours;
+                      state.frequency_cap_hours = c.frequency_cap_hours || c.cooldownHours || DEFAULTS.frequency_cap_hours;
+                      state.scroll_depth_threshold = c.scroll_depth_threshold != null ? c.scroll_depth_threshold : DEFAULTS.scroll_depth_threshold;
+                      state.coupon_mode = c.coupon_mode || DEFAULTS.coupon_mode;
+                      state.coupon_type = c.coupon_type || DEFAULTS.coupon_type;
                     }
                     applyState();
                   })
@@ -2414,12 +2490,26 @@ export const ExitIntentSettingsPage: FC<{
   return (
     <Layout title="Exit-intent 쿠폰 게이트" loggedIn currentPath="/dashboard/settings/exit-intent" isCafe24={isCafe24}>
       <h1>Exit-intent 쿠폰 게이트</h1>
+      {/* DEPRECATED 안내 배너 (D1=A, 2026-04-29) */}
+      <div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:flex-start;gap:14px">
+        <span style="font-size:22px;flex-shrink:0">⚠️</span>
+        <div>
+          <p style="font-size:14px;font-weight:700;color:#92400e;margin:0 0 6px">이 기능은 이탈 감지 팝업으로 통합되었습니다.</p>
+          <p style="font-size:13px;color:#78350f;margin:0 0 10px;line-height:1.6">
+            Exit-intent 쿠폰 게이트의 모든 기능(스크롤 깊이 트리거, 빈도 제한, 쿠폰 모드)은 이제 <strong>이탈 감지 팝업</strong> 설정 페이지로 이동했습니다.
+            위젯은 더 이상 이 페이지의 설정을 읽지 않습니다. <strong>이 페이지는 2026-05-29에 삭제됩니다.</strong>
+          </p>
+          <a href="/dashboard/settings/popup" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#f59e0b;color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none">
+            이탈 감지 팝업 설정으로 이동 →
+          </a>
+        </div>
+      </div>
       {!isPlus
         ? <PlusLockOverlay feature="Exit-intent 쿠폰 게이트" />
         : (
-          <div>
+          <div style="opacity:0.5;pointer-events:none">
             <p style="font-size:13px;color:#64748b;margin-bottom:20px">
-              비회원이 페이지를 떠나려는 순간 가입 혜택을 한 번 더 노출합니다. PC는 마우스 이탈, 모바일은 빠른 스크롤 업으로 감지합니다.
+              (아래는 레거시 설정입니다. 위 안내에 따라 이탈 감지 팝업 페이지를 이용하세요.)
             </p>
 
             <div class="card">
