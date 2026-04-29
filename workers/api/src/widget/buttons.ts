@@ -13,6 +13,8 @@ import { getLiveCounterJs } from './live-counter';
 import { getCouponPackJs, getSingleCouponCardJs } from './coupon-pack';
 import { getStyleHelpersJs } from './core/style-helpers';
 import { getDebugJs } from './core/debug';
+import { getReturnUrlJs } from './auth/return-url';
+import { getStartAuthJs } from './auth/start-auth';
 
 export const WIDGET_JS = `(function() {
   'use strict';
@@ -315,32 +317,7 @@ export const WIDGET_JS = `(function() {
     this.loadConfig(clientId);
   };
 
-  // 로그인/가입/동의 페이지가 아닌 이전 페이지를 저장
-  BGWidget.prototype.saveReturnUrl = function() {
-    try {
-      var ref = document.referrer;
-      if (!ref) return;
-      // new URL() 대신 <a> 태그를 이용한 ES5 URL 파싱
-      var refA = document.createElement('a');
-      refA.href = ref;
-      var refPath = refA.pathname.toLowerCase();
-      // 로그인/가입/동의 페이지는 저장하지 않음
-      var skipPages = ['/member/login', '/member/join', '/member/agreement', '/member/modify'];
-      for (var i = 0; i < skipPages.length; i++) {
-        if (refPath.indexOf(skipPages[i]) >= 0) return;
-      }
-      localStorage.setItem('bg_return_url', refA.pathname + refA.search);
-    } catch(e) {}
-  };
-
-  // 저장된 복귀 URL 반환 (없으면 메인 페이지)
-  BGWidget.prototype.getReturnUrl = function() {
-    try {
-      var saved = localStorage.getItem('bg_return_url');
-      if (saved && saved !== '/') return saved;
-    } catch(e) {}
-    return '/index.html';
-  };
+` + getReturnUrlJs() + `
 
   BGWidget.prototype.detectPageType = function() {
     var path = window.location.pathname.toLowerCase();
@@ -349,82 +326,6 @@ export const WIDGET_JS = `(function() {
     if (/\\/products?\\//.test(path) || /\\/goods\\//.test(path)) return 'product';
     if (/\\/category\\//.test(path)) return 'category';
     return 'other';
-  };
-
-  // 카페24 로그인 상태 감지 (공통)
-  BGWidget.prototype.isUserLoggedIn = function() {
-    // 방법 1: iscache=F 쿠키 (카페24 로그인 시 설정, 가장 확실)
-    try {
-      if (/(?:^|; ?)iscache=F/.test(document.cookie)) return true;
-    } catch (e) {}
-    // 방법 2: 로그인 상태 레이아웃 요소
-    if (document.querySelector('.xans-layout-statelogon')) return true;
-    // 방법 3: MemberAction 전역 객체 (로그인 페이지에서만 존재)
-    try {
-      if (typeof MemberAction !== 'undefined' && MemberAction.isLogin && MemberAction.isLogin()) {
-        return true;
-      }
-    } catch (e) {}
-    return false;
-  };
-
-  // 로그인 이력 기록 및 확인
-  BGWidget.prototype.checkLoginHistory = function() {
-    var loggedIn = this.isUserLoggedIn();
-    // 현재 로그인 상태면 이력 기록
-    if (loggedIn) {
-      try { localStorage.setItem('bg_has_logged_in', '1'); } catch (e) {}
-    }
-    return loggedIn;
-  };
-
-  BGWidget.prototype.hasLoginHistory = function() {
-    try { return localStorage.getItem('bg_has_logged_in') === '1'; } catch (e) {}
-    return false;
-  };
-
-  BGWidget.prototype.saveLastProvider = function() {
-    try {
-      // URLSearchParams 대신 직접 쿼리스트링 파싱 (ES5)
-      var search = window.location.search;
-      var provider = null;
-      if (search) {
-        var qs = search.charAt(0) === '?' ? search.slice(1) : search;
-        var pairs = qs.split('&');
-        for (var qi = 0; qi < pairs.length; qi++) {
-          var eq = pairs[qi].indexOf('=');
-          if (eq === -1) continue;
-          var key = decodeURIComponent(pairs[qi].slice(0, eq).replace(/\\+/g, ' '));
-          if (key === 'bg_provider') {
-            provider = decodeURIComponent(pairs[qi].slice(eq + 1).replace(/\\+/g, ' '));
-            break;
-          }
-        }
-      }
-      if (provider) {
-        localStorage.setItem('bg_last_provider', provider);
-        // Clean URL: bg_provider 파라미터 제거
-        var newPairs = [];
-        if (search) {
-          var qs2 = search.charAt(0) === '?' ? search.slice(1) : search;
-          var allPairs = qs2.split('&');
-          for (var qi2 = 0; qi2 < allPairs.length; qi2++) {
-            var eq2 = allPairs[qi2].indexOf('=');
-            var k2 = eq2 !== -1 ? allPairs[qi2].slice(0, eq2) : allPairs[qi2];
-            if (decodeURIComponent(k2.replace(/\\+/g, ' ')) !== 'bg_provider') {
-              newPairs.push(allPairs[qi2]);
-            }
-          }
-        }
-        var newUrl = window.location.pathname;
-        var remaining = newPairs.join('&');
-        if (remaining) newUrl += '?' + remaining;
-        newUrl += window.location.hash;
-        window.history.replaceState({}, '', newUrl);
-      }
-    } catch (e) {
-      // Ignore localStorage errors
-    }
   };
 
   BGWidget.prototype.loadConfig = function(clientId) {
@@ -842,87 +743,7 @@ export const WIDGET_JS = `(function() {
     return btn;
   };
 
-  BGWidget.prototype.startAuth = function(provider) {
-    var config = this.config;
-    if (!config) return;
-
-    // OAuth 시작 이벤트 추적 (이탈률 계산용)
-    this.trackEvent('oauth_start', { provider: provider });
-
-    // Save last provider to localStorage for smart button (Cafe24 SSO doesn't pass bg_provider back)
-    try { localStorage.setItem('bg_last_provider', provider); } catch (e) {}
-
-    if (config.sso_callback_uri) {
-      var ssoType = config.sso_type || 'sso';
-
-      // sso_callback_uri에서 mall_id 추출 (팝업 완료 감지용)
-      var mallMatch = config.sso_callback_uri.match(new RegExp('https://([^.]+)\\.cafe24\\.com'));
-      var mallId = mallMatch ? mallMatch[1] : null;
-
-      // [디버그 i] startAuth 분기
-      bgLog('startAuth: branch=', (typeof MemberAction !== 'undefined' && MemberAction.snsLogin) ? 'PC-MemberAction' : 'else-popup', 'mallId=', mallId);
-
-      // /oauth/sso-start: first-party 맥락으로 bg.suparain.kr 방문 → 쿠키 확정 세팅 →
-      // Cafe24 SSO URL로 302. 기존의 cross-origin fetch로 Set-Cookie 시도는 ITP/3rd-party
-      // 차단으로 쿠키가 저장되지 않아 /authorize가 KV 엣지 캐시의 이전 값을 읽는 레이스
-      // (이전 클릭 프로바이더로 재시도되는 버그)를 원천 제거.
-      var startUrlBase = this.baseUrl + '/oauth/sso-start'
-        + '?client_id=' + encodeURIComponent(config.client_id)
-        + '&provider=' + encodeURIComponent(provider)
-        + '&sso_type=' + encodeURIComponent(ssoType)
-        + '&visitor_id=' + encodeURIComponent(bgVisitorId)
-        + '&device=' + encodeURIComponent(bgDetectDevice());
-
-      if (typeof MemberAction !== 'undefined' && MemberAction.snsLogin) {
-        // login 페이지: 전체 페이지 네비게이션 (top-level navigation → first-party 쿠키 세팅)
-        var loginStartUrl = startUrlBase + '&return_url=' + encodeURIComponent(this.getReturnUrl());
-        window.location.href = loginStartUrl;
-      } else if (mallId) {
-        // join 페이지 등: 팝업에서 /oauth/sso-start 호출. 팝업 컨텍스트도 top-level 네비게이션이라
-        // bg.suparain.kr에 first-party 쿠키가 세팅됨. 팝업 내부 SSO 완료 후 /member/login.html로
-        // 복귀하면 그 페이지의 위젯이 postMessage 'bg_sso_complete' 를 보내 팝업을 닫음.
-        var savedReturnUrl = this.getReturnUrl();
-        var popupStartUrl = startUrlBase + '&return_url=' + encodeURIComponent('/member/login.html');
-        var popup = window.open(popupStartUrl, 'bg_sso_popup', 'width=520,height=700,scrollbars=yes');
-        window.addEventListener('message', function handler(e) {
-          if (e.origin.slice(-11) !== '.cafe24.com') return; // origin 검증 (endsWith 대신 slice)
-          if (e.data === 'bg_sso_complete') {
-            window.removeEventListener('message', handler);
-            window.location.href = savedReturnUrl;
-          }
-        });
-        // 팝업이 닫힌 경우에도 이전 페이지로 이동
-        var pollClosed = setInterval(function() {
-          if (!popup || popup.closed) {
-            clearInterval(pollClosed);
-            window.location.href = savedReturnUrl;
-          }
-        }, 1000);
-      }
-      return;
-    }
-
-    // Fallback: direct OAuth flow (non-Cafe24 platforms)
-    var authUrl = this.baseUrl + '/oauth/authorize'
-      + '?client_id=' + encodeURIComponent(config.client_id)
-      + '&redirect_uri=' + encodeURIComponent(window.location.origin + '/member/login.html')
-      + '&provider=' + encodeURIComponent(provider)
-      + '&state=' + encodeURIComponent(this.generateState());
-
-    window.location.href = authUrl;
-  };
-
-  BGWidget.prototype.generateState = function() {
-    var arr = new Uint8Array(16);
-    crypto.getRandomValues(arr);
-    // Array.from + padStart 대신 ES5 for 루프 + 직접 패딩
-    var hex = '';
-    for (var gi = 0; gi < arr.length; gi++) {
-      var byteHex = arr[gi].toString(16);
-      hex += byteHex.length === 1 ? '0' + byteHex : byteHex;
-    }
-    return hex;
-  };
+` + getStartAuthJs() + `
 
   BGWidget.prototype.findLoginPage = function() {
     // Cafe24 login & signup page selectors
