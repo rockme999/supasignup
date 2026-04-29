@@ -645,6 +645,112 @@ export async function resumeCouponPack(
 }
 
 /**
+ * 부분 실패한 쿠폰팩 항목만 재시도하여 등록한다.
+ *
+ * - coupon_config.pack.items 중 cafe24_coupon_no가 비어 있는 항목만 대상
+ * - 이미 등록된 항목(cafe24_coupon_no 있음)은 건드리지 않음
+ * - 성공 후 coupon_config.pack 업데이트는 **호출부 책임**
+ *
+ * @returns { success, items: 최종 전체 items, failures: 여전히 실패한 항목 }
+ */
+export async function retryFailedPackItems(
+  env: Env,
+  shop: Shop,
+): Promise<RegisterCouponPackResult> {
+  // 기존 pack 파싱
+  let existingPack: CouponPackConfig | null = null;
+  if (shop.coupon_config) {
+    try {
+      const config = JSON.parse(shop.coupon_config) as CouponConfig & { pack?: CouponPackConfig };
+      existingPack = config.pack ?? null;
+    } catch { /* 무시 */ }
+  }
+
+  if (!existingPack || !existingPack.items || existingPack.items.length === 0) {
+    console.info(`[CouponPack] retryFailed: pack 또는 items 없음, 스킵: mall=${shop.mall_id}`);
+    return { success: true, items: [], failures: [] };
+  }
+
+  // 실패 항목 = cafe24_coupon_no가 없는 항목
+  const failedItems = existingPack.items.filter(i => !i.cafe24_coupon_no);
+  if (failedItems.length === 0) {
+    console.info(`[CouponPack] retryFailed: 실패 항목 없음, 스킵: mall=${shop.mall_id}`);
+    return { success: true, items: existingPack.items, failures: [] };
+  }
+
+  if (!shop.platform_access_token) {
+    console.error(`[CouponPack] retryFailed: access_token 없음: mall=${shop.mall_id}`);
+    return { success: false, items: existingPack.items, failures: failedItems };
+  }
+
+  let tokens: { access_token: string | null; refresh_token: string | null };
+  try {
+    tokens = await decryptShopTokens(shop, env.ENCRYPTION_KEY);
+  } catch (err) {
+    console.error(`[CouponPack] retryFailed: 토큰 복호화 실패: mall=${shop.mall_id}`, err);
+    return { success: false, items: existingPack.items, failures: failedItems };
+  }
+
+  if (!tokens.access_token) {
+    console.error(`[CouponPack] retryFailed: 복호화된 access_token이 null: mall=${shop.mall_id}`);
+    return { success: false, items: existingPack.items, failures: failedItems };
+  }
+
+  let accessToken = tokens.access_token;
+  const expireDays = existingPack.expire_days ?? 30;
+
+  // 기존 성공 항목 유지
+  const resultItems: PackItem[] = existingPack.items.filter(i => !!i.cafe24_coupon_no);
+  const stillFailed: PackItem[] = [];
+
+  for (const failedItem of failedItems) {
+    // COUPON_PACK_DEFINITIONS에서 일치하는 정의 찾기
+    const def = COUPON_PACK_DEFINITIONS.find(
+      d => d.min_order === failedItem.min_order && d.discount === failedItem.discount,
+    );
+    if (!def) {
+      console.warn(`[CouponPack] retryFailed: 정의 없음 min_order=${failedItem.min_order}, 스킵`);
+      stillFailed.push(failedItem);
+      continue;
+    }
+
+    let result = await createPackCoupon(shop.mall_id, accessToken, def, expireDays);
+
+    if ('ok' in result && !result.ok && result.status === 401 && tokens.refresh_token) {
+      const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
+      if (newToken) {
+        accessToken = newToken;
+        result = await createPackCoupon(shop.mall_id, accessToken, def, expireDays);
+      }
+    }
+
+    if ('coupon_no' in result) {
+      resultItems.push({ min_order: def.min_order, discount: def.discount, cafe24_coupon_no: result.coupon_no });
+    } else {
+      stillFailed.push(failedItem);
+      try {
+        await env.DB.prepare(
+          "INSERT INTO audit_logs (id, actor_id, action, target_type, target_id, detail, created_at) VALUES (?, ?, 'coupon_pack_register_fail', 'shop', ?, ?, datetime('now'))",
+        ).bind(
+          crypto.randomUUID(),
+          shop.owner_id,
+          shop.shop_id,
+          JSON.stringify({ min_order: def.min_order, discount: def.discount, error: 'ok' in result ? result.error : '', retry: true }),
+        ).run();
+      } catch (err) {
+        console.error(`[CouponPack] retryFailed: audit_log 저장 실패: mall=${shop.mall_id}`, err);
+      }
+    }
+  }
+
+  const success = stillFailed.length === 0;
+  console.info(
+    `[CouponPack] retryFailed 완료: mall=${shop.mall_id}, 성공=${resultItems.length}, 실패=${stillFailed.length}`,
+  );
+  return { success, items: resultItems, failures: stillFailed };
+}
+
+/**
  * Plus 웰컴 쿠폰팩 자동 발급을 중지한다.
  *
  * - coupon_config.pack.items에서 cafe24_coupon_no 추출

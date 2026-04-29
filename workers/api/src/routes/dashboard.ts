@@ -30,7 +30,7 @@ import {
 import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
-import { registerCouponPack, unregisterCouponPack, withPackDefaults } from '../services/coupon-pack';
+import { registerCouponPack, unregisterCouponPack, withPackDefaults, retryFailedPackItems } from '../services/coupon-pack';
 import type { CouponPackConfig, CouponPackState, CouponPackDesign } from '../services/coupon-pack';
 import { autoReplyInquiry } from './ai';
 import { getGlobalAutoReplyEnabled } from './admin';
@@ -1408,6 +1408,75 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
 
     return c.json({ ok: true, pack: newPack, items: [], failures: [] });
   }
+});
+
+// ─── POST /shops/:id/coupon-pack/retry ──────────────────────
+/**
+ * 쿠폰팩 부분 실패 항목 재시도.
+ *
+ * - items 중 cafe24_coupon_no가 없는 항목만 카페24 재등록
+ * - 성공 항목은 건드리지 않음
+ * - Plus 플랜 전용 (Free → 403)
+ *
+ * Response: { ok, success, items, failures }
+ */
+dashboard.post('/shops/:id/coupon-pack/retry', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (shop.plan !== 'plus') {
+    return c.json(
+      { error: 'plus_required', message: '쿠폰팩은 Plus 플랜에서만 사용할 수 있습니다.' },
+      403,
+    );
+  }
+
+  const result = await retryFailedPackItems(c.env, shop);
+
+  if (result.items.length > 0 || result.failures.length === 0) {
+    // 성공 또는 재시도 결과 반영 → coupon_config 갱신
+    let existingConfig: CouponConfig & { pack?: CouponPackConfig } = { ...DEFAULT_COUPON_CONFIG };
+    if (shop.coupon_config) {
+      try {
+        existingConfig = JSON.parse(shop.coupon_config) as CouponConfig & { pack?: CouponPackConfig };
+      } catch { /* 무시 */ }
+    }
+
+    const prevPack = existingConfig.pack;
+    const allSuccess = result.failures.length === 0;
+    const newPack: CouponPackConfig = withPackDefaults({
+      ...(prevPack ?? {}),
+      state: (allSuccess && result.items.length > 0) ? 'active' : prevPack?.state ?? 'unregistered',
+      items: result.items,
+      registered_at: (allSuccess && result.items.length > 0) ? new Date().toISOString() : (prevPack?.registered_at ?? null),
+    });
+
+    await c.env.DB
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify({ ...existingConfig, pack: newPack }), shopId)
+      .run();
+
+    await Promise.all([
+      c.env.KV.delete(`widget_config:${shop.client_id}`),
+      purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+    ]);
+
+    console.info(
+      `[CouponPack] retry 완료: mall=${shop.mall_id}, 성공=${result.items.length}, 실패=${result.failures.length}`,
+    );
+  }
+
+  return c.json({
+    ok: true,
+    success: result.success,
+    items: result.items,
+    failures: result.failures,
+  });
 });
 
 export default dashboard;
