@@ -541,6 +541,25 @@ cafe24.post('/webhook', async (c) => {
           stmts.push(c.env.DB.prepare("UPDATE shops SET plan = 'free', updated_at = datetime('now') WHERE shop_id = ?").bind(sub.shop_id));
         }
         await c.env.DB.batch(stmts);
+
+        // 쿠폰팩 정지 (state: active → paused) — 실패해도 plan 변경 롤백 안 함
+        if (reverted) {
+          try {
+            const shopForPause = await c.env.DB
+              .prepare('SELECT * FROM shops WHERE shop_id = ?')
+              .bind(sub.shop_id)
+              .first<{ coupon_config: string | null; platform_access_token: string | null; platform_refresh_token: string | null; owner_id: string; mall_id: string; shop_id: string }>();
+            if (shopForPause) {
+              const pauseResult = await pauseCouponPack(c.env, shopForPause as any);
+              if (pauseResult.success || pauseResult.failures.length < (shopForPause.coupon_config ? 1 : 0)) {
+                await updateCouponPackState(c.env.DB, sub.shop_id, shopForPause.coupon_config, 'paused');
+              }
+            }
+          } catch (e) {
+            console.error(`[CouponPack] 정지 예외 (plan→free, refund): order_id=${orderId}`, e);
+          }
+        }
+
         console.info(`Refund complete: subscription=${sub.id}, shop=${sub.shop_id}, reverted=${reverted}`);
         log.action = 'refund_complete';
         log.note = `subscription=${sub.id}, reverted=${reverted}`;
