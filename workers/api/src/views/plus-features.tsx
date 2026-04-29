@@ -6,6 +6,7 @@
  */
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
+import { buildCouponPackHtml, COUPON_PACK_CSS } from '../widget/coupon-pack';
 
 export const AiReportsPage: FC<{
   shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
@@ -3307,10 +3308,13 @@ export const CouponPackSettingsPage: FC<{
           {/* 저장 피드백 */}
           <div id="cpSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
 
-          {/* 부분 실패 배지 */}
+          {/* 부분 실패 배지 + 재시도 버튼 */}
           {failures.length > 0 && (
-            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#991b1b;font-weight:500">
-              ⚠ {failures.length}건 등록 실패 — 다시 활성화하면 실패 항목만 재시도합니다
+            <div id="cpRetryBadge" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#991b1b;font-weight:500">
+              <span>⚠ {failures.length}건 등록 실패 — 재시도 버튼을 클릭해 실패 항목을 다시 등록할 수 있습니다</span>
+              <button id="cpRetryBtn" class="btn" style="white-space:nowrap;font-size:12px;padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">
+                재시도
+              </button>
             </div>
           )}
 
@@ -3446,246 +3450,45 @@ export const CouponPackSettingsPage: FC<{
                 <p style="font-size:11px;color:#94a3b8;margin-top:6px">토글 OFF 시 정적 카드로 표시됩니다</p>
               </div>
 
-              {/* d) 미리보기 영역 (풀 사이즈 300×140) */}
+              {/* d) 미리보기 영역 (풀 사이즈 300×140) — buildCouponPackHtml 재사용 */}
               <div>
                 <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+                {/* keyframes: 위젯과 동일한 COUPON_PACK_CSS 재사용 (bg-cp- prefix) */}
+                <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
                 <div style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:20px">
-                  {/* 8가지 조합을 모두 인라인, display 토글로 전환 */}
+                  {/* 8가지 조합 (design × anim) — display 토글로 JS가 전환 */}
 
                   {/* dark-static */}
-                  <div id="cp-prev-dark-static" style={`display:${design === 'dark' && !animMode ? 'block' : 'none'};position:relative;width:300px;height:140px`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <mask id="cpv-1s">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="#0f0f0f" mask="url(#cpv-1s)"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,#c9a84c 30%,#f0d080 50%,#c9a84c 70%,transparent 95%)"></div>
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(255,255,255,0.13);border-right:1.5px dashed rgba(255,255,255,0.13);margin:0 11px;pointer-events:none"></div>
-                      <div style="font-size:32px;font-weight:800;color:#f0d080;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2">5만원 상당</div>
-                      <div style="font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:4px;position:relative;z-index:2">신규 회원 웰컴 할인 쿠폰</div>
-                      <div style="font-size:10px;color:#9ca3af;opacity:0.72;position:relative;z-index:2">회원가입 시 즉시 사용 가능한 쿠폰을 드려요!</div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-dark-static" style={`display:${design === 'dark' && !animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'dark', anim_mode: false })}} />
 
                   {/* dark-anim */}
-                  <div id="cp-prev-dark-anim" style={`display:${design === 'dark' && animMode ? 'block' : 'none'};position:relative;width:300px;height:140px`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <mask id="cpv-1a">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="#0f0f0f" mask="url(#cpv-1a)"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,#c9a84c 30%,#f0d080 50%,#c9a84c 70%,transparent 95%)"></div>
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(255,255,255,0.13);border-right:1.5px dashed rgba(255,255,255,0.13);margin:0 11px;pointer-events:none"></div>
-                      <div style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 28%,rgba(255,255,255,0.16) 50%,transparent 72%);animation:cpSweep1 2.2s ease-in-out infinite;pointer-events:none;z-index:4"></div>
-                      <div style="font-size:32px;font-weight:800;color:#f0d080;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2;animation:cpGoldGlow 2s ease-in-out infinite">5만원 상당</div>
-                      <div style="font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:4px;position:relative;z-index:2">신규 회원 웰컴 할인 쿠폰</div>
-                      <div style="font-size:10px;color:#9ca3af;opacity:0.72;position:relative;z-index:2">회원가입 시 즉시 사용 가능한 쿠폰을 드려요!</div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-dark-anim" style={`display:${design === 'dark' && animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'dark', anim_mode: true })}} />
 
                   {/* brand-static */}
-                  <div id="cp-prev-brand-static" style={`display:${design === 'brand' && !animMode ? 'block' : 'none'};position:relative;width:300px;height:140px`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <linearGradient id="cpv-pg-s" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stop-color="#db2777"/>
-                          <stop offset="50%" stop-color="#ec4899"/>
-                          <stop offset="100%" stop-color="#f472b6"/>
-                        </linearGradient>
-                        <mask id="cpv-2s">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="url(#cpv-pg-s)" mask="url(#cpv-2s)"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(255,255,255,0.25);border-right:1.5px dashed rgba(255,255,255,0.25);margin:0 11px;pointer-events:none"></div>
-                      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);z-index:2;filter:drop-shadow(0 0 8px rgba(255,220,40,0.7))">
-                        <svg width="52" height="62" viewBox="0 0 52 62" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30 2L6 34H22L18 60L46 26H30L34 2Z" fill="#FFE033" stroke="#FFB800" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                      </div>
-                      <div style="position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;padding-left:24px;padding-right:80px;z-index:3">
-                        <div style="font-size:34px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1;margin-bottom:6px">5만원 상당</div>
-                        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.92);margin-bottom:4px">신규 회원 웰컴 할인 쿠폰</div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.72)">번개가입, 번개지급</div>
-                      </div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-brand-static" style={`display:${design === 'brand' && !animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'brand', anim_mode: false })}} />
 
                   {/* brand-anim */}
-                  <div id="cp-prev-brand-anim" style={`display:${design === 'brand' && animMode ? 'block' : 'none'};position:relative;width:300px;height:140px`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <linearGradient id="cpv-pg-a" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stop-color="#db2777">
-                            <animate attributeName="stop-color" values="#9d174d;#db2777;#ec4899;#db2777;#9d174d" dur="3s" repeatCount="indefinite"/>
-                          </stop>
-                          <stop offset="50%" stop-color="#ec4899">
-                            <animate attributeName="stop-color" values="#db2777;#ec4899;#f472b6;#ec4899;#db2777" dur="3s" repeatCount="indefinite"/>
-                          </stop>
-                          <stop offset="100%" stop-color="#f472b6">
-                            <animate attributeName="stop-color" values="#ec4899;#f472b6;#db2777;#9d174d;#ec4899" dur="3s" repeatCount="indefinite"/>
-                          </stop>
-                        </linearGradient>
-                        <mask id="cpv-2a">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="url(#cpv-pg-a)" mask="url(#cpv-2a)"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(255,255,255,0.25);border-right:1.5px dashed rgba(255,255,255,0.25);margin:0 11px;pointer-events:none"></div>
-                      <span style="position:absolute;font-size:9px;color:rgba(255,255,255,0.9);animation:cpStarPop 2s ease-in-out infinite;top:13px;left:22px;z-index:5">★</span>
-                      <span style="position:absolute;font-size:9px;color:rgba(255,255,255,0.9);animation:cpStarPop 2s ease-in-out infinite;animation-delay:0.55s;top:10px;left:88px;z-index:5">✦</span>
-                      <span style="position:absolute;font-size:9px;color:rgba(255,255,255,0.9);animation:cpStarPop 2s ease-in-out infinite;animation-delay:1.1s;bottom:13px;right:68px;z-index:5">★</span>
-                      <span style="position:absolute;font-size:9px;color:rgba(255,255,255,0.9);animation:cpStarPop 2s ease-in-out infinite;animation-delay:1.65s;bottom:11px;left:42px;z-index:5">✦</span>
-                      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);z-index:2;filter:drop-shadow(0 0 8px rgba(255,220,40,0.7))">
-                        <svg width="52" height="62" viewBox="0 0 52 62" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30 2L6 34H22L18 60L46 26H30L34 2Z" fill="#FFE033" stroke="#FFB800" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                      </div>
-                      <div style="position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;padding-left:24px;padding-right:80px;z-index:3">
-                        <div style="font-size:34px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1;margin-bottom:6px">5만원 상당</div>
-                        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.92);margin-bottom:4px">신규 회원 웰컴 할인 쿠폰</div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.72)">번개가입, 번개지급</div>
-                      </div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-brand-anim" style={`display:${design === 'brand' && animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'brand', anim_mode: true })}} />
 
                   {/* illust-static */}
-                  <div id="cp-prev-illust-static" style={`display:${design === 'illust' && !animMode ? 'block' : 'none'};position:relative;width:300px;height:140px`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <mask id="cpv-3s">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="#ffffff" mask="url(#cpv-3s)"/>
-                      <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#34d399,#a78bfa,#f472b6)"></div>
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.09);border-right:1.5px dashed rgba(0,0,0,0.09);margin:0 11px;pointer-events:none"></div>
-                      <svg style="position:absolute;right:13px;top:50%;transform:translateY(-50%)" width="42" height="46" viewBox="0 0 42 46" fill="none">
-                        <rect x="3" y="17" width="36" height="25" rx="3" fill="#fce7f3" stroke="#f9a8d4" stroke-width="1.4"/>
-                        <rect x="1" y="13" width="40" height="7" rx="2" fill="#fbcfe8" stroke="#f9a8d4" stroke-width="1.4"/>
-                        <rect x="18" y="13" width="6" height="29" rx="1.5" fill="#f472b6" opacity="0.65"/>
-                        <rect x="1" y="16" width="40" height="5" rx="1.5" fill="#f472b6" opacity="0.45"/>
-                        <circle cx="21" cy="13" r="4" fill="#ec4899"/>
-                      </svg>
-                      <svg style="position:absolute;left:9px;top:9px" width="22" height="22" viewBox="0 0 22 22" fill="none">
-                        <circle cx="11" cy="5" r="4" fill="#6ee7b7" opacity="0.55"/>
-                        <circle cx="17" cy="11" r="4" fill="#a78bfa" opacity="0.45"/>
-                        <circle cx="11" cy="17" r="4" fill="#fca5a5" opacity="0.45"/>
-                        <circle cx="5" cy="11" r="4" fill="#fcd34d" opacity="0.45"/>
-                        <circle cx="11" cy="11" r="3" fill="#fff"/>
-                      </svg>
-                      <div style="position:relative;z-index:2;text-align:center">
-                        <div style="font-size:32px;font-weight:800;color:#059669;letter-spacing:-0.5px;line-height:1;margin-bottom:6px">5만원 상당</div>
-                        <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">신규 회원 웰컴 할인 쿠폰</div>
-                        <div style="font-size:10px;color:#6b7280;opacity:0.72">가입 즉시 사용 가능해요!</div>
-                      </div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-illust-static" style={`display:${design === 'illust' && !animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'illust', anim_mode: false })}} />
 
                   {/* illust-anim */}
-                  <div id="cp-prev-illust-anim" style={`display:${design === 'illust' && animMode ? 'block' : 'none'};position:relative;width:300px;height:140px;animation:cpCardPop3 2s ease-in-out infinite,cpShadowPulse3 2s ease-in-out infinite`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <mask id="cpv-3a">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="#ffffff" mask="url(#cpv-3a)"/>
-                      <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#34d399,#a78bfa,#f472b6,#34d399);background-size:200% 100%;animation:cpStripScroll 2s linear infinite"></div>
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.09);border-right:1.5px dashed rgba(0,0,0,0.09);margin:0 11px;pointer-events:none"></div>
-                      <svg style="position:absolute;right:13px;top:50%;transform:translateY(-50%)" width="42" height="46" viewBox="0 0 42 46" fill="none">
-                        <rect x="3" y="17" width="36" height="25" rx="3" fill="#fce7f3" stroke="#f9a8d4" stroke-width="1.4"/>
-                        <rect x="1" y="13" width="40" height="7" rx="2" fill="#fbcfe8" stroke="#f9a8d4" stroke-width="1.4"/>
-                        <rect x="18" y="13" width="6" height="29" rx="1.5" fill="#f472b6" opacity="0.65"/>
-                        <rect x="1" y="16" width="40" height="5" rx="1.5" fill="#f472b6" opacity="0.45"/>
-                        <circle cx="21" cy="13" r="4" fill="#ec4899"/>
-                      </svg>
-                      <svg style="position:absolute;left:9px;top:9px" width="22" height="22" viewBox="0 0 22 22" fill="none">
-                        <circle cx="11" cy="5" r="4" fill="#6ee7b7" opacity="0.55"/>
-                        <circle cx="17" cy="11" r="4" fill="#a78bfa" opacity="0.45"/>
-                        <circle cx="11" cy="17" r="4" fill="#fca5a5" opacity="0.45"/>
-                        <circle cx="5" cy="11" r="4" fill="#fcd34d" opacity="0.45"/>
-                        <circle cx="11" cy="11" r="3" fill="#fff"/>
-                      </svg>
-                      <div style="position:relative;z-index:2;text-align:center">
-                        <div style="font-size:32px;font-weight:800;color:#059669;letter-spacing:-0.5px;line-height:1;margin-bottom:6px">5만원 상당</div>
-                        <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">신규 회원 웰컴 할인 쿠폰</div>
-                        <div style="font-size:10px;color:#6b7280;opacity:0.72">가입 즉시 사용 가능해요!</div>
-                      </div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-illust-anim" style={`display:${design === 'illust' && animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'illust', anim_mode: true })}} />
 
                   {/* minimal-static */}
-                  <div id="cp-prev-minimal-static" style={`display:${design === 'minimal' && !animMode ? 'block' : 'none'};position:relative;width:300px;height:140px`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" overflow="visible" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <mask id="cpv-4s">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="#f8fafc" mask="url(#cpv-4s)"/>
-                      <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.15);border-right:1.5px dashed rgba(0,0,0,0.15);margin:0 11px;pointer-events:none"></div>
-                      <div style="font-size:36px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2">
-                        <span style="display:inline-block;border-bottom:2.5px solid #0f172a;padding-bottom:2px">₩55,000</span>
-                      </div>
-                      <div style="font-size:11px;font-weight:600;color:#374151;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px;position:relative;z-index:2">WELCOME COUPON PACK</div>
-                      <div style="font-size:10px;color:#94a3b8;opacity:0.72;position:relative;z-index:2">신규 회원 가입 즉시 지급</div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-minimal-static" style={`display:${design === 'minimal' && !animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'minimal', anim_mode: false })}} />
 
                   {/* minimal-anim */}
-                  <div id="cp-prev-minimal-anim" style={`display:${design === 'minimal' && animMode ? 'block' : 'none'};position:relative;width:300px;height:140px;animation:cpShadowPulse4 2s ease-in-out infinite`}>
-                    <svg class="coupon-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" overflow="visible" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-                      <defs>
-                        <mask id="cpv-4a">
-                          <rect width="300" height="140" fill="white"/>
-                          <circle cx="0" cy="70" r="13" fill="black"/>
-                          <circle cx="300" cy="70" r="13" fill="black"/>
-                        </mask>
-                      </defs>
-                      <rect width="300" height="140" rx="12" fill="#f8fafc" mask="url(#cpv-4a)"/>
-                      <path class="cpv4-stroke" d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:12px">
-                      <div style="position:absolute;inset:0;border-left:1.5px dashed rgba(0,0,0,0.15);border-right:1.5px dashed rgba(0,0,0,0.15);margin:0 11px;pointer-events:none"></div>
-                      <div style="font-size:36px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;line-height:1;margin-bottom:6px;position:relative;z-index:2">
-                        <span style="display:inline-block;border-bottom:2.5px solid #0f172a;padding-bottom:2px">₩55,000</span>
-                      </div>
-                      <div style="font-size:11px;font-weight:600;color:#374151;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px;position:relative;z-index:2">WELCOME COUPON PACK</div>
-                      <div style="font-size:10px;color:#94a3b8;opacity:0.72;position:relative;z-index:2">신규 회원 가입 즉시 지급</div>
-                    </div>
-                  </div>
+                  <div id="cp-prev-minimal-anim" style={`display:${design === 'minimal' && animMode ? 'block' : 'none'}`}
+                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'minimal', anim_mode: true })}} />
 
                 </div>
               </div>
@@ -3730,46 +3533,7 @@ export const CouponPackSettingsPage: FC<{
             </p>
           </div>
 
-          <style dangerouslySetInnerHTML={{__html: `
-            @keyframes cpSweep1 {
-              0%   { transform: translateX(-180%) skewX(-22deg); opacity: 0; }
-              8%   { opacity: 0.8; }
-              42%  { opacity: 0.8; }
-              52%  { transform: translateX(180%) skewX(-22deg); opacity: 0; }
-              100% { transform: translateX(180%) skewX(-22deg); opacity: 0; }
-            }
-            @keyframes cpGoldGlow {
-              0%, 100% { text-shadow: 0 0 5px rgba(240,208,128,0.35); }
-              50%       { text-shadow: 0 0 16px rgba(240,208,128,0.85), 0 0 30px rgba(240,208,128,0.35); }
-            }
-            @keyframes cpStarPop {
-              0%, 75%, 100% { opacity: 0; transform: scale(0.4); }
-              38%           { opacity: 1; transform: scale(1); }
-            }
-            @keyframes cpCardPop3 {
-              0%, 100% { transform: scale(1); }
-              50%       { transform: scale(1.014); }
-            }
-            @keyframes cpStripScroll {
-              0%   { background-position: 0% 50%; }
-              100% { background-position: 200% 50%; }
-            }
-            @keyframes cpShadowPulse3 {
-              0%, 100% { filter: drop-shadow(0 1px 2px rgba(15,23,42,0.04)); }
-              50%       { filter: drop-shadow(0 6px 14px rgba(15,23,42,0.16)); }
-            }
-            @keyframes cpStrokeShift4 {
-              0%, 100% { stroke: #cbd5e1; }
-              50%       { stroke: #1e293b; }
-            }
-            @keyframes cpShadowPulse4 {
-              0%, 100% { filter: drop-shadow(0 1px 2px rgba(15,23,42,0.05)); }
-              50%       { filter: drop-shadow(0 6px 16px rgba(15,23,42,0.20)); }
-            }
-            #cp-prev-minimal-anim .cpv4-stroke {
-              animation: cpStrokeShift4 2s ease-in-out infinite;
-            }
-          `}} />
+          {/* CSS keyframes는 미리보기 영역에서 COUPON_PACK_CSS로 이미 주입됨 — 별도 style 블록 불필요 */}
 
           <script dangerouslySetInnerHTML={{__html: `
             (function() {
@@ -3897,6 +3661,46 @@ export const CouponPackSettingsPage: FC<{
                   setTimeout(function() { msgEl.style.display = 'none'; }, 4000);
                 }
               });
+
+              /* ── 재시도 버튼 ── */
+              var retryBtn = document.getElementById('cpRetryBtn');
+              if (retryBtn) {
+                retryBtn.addEventListener('click', async function() {
+                  var btn = this;
+                  btn.disabled = true;
+                  btn.textContent = '재시도 중...';
+                  var msgEl = document.getElementById('cpSaveMsg');
+                  try {
+                    var resp = await fetch('/api/dashboard/shops/' + shopId + '/coupon-pack/retry', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'same-origin',
+                    });
+                    var data = await resp.json();
+                    if (resp.ok) {
+                      msgEl.style.display = 'block';
+                      msgEl.style.background = '#f0fdf4';
+                      msgEl.style.color = '#166534';
+                      msgEl.style.border = '1px solid #bbf7d0';
+                      var stillFailed = data.failures ? data.failures.length : 0;
+                      msgEl.textContent = stillFailed > 0
+                        ? ('재시도 완료. 아직 ' + stillFailed + '건 실패 — 카페24 토큰을 확인해주세요.')
+                        : '모든 항목 등록 완료! 페이지를 새로고침합니다.';
+                      setTimeout(function() { window.location.reload(); }, 1500);
+                    } else {
+                      throw new Error(data.message || '재시도 실패');
+                    }
+                  } catch(e) {
+                    msgEl.style.display = 'block';
+                    msgEl.style.background = '#fef2f2';
+                    msgEl.style.color = '#991b1b';
+                    msgEl.style.border = '1px solid #fecaca';
+                    msgEl.textContent = '오류: ' + e.message;
+                    btn.disabled = false;
+                    btn.textContent = '재시도';
+                  }
+                });
+              }
             })();
           `}} />
         </div>
