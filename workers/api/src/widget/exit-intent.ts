@@ -13,6 +13,8 @@
  * funnel 이벤트:
  *   widget.exit_intent_shown / widget.exit_intent_signup / widget.exit_intent_dismissed
  *   widget.scroll_trigger_fired
+ *   widget.coupon_pack_shown (source:'exit_intent') / widget.coupon_pack_clicked (source:'exit_intent')
+ *   widget.plus_upsell_shown (source:'exit_intent') / widget.plus_upsell_clicked (source:'exit_intent')
  */
 export function getExitIntentJs(): string {
   return [
@@ -80,6 +82,23 @@ export function getExitIntentJs(): string {
     '        badgeEl.textContent = couponLabel;',
     '        badgeEl.style.cssText = "display:block;text-align:center;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:600;margin-bottom:18px";',
     '      }',
+    '      // Plus 쿠폰팩 카드 (pack.state === \'active\' && plan !== \'free\' 분기)',
+    '      var cpConfig = config.coupon_pack;',
+    '      var cpCardEl = null;',
+    '      var isFreePlan = !config.plan || config.plan === "free";',
+    '      if (cpConfig && cpConfig.active && !isFreePlan) {',
+    '        cpCardEl = self.renderCouponPackCard(cpConfig);',
+    '        self.trackEvent("widget.coupon_pack_shown", {',
+    '          source: "exit_intent",',
+    '          design: cpConfig.design || "brand",',
+    '          anim_mode: cpConfig.anim_mode !== false,',
+    '          total_amount: cpConfig.total_amount || 55000',
+    '        });',
+    '      } else if (isFreePlan) {',
+    '        // Free 플랜: Plus 업그레이드 유도 카드',
+    '        cpCardEl = self.renderPlusUpsellCard(config);',
+    '        self.trackEvent("widget.plus_upsell_shown", { source: "exit_intent" });',
+    '      }',
     '      var btnWrap = document.createElement("div");',
     '      btnWrap.style.cssText = "display:flex;flex-direction:column;gap:8px;margin-bottom:14px";',
     '      var providers = (config.providers && config.providers.length > 0) ? config.providers : [];',
@@ -96,7 +115,8 @@ export function getExitIntentJs(): string {
     '        iconEl.innerHTML = pInfo.icon;',
     '        pBtn.appendChild(iconEl);',
     '        var lbl = document.createElement("span");',
-    '        lbl.textContent = pInfo.name + "\\ub85c \\uac00\\uc785\\ud558\\uae30";',  // 로 가입하기
+    '        var btnText = (cpCardEl && !isFreePlan) ? "\\ud68c\\uc6d0\\uac00\\uc785 \\u2192" : pInfo.name + "\\ub85c \\uac00\\uc785\\ud558\\uae30";',  // "회원가입 →" or "OO로 가입하기"
+    '        lbl.textContent = btnText;',
     '        pBtn.appendChild(lbl);',
     '        pBtn.addEventListener("mouseenter", function() { this.style.opacity = "0.85"; });',
     '        pBtn.addEventListener("mouseleave", function() { this.style.opacity = "1"; });',
@@ -104,6 +124,13 @@ export function getExitIntentJs(): string {
     '          pBtn.addEventListener("click", function() {',
     '            overlay.remove();',
     '            self.trackEvent("widget.exit_intent_signup", { provider: provider });',
+    '            if (cpCardEl && !isFreePlan) {',
+    '              self.trackEvent("widget.coupon_pack_clicked", {',
+    '                source: "exit_intent",',
+    '                design: cpConfig.design || "brand",',
+    '                total_amount: cpConfig.total_amount || 55000',
+    '              });',
+    '            }',
     '            self.startAuth(provider);',
     '          });',
     '        })(prov);',
@@ -120,6 +147,8 @@ export function getExitIntentJs(): string {
     '      modal.appendChild(titleEl);',
     '      modal.appendChild(bodyEl);',
     '      if (badgeEl) modal.appendChild(badgeEl);',
+    '      // 쿠폰팩 카드 또는 Plus 업셀 카드: body 아래, 소셜 버튼 위에 배치',
+    '      if (cpCardEl) modal.appendChild(cpCardEl);',
     '      modal.appendChild(btnWrap);',
     '      modal.appendChild(dismissLink);',
     '      overlay.appendChild(modal);',
