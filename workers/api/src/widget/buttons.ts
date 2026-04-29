@@ -247,7 +247,10 @@ export const WIDGET_JS = `(function() {
   var bgReferrerDomain = '';
   try {
     if (document.referrer) {
-      bgReferrerDomain = new URL(document.referrer).hostname;
+      // new URL() 대신 <a> 태그를 이용한 ES5 URL 파싱
+      var _refAnchor = document.createElement('a');
+      _refAnchor.href = document.referrer;
+      bgReferrerDomain = _refAnchor.hostname;
     }
   } catch (e) {}
 
@@ -333,13 +336,16 @@ export const WIDGET_JS = `(function() {
     try {
       var ref = document.referrer;
       if (!ref) return;
-      var refPath = new URL(ref).pathname.toLowerCase();
+      // new URL() 대신 <a> 태그를 이용한 ES5 URL 파싱
+      var refA = document.createElement('a');
+      refA.href = ref;
+      var refPath = refA.pathname.toLowerCase();
       // 로그인/가입/동의 페이지는 저장하지 않음
       var skipPages = ['/member/login', '/member/join', '/member/agreement', '/member/modify'];
       for (var i = 0; i < skipPages.length; i++) {
         if (refPath.indexOf(skipPages[i]) >= 0) return;
       }
-      localStorage.setItem('bg_return_url', new URL(ref).pathname + new URL(ref).search);
+      localStorage.setItem('bg_return_url', refA.pathname + refA.search);
     } catch(e) {}
   };
 
@@ -395,14 +401,39 @@ export const WIDGET_JS = `(function() {
 
   BGWidget.prototype.saveLastProvider = function() {
     try {
-      var params = new URLSearchParams(window.location.search);
-      var provider = params.get('bg_provider');
+      // URLSearchParams 대신 직접 쿼리스트링 파싱 (ES5)
+      var search = window.location.search;
+      var provider = null;
+      if (search) {
+        var qs = search.charAt(0) === '?' ? search.slice(1) : search;
+        var pairs = qs.split('&');
+        for (var qi = 0; qi < pairs.length; qi++) {
+          var eq = pairs[qi].indexOf('=');
+          if (eq === -1) continue;
+          var key = decodeURIComponent(pairs[qi].slice(0, eq).replace(/\+/g, ' '));
+          if (key === 'bg_provider') {
+            provider = decodeURIComponent(pairs[qi].slice(eq + 1).replace(/\+/g, ' '));
+            break;
+          }
+        }
+      }
       if (provider) {
         localStorage.setItem('bg_last_provider', provider);
-        // Clean URL
-        params.delete('bg_provider');
+        // Clean URL: bg_provider 파라미터 제거
+        var newPairs = [];
+        if (search) {
+          var qs2 = search.charAt(0) === '?' ? search.slice(1) : search;
+          var allPairs = qs2.split('&');
+          for (var qi2 = 0; qi2 < allPairs.length; qi2++) {
+            var eq2 = allPairs[qi2].indexOf('=');
+            var k2 = eq2 !== -1 ? allPairs[qi2].slice(0, eq2) : allPairs[qi2];
+            if (decodeURIComponent(k2.replace(/\+/g, ' ')) !== 'bg_provider') {
+              newPairs.push(allPairs[qi2]);
+            }
+          }
+        }
         var newUrl = window.location.pathname;
-        var remaining = params.toString();
+        var remaining = newPairs.join('&');
         if (remaining) newUrl += '?' + remaining;
         newUrl += window.location.hash;
         window.history.replaceState({}, '', newUrl);
@@ -812,7 +843,7 @@ export const WIDGET_JS = `(function() {
         var popupStartUrl = startUrlBase + '&return_url=' + encodeURIComponent('/member/login.html');
         var popup = window.open(popupStartUrl, 'bg_sso_popup', 'width=520,height=700,scrollbars=yes');
         window.addEventListener('message', function handler(e) {
-          if (!e.origin.endsWith('.cafe24.com')) return; // origin 검증
+          if (e.origin.slice(-11) !== '.cafe24.com') return; // origin 검증 (endsWith 대신 slice)
           if (e.data === 'bg_sso_complete') {
             window.removeEventListener('message', handler);
             window.location.href = savedReturnUrl;
@@ -842,7 +873,13 @@ export const WIDGET_JS = `(function() {
   BGWidget.prototype.generateState = function() {
     var arr = new Uint8Array(16);
     crypto.getRandomValues(arr);
-    return Array.from(arr, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+    // Array.from + padStart 대신 ES5 for 루프 + 직접 패딩
+    var hex = '';
+    for (var gi = 0; gi < arr.length; gi++) {
+      var byteHex = arr[gi].toString(16);
+      hex += byteHex.length === 1 ? '0' + byteHex : byteHex;
+    }
+    return hex;
   };
 
   BGWidget.prototype.findLoginPage = function() {
