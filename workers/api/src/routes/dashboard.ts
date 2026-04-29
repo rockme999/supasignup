@@ -1131,19 +1131,24 @@ dashboard.post('/shops/:id/verify-sso', async (c) => {
   if (ourSso) {
     const detectedType = ourSso.type;
     const currentType = (shop.sso_type as string) || 'sso';
+    const slots = results.map((r) => ({
+      type: r.type,
+      status: r.is_ours ? 'ours' : r.is_other ? 'other' : r.is_empty ? 'empty' : 'unknown',
+    }));
+    const slotsJson = JSON.stringify(slots);
 
-    // sso_type 업데이트 + 캐시 삭제 (KV + 에지)
+    // sso_type 업데이트 + 검증 결과 저장 + 캐시 삭제 (KV + 에지)
     if (detectedType !== currentType) {
       await Promise.all([
-        c.env.DB.prepare("UPDATE shops SET sso_type = ?, sso_configured = 1, updated_at = datetime('now') WHERE shop_id = ?")
-          .bind(detectedType, shopId)
+        c.env.DB.prepare("UPDATE shops SET sso_type = ?, sso_configured = 1, sso_verified_at = datetime('now'), sso_verified_slots = ?, updated_at = datetime('now') WHERE shop_id = ?")
+          .bind(detectedType, slotsJson, shopId)
           .run(),
         c.env.KV.delete(`widget_config:${shop.client_id as string}`),
         purgeWidgetConfigCache(shop.client_id as string, c.env.BASE_URL),
       ]);
-    } else if (!(shop.sso_configured as number)) {
-      await c.env.DB.prepare("UPDATE shops SET sso_configured = 1, updated_at = datetime('now') WHERE shop_id = ?")
-        .bind(shopId)
+    } else {
+      await c.env.DB.prepare("UPDATE shops SET sso_configured = 1, sso_verified_at = datetime('now'), sso_verified_slots = ?, updated_at = datetime('now') WHERE shop_id = ?")
+        .bind(slotsJson, shopId)
         .run();
     }
 
@@ -1156,10 +1161,7 @@ dashboard.post('/shops/:id/verify-sso', async (c) => {
       message: detectedType !== currentType
         ? `SSO 슬롯이 ${detectedType}로 확인되어 자동 변경되었습니다.`
         : `SSO 설정이 정상입니다. (${detectedType})`,
-      slots: results.map((r) => ({
-        type: r.type,
-        status: r.is_ours ? 'ours' : r.is_other ? 'other' : r.is_empty ? 'empty' : 'unknown',
-      })),
+      slots,
     });
   }
 

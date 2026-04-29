@@ -18,6 +18,133 @@ import {
 import { buildCouponPackHtml, COUPON_PACK_CSS } from '../widget/coupon-pack';
 import { COUPON_PACK_DEFINITIONS } from '../services/coupon-pack';
 
+// ─── SSO 설정 확인 섹션 ──────────────────────────────────────
+// verifiedAt が null → 미검증: 큰 "설정 확인" 버튼
+// verifiedAt が非 null → 검증 완료: SSR 결과 박스 + 작은 "다시 확인" 버튼
+
+type SsoSlot = { type: string; status: string };
+
+const SsoSlotBadges: FC<{ slots: SsoSlot[] }> = ({ slots }) => (
+  <div style="margin-top:8px">
+    {slots.map((s) => {
+      const color = s.status === 'ours' ? '#22c55e' : s.status === 'other' ? '#f59e0b' : '#94a3b8';
+      const label = s.status === 'ours' ? '번개가입' : s.status === 'other' ? '다른 앱' : '미등록';
+      return (
+        <span style={`display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:${color}20;color:${color};border:1px solid ${color}`}>
+          {s.type}: {label}
+        </span>
+      );
+    })}
+  </div>
+);
+
+const SsoVerifySection: FC<{ shopId: string; verifiedAt: string | null; verifiedSlots: string | null }> = ({ shopId, verifiedAt, verifiedSlots }) => {
+  let parsedSlots: SsoSlot[] = [];
+  if (verifiedSlots) {
+    try { parsedSlots = JSON.parse(verifiedSlots); } catch { /* ignore */ }
+  }
+
+  return (
+    <div class="card" style="margin-top:16px; border:2px solid #2563eb">
+      <h2 style="color:#2563eb">SSO 설정 확인</h2>
+      <p style="font-size:14px; color:#475569; margin-bottom:16px">
+        카페24에서 SSO 등록을 완료한 후 아래 버튼을 클릭하면, 번개가입이 자동으로 SSO 슬롯(sso~sso5)을 감지하고 설정을 확정합니다.
+      </p>
+
+      {verifiedAt ? (
+        /* ── 검증 완료 상태: SSR 결과 박스 ── */
+        <>
+          <div style="padding:16px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac;margin-bottom:16px">
+            <div style="font-size:15px;font-weight:600;color:#16a34a;margin-bottom:8px">
+              ✅ SSO 설정이 정상입니다.
+            </div>
+            <div style="font-size:13px;color:#475569;margin-bottom:4px">
+              확인일: {verifiedAt.replace('T', ' ').slice(0, 16)} (UTC)
+            </div>
+            {parsedSlots.length > 0 && <SsoSlotBadges slots={parsedSlots} />}
+          </div>
+          <button
+            id="btn-verify-sso"
+            onclick={`verifySso('${shopId}')`}
+            class="btn btn-outline btn-sm"
+          >
+            다시 확인
+          </button>
+        </>
+      ) : (
+        /* ── 미검증 상태: 큰 "설정 확인" 버튼 ── */
+        <button
+          id="btn-verify-sso"
+          onclick={`verifySso('${shopId}')`}
+          class="btn btn-primary"
+          style="font-size:15px; padding:10px 28px"
+        >
+          설정 확인
+        </button>
+      )}
+
+      <div id="sso-verify-result" style="margin-top:16px; display:none"></div>
+
+      <script dangerouslySetInnerHTML={{__html: `
+function verifySso(shopId) {
+  var btn = document.getElementById('btn-verify-sso');
+  var result = document.getElementById('sso-verify-result');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  result.style.display = 'none';
+
+  fetch('/api/dashboard/shops/' + shopId + '/verify-sso', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.textContent = ${verifiedAt ? "'다시 확인'" : "'설정 확인'"};
+    result.style.display = 'block';
+
+    if (data.ok) {
+      var slotHtml = (data.slots || []).map(function(s) {
+        var color = s.status === 'ours' ? '#22c55e' : s.status === 'other' ? '#f59e0b' : '#94a3b8';
+        var label = s.status === 'ours' ? '번개가입' : s.status === 'other' ? '다른 앱' : '미등록';
+        return '<span style="display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '">' + s.type + ': ' + label + '</span>';
+      }).join('');
+
+      result.innerHTML =
+        '<div style="padding:16px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac">' +
+        '<div style="font-size:15px;font-weight:600;color:#16a34a;margin-bottom:8px">\\u2705 ' + data.message + '</div>' +
+        (data.changed ? '<div style="font-size:13px;color:#475569;margin-bottom:8px">' + data.previous_sso_type + ' \\u2192 ' + data.detected_sso_type + '\\ub85c \\uc790\\ub3d9 \\ubcc0\\uacbd\\ub428</div>' : '') +
+        '<div style="margin-top:8px">' + slotHtml + '</div>' +
+        '</div>';
+
+      // 성공 후 1.5초 뒤 새로고침 → SSR로 결과 영구 표시
+      setTimeout(function() { window.location.reload(); }, 1500);
+    } else {
+      var slotHtml2 = (data.slots || []).map(function(s) {
+        var color = s.status === 'other' ? '#f59e0b' : '#94a3b8';
+        var label = s.status === 'other' ? '다른 앱' : '미등록';
+        return '<span style="display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '">' + s.type + ': ' + label + '</span>';
+      }).join('');
+
+      result.innerHTML =
+        '<div style="padding:16px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5">' +
+        '<div style="font-size:15px;font-weight:600;color:#dc2626;margin-bottom:8px">\\u274C ' + data.message + '</div>' +
+        '<div style="margin-top:8px">' + slotHtml2 + '</div>' +
+        '</div>';
+    }
+  })
+  .catch(function(err) {
+    btn.disabled = false;
+    btn.textContent = ${verifiedAt ? "'다시 확인'" : "'설정 확인'"};
+    result.style.display = 'block';
+    result.innerHTML = '<div style="color:#dc2626">오류가 발생했습니다: ' + err.message + '</div>';
+  });
+}
+      `}} />
+    </div>
+  );
+};
+
 export const SsoGuidePage: FC<{
   shop: ShopDetail;
   clientId: string;
@@ -141,79 +268,11 @@ export const SsoGuidePage: FC<{
       </ol>
     </div>
 
-    <div class="card" style="margin-top:16px; border:2px solid #2563eb">
-      <h2 style="color:#2563eb">SSO 설정 확인</h2>
-      <p style="font-size:14px; color:#475569; margin-bottom:16px">
-        카페24에서 SSO 등록을 완료한 후 아래 버튼을 클릭하면, 번개가입이 자동으로 SSO 슬롯(sso~sso5)을 감지하고 설정을 확정합니다.
-      </p>
-      <button
-        id="btn-verify-sso"
-        onclick={`verifySso('${shop.shop_id}')`}
-        class="btn btn-primary"
-        style="font-size:15px; padding:10px 28px"
-      >
-        설정 확인
-      </button>
-      <div id="sso-verify-result" style="margin-top:16px; display:none"></div>
-    </div>
+    <SsoVerifySection shopId={shop.shop_id} verifiedAt={shop.sso_verified_at ?? null} verifiedSlots={shop.sso_verified_slots ?? null} />
 
     <div style="margin-top:16px">
       <a href="/dashboard" class="btn btn-outline btn-sm">대시보드로 돌아가기</a>
     </div>
-
-    <script dangerouslySetInnerHTML={{__html: `
-function verifySso(shopId) {
-  var btn = document.getElementById('btn-verify-sso');
-  var result = document.getElementById('sso-verify-result');
-  btn.disabled = true;
-  btn.textContent = '확인 중...';
-  result.style.display = 'none';
-
-  fetch('/api/dashboard/shops/' + shopId + '/verify-sso', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    btn.disabled = false;
-    btn.textContent = '설정 확인';
-    result.style.display = 'block';
-
-    if (data.ok) {
-      var slotHtml = (data.slots || []).map(function(s) {
-        var color = s.status === 'ours' ? '#22c55e' : s.status === 'other' ? '#f59e0b' : '#94a3b8';
-        var label = s.status === 'ours' ? '번개가입' : s.status === 'other' ? '다른 앱' : '미등록';
-        return '<span style="display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '">' + s.type + ': ' + label + '</span>';
-      }).join('');
-
-      result.innerHTML =
-        '<div style="padding:16px;border-radius:8px;background:#f0fdf4;border:1px solid #86efac">' +
-        '<div style="font-size:15px;font-weight:600;color:#16a34a;margin-bottom:8px">\\u2705 ' + data.message + '</div>' +
-        (data.changed ? '<div style="font-size:13px;color:#475569;margin-bottom:8px">' + data.previous_sso_type + ' \\u2192 ' + data.detected_sso_type + '로 자동 변경됨</div>' : '') +
-        '<div style="margin-top:8px">' + slotHtml + '</div>' +
-        '</div>';
-    } else {
-      var slotHtml2 = (data.slots || []).map(function(s) {
-        var color = s.status === 'other' ? '#f59e0b' : '#94a3b8';
-        var label = s.status === 'other' ? '다른 앱' : '미등록';
-        return '<span style="display:inline-block;padding:2px 10px;margin:2px;border-radius:12px;font-size:12px;background:' + color + '20;color:' + color + ';border:1px solid ' + color + '">' + s.type + ': ' + label + '</span>';
-      }).join('');
-
-      result.innerHTML =
-        '<div style="padding:16px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5">' +
-        '<div style="font-size:15px;font-weight:600;color:#dc2626;margin-bottom:8px">\\u274C ' + data.message + '</div>' +
-        '<div style="margin-top:8px">' + slotHtml2 + '</div>' +
-        '</div>';
-    }
-  })
-  .catch(function(err) {
-    btn.disabled = false;
-    btn.textContent = '설정 확인';
-    result.style.display = 'block';
-    result.textContent = '오류가 발생했습니다: ' + err.message;
-  });
-}
-    `}} />
   </Layout>
 );
 

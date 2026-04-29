@@ -95,6 +95,9 @@ export type ShopDetail = {
   enabled_providers: string;
   created_at: string;
   sso_configured: number;
+  sso_type?: string;
+  sso_verified_at?: string | null;
+  sso_verified_slots?: string | null;
 };
 
 export type ShopSummary = {

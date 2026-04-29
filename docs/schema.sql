@@ -46,6 +46,9 @@
 --   2026-04-27: shops.live_counter_config 추가 (0030) — 라이브 가입자 카운터 설정 JSON
 --                { enabled, position, show_toast, show_counter }
 --                NULL = 기본값(활성). Plus 플랜만 동작. threshold(일 평균 ≥3명) 미달 시 자동 비활성.
+--   2026-04-29: shops.sso_verified_at / sso_verified_slots 추가 (0031) — SSO 설정 확인 결과 영구 보존
+--                sso_verified_at: 마지막 성공 검증 시각 (ISO 8601 TEXT, NULL = 미검증)
+--                sso_verified_slots: 슬롯 상태 JSON 배열 [{type,status}] (TEXT)
 --   2026-04-27: shops.coupon_config.pack 필드 추가 (마이그레이션 없음 — JSON 자유 확장) (Round 4 Phase A)
 --                coupon_config.pack = {
 --                  enabled: boolean,
@@ -110,6 +113,8 @@ CREATE TABLE IF NOT EXISTS shops (
   ai_suggested_copy      TEXT,                                    -- Plus: AI 추천 카피 JSON
   exit_intent_config     TEXT,                                    -- Plus: Exit-intent 쿠폰 게이트 설정 JSON
   live_counter_config    TEXT,                                    -- Plus: 라이브 가입자 카운터 설정 JSON
+  sso_verified_at        TEXT,                                    -- SSO 설정 확인 마지막 성공 시각 (ISO 8601)
+  sso_verified_slots     TEXT,                                    -- SSO 슬롯 상태 JSON 배열 [{type,status}]
   auto_reply_inquiries   INTEGER NOT NULL DEFAULT 0,              -- AI 자동답변 on/off
   plan                   TEXT NOT NULL DEFAULT 'free',            -- 'free' | 'plus' (CHECK 없음, 앱 레이어 검증)
   UNIQUE(mall_id, platform)
