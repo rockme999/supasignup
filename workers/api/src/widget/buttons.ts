@@ -145,11 +145,12 @@ export const WIDGET_JS = `(function() {
     /* ── 모바일 자동 미세 애니메이션 keyframes ── */
     '@keyframes bg-mobile-glass{0%,100%{backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}50%{backdrop-filter:blur(16px) saturate(165%);-webkit-backdrop-filter:blur(16px) saturate(165%)}}',
     '@keyframes bg-mobile-neon{0%,100%{box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)}50%{box-shadow:0 0 14px rgba(99,102,241,0.5),inset 0 0 14px rgba(99,102,241,0.10)}}',
-    '@keyframes bg-mobile-liquid{0%,100%{opacity:1}50%{opacity:0.55}}',
+    /* bg-mobile-liquid: opacity 보간은 ::before가 버튼 전체를 반투명하게 만드는 부작용 있음 → scale 보간으로 교체 */
+    '@keyframes bg-mobile-liquid{0%,100%{transform:scaleX(1)}50%{transform:scaleX(1.04)}}',
     '@keyframes bg-mobile-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}',
     '@keyframes bg-mobile-soft{0%,100%{box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)}50%{box-shadow:0 2px 4px rgba(0,0,0,0.05),0 8px 20px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.05)}}',
-    /* ── 모바일 자동 미세 애니메이션 적용 (hover 없는 환경 + 모션 허용) ── */
-    '@media(hover:none)and(prefers-reduced-motion:no-preference){.bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
+    /* ── 모바일 자동 미세 애니메이션 적용 (hover 없는 환경 + 모션 허용) — 공백 추가로 iOS Safari/Android 호환 ── */
+    '@media (hover: none) and (prefers-reduced-motion: no-preference){.bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
     /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) ── */
     '.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block}',
     '.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)}',
@@ -159,22 +160,26 @@ export const WIDGET_JS = `(function() {
 
   // ─── Plus: 부모 트리 luminance 추적 (자동 다크 wrapper 판단) ─
   function getEffectiveBgLuminance(el) {
-    var node = el;
-    while (node && node !== document.documentElement) {
-      var bg = window.getComputedStyle(node).backgroundColor;
-      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
-        var m = bg.match(/rgba?\\(([^)]+)\\)/);
-        if (m) {
-          var p = m[1].split(',').map(function(x) { return parseFloat(x.trim()); });
-          // 알파값이 0.5 이하면 투명으로 간주하고 계속 올라감
-          if (p[3] === undefined || p[3] > 0.5) {
-            return (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255;
+    try {
+      var node = el;
+      while (node && node !== document.documentElement) {
+        var bg = window.getComputedStyle(node).backgroundColor;
+        if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+          var m = bg.match(/rgba?\\(([^)]+)\\)/);
+          if (m) {
+            var p = m[1].split(',').map(function(x) { return parseFloat(x.trim()); });
+            // 알파값이 0.5 이하면 투명으로 간주하고 계속 올라감
+            if (p[3] === undefined || p[3] > 0.5) {
+              return (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255;
+            }
           }
         }
+        node = node.parentElement;
       }
-      node = node.parentElement;
+    } catch (e) {
+      // getComputedStyle 예외 (모바일 SafariIE 일부 노드) → 흰색(밝은 배경)으로 간주
     }
-    // 모든 부모가 transparent → 흰색(밝은 배경)으로 가정
+    // 모든 부모가 transparent 또는 예외 → 흰색(밝은 배경)으로 가정
     return 1.0;
   }
 
@@ -701,8 +706,8 @@ export const WIDGET_JS = `(function() {
           // Plus 프리셋: 배경 톤에 따라 아이콘 fill 자동 결정 (구글 4색 제외)
           // 다크 배경: glass, neon, liquid, gradient → 흰색
           // 라이트 배경: soft, pulse → 검정
-          var PLUS_DARK_PRESETS = new Set(['glassmorphism','neon-glow','liquid-glass','gradient-flow']);
-          var plusIconFill = PLUS_DARK_PRESETS.has(preset) ? '#ffffff' : '#374151';
+          var PLUS_DARK_PRESETS = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+          var plusIconFill = PLUS_DARK_PRESETS.indexOf(preset) !== -1 ? '#ffffff' : '#374151';
           var paths = iconSpan.querySelectorAll('path');
           for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', plusIconFill); }
         }
