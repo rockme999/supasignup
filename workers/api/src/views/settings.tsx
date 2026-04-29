@@ -1635,7 +1635,6 @@ export const GeneralSettingsPage: FC<{
                     <span class="toggle-slider"></span>
                   </label>
                   <strong style="font-size:14px">정률할인 쿠폰</strong>
-                  {!isPlus && <span class="badge badge-gray" style="margin-left:4px">Plus 전용</span>}
                 </div>
                 <span id="coupon_rate_no_badge" style="display:none;font-size:11px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:2px 8px"></span>
               </div>
