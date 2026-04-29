@@ -192,7 +192,7 @@ app.get('/widget/buttons.js', (c) => {
       status: 304,
       headers: {
         'ETag': WIDGET_ETAG,
-        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+        'Cache-Control': 'public, max-age=0, must-revalidate',
         'Access-Control-Allow-Origin': '*',
       },
     });
@@ -206,7 +206,7 @@ app.get('/widget/buttons.js', (c) => {
 
   return c.body(js, 200, {
     'Content-Type': 'application/javascript; charset=utf-8',
-    'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+    'Cache-Control': 'public, max-age=0, must-revalidate',
     'ETag': WIDGET_ETAG,
     'Access-Control-Allow-Origin': '*',
   });
