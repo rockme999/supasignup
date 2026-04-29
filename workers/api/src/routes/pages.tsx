@@ -34,6 +34,7 @@ import {
   AiBriefingPage,
   ExitIntentSettingsPage,
   LiveCounterSettingsPage,
+  CouponPackSettingsPage,
   QuickStartPage,
   GuidePage,
   FaqPage,
@@ -1243,6 +1244,39 @@ pages.get('/dashboard/settings/live-counter', async (c) => {
     <LiveCounterSettingsPage
       shop={shop}
       liveCounterConfig={liveCounterConfig}
+      isCafe24={c.get('isCafe24')}
+    />
+  );
+});
+
+// ─── Settings: Coupon Pack [Plus] ───────────────────────────
+
+pages.get('/dashboard/settings/coupon-pack', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shop = await getOwnerShop(c.env.DB, ownerId);
+  if (!shop) return c.redirect('/dashboard');
+
+  let packConfig: {
+    state?: string;
+    registered_at?: string | null;
+    expire_days?: number;
+    items?: Array<{ min_order: number; discount: number; cafe24_coupon_no?: string }>;
+    design?: string;
+    anim_mode?: boolean;
+    failures?: Array<{ min_order: number; discount: number }>;
+  } | null = null;
+
+  if (shop.coupon_config) {
+    try {
+      const parsed = JSON.parse(shop.coupon_config) as { pack?: typeof packConfig };
+      packConfig = parsed?.pack ?? null;
+    } catch { /* ignore */ }
+  }
+
+  return c.html(
+    <CouponPackSettingsPage
+      shop={shop}
+      packConfig={packConfig}
       isCafe24={c.get('isCafe24')}
     />
   );

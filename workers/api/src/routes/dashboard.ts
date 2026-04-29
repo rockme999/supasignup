@@ -30,8 +30,8 @@ import {
 import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
-import { registerCouponPack, unregisterCouponPack } from '../services/coupon-pack';
-import type { CouponPackConfig, CouponPackState } from '../services/coupon-pack';
+import { registerCouponPack, unregisterCouponPack, withPackDefaults } from '../services/coupon-pack';
+import type { CouponPackConfig, CouponPackState, CouponPackDesign } from '../services/coupon-pack';
 import { autoReplyInquiry } from './ai';
 import { getGlobalAutoReplyEnabled } from './admin';
 
@@ -1266,10 +1266,15 @@ dashboard.post('/widget/event-dashboard', async (c) => {
 
 // ─── PUT /shops/:id/coupon-pack ─────────────────────────────
 /**
- * Plus 웰컴 쿠폰팩 활성화 / 비활성화.
+ * Plus 웰컴 쿠폰팩 활성화 / 비활성화 + 디자인/애니/만료일 설정.
  *
  * enabled=true : registerCouponPack() 호출 → coupon_config.pack 갱신 → 캐시 무효화
- * enabled=false: unregisterCouponPack() 호출 → coupon_config.pack.enabled=false
+ * enabled=false: unregisterCouponPack() 호출 → coupon_config.pack.state='unregistered'
+ *
+ * 선택 필드:
+ *   design      : 'dark' | 'brand' | 'illust' | 'minimal' (기본 'brand')
+ *   anim_mode   : boolean (기본 true)
+ *   expire_days : 7~90 (기본 30) — 다음 register 시점에만 카페24 반영
  *
  * - Plus 플랜 전용 (Free → 403)
  * - 기존 coupon_config 나머지 필드 변경 없음 (pack 필드 추가/수정만)
@@ -1290,9 +1295,32 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     );
   }
 
-  const body = await c.req.json<{ enabled: boolean }>();
+  const body = await c.req.json<{
+    enabled: boolean;
+    design?: CouponPackDesign;
+    anim_mode?: boolean;
+    expire_days?: number;
+  }>();
+
   if (typeof body.enabled !== 'boolean') {
     return c.json({ error: 'invalid_body', message: 'enabled(boolean) 필드가 필요합니다.' }, 400);
+  }
+
+  const VALID_DESIGNS: CouponPackDesign[] = ['dark', 'brand', 'illust', 'minimal'];
+  if (body.design !== undefined && !VALID_DESIGNS.includes(body.design)) {
+    return c.json(
+      { error: 'invalid_design', message: `design은 ${VALID_DESIGNS.join(' | ')} 중 하나여야 합니다.` },
+      400,
+    );
+  }
+  if (body.anim_mode !== undefined && typeof body.anim_mode !== 'boolean') {
+    return c.json({ error: 'invalid_anim_mode', message: 'anim_mode는 boolean이어야 합니다.' }, 400);
+  }
+  if (body.expire_days !== undefined) {
+    const d = body.expire_days;
+    if (!Number.isInteger(d) || d < 7 || d > 90) {
+      return c.json({ error: 'invalid_expire_days', message: 'expire_days는 7~90 사이 정수여야 합니다.' }, 400);
+    }
   }
 
   // 기존 coupon_config 파싱 (pack 외 필드 보존)
@@ -1305,19 +1333,27 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     } catch { /* 파싱 실패 시 기본값 사용 */ }
   }
 
+  // 디자인/애니/만료일은 기존 값 유지 + body 덮어쓰기
+  const prevPack = existingConfig.pack;
+  const mergedDesign: CouponPackDesign    = body.design    ?? prevPack?.design    ?? 'brand';
+  const mergedAnim:   boolean             = body.anim_mode ?? prevPack?.anim_mode ?? true;
+  const mergedExpiry: number              = body.expire_days ?? prevPack?.expire_days ?? 30;
+
   if (body.enabled) {
     // ── 활성화: 5개 쿠폰 카페24 등록 ──────────────────────────
     const result = await registerCouponPack(c.env, shop);
 
     const now = new Date().toISOString();
     const packActive = result.items.length > 0;
-    const newPack: CouponPackConfig = {
+    const newPack: CouponPackConfig = withPackDefaults({
       enabled: packActive,
       state: packActive ? 'active' : 'unregistered',
-      registered_at: packActive ? now : (existingConfig.pack?.registered_at ?? null),
-      expire_days: existingConfig.pack?.expire_days ?? 30,
+      registered_at: packActive ? now : (prevPack?.registered_at ?? null),
+      expire_days: mergedExpiry,
       items: result.items,
-    };
+      design: mergedDesign,
+      anim_mode: mergedAnim,
+    });
 
     const newConfig = { ...existingConfig, pack: newPack };
 
@@ -1348,17 +1384,14 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     // unregisterCouponPack은 예외를 던지지 않음 (내부 로그만)
     await unregisterCouponPack(c.env, shop);
 
-    const newPack: CouponPackConfig = {
-      ...(existingConfig.pack ?? {
-        enabled: false,
-        state: 'unregistered' as CouponPackState,
-        registered_at: null,
-        expire_days: 30,
-        items: [],
-      }),
+    const newPack: CouponPackConfig = withPackDefaults({
+      ...(prevPack ?? {}),
       enabled: false,
       state: 'unregistered' as CouponPackState,
-    };
+      expire_days: mergedExpiry,
+      design: mergedDesign,
+      anim_mode: mergedAnim,
+    });
 
     const newConfig = { ...existingConfig, pack: newPack };
 

@@ -51,6 +51,9 @@ export interface PackItem {
  */
 export type CouponPackState = 'active' | 'paused' | 'unregistered';
 
+/** 쿠폰팩 시안 디자인 4종 */
+export type CouponPackDesign = 'dark' | 'brand' | 'illust' | 'minimal';
+
 /** coupon_config.pack 전체 */
 export interface CouponPackConfig {
   /** @deprecated enabled 대신 state를 사용. 읽기 시 state로 변환. */
@@ -60,6 +63,23 @@ export interface CouponPackConfig {
   registered_at: string | null;  // ISO 8601 — 마지막 등록 시각
   expire_days: number;           // 기본 30
   items: PackItem[];
+  /** 시안 디자인 선택 (기본 'brand') */
+  design?: CouponPackDesign;
+  /** 반짝 애니 ON/OFF (기본 true) */
+  anim_mode?: boolean;
+}
+
+/** CouponPackConfig default 값 주입 헬퍼 */
+export function withPackDefaults(pack: Partial<CouponPackConfig>): CouponPackConfig {
+  return {
+    state: pack.state ?? 'unregistered',
+    registered_at: pack.registered_at ?? null,
+    expire_days: pack.expire_days ?? 30,
+    items: pack.items ?? [],
+    design: pack.design ?? 'brand',
+    anim_mode: pack.anim_mode !== undefined ? pack.anim_mode : true,
+    ...(pack.enabled !== undefined ? { enabled: pack.enabled } : {}),
+  };
 }
 
 /** registerCouponPack 반환 타입 */
