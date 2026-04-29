@@ -1178,21 +1178,27 @@ export const WIDGET_JS = `(function() {
       body.innerHTML = escapeHtml(popupBody).replace(/\\n/g, '<br>');
       body.style.cssText = 'font-size:14px;color:#6b7280;text-align:center;margin:0 0 16px';
 
-      // Plus 쿠폰팩 카드 (pack.state === 'active' && plan === 'plus' 분기)
+      // Plus 쿠폰팩 카드 (pack.state === 'active' && plan !== 'free') 또는 Free 업셀 카드
       var cpConfig = config.coupon_pack;
       var cpCardEl = null;
-      if (cpConfig && cpConfig.active && config.plan !== 'free') {
+      var isFreePlan = !config.plan || config.plan === 'free';
+      if (cpConfig && cpConfig.active && !isFreePlan) {
         cpCardEl = self.renderCouponPackCard(cpConfig);
         self.trackEvent('widget.coupon_pack_shown', {
+          source: 'exit_popup',
           design: cpConfig.design || 'brand',
           anim_mode: cpConfig.anim_mode !== false,
           total_amount: cpConfig.total_amount || 55000
         });
+      } else if (isFreePlan) {
+        // Free 플랜: Plus 업그레이드 유도 카드
+        cpCardEl = self.renderPlusUpsellCard(config);
+        self.trackEvent('widget.plus_upsell_shown', { source: 'exit_popup' });
       }
 
       // CTA 버튼
       var ctaBtn = document.createElement('button');
-      var ctaText = cpCardEl
+      var ctaText = (cpCardEl && !isFreePlan)
         ? '\\ud68c\\uc6d0\\uac00\\uc785 \\u2192'  // 회원가입 →
         : popupCta;
       ctaBtn.textContent = ctaText;
@@ -1201,8 +1207,9 @@ export const WIDGET_JS = `(function() {
       ctaBtn.addEventListener('click', function() {
         overlay.remove();
         self.trackEvent('popup_signup', {});
-        if (cpCardEl) {
+        if (cpCardEl && !isFreePlan) {
           self.trackEvent('widget.coupon_pack_clicked', {
+            source: 'exit_popup',
             design: cpConfig.design || 'brand',
             total_amount: cpConfig.total_amount || 55000
           });
@@ -1213,7 +1220,7 @@ export const WIDGET_JS = `(function() {
       modal.appendChild(closeBtn);
       modal.appendChild(title);
       modal.appendChild(body);
-      // 쿠폰팩 카드: body 아래, CTA 위에 배치 (핵심 비주얼)
+      // 쿠폰팩 카드 또는 Plus 업셀 카드: body 아래, CTA 위에 배치 (핵심 비주얼)
       if (cpCardEl) modal.appendChild(cpCardEl);
       modal.appendChild(ctaBtn);
       overlay.appendChild(modal);
