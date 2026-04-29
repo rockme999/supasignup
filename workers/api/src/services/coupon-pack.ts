@@ -54,6 +54,9 @@ export type CouponPackState = 'active' | 'paused' | 'unregistered';
 /** 쿠폰팩 시안 디자인 4종 */
 export type CouponPackDesign = 'dark' | 'brand' | 'illust' | 'minimal';
 
+/** 쿠폰팩 카드 크기 4단계 */
+export type CouponPackSize = 'lg' | 'md' | 'sm' | 'xs';
+
 /** coupon_config.pack 전체 */
 export interface CouponPackConfig {
   /** @deprecated enabled 대신 state를 사용. 읽기 시 state로 변환. */
@@ -67,6 +70,8 @@ export interface CouponPackConfig {
   design?: CouponPackDesign;
   /** 반짝 애니 ON/OFF (기본 true) */
   anim_mode?: boolean;
+  /** 카드 크기 (기본 'lg') */
+  size?: CouponPackSize;
 }
 
 /** CouponPackConfig default 값 주입 헬퍼 */
@@ -78,6 +83,7 @@ export function withPackDefaults(pack: Partial<CouponPackConfig>): CouponPackCon
     items: pack.items ?? [],
     design: pack.design ?? 'brand',
     anim_mode: pack.anim_mode !== undefined ? pack.anim_mode : true,
+    size: pack.size ?? 'lg',
     ...(pack.enabled !== undefined ? { enabled: pack.enabled } : {}),
   };
 }

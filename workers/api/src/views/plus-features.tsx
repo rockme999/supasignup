@@ -3360,6 +3360,7 @@ export const CouponPackSettingsPage: FC<{
     items?: Array<{ min_order: number; discount: number; cafe24_coupon_no?: string }>;
     design?: string;
     anim_mode?: boolean;
+    size?: string;
     failures?: Array<{ min_order: number; discount: number }>;
   } | null;
   isCafe24?: boolean;
@@ -3368,11 +3369,15 @@ export const CouponPackSettingsPage: FC<{
   const pc = packConfig || {};
 
   const state       = pc.state ?? 'unregistered';
-  const isActive    = state === 'active' || state === 'paused';
+  // 작업 3: 신규 미등록 상태도 UI에서 ON으로 표시 (저장 시 활성화)
+  const isActiveDb  = state === 'active' || state === 'paused';
+  const isActiveUi  = state !== 'unregistered'; // 'active' | 'paused' → ON, 'unregistered' → ON (신규)
   const design      = (pc.design ?? 'brand') as 'dark' | 'brand' | 'illust' | 'minimal';
   const animMode    = pc.anim_mode !== false;
+  const size        = (pc.size ?? 'lg') as 'lg' | 'md' | 'sm' | 'xs';
   const expireDays  = pc.expire_days ?? 30;
   const failures    = pc.failures ?? [];
+  const isNewShop   = state === 'unregistered' && (pc.items ?? []).length === 0;
 
   // 쿠폰팩 구성 — COUPON_PACK_DEFINITIONS 기준으로 등록 상태 매핑
   const registeredItems: Map<number, string | null> = new Map(
@@ -3386,6 +3391,13 @@ export const CouponPackSettingsPage: FC<{
     { value: 'brand',   label: '#2 번개가입 브랜드' },
     { value: 'illust',  label: '#3 밝은 일러스트' },
     { value: 'minimal', label: '#4 미니멀' },
+  ];
+
+  const sizes: Array<{ value: 'lg' | 'md' | 'sm' | 'xs'; label: string; scale: string }> = [
+    { value: 'lg', label: '크게', scale: '100%' },
+    { value: 'md', label: '보통', scale: '85%' },
+    { value: 'sm', label: '작게', scale: '70%' },
+    { value: 'xs', label: '매우 작게', scale: '55%' },
   ];
 
   return (
@@ -3416,26 +3428,125 @@ export const CouponPackSettingsPage: FC<{
             </div>
           )}
 
-          {/* ── 카드: 활성화 토글 + 디자인 + 애니 + 미리보기 + 만료일 ── */}
+          {/* ── 섹션 1: 미리보기 카드 ── */}
           <div class="card" style="margin-bottom:16px">
+            {/* 미리보기 헤더 + 활성화 토글 (우측 상단) */}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <p style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+              {/* 활성화 토글 — 미리보기 우측 */}
+              <div style="display:flex;align-items:center;gap:8px">
+                <div id="cpEnabledToggle" data-value={isActiveUi ? 'true' : 'false'}
+                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${isActiveUi ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                  <div style={`position:absolute;top:2px;${isActiveUi ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                </div>
+                <span id="cpEnabledLabel" style="font-size:12px;font-weight:600;color:#374151">{isActiveUi ? '활성화됨' : '비활성화됨'}</span>
+              </div>
+            </div>
+
+            {/* keyframes: 위젯과 동일한 COUPON_PACK_CSS 재사용 (bg-cp- prefix) */}
+            <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
+            <div style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+              {/* 32가지 조합 (design × anim × size) — JS display 토글 */}
+              {(['dark', 'brand', 'illust', 'minimal'] as const).map(d =>
+                (['static', 'anim'] as const).map(v =>
+                  (['lg', 'md', 'sm', 'xs'] as const).map(s => {
+                    const animVal = v === 'anim';
+                    const isVisible = design === d && animMode === animVal && size === s;
+                    return (
+                      <div
+                        id={`cp-prev-${d}-${v}-${s}`}
+                        style={`display:${isVisible ? 'block' : 'none'}`}
+                        dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: d, anim_mode: animVal, size: s })}}
+                      />
+                    );
+                  })
+                )
+              )}
+            </div>
+            {isNewShop && (
+              <p style="font-size:11px;color:#db2777;margin-top:10px;font-weight:500">
+                저장하면 카페24에 자동 등록됩니다
+              </p>
+            )}
+          </div>
+
+          {/* ── 섹션 2: 쿠폰팩 구성 ── */}
+          <div class="card" style="margin-bottom:16px">
+            <h2 style="font-size:14px;font-weight:700;margin-bottom:4px">쿠폰팩 구성</h2>
+            <p style="font-size:12px;color:#64748b;margin-bottom:16px">내 가게에서 신규 회원에게 발급될 5장의 쿠폰 구성입니다.</p>
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                  <tr style="border-bottom:2px solid #e5e7eb">
+                    <th style="text-align:left;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">쿠폰 내용</th>
+                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">최소 주문</th>
+                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">할인</th>
+                    <th style="text-align:center;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">카페24 등록</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COUPON_PACK_DEFINITIONS.map((def, idx) => {
+                    const couponNo = registeredItems.get(def.min_order);
+                    const isFailed = failedSet.has(def.min_order);
+                    const isRegistered = couponNo != null;
+
+                    let statusCell;
+                    if (isFailed) {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px">
+                          <span style="color:#dc2626;font-weight:600" title="카페24 등록 실패">✗ 실패</span>
+                        </td>
+                      );
+                    } else if (isRegistered) {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px">
+                          <span style="color:#059669;font-weight:600">✓</span>
+                          <span style="font-size:11px;color:#94a3b8;margin-left:4px">#{couponNo}</span>
+                        </td>
+                      );
+                    } else {
+                      statusCell = (
+                        <td style="text-align:center;padding:8px 12px;color:#94a3b8">—</td>
+                      );
+                    }
+
+                    return (
+                      <tr style={`border-bottom:1px solid #f3f4f6;background:${idx % 2 === 0 ? '#fff' : '#fafafa'}`}>
+                        <td style="padding:8px 12px;color:#374151;font-weight:500">
+                          {def.min_order.toLocaleString()}원 이상 {def.discount.toLocaleString()}원 할인
+                        </td>
+                        <td style="text-align:right;padding:8px 12px;color:#6b7280">
+                          ₩{def.min_order.toLocaleString()}
+                        </td>
+                        <td style="text-align:right;padding:8px 12px;color:#2563eb;font-weight:600">
+                          ₩{def.discount.toLocaleString()}
+                        </td>
+                        {statusCell}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style="border-top:2px solid #e5e7eb;background:#f8fafc">
+                    <td colspan={2} style="padding:8px 12px;font-size:13px;font-weight:600;color:#374151">합계</td>
+                    <td style="text-align:right;padding:8px 12px;font-weight:700;color:#2563eb">
+                      ₩{totalDiscount.toLocaleString()}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* ── 섹션 3: 옵션 카드 ── */}
+          <div class="card" style="margin-bottom:16px">
+            <h2 style="font-size:14px;font-weight:700;margin-bottom:20px">옵션</h2>
             <div style="display:flex;flex-direction:column;gap:24px">
 
-              {/* a) 활성화 토글 */}
+              {/* a) 디자인 선택 */}
               <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">쿠폰팩 활성화</label>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <div id="cpEnabledToggle" data-value={isActive ? 'true' : 'false'}
-                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${isActive ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s`}>
-                    <div style={`position:absolute;top:2px;${isActive ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
-                  </div>
-                  <span id="cpEnabledLabel" style="font-size:13px;color:#374151">{isActive ? '활성화됨' : '비활성화됨'}</span>
-                </div>
-                <p style="font-size:11px;color:#94a3b8;margin-top:6px">ON 시 5개 쿠폰을 카페24에 등록해 신규 가입자에게 자동 발급합니다.</p>
-              </div>
-
-              {/* b) 디자인 선택 */}
-              <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">디자인 선택</label>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">디자인</label>
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
                   {designs.map(d => (
                     <label id={`cp-design-${d.value}`}
@@ -3533,10 +3644,10 @@ export const CouponPackSettingsPage: FC<{
                 </div>
               </div>
 
-              {/* c) 애니 토글 */}
+              {/* b) 반짝 효과 토글 */}
               <div>
                 <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">
-                  ✨ 반짝 효과
+                  반짝 효과
                 </label>
                 <div style="display:flex;align-items:center;gap:10px">
                   <div id="cpAnimToggle" data-value={animMode ? 'true' : 'false'}
@@ -3548,50 +3659,23 @@ export const CouponPackSettingsPage: FC<{
                 <p style="font-size:11px;color:#94a3b8;margin-top:6px">토글 OFF 시 정적 카드로 표시됩니다</p>
               </div>
 
-              {/* d) 미리보기 영역 (풀 사이즈 300×140) — buildCouponPackHtml 재사용 */}
+              {/* c) 크기 조절 */}
               <div>
-                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                {/* keyframes: 위젯과 동일한 COUPON_PACK_CSS 재사용 (bg-cp- prefix) */}
-                <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
-                <div style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:20px">
-                  {/* 8가지 조합 (design × anim) — display 토글로 JS가 전환 */}
-
-                  {/* dark-static */}
-                  <div id="cp-prev-dark-static" style={`display:${design === 'dark' && !animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'dark', anim_mode: false })}} />
-
-                  {/* dark-anim */}
-                  <div id="cp-prev-dark-anim" style={`display:${design === 'dark' && animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'dark', anim_mode: true })}} />
-
-                  {/* brand-static */}
-                  <div id="cp-prev-brand-static" style={`display:${design === 'brand' && !animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'brand', anim_mode: false })}} />
-
-                  {/* brand-anim */}
-                  <div id="cp-prev-brand-anim" style={`display:${design === 'brand' && animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'brand', anim_mode: true })}} />
-
-                  {/* illust-static */}
-                  <div id="cp-prev-illust-static" style={`display:${design === 'illust' && !animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'illust', anim_mode: false })}} />
-
-                  {/* illust-anim */}
-                  <div id="cp-prev-illust-anim" style={`display:${design === 'illust' && animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'illust', anim_mode: true })}} />
-
-                  {/* minimal-static */}
-                  <div id="cp-prev-minimal-static" style={`display:${design === 'minimal' && !animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'minimal', anim_mode: false })}} />
-
-                  {/* minimal-anim */}
-                  <div id="cp-prev-minimal-anim" style={`display:${design === 'minimal' && animMode ? 'block' : 'none'}`}
-                    dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: 'minimal', anim_mode: true })}} />
-
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">카드 크기</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  {sizes.map(s => (
+                    <label id={`cp-size-${s.value}`}
+                      style={`display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;cursor:pointer;border:2px solid ${size === s.value ? '#ec4899' : '#e5e7eb'};background:${size === s.value ? '#fdf2f8' : '#fff'};transition:all 0.15s`}>
+                      <input type="radio" name="cpSize" value={s.value} checked={size === s.value} style="display:none" />
+                      <span style={`font-size:12px;font-weight:700;color:${size === s.value ? '#be185d' : '#374151'}`}>{s.label}</span>
+                      <span style="font-size:10px;color:#94a3b8">{s.scale}</span>
+                    </label>
+                  ))}
                 </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:6px">이탈 팝업 안에서의 카드 표시 크기입니다</p>
               </div>
 
-              {/* e) 만료 일수 */}
+              {/* d) 만료 일수 */}
               <div>
                 <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px" htmlFor="cpExpireDays">쿠폰 만료 일수</label>
                 <div style="display:flex;align-items:center;gap:10px">
@@ -3619,90 +3703,26 @@ export const CouponPackSettingsPage: FC<{
                 )}
               </div>
 
-              {/* 저장 버튼 */}
-              <div>
-                <button id="cpSaveBtn" class="btn btn-primary" style="width:auto">설정 저장</button>
-              </div>
-
             </div>
           </div>
 
-          {/* 쿠폰팩 구성 섹션 */}
-          <div class="card" style="margin-bottom:16px">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:4px">쿠폰팩 구성</h2>
-            <p style="font-size:12px;color:#64748b;margin-bottom:16px">내 가게에서 신규 회원에게 발급될 5장의 쿠폰 구성입니다.</p>
-            <div style="overflow-x:auto">
-              <table style="width:100%;border-collapse:collapse;font-size:13px">
-                <thead>
-                  <tr style="border-bottom:2px solid #e5e7eb">
-                    <th style="text-align:left;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">쿠폰 내용</th>
-                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">최소 주문</th>
-                    <th style="text-align:right;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">할인</th>
-                    <th style="text-align:center;padding:6px 12px;font-weight:600;color:#374151;white-space:nowrap">카페24 등록</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COUPON_PACK_DEFINITIONS.map((def, idx) => {
-                    const couponNo = registeredItems.get(def.min_order);
-                    const isFailed = failedSet.has(def.min_order);
-                    const isRegistered = couponNo != null;
-
-                    let statusCell;
-                    if (isFailed) {
-                      statusCell = (
-                        <td style="text-align:center;padding:8px 12px">
-                          <span style="color:#dc2626;font-weight:600" title="카페24 등록 실패">✗ 실패</span>
-                        </td>
-                      );
-                    } else if (isRegistered) {
-                      statusCell = (
-                        <td style="text-align:center;padding:8px 12px">
-                          <span style="color:#059669;font-weight:600">✓</span>
-                          <span style="font-size:11px;color:#94a3b8;margin-left:4px">#{couponNo}</span>
-                        </td>
-                      );
-                    } else {
-                      statusCell = (
-                        <td style="text-align:center;padding:8px 12px;color:#94a3b8">—</td>
-                      );
-                    }
-
-                    return (
-                      <tr style={`border-bottom:1px solid #f3f4f6;background:${idx % 2 === 0 ? '#fff' : '#fafafa'}`}>
-                        <td style="padding:8px 12px;color:#374151;font-weight:500">
-                          {def.min_order.toLocaleString()}원 이상 {def.discount.toLocaleString()}원 할인
-                        </td>
-                        <td style="text-align:right;padding:8px 12px;color:#6b7280">
-                          ₩{def.min_order.toLocaleString()}
-                        </td>
-                        <td style="text-align:right;padding:8px 12px;color:#2563eb;font-weight:600">
-                          ₩{def.discount.toLocaleString()}
-                        </td>
-                        {statusCell}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style="border-top:2px solid #e5e7eb;background:#f8fafc">
-                    <td colspan={2} style="padding:8px 12px;font-size:13px;font-weight:600;color:#374151">합계</td>
-                    <td style="text-align:right;padding:8px 12px;font-weight:700;color:#2563eb">
-                      ₩{totalDiscount.toLocaleString()}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+          {/* ── 섹션 4: 저장 버튼 ── */}
+          <div style="margin-bottom:24px">
+            <button id="cpSaveBtn" class="btn btn-primary" style="width:auto">설정 저장</button>
+            {isNewShop && (
+              <span id="cpNewShopHint" style="font-size:12px;color:#db2777;margin-left:12px;font-weight:500">
+                저장하면 카페24에 자동 등록됩니다
+              </span>
+            )}
           </div>
 
-          {/* 안내 카드 */}
+          {/* ── 안내 카드 ── */}
           <div class="card" style="border-left:3px solid #ec4899;background:#fdf2f8">
             <h2 style="font-size:14px;color:#be185d;margin-bottom:8px">쿠폰팩 안내</h2>
             <p style="font-size:13px;color:#374151;line-height:1.7">
               쿠폰팩 활성화 시 5개의 단계별 할인 쿠폰(₩3,000 ~ ₩30,000)이 카페24에 등록됩니다.
               신규 회원 가입 시 카페24가 자동으로 5장 모두를 즉시 발급합니다.
-              디자인 변경은 즉시 저장되며, 위젯 렌더링에만 영향을 줍니다.
+              디자인/크기 변경은 즉시 저장되며, 위젯 렌더링에만 영향을 줍니다.
             </p>
           </div>
 
@@ -3727,21 +3747,25 @@ export const CouponPackSettingsPage: FC<{
                 });
               }
 
-              /* ── 미리보기 갱신 ── */
+              /* ── 미리보기 갱신 (design × anim × size) ── */
               function updatePreview() {
                 var designInput = document.querySelector('input[name="cpDesign"]:checked');
                 var d = designInput ? designInput.value : 'brand';
                 var anim = document.getElementById('cpAnimToggle').getAttribute('data-value') === 'true';
-                var ids = ['dark-static','dark-anim','brand-static','brand-anim','illust-static','illust-anim','minimal-static','minimal-anim'];
-                ids.forEach(function(k) {
-                  var el = document.getElementById('cp-prev-' + k);
-                  if (!el) return;
-                  var parts = k.split('-');
-                  /* k can be 'brand-anim' or 'dark-static' or 'illust-static' or 'minimal-anim' */
-                  var variant = parts[parts.length - 1];
-                  var dKey = parts.slice(0, parts.length - 1).join('-');
-                  var show = dKey === d && ((anim && variant === 'anim') || (!anim && variant === 'static'));
-                  el.style.display = show ? 'block' : 'none';
+                var sizeInput = document.querySelector('input[name="cpSize"]:checked');
+                var sz = sizeInput ? sizeInput.value : 'lg';
+                var designs = ['dark','brand','illust','minimal'];
+                var variants = ['static','anim'];
+                var szList = ['lg','md','sm','xs'];
+                designs.forEach(function(dv) {
+                  variants.forEach(function(vv) {
+                    szList.forEach(function(sv) {
+                      var el = document.getElementById('cp-prev-' + dv + '-' + vv + '-' + sv);
+                      if (!el) return;
+                      var show = dv === d && ((anim && vv === 'anim') || (!anim && vv === 'static')) && sv === sz;
+                      el.style.display = show ? 'block' : 'none';
+                    });
+                  });
                 });
               }
 
@@ -3761,7 +3785,7 @@ export const CouponPackSettingsPage: FC<{
                 });
               });
 
-              /* 체크마크 초기화 (SSR에서는 checked인 것만 보임, JS로도 sync) */
+              /* 체크마크 초기화 */
               document.querySelectorAll('input[name="cpDesign"]').forEach(function(r) {
                 var lbl = document.getElementById('cp-design-' + r.value);
                 if (lbl) {
@@ -3770,6 +3794,22 @@ export const CouponPackSettingsPage: FC<{
                     chk.style.display = r.checked ? 'inline' : 'none';
                   }
                 }
+              });
+
+              /* ── 크기 라디오 ── */
+              document.querySelectorAll('input[name="cpSize"]').forEach(function(input) {
+                input.addEventListener('change', function() {
+                  document.querySelectorAll('input[name="cpSize"]').forEach(function(r) {
+                    var lbl = document.getElementById('cp-size-' + r.value);
+                    if (lbl) {
+                      lbl.style.borderColor = r.checked ? '#ec4899' : '#e5e7eb';
+                      lbl.style.background = r.checked ? '#fdf2f8' : '#fff';
+                      var span = lbl.querySelector('span');
+                      if (span) span.style.color = r.checked ? '#be185d' : '#374151';
+                    }
+                  });
+                  updatePreview();
+                });
               });
 
               /* ── 토글 등록 ── */
@@ -3797,6 +3837,8 @@ export const CouponPackSettingsPage: FC<{
                 var animMode = document.getElementById('cpAnimToggle').getAttribute('data-value') === 'true';
                 var designEl = document.querySelector('input[name="cpDesign"]:checked');
                 var design   = designEl ? designEl.value : 'brand';
+                var sizeEl   = document.querySelector('input[name="cpSize"]:checked');
+                var size     = sizeEl ? sizeEl.value : 'lg';
                 var expireDaysVal = parseInt(document.getElementById('cpExpireDays').value, 10);
                 if (isNaN(expireDaysVal) || expireDaysVal < 7 || expireDaysVal > 90) {
                   expireDaysVal = 30;
@@ -3807,7 +3849,7 @@ export const CouponPackSettingsPage: FC<{
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ enabled: enabled, design: design, anim_mode: animMode, expire_days: expireDaysVal })
+                    body: JSON.stringify({ enabled: enabled, design: design, anim_mode: animMode, size: size, expire_days: expireDaysVal })
                   });
                   var data = await resp.json();
                   if (resp.ok) {
@@ -3824,6 +3866,9 @@ export const CouponPackSettingsPage: FC<{
                       msgEl.textContent = '설정이 저장되었습니다.';
                     }
                     msgEl.style.display = 'block';
+                    /* 신규 등록 힌트 숨김 */
+                    var hint = document.getElementById('cpNewShopHint');
+                    if (hint) hint.style.display = 'none';
                   } else {
                     throw new Error(data.message || '저장 실패');
                   }

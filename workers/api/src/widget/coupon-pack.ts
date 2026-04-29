@@ -25,6 +25,7 @@ export interface CouponPackRenderOpts {
   anim_mode: boolean;
   total_amount?: number;   // 기본 55000
   items_count?: number;    // 기본 5
+  size?: 'lg' | 'md' | 'sm' | 'xs';  // 기본 'lg' (1.0)
 }
 
 /**
@@ -34,11 +35,21 @@ export interface CouponPackRenderOpts {
  * SVG mask, CSS keyframes, 인라인 스타일을 모두 포함한 self-contained HTML.
  * bg-cp- prefix로 외부 페이지 CSS와 충돌하지 않는다.
  */
+/** size → scale 비율 매핑 */
+const SIZE_SCALE: Record<string, number> = { lg: 1.0, md: 0.85, sm: 0.7, xs: 0.55 };
+
+/** size → 카드 치수 (300×140 기준) */
+function getSizeDimensions(size: string): { w: number; h: number; scale: number } {
+  const scale = SIZE_SCALE[size] ?? 1.0;
+  return { w: Math.round(300 * scale), h: Math.round(140 * scale), scale };
+}
+
 export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   const design = opts.design ?? 'brand';
   const animMode = opts.anim_mode !== false;
   const totalAmount = opts.total_amount ?? 55000;
   const itemsCount = opts.items_count ?? 5;
+  const size = opts.size ?? 'lg';
 
   // 금액 포맷: minimal은 ₩55,000, 나머지는 "5만원 상당" 형식 (시안 텍스트 통일)
   const fmtAmountMoney = '₩' + totalAmount.toLocaleString('ko-KR');
@@ -48,8 +59,15 @@ export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   const variant = animMode ? 'a' : 's';
 
   const cardHtml = buildCardHtml(design, variant, fmtAmountMoney, fmtAmountWon, itemsCount);
-  return cardHtml;
+
+  // lg이면 wrapper 없이 그대로, 나머지는 scale wrapper로 감싸기
+  if (size === 'lg') return cardHtml;
+  const { w, h, scale } = getSizeDimensions(size);
+  return `<div style="width:${w}px;height:${h}px;overflow:hidden;flex-shrink:0"><div style="transform:scale(${scale});transform-origin:top left;width:300px;height:140px">${cardHtml}</div></div>`;
 }
+
+/** 디자인 번호 매핑 */
+const DESIGN_NUM: Record<string, number> = { dark: 1, brand: 2, illust: 3, minimal: 4 };
 
 /** 디자인 × 변형별 카드 HTML */
 function buildCardHtml(
@@ -59,7 +77,9 @@ function buildCardHtml(
   fmtAmountWon: string,
   itemsCount: number,
 ): string {
-  const animClass = variant === 'a' ? ` bg-cp-${design}-anim` : '';
+  // CSS 셀렉터 .bg-cp-card-{N}-anim 과 일치하도록 숫자 기반으로 생성
+  const num = DESIGN_NUM[design];
+  const animClass = variant === 'a' ? ` bg-cp-card-${num}-anim` : '';
 
   switch (design) {
     case 'dark':   return buildDarkCard(variant, animClass, fmtAmountWon, itemsCount);

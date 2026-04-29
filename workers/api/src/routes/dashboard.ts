@@ -31,7 +31,7 @@ import { purgeWidgetConfigCache } from './widget';
 import { syncCouponConfig, DEFAULT_COUPON_CONFIG } from '../services/coupon';
 import type { CouponConfig } from '../services/coupon';
 import { registerCouponPack, unregisterCouponPack, withPackDefaults, retryFailedPackItems, updatePackExpireDays, resolveCouponPackState } from '../services/coupon-pack';
-import type { CouponPackConfig, CouponPackState, CouponPackDesign } from '../services/coupon-pack';
+import type { CouponPackConfig, CouponPackState, CouponPackDesign, CouponPackSize } from '../services/coupon-pack';
 import { autoReplyInquiry } from './ai';
 import { getGlobalAutoReplyEnabled } from './admin';
 
@@ -1341,6 +1341,7 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     design?: CouponPackDesign;
     anim_mode?: boolean;
     expire_days?: number;
+    size?: CouponPackSize;
   }>();
 
   if (typeof body.enabled !== 'boolean') {
@@ -1363,6 +1364,13 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
       return c.json({ error: 'invalid_expire_days', message: 'expire_days는 7~90 사이 정수여야 합니다.' }, 400);
     }
   }
+  const VALID_SIZES: CouponPackSize[] = ['lg', 'md', 'sm', 'xs'];
+  if (body.size !== undefined && !VALID_SIZES.includes(body.size)) {
+    return c.json(
+      { error: 'invalid_size', message: `size는 ${VALID_SIZES.join(' | ')} 중 하나여야 합니다.` },
+      400,
+    );
+  }
 
   // 기존 coupon_config 파싱 (pack 외 필드 보존)
   let existingConfig: CouponConfig & { pack?: CouponPackConfig } = {
@@ -1380,6 +1388,7 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
   const mergedDesign: CouponPackDesign    = body.design    ?? prevPack?.design    ?? 'brand';
   const mergedAnim:   boolean             = body.anim_mode ?? prevPack?.anim_mode ?? true;
   const mergedExpiry: number              = body.expire_days ?? prevPack?.expire_days ?? 30;
+  const mergedSize:   CouponPackSize      = body.size ?? prevPack?.size ?? 'lg';
   const expireDaysChanged =
     body.expire_days !== undefined && body.expire_days !== (prevPack?.expire_days ?? 30);
 
@@ -1396,6 +1405,7 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
         expire_days: allSuccess ? mergedExpiry : (prevPack?.expire_days ?? 30),
         design: mergedDesign,
         anim_mode: mergedAnim,
+        size: mergedSize,
       });
 
       const newConfig = { ...existingConfig, pack: newPack };
@@ -1436,6 +1446,7 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
       items: result.items,
       design: mergedDesign,
       anim_mode: mergedAnim,
+      size: mergedSize,
     });
 
     const newConfig = { ...existingConfig, pack: newPack };
@@ -1474,6 +1485,7 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
       expire_days: mergedExpiry,
       design: mergedDesign,
       anim_mode: mergedAnim,
+      size: mergedSize,
     });
 
     const newConfig = { ...existingConfig, pack: newPack };
