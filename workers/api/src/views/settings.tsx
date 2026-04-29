@@ -1719,7 +1719,7 @@ export const GeneralSettingsPage: FC<{
               <p style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;margin:0">미리보기</p>
               <div style="display:flex;align-items:center;gap:8px">
                 <div id="cpEnabledToggle" data-value={isActiveUi ? 'true' : 'false'}
-                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${isActiveUi ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${isActiveUi ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s`}>
                   <div style={`position:absolute;top:2px;${isActiveUi ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
                 </div>
                 <span id="cpEnabledLabel" style="font-size:12px;font-weight:600;color:#374151">{isActiveUi ? '활성화됨' : '비활성화됨'}</span>
@@ -1852,7 +1852,7 @@ export const GeneralSettingsPage: FC<{
               <div style="display:flex;align-items:center;gap:8px">
                 <span style="font-size:12px;color:#374151;font-weight:500">&#10024; 반짝 효과</span>
                 <div id="cpAnimToggle" data-value={cpAnimMode ? 'true' : 'false'}
-                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${cpAnimMode ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${cpAnimMode ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s`}>
                   <div style={`position:absolute;top:2px;${cpAnimMode ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
                 </div>
                 <span id="cpAnimLabel" style="font-size:12px;font-weight:600;color:#374151">{cpAnimMode ? 'ON' : 'OFF'}</span>
@@ -1866,7 +1866,7 @@ export const GeneralSettingsPage: FC<{
                 <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
                   {cpDesigns.map(d => (
                     <label id={`cp-design-${d.value}`}
-                      style={`display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:10px;cursor:pointer;border:2px solid ${cpDesign === d.value ? '#ec4899' : '#e5e7eb'};background:${cpDesign === d.value ? '#fdf2f8' : '#fff'};transition:all 0.15s;position:relative;flex:1;min-width:0${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                      style={`display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:10px;cursor:pointer;border:2px solid ${cpDesign === d.value ? '#ec4899' : '#e5e7eb'};background:${cpDesign === d.value ? '#fdf2f8' : '#fff'};transition:all 0.15s;position:relative;flex:1;min-width:0`}>
                       <input type="radio" name="cpDesign" value={d.value} checked={cpDesign === d.value} style="display:none" />
                       {cpDesign === d.value && (
                         <span style="position:absolute;top:4px;right:6px;font-size:11px;color:#ec4899">&#10003;</span>
@@ -1962,7 +1962,7 @@ export const GeneralSettingsPage: FC<{
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
                   {cpSizes.map(s => (
                     <label id={`cp-size-${s.value}`}
-                      style={`display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;cursor:pointer;border:2px solid ${cpSize === s.value ? '#ec4899' : '#e5e7eb'};background:${cpSize === s.value ? '#fdf2f8' : '#fff'};transition:all 0.15s${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+                      style={`display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;cursor:pointer;border:2px solid ${cpSize === s.value ? '#ec4899' : '#e5e7eb'};background:${cpSize === s.value ? '#fdf2f8' : '#fff'};transition:all 0.15s`}>
                       <input type="radio" name="cpSize" value={s.value} checked={cpSize === s.value} style="display:none" />
                       <span style={`font-size:12px;font-weight:700;color:${cpSize === s.value ? '#be185d' : '#374151'}`}>{s.label}</span>
                       <span style="font-size:10px;color:#94a3b8">{s.scale}</span>
@@ -1982,8 +1982,7 @@ export const GeneralSettingsPage: FC<{
                     min="7"
                     max="90"
                     value={cpExpireDays}
-                    disabled={!isPlus}
-                    style={`width:80px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center${!isPlus ? ';opacity:0.5' : ''}`}
+                    style="width:80px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center"
                   />
                   <span style="font-size:13px;color:#374151">일</span>
                 </div>
