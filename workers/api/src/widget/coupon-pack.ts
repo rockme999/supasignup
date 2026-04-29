@@ -25,7 +25,7 @@ export interface CouponPackRenderOpts {
   anim_mode: boolean;
   total_amount?: number;   // 기본 55000
   items_count?: number;    // 기본 5
-  size?: 'lg' | 'md' | 'sm' | 'xs';  // 기본 'lg' (1.0)
+  size?: 'lg' | 'md' | 'sm' | 'xs';  // 기본 'md' (0.85)
 }
 
 /**
@@ -49,7 +49,7 @@ export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   const animMode = opts.anim_mode !== false;
   const totalAmount = opts.total_amount ?? 55000;
   const itemsCount = opts.items_count ?? 5;
-  const size = opts.size ?? 'lg';
+  const size = opts.size ?? 'md';
 
   // 금액 포맷: minimal은 ₩55,000, 나머지는 "5만원 상당" 형식 (시안 텍스트 통일)
   const fmtAmountMoney = '₩' + totalAmount.toLocaleString('ko-KR');
@@ -58,44 +58,51 @@ export function buildCouponPackHtml(opts: CouponPackRenderOpts): string {
   // 각 디자인별로 mask id suffix를 고정 (정적: s, 반짝: a)
   const variant = animMode ? 'a' : 's';
 
-  const cardHtml = buildCardHtml(design, variant, fmtAmountMoney, fmtAmountWon, itemsCount);
-
-  // lg이면 wrapper 없이 그대로, 나머지는 scale wrapper로 감싸기
-  if (size === 'lg') return cardHtml;
-  const { w, h, scale } = getSizeDimensions(size);
-  return `<div style="width:${w}px;height:${h}px;overflow:hidden;flex-shrink:0"><div style="transform:scale(${scale});transform-origin:top left;width:300px;height:140px">${cardHtml}</div></div>`;
+  const { w, h } = getSizeDimensions(size);
+  return buildCardHtml(design, variant, fmtAmountMoney, fmtAmountWon, itemsCount, w, h);
 }
 
 /** 디자인 번호 매핑 */
 const DESIGN_NUM: Record<string, number> = { dark: 1, brand: 2, illust: 3, minimal: 4 };
 
-/** 디자인 × 변형별 카드 HTML */
+/**
+ * 디자인 × 변형별 카드 HTML
+ *
+ * 방안 A: SVG width/height를 직접 줄이고 viewBox는 300×140 유지.
+ * SVG는 viewBox 비율을 유지하며 자동 스케일됨 → mask/gradient가 viewBox 좌표계 기준으로
+ * 함께 스케일되어 깨짐 없음. CSS transform 사용 안 함.
+ *
+ * mask id에 size suffix(w) 포함 → 동일 페이지에 여러 size 카드가 동시 렌더되어도 충돌 없음.
+ */
 function buildCardHtml(
   design: 'dark' | 'brand' | 'illust' | 'minimal',
   variant: 's' | 'a',
   fmtAmountMoney: string,
   fmtAmountWon: string,
   itemsCount: number,
+  w: number,
+  h: number,
 ): string {
   // CSS 셀렉터 .bg-cp-card-{N}-anim 과 일치하도록 숫자 기반으로 생성
   const num = DESIGN_NUM[design];
   const animClass = variant === 'a' ? ` bg-cp-card-${num}-anim` : '';
 
   switch (design) {
-    case 'dark':   return buildDarkCard(variant, animClass, fmtAmountWon, itemsCount);
-    case 'brand':  return buildBrandCard(variant, animClass, fmtAmountWon, itemsCount);
-    case 'illust': return buildIllustCard(variant, animClass, fmtAmountWon, itemsCount);
-    case 'minimal':return buildMinimalCard(variant, animClass, fmtAmountMoney, itemsCount);
+    case 'dark':   return buildDarkCard(variant, animClass, fmtAmountWon, itemsCount, w, h);
+    case 'brand':  return buildBrandCard(variant, animClass, fmtAmountWon, itemsCount, w, h);
+    case 'illust': return buildIllustCard(variant, animClass, fmtAmountWon, itemsCount, w, h);
+    case 'minimal':return buildMinimalCard(variant, animClass, fmtAmountMoney, itemsCount, w, h);
   }
 }
 
 // ────────────────────────────────────────────────────────────────
 // #1 다크 — 검정 배경 + 금색 타이포
 // ────────────────────────────────────────────────────────────────
-function buildDarkCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number): string {
-  const maskId = `bg-cp-1${variant}`;
-  return `<div class="bg-cp-card bg-cp-card-1${animClass}" style="position:relative;width:300px;height:140px;flex-shrink:0">
-  <svg class="bg-cp-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+function buildDarkCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number): string {
+  // mask id에 width suffix 추가 → 동일 페이지 다중 size 카드 간 id 충돌 방지
+  const maskId = `bg-cp-1${variant}-${w}`;
+  return `<div class="bg-cp-card bg-cp-card-1${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;display:block">
     <defs>
       <mask id="${maskId}">
         <rect width="300" height="140" fill="white"/>
@@ -117,9 +124,9 @@ function buildDarkCard(variant: string, animClass: string, fmtAmount: string, it
 // ────────────────────────────────────────────────────────────────
 // #2 번개가입 브랜드 — 핑크 그라디언트
 // ────────────────────────────────────────────────────────────────
-function buildBrandCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number): string {
-  const maskId = `bg-cp-2${variant}`;
-  const gradId = `bg-cp-pg-${variant}`;
+function buildBrandCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number): string {
+  const maskId = `bg-cp-2${variant}-${w}`;
+  const gradId = `bg-cp-pg-${variant}-${w}`;
 
   // 정적 vs 반짝: gradStop 내 SMIL animate 유무
   const gradStops = variant === 'a'
@@ -143,8 +150,8 @@ function buildBrandCard(variant: string, animClass: string, fmtAmount: string, i
        <span style="position:absolute;font-size:9px;color:rgba(255,255,255,0.9);animation:bg-cp-starPop 2s ease-in-out infinite;pointer-events:none;z-index:5;bottom:11px;left:42px;animation-delay:1.65s">✦</span>`
     : '';
 
-  return `<div class="bg-cp-card bg-cp-card-2${animClass}" style="position:relative;width:300px;height:140px;flex-shrink:0">
-  <svg class="bg-cp-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+  return `<div class="bg-cp-card bg-cp-card-2${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;display:block">
     <defs>
       <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
         ${gradStops}
@@ -177,12 +184,12 @@ function buildBrandCard(variant: string, animClass: string, fmtAmount: string, i
 // ────────────────────────────────────────────────────────────────
 // #3 밝은 일러스트 — 흰 배경 + 민트/핑크 액센트
 // ────────────────────────────────────────────────────────────────
-function buildIllustCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number): string {
-  const maskId = `bg-cp-3${variant}`;
+function buildIllustCard(variant: string, animClass: string, fmtAmount: string, itemsCount: number, w: number, h: number): string {
+  const maskId = `bg-cp-3${variant}-${w}`;
   // 반짝: 색띠 background-size/animation은 CSS keyframe에서 처리
   // (인라인 style에서는 animation 이름만 참조)
-  return `<div class="bg-cp-card bg-cp-card-3${animClass}" style="position:relative;width:300px;height:140px;flex-shrink:0">
-  <svg class="bg-cp-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+  return `<div class="bg-cp-card bg-cp-card-3${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;display:block">
     <defs>
       <mask id="${maskId}">
         <rect width="300" height="140" fill="white"/>
@@ -226,10 +233,10 @@ function buildIllustCard(variant: string, animClass: string, fmtAmount: string, 
 // ────────────────────────────────────────────────────────────────
 // #4 미니멀 — 회색 배경 + 검정 아웃라인 + 큰 타이포
 // ────────────────────────────────────────────────────────────────
-function buildMinimalCard(variant: string, animClass: string, fmtAmount: string, _itemsCount: number): string {
-  const maskId = `bg-cp-4${variant}`;
-  return `<div class="bg-cp-card bg-cp-card-4${animClass}" style="position:relative;width:300px;height:140px;flex-shrink:0">
-  <svg class="bg-cp-svg-bg" width="300" height="140" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" overflow="visible" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+function buildMinimalCard(variant: string, animClass: string, fmtAmount: string, _itemsCount: number, w: number, h: number): string {
+  const maskId = `bg-cp-4${variant}-${w}`;
+  return `<div class="bg-cp-card bg-cp-card-4${animClass}" style="position:relative;width:${w}px;height:${h}px;flex-shrink:0">
+  <svg class="bg-cp-svg-bg" width="${w}" height="${h}" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" overflow="visible" style="position:absolute;inset:0;display:block">
     <defs>
       <mask id="${maskId}">
         <rect width="300" height="140" fill="white"/>

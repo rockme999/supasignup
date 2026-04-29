@@ -83,7 +83,7 @@ export function withPackDefaults(pack: Partial<CouponPackConfig>): CouponPackCon
     items: pack.items ?? [],
     design: pack.design ?? 'brand',
     anim_mode: pack.anim_mode !== undefined ? pack.anim_mode : true,
-    size: pack.size ?? 'lg',
+    size: pack.size ?? 'md',
     ...(pack.enabled !== undefined ? { enabled: pack.enabled } : {}),
   };
 }

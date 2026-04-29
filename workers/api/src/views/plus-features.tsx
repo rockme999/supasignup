@@ -3374,7 +3374,7 @@ export const CouponPackSettingsPage: FC<{
   const isActiveUi  = state !== 'unregistered'; // 'active' | 'paused' → ON, 'unregistered' → ON (신규)
   const design      = (pc.design ?? 'brand') as 'dark' | 'brand' | 'illust' | 'minimal';
   const animMode    = pc.anim_mode !== false;
-  const size        = (pc.size ?? 'lg') as 'lg' | 'md' | 'sm' | 'xs';
+  const size        = (pc.size ?? 'md') as 'lg' | 'md' | 'sm' | 'xs';
   const expireDays  = pc.expire_days ?? 30;
   const failures    = pc.failures ?? [];
   const isNewShop   = state === 'unregistered' && (pc.items ?? []).length === 0;
@@ -3394,10 +3394,10 @@ export const CouponPackSettingsPage: FC<{
   ];
 
   const sizes: Array<{ value: 'lg' | 'md' | 'sm' | 'xs'; label: string; scale: string }> = [
-    { value: 'lg', label: '크게', scale: '100%' },
+    { value: 'lg', label: '큼', scale: '100%' },
     { value: 'md', label: '보통', scale: '85%' },
-    { value: 'sm', label: '작게', scale: '70%' },
-    { value: 'xs', label: '매우 작게', scale: '55%' },
+    { value: 'sm', label: '작음', scale: '70%' },
+    { value: 'xs', label: '매우 작음', scale: '55%' },
   ];
 
   return (
@@ -3470,10 +3470,20 @@ export const CouponPackSettingsPage: FC<{
             )}
           </div>
 
-          {/* ── 섹션 2: 쿠폰팩 구성 ── */}
+          {/* ── 섹션 2: 쿠폰팩 구성 (accordion) ── */}
           <div class="card" style="margin-bottom:16px">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:4px">쿠폰팩 구성</h2>
-            <p style="font-size:12px;color:#64748b;margin-bottom:16px">내 가게에서 신규 회원에게 발급될 5장의 쿠폰 구성입니다.</p>
+            <button
+              id="cpPackAccordionBtn"
+              aria-expanded="false"
+              style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin:0"
+            >
+              <div>
+                <h2 style="font-size:14px;font-weight:700;margin-bottom:2px;text-align:left">쿠폰팩 구성</h2>
+                <p style="font-size:12px;color:#64748b;margin:0;text-align:left">내 가게에서 신규 회원에게 발급될 5장의 쿠폰 구성입니다.</p>
+              </div>
+              <span id="cpPackAccordionArrow" style="font-size:14px;color:#94a3b8;transition:transform 0.2s;flex-shrink:0;margin-left:12px">&#9654;</span>
+            </button>
+            <div id="cpPackAccordionBody" style="display:none;margin-top:16px">
             <div style="overflow-x:auto">
               <table style="width:100%;border-collapse:collapse;font-size:13px">
                 <thead>
@@ -3537,28 +3547,41 @@ export const CouponPackSettingsPage: FC<{
                 </tfoot>
               </table>
             </div>
+            </div>{/* /cpPackAccordionBody */}
           </div>
 
           {/* ── 섹션 3: 옵션 카드 ── */}
           <div class="card" style="margin-bottom:16px">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:20px">옵션</h2>
+            {/* 옵션 헤더 + 반짝 토글 (작업 3: 헤더 우측 상단) */}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <h2 style="font-size:14px;font-weight:700;margin:0">옵션</h2>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:12px;color:#374151;font-weight:500">✨ 반짝 효과</span>
+                <div id="cpAnimToggle" data-value={animMode ? 'true' : 'false'}
+                  style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${animMode ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                  <div style={`position:absolute;top:2px;${animMode ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                </div>
+                <span id="cpAnimLabel" style="font-size:12px;font-weight:600;color:#374151">{animMode ? 'ON' : 'OFF'}</span>
+              </div>
+            </div>
             <div style="display:flex;flex-direction:column;gap:24px">
 
               {/* a) 디자인 선택 */}
               <div>
                 <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">디자인</label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+                {/* 작업 2: 4종 1줄 가로 배치. 각 카드는 SVG 썸네일(200×93)을 viewBox로 축소 렌더 */}
+                <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
                   {designs.map(d => (
                     <label id={`cp-design-${d.value}`}
-                      style={`display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border-radius:10px;cursor:pointer;border:2px solid ${design === d.value ? '#ec4899' : '#e5e7eb'};background:${design === d.value ? '#fdf2f8' : '#fff'};transition:all 0.15s;position:relative`}>
+                      style={`display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:10px;cursor:pointer;border:2px solid ${design === d.value ? '#ec4899' : '#e5e7eb'};background:${design === d.value ? '#fdf2f8' : '#fff'};transition:all 0.15s;position:relative;flex:1;min-width:0`}>
                       <input type="radio" name="cpDesign" value={d.value} checked={design === d.value} style="display:none" />
                       {design === d.value && (
-                        <span style="position:absolute;top:6px;right:8px;font-size:13px;color:#ec4899">✓</span>
+                        <span style="position:absolute;top:4px;right:6px;font-size:11px;color:#ec4899">✓</span>
                       )}
-                      {/* 썸네일 미리보기 (200×90 축소) */}
-                      <div class={`cp-thumb cp-thumb-${d.value}`} style="width:200px;height:90px;border-radius:7px;overflow:hidden;position:relative;flex-shrink:0">
+                      {/* 썸네일 미리보기 — 1줄 배치에 맞게 150×70으로 축소 */}
+                      <div class={`cp-thumb cp-thumb-${d.value}`} style="width:150px;height:70px;border-radius:6px;overflow:hidden;position:relative;flex-shrink:0">
                         {d.value === 'dark' && (
-                          <svg width="200" height="90" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
                             <defs>
                               <mask id="tm-dark">
                                 <rect width="300" height="140" fill="white"/>
@@ -3567,14 +3590,13 @@ export const CouponPackSettingsPage: FC<{
                               </mask>
                             </defs>
                             <rect width="300" height="140" rx="12" fill="#0f0f0f" mask="url(#tm-dark)"/>
-                            <line x1="0" y1="2" x2="300" y2="2" stroke="#c9a84c" stroke-width="2" opacity="0.7"/>
                             <text x="150" y="60" text-anchor="middle" fill="#f0d080" font-size="28" font-weight="800">5만원 상당</text>
                             <text x="150" y="82" text-anchor="middle" fill="#e5e7eb" font-size="12" font-weight="600">신규 회원 웰컴 쿠폰</text>
                             <text x="150" y="100" text-anchor="middle" fill="#9ca3af" font-size="9">가입 즉시 사용 가능</text>
                           </svg>
                         )}
                         {d.value === 'brand' && (
-                          <svg width="200" height="90" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
                             <defs>
                               <linearGradient id="tm-brand-g" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#db2777"/>
@@ -3595,24 +3617,22 @@ export const CouponPackSettingsPage: FC<{
                           </svg>
                         )}
                         {d.value === 'illust' && (
-                          <svg width="200" height="90" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
                             <defs>
                               <mask id="tm-illust">
                                 <rect width="300" height="140" fill="white"/>
                                 <circle cx="0" cy="70" r="13" fill="black"/>
                                 <circle cx="300" cy="70" r="13" fill="black"/>
                               </mask>
-                            </defs>
-                            <rect width="300" height="140" rx="12" fill="#ffffff" mask="url(#tm-illust)"/>
-                            <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
-                            <rect x="0" y="0" width="300" height="4" fill="url(#tm-strip)"/>
-                            <defs>
                               <linearGradient id="tm-strip" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stop-color="#34d399"/>
                                 <stop offset="50%" stop-color="#a78bfa"/>
                                 <stop offset="100%" stop-color="#f472b6"/>
                               </linearGradient>
                             </defs>
+                            <rect width="300" height="140" rx="12" fill="#ffffff" mask="url(#tm-illust)"/>
+                            <path d="M 12 0 H 288 A 12 12 0 0 1 300 12 V 57 A 13 13 0 0 0 300 83 V 128 A 12 12 0 0 1 288 140 H 12 A 12 12 0 0 1 0 128 V 83 A 13 13 0 0 0 0 57 V 12 A 12 12 0 0 1 12 0 Z" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
+                            <rect x="0" y="0" width="300" height="4" fill="url(#tm-strip)"/>
                             <text x="140" y="58" text-anchor="middle" fill="#059669" font-size="28" font-weight="800">5만원 상당</text>
                             <text x="140" y="80" text-anchor="middle" fill="#374151" font-size="12" font-weight="600">신규 회원 웰컴 쿠폰</text>
                             <text x="140" y="98" text-anchor="middle" fill="#6b7280" font-size="9">가입 즉시 사용 가능해요!</text>
@@ -3622,7 +3642,7 @@ export const CouponPackSettingsPage: FC<{
                           </svg>
                         )}
                         {d.value === 'minimal' && (
-                          <svg width="200" height="90" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
+                          <svg width="150" height="70" viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%">
                             <defs>
                               <mask id="tm-minimal">
                                 <rect width="300" height="140" fill="white"/>
@@ -3644,22 +3664,7 @@ export const CouponPackSettingsPage: FC<{
                 </div>
               </div>
 
-              {/* b) 반짝 효과 토글 */}
-              <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">
-                  반짝 효과
-                </label>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <div id="cpAnimToggle" data-value={animMode ? 'true' : 'false'}
-                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${animMode ? 'linear-gradient(135deg,#db2777 0%,#ec4899 100%)' : '#d1d5db'};transition:background 0.2s`}>
-                    <div style={`position:absolute;top:2px;${animMode ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
-                  </div>
-                  <span id="cpAnimLabel" style="font-size:13px;color:#374151">{animMode ? 'ON' : 'OFF'}</span>
-                </div>
-                <p style="font-size:11px;color:#94a3b8;margin-top:6px">토글 OFF 시 정적 카드로 표시됩니다</p>
-              </div>
-
-              {/* c) 크기 조절 */}
+              {/* b) 크기 조절 */}
               <div>
                 <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">카드 크기</label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -3731,6 +3736,28 @@ export const CouponPackSettingsPage: FC<{
           <script dangerouslySetInnerHTML={{__html: `
             (function() {
               var shopId = '${shop!.shop_id}';
+
+              /* ── 쿠폰팩 구성 accordion ── */
+              (function() {
+                var btn = document.getElementById('cpPackAccordionBtn');
+                var body = document.getElementById('cpPackAccordionBody');
+                var arrow = document.getElementById('cpPackAccordionArrow');
+                if (!btn || !body || !arrow) return;
+                btn.addEventListener('click', function() {
+                  var isOpen = btn.getAttribute('aria-expanded') === 'true';
+                  if (isOpen) {
+                    btn.setAttribute('aria-expanded', 'false');
+                    body.style.display = 'none';
+                    arrow.style.transform = '';
+                    arrow.textContent = '\\u25BA'; // ▶
+                  } else {
+                    btn.setAttribute('aria-expanded', 'true');
+                    body.style.display = 'block';
+                    arrow.style.transform = 'rotate(90deg)';
+                    arrow.textContent = '\\u25BC'; // ▼
+                  }
+                });
+              })();
 
               /* ── 공통 토글 헬퍼 ── */
               function makeToggle(id, color, onChange) {
