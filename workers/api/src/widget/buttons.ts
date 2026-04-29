@@ -114,17 +114,17 @@ export const WIDGET_JS = `(function() {
     /* ── Plus 프리셋: 글래스모피즘 ── */
     '.bg-preset-glass{background:rgba(255,255,255,0.1)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border:1px solid rgba(255,255,255,0.22)!important;color:#fff!important;box-shadow:0 2px 12px rgba(0,0,0,0.12)!important}',
     '.bg-preset-glass:hover{background:rgba(255,255,255,0.18)!important;transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(0,0,0,0.18)!important;opacity:1!important}',
-    '.bg-preset-glass .bg-btn-icon{background:rgba(255,255,255,0.25);border-radius:50%}',
+    '.bg-preset-glass .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 네온 글로우 ── */
     '.bg-preset-neon{background:transparent!important;border:1px solid rgba(99,102,241,0.55)!important;color:#a5b4fc!important;box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)!important;text-shadow:0 0 8px rgba(165,180,252,0.5)!important}',
     '.bg-preset-neon:hover{border-color:rgba(99,102,241,0.9)!important;box-shadow:0 0 14px rgba(99,102,241,0.6),0 0 28px rgba(99,102,241,0.3),inset 0 0 14px rgba(99,102,241,0.12)!important;color:#e0e7ff!important;text-shadow:0 0 12px rgba(165,180,252,0.8)!important}',
-    '.bg-preset-neon .bg-btn-icon{background:rgba(99,102,241,0.2);border-radius:50%;border:1px solid rgba(99,102,241,0.5);box-shadow:0 0 6px rgba(99,102,241,0.4)}',
+    '.bg-preset-neon .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 리퀴드 글래스 ── */
     '.bg-preset-liquid{position:relative!important;background:rgba(255,255,255,0.08)!important;backdrop-filter:blur(20px) saturate(180%)!important;-webkit-backdrop-filter:blur(20px) saturate(180%)!important;border:1px solid rgba(255,255,255,0.18)!important;color:rgba(255,255,255,0.92)!important;box-shadow:inset 0 0 20px rgba(255,255,255,0.07),0 8px 32px rgba(31,38,135,0.18),0 2px 6px rgba(0,0,0,0.18)!important;overflow:hidden!important}',
     '.bg-preset-liquid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--bg-mx,50%) var(--bg-my,30%),rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.06) 45%,transparent 70%);pointer-events:none}',
     '.bg-preset-liquid::after{content:"";position:absolute;top:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none}',
     '.bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}',
-    '.bg-preset-liquid .bg-btn-icon{background:rgba(255,255,255,0.18);border-radius:50%;border:1px solid rgba(255,255,255,0.25)}',
+    '.bg-preset-liquid .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 그라디언트 플로우 ── */
     '.bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
     '.bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}',
