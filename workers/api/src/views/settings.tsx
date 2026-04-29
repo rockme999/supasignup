@@ -1489,7 +1489,8 @@ export const GeneralSettingsPage: FC<{
   const isPlus = shop != null && shop.plan !== 'free';
   const pc = packConfig || {};
   const cpState       = pc.state ?? 'unregistered';
-  const isActiveUi    = cpState !== 'unregistered';
+  // Free 플랜은 항상 비활성화로 표시 (운영자가 Plus 결제 후 활성화 가능)
+  const isActiveUi    = isPlus && cpState !== 'unregistered';
   const cpDesign      = (pc.design ?? 'brand') as 'dark' | 'brand' | 'illust' | 'minimal';
   const cpAnimMode    = pc.anim_mode !== false;
   const cpSize        = (pc.size ?? 'md') as 'lg' | 'md' | 'sm' | 'xs';
@@ -1726,7 +1727,7 @@ export const GeneralSettingsPage: FC<{
             </div>
 
             <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
-            <div style={`display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:24px${!isPlus ? ';filter:blur(2px);pointer-events:none' : ''}`}>
+            <div style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
               {(['dark', 'brand', 'illust', 'minimal'] as const).map(d =>
                 (['static', 'anim'] as const).map(v =>
                   (['lg', 'md', 'sm', 'xs'] as const).map(s => {
