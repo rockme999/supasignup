@@ -145,14 +145,14 @@ export const WIDGET_JS = `(function() {
     /* ── 모바일 자동 미세 애니메이션 keyframes ── */
     '@keyframes bg-mobile-glass{0%,100%{backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}50%{backdrop-filter:blur(16px) saturate(165%);-webkit-backdrop-filter:blur(16px) saturate(165%)}}',
     '@keyframes bg-mobile-neon{0%,100%{box-shadow:0 0 6px rgba(99,102,241,0.25),inset 0 0 10px rgba(99,102,241,0.06)}50%{box-shadow:0 0 14px rgba(99,102,241,0.5),inset 0 0 14px rgba(99,102,241,0.10)}}',
-    /* bg-mobile-liquid: opacity 보간은 ::before가 버튼 전체를 반투명하게 만드는 부작용 있음 → scale 보간으로 교체 */
-    '@keyframes bg-mobile-liquid{0%,100%{transform:scaleX(1)}50%{transform:scaleX(1.04)}}',
+    /* bg-mobile-liquid: ::before(radial-gradient 광택)를 좌→우 translateX로 이동 — 광택이 카드 위를 흐르는 효과, opacity 변화로 가시성 보강 */
+    '@keyframes bg-mobile-liquid{0%,100%{transform:translateX(-15%);opacity:0.55}50%{transform:translateX(15%);opacity:1}}',
     '@keyframes bg-mobile-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}',
     '@keyframes bg-mobile-soft{0%,100%{box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)}50%{box-shadow:0 2px 4px rgba(0,0,0,0.05),0 8px 20px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.05)}}',
     /* ── 모바일 자동 미세 애니메이션 적용 (hover 없는 환경 + 모션 허용) — 공백 추가로 iOS Safari/Android 호환 ── */
     '@media (hover: none) and (prefers-reduced-motion: no-preference){.bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
     /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) ── */
-    '.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block}',
+    '.bg-dark-wrap{padding:14px 16px;border-radius:12px;display:inline-block;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto}',
     '.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)}',
     '.bg-dark-wrap-neon-glow{background:#0a0a14}',
     '.bg-dark-wrap-liquid-glass{background:linear-gradient(160deg,#0f2027,#203a43,#2c5364)}'
