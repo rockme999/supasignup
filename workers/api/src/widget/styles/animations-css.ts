@@ -16,7 +16,10 @@ export function getAnimationsCss(): string[] {
     '@keyframes bg-mobile-liquid{0%,100%{transform:translateX(-15%);opacity:0.55}50%{transform:translateX(15%);opacity:1}}',
     '@keyframes bg-mobile-gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}',
     '@keyframes bg-mobile-soft{0%,100%{box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)}50%{box-shadow:0 2px 4px rgba(0,0,0,0.05),0 8px 20px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.05)}}',
+    /* bg-mobile-pulse: 모바일 전용 호흡감 — pulseRing(box-shadow 링)에 더해 미세 scale + 보더 톤 변화. hover 색감(#6366f1)보다 옅은 #c7d2fe로 "살아있음" 신호만. */
+    '@keyframes bg-mobile-pulse{0%,100%{transform:scale(1);border-color:#e5e7eb}50%{transform:scale(1.012);border-color:#c7d2fe}}',
     /* ── 모바일 자동 미세 애니메이션 적용 (hover 없는 환경 + 모션 허용) — 공백 추가로 iOS Safari/Android 호환 ── */
-    '@media (hover: none) and (prefers-reduced-motion: no-preference){.bg-widget .bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-widget .bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-widget .bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-widget .bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-widget .bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}}',
+    /* pulse는 기본 룰에 'animation:bg-pulseRing ... !important' 가 박혀있어, 모바일에서 두 번째 애니메이션을 합치려면 !important + 셔터로 덮어써야 함. */
+    '@media (hover: none) and (prefers-reduced-motion: no-preference){.bg-widget .bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}.bg-widget .bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}.bg-widget .bg-preset-liquid::before{animation:bg-mobile-liquid 7s ease-in-out infinite}.bg-widget .bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}.bg-widget .bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}.bg-widget .bg-preset-pulse{animation:bg-pulseRing 2s ease-in-out infinite,bg-mobile-pulse 6s ease-in-out infinite!important}}',
   ];
 }
