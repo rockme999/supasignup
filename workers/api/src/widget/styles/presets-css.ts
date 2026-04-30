@@ -23,21 +23,31 @@ export function getPresetsCss(): string[] {
     '.bg-widget .bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}',
     '.bg-widget .bg-preset-liquid .bg-btn-icon{background:transparent}',
     /* ── Plus 프리셋: 그라디언트 플로우 ── */
-    '.bg-widget .bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
+    /* background-position만 !important 제거 — keyframe/hover에서 실제로 변경되어야 그라디언트 흐름 효과가 동작 (외부 CSS와의 background-position 충돌 가능성 매우 낮음) */
+    '.bg-widget .bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}',
     '.bg-widget .bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}',
     '.bg-widget .bg-preset-gradient .bg-btn-icon{background:transparent}',
+    /* 모바일 순차 호버 시연 공통 delay 클래스 (glass/neon/liquid/gradient/soft 5종 공유)
+       — 페이지 로드 후 8초 대기, 그 다음부터 8초 간격으로 반복. 각 버튼 인덱스별 0.3s 추가 딜레이 */
+    '.bg-widget .bg-mobile-anim-d1{animation-delay:8s!important}',
+    '.bg-widget .bg-mobile-anim-d2{animation-delay:8.3s!important}',
+    '.bg-widget .bg-mobile-anim-d3{animation-delay:8.6s!important}',
+    '.bg-widget .bg-mobile-anim-d4{animation-delay:8.9s!important}',
+    '.bg-widget .bg-mobile-anim-d5{animation-delay:9.2s!important}',
+    '.bg-widget .bg-mobile-anim-d6{animation-delay:9.5s!important}',
     /* ── Plus 프리셋: 소프트 섀도우 ── */
     '.bg-widget .bg-preset-soft{background:#ffffff!important;background-image:none!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}',
     '.bg-widget .bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}',
-    '.bg-widget .bg-preset-soft .bg-btn-icon{background:#f3f4f6;border-radius:50%}',
     /* ── Plus 프리셋: 펄스 애니메이션 ── */
     '.bg-widget .bg-preset-pulse{background:#fff!important;background-image:none!important;border:1px solid #e5e7eb!important;color:#374151!important;box-shadow:0 1px 3px rgba(0,0,0,0.06)!important;animation:bg-pulseRing 2s ease-in-out infinite!important}',
     '.bg-widget .bg-preset-pulse:hover{animation:none!important;transform:scale(1.02)!important;box-shadow:0 0 0 3px rgba(99,102,241,0.25),0 4px 16px rgba(99,102,241,0.2)!important;border-color:#6366f1!important;color:#4f46e5!important}',
-    '.bg-widget .bg-preset-pulse .bg-btn-icon{background:#ede9fe;border-radius:50%}',
-    '.bg-widget .bg-preset-pulse-d1{animation-delay:0s!important}',
-    '.bg-widget .bg-preset-pulse-d2{animation-delay:0.4s!important}',
-    '.bg-widget .bg-preset-pulse-d3{animation-delay:0.8s!important}',
-    '.bg-widget .bg-preset-pulse-d4{animation-delay:1.2s!important}',
+    /* pulse 모바일 순차 호버 시연 — 두 animation(bg-pulseRing 즉시, bg-mobile-pulse 8s+ 후)에 다른 delay 적용 */
+    '.bg-widget .bg-mobile-pulse-d1{animation-delay:0s,8s!important}',
+    '.bg-widget .bg-mobile-pulse-d2{animation-delay:0s,8.3s!important}',
+    '.bg-widget .bg-mobile-pulse-d3{animation-delay:0s,8.6s!important}',
+    '.bg-widget .bg-mobile-pulse-d4{animation-delay:0s,8.9s!important}',
+    '.bg-widget .bg-mobile-pulse-d5{animation-delay:0s,9.2s!important}',
+    '.bg-widget .bg-mobile-pulse-d6{animation-delay:0s,9.5s!important}',
     /* ── 자동 다크 wrapper (glass/neon/liquid 밝은 배경 보호) — 클래스 단독 룰: 컨테이너에 .bg-dark-wrap-* 만 있으면 항상 적용 ── */
     '.bg-dark-wrap{padding:14px 16px;border-radius:12px!important;display:inline-block!important;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto}',
     '.bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)!important}',

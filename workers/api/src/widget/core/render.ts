@@ -316,11 +316,16 @@ export function getRenderJs(): string {
     if (isPlusPreset) {
       var plusClass = PLUS_PRESET_CLASSES[preset];
       btn.className = btn.className + ' ' + plusClass;
-      // pulse 순차 딜레이: 컨테이너 내 n번째 버튼 계산
+      // 순차 딜레이: 컨테이너 내 n번째 버튼 계산. liquid 제외한 5종에 적용 (호버 시연 패턴, 8s 후 0.3s 간격 trigger)
       if (preset === 'pulse') {
         var pulseIdx = this.container ? this.container.querySelectorAll('.bg-btn').length : 0;
-        var delayClasses = ['bg-preset-pulse-d1', 'bg-preset-pulse-d2', 'bg-preset-pulse-d3', 'bg-preset-pulse-d4'];
-        btn.className = btn.className + ' ' + (delayClasses[pulseIdx] || delayClasses[0]);
+        var pulseDelayClasses = ['bg-mobile-pulse-d1', 'bg-mobile-pulse-d2', 'bg-mobile-pulse-d3', 'bg-mobile-pulse-d4', 'bg-mobile-pulse-d5', 'bg-mobile-pulse-d6'];
+        btn.className = btn.className + ' ' + (pulseDelayClasses[pulseIdx] || pulseDelayClasses[0]);
+      } else if (preset !== 'liquid-glass') {
+        // glass / neon / gradient / soft 4종 공유 — 공통 delay 클래스
+        var animIdx = this.container ? this.container.querySelectorAll('.bg-btn').length : 0;
+        var animDelayClasses = ['bg-mobile-anim-d1', 'bg-mobile-anim-d2', 'bg-mobile-anim-d3', 'bg-mobile-anim-d4', 'bg-mobile-anim-d5', 'bg-mobile-anim-d6'];
+        btn.className = btn.className + ' ' + (animDelayClasses[animIdx] || animDelayClasses[0]);
       }
     }
 
