@@ -42,6 +42,12 @@
 --                향후 동일 사고 방지를 위해 deploy.sh에 마이그레이션 추적 자동 검증 로직 추가 예정.
 --   2026-04-27: shops.exit_intent_config 추가 (0028) — Exit-intent 쿠폰 게이트 설정 JSON
 --                { enabled, frequency_cap_hours, scroll_depth_threshold, coupon_type, headline, body }
+--   2026-04-30: shops.exit_intent_config DEPRECATED — 이탈 감지 팝업(popup_config)으로 통합.
+--                코드는 더 이상 이 컬럼을 read/write 하지 않음. 컬럼 자체는 데이터 보존(롤백 옵션) 목적으로
+--                유지하며 차후 마이그레이션에서 DROP 예정. /dashboard/settings/exit-intent 라우트는
+--                /dashboard/settings/popup 으로 301 redirect 됨. 위젯/대시보드/widget config API에서
+--                관련 코드 모두 제거. (단, widget.exit_intent_* funnel 이벤트는 캐싱된 구 위젯 스크립트
+--                호환성을 위해 VALID_EVENT_TYPES에 잔존 — 신규 발생은 0.)
 --   2026-04-27: ai_briefings.headline 추가 (0029) — 대시보드 홈 카드용 한 줄 요약 (AI 생성)
 --   2026-04-27: shops.live_counter_config 추가 (0030) — 라이브 가입자 카운터 설정 JSON
 --                { enabled, position, show_toast, show_counter }
@@ -111,7 +117,7 @@ CREATE TABLE IF NOT EXISTS shops (
   popup_config           TEXT,                                    -- Plus: 이탈 팝업 설정 JSON
   escalation_config      TEXT,                                    -- Plus: 에스컬레이션 설정 JSON
   ai_suggested_copy      TEXT,                                    -- Plus: AI 추천 카피 JSON
-  exit_intent_config     TEXT,                                    -- Plus: Exit-intent 쿠폰 게이트 설정 JSON
+  exit_intent_config     TEXT,                                    -- DEPRECATED 2026-04-30 — 이탈 감지 팝업(popup_config)으로 통합. 코드 미사용. 차후 DROP 예정.
   live_counter_config    TEXT,                                    -- Plus: 라이브 가입자 카운터 설정 JSON
   sso_verified_at        TEXT,                                    -- SSO 설정 확인 마지막 성공 시각 (ISO 8601)
   sso_verified_slots     TEXT,                                    -- SSO 슬롯 상태 JSON 배열 [{type,status}]

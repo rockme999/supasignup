@@ -17,7 +17,7 @@
 
 import { Hono } from 'hono';
 import type { Env, ProviderName, WidgetStyle } from '@supasignup/bg-core';
-import { generateId, DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
+import { generateId, DEFAULT_WIDGET_STYLE, encrypt } from '@supasignup/bg-core';
 import { hashPassword, verifyPassword } from '../services/password';
 import { createToken } from '../services/jwt';
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth';
@@ -381,7 +381,7 @@ dashboard.put('/shops/:id/popup', async (c) => {
     title: body.title || '잠깐만요!',
     body: body.body || '지금 가입하면 특별 혜택을 드려요!',
     ctaText: body.ctaText || '혜택 받고 가입하기',
-    preset: Math.min(Math.max(body.preset ?? 0, 0), 7),
+    preset: Math.min(Math.max(body.preset ?? 6, 0), 7),
     borderRadius: Math.min(Math.max(body.borderRadius ?? 16, 8), 24),
     opacity: Math.min(Math.max(body.opacity ?? 100, 10), 100),
     icon: body.icon ?? '🎁',
@@ -389,8 +389,8 @@ dashboard.put('/shops/:id/popup', async (c) => {
     // frequency_cap_hours로 통합 (cooldownHours 하위 호환 유지)
     frequency_cap_hours: Math.min(Math.max(body.frequency_cap_hours ?? body.cooldownHours ?? existing.frequency_cap_hours ?? existing.cooldownHours ?? 24, 1), 168),
     cooldownHours: Math.min(Math.max(body.cooldownHours ?? body.frequency_cap_hours ?? existing.cooldownHours ?? existing.frequency_cap_hours ?? 24, 1), 168),
-    // D2=A 쿠폰 모드
-    coupon_mode: (body.coupon_mode ?? existing.coupon_mode ?? 'none') as 'none' | 'single' | 'pack',
+    // D2=A 쿠폰 모드 (2026-04-30: default를 'pack'으로 변경 — Plus 페이지이므로 쿠폰팩이 자연스러움)
+    coupon_mode: (body.coupon_mode ?? existing.coupon_mode ?? 'pack') as 'none' | 'single' | 'pack',
     coupon_type: (body.coupon_type ?? existing.coupon_type ?? null) as 'shipping' | 'amount' | 'rate' | null,
     // Exit-intent 흡수
     scroll_depth_threshold: body.scroll_depth_threshold ?? existing.scroll_depth_threshold ?? 0,
@@ -513,6 +513,7 @@ dashboard.put('/shops/:id/banner', async (c) => {
   }
 
   const body = await c.req.json<{
+    enabled?: boolean;
     preset: number;
     text: string;
     borderRadius: number;
@@ -521,6 +522,7 @@ dashboard.put('/shops/:id/banner', async (c) => {
     bold?: boolean;
     italic?: boolean;
     hideForReturning?: boolean;
+    hideOnSpecialPages?: boolean;
     anchorSelector?: string;
     position: string;
     animation?: string;
@@ -541,6 +543,8 @@ dashboard.put('/shops/:id/banner', async (c) => {
   }
 
   const bannerConfig = {
+    enabled: body.enabled !== false,                       // default true (기본 활성)
+    hideOnSpecialPages: body.hideOnSpecialPages !== false, // default true (메인/로그인/회원가입에서 기본 숨김)
     preset: body.preset,
     text: body.text || '번개가입으로 회원 혜택을 받으세요!',
     borderRadius: body.borderRadius ?? 10,
@@ -816,86 +820,9 @@ dashboard.put('/shops/:id/coupon', async (c) => {
   return c.json({ ok: true, coupon_config: newConfig });
 });
 
-// ─── GET /shops/:id/exit-intent-config ──────────────────────
-dashboard.get('/shops/:id/exit-intent-config', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shopId = c.req.param('id');
-
-  const shop = await getShopById(c.env.DB, shopId);
-  if (!shop || shop.owner_id !== ownerId) {
-    return c.json({ error: 'not_found' }, 404);
-  }
-
-  if (shop.plan === 'free') {
-    return c.json({ error: 'plus_required', message: 'Exit-intent 쿠폰 게이트는 Plus 플랜에서만 사용할 수 있습니다.' }, 403);
-  }
-
-  const config = shop.exit_intent_config ? JSON.parse(shop.exit_intent_config) : null;
-  return c.json({ ok: true, exit_intent_config: config });
-});
-
-// ─── PUT /shops/:id/exit-intent-config ──────────────────────
-dashboard.put('/shops/:id/exit-intent-config', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shopId = c.req.param('id');
-
-  const shop = await getShopById(c.env.DB, shopId);
-  if (!shop || shop.owner_id !== ownerId) {
-    return c.json({ error: 'not_found' }, 404);
-  }
-
-  if (shop.plan === 'free') {
-    return c.json({ error: 'plus_required', message: 'Exit-intent 쿠폰 게이트는 Plus 플랜에서만 사용할 수 있습니다.' }, 403);
-  }
-
-  const body = await c.req.json<{
-    enabled?: boolean;
-    frequency_cap_hours?: number;
-    scroll_depth_threshold?: number;
-    coupon_type?: string;
-    headline?: string;
-    body?: string;
-  }>();
-
-  // 검증
-  const VALID_CAP_HOURS = [1, 6, 24, 168]; // 1h / 6h / 24h / 7d
-  if (body.frequency_cap_hours !== undefined && !VALID_CAP_HOURS.includes(body.frequency_cap_hours)) {
-    return c.json({ error: 'invalid_frequency_cap_hours', message: `frequency_cap_hours must be one of: ${VALID_CAP_HOURS.join(', ')}` }, 400);
-  }
-  const VALID_COUPON_TYPES = ['shipping', 'amount', 'rate'];
-  if (body.coupon_type !== undefined && !VALID_COUPON_TYPES.includes(body.coupon_type)) {
-    return c.json({ error: 'invalid_coupon_type', message: `coupon_type must be one of: ${VALID_COUPON_TYPES.join(', ')}` }, 400);
-  }
-  if (body.headline && body.headline.length > 30) {
-    return c.json({ error: 'headline_too_long', message: 'headline must be 30 characters or less' }, 400);
-  }
-  if (body.body && body.body.length > 120) {
-    return c.json({ error: 'body_too_long', message: 'body must be 120 characters or less' }, 400);
-  }
-
-  // 기존 config 로드 후 병합
-  const existing = shop.exit_intent_config ? JSON.parse(shop.exit_intent_config) : {};
-  const newConfig = {
-    enabled: body.enabled !== undefined ? body.enabled : (existing.enabled !== false),
-    frequency_cap_hours: body.frequency_cap_hours ?? existing.frequency_cap_hours ?? 24,
-    scroll_depth_threshold: body.scroll_depth_threshold ?? existing.scroll_depth_threshold ?? 60,
-    coupon_type: body.coupon_type ?? existing.coupon_type ?? null,
-    headline: body.headline ?? existing.headline ?? '잠깐만요!',
-    body: body.body ?? existing.body ?? '지금 가입하면 {coupon} 즉시 받을 수 있어요.',
-  };
-
-  await updateShop(c.env.DB, shopId, {
-    exit_intent_config: JSON.stringify(newConfig),
-  });
-
-  // 위젯 캐시 무효화
-  await Promise.all([
-    c.env.KV.delete(`widget_config:${shop.client_id}`),
-    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
-  ]);
-
-  return c.json({ ok: true, exit_intent_config: newConfig });
-});
+// ─── /shops/:id/exit-intent-config [REMOVED 2026-04-30] ─────
+// 이탈 감지 팝업(/shops/:id/popup-config)으로 통합. 어드민 UI에서 더 이상 호출하지 않음.
+// shops.exit_intent_config 컬럼은 데이터 보존 목적으로 유지(롤백 옵션). 차후 마이그레이션에서 컬럼 삭제 예정.
 
 // ─── GET /shops/:id/live-counter ────────────────────────────
 dashboard.get('/shops/:id/live-counter', async (c) => {
@@ -1517,6 +1444,87 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
 
     return c.json({ ok: true, pack: newPack, items: [], failures: [] });
   }
+});
+
+// ─── POST /shops/:id/dev-seed-signups ──────────────────────
+/**
+ * 라이브 카운터 동작 검증을 위한 fake 가입자 데이터 시드 (스테이징 전용).
+ *
+ * 가드:
+ *  - BASE_URL 에 '-dev.' 포함 시에만 허용 (프로덕션 차단)
+ *  - 인증된 owner + Plus 플랜
+ *
+ * Body: { count?: number (기본 25, 1~200), recent_count?: number (기본 5, 최근 30분 내) }
+ *  - 처음 recent_count 명: 최근 30분 내 분산 (toast 후보)
+ *  - 나머지: 최근 7일 분산 (threshold daily_avg ≥3 충족용)
+ *
+ * users.name 은 ENCRYPTION_KEY 로 encrypt 처리해 toast 마스킹 표시까지 동작.
+ */
+dashboard.post('/shops/:id/dev-seed-signups', async (c) => {
+  if (!c.env.BASE_URL || !c.env.BASE_URL.includes('-dev.')) {
+    return c.json({ error: 'forbidden', message: 'dev seed는 스테이징 환경에서만 사용 가능합니다.' }, 403);
+  }
+
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+  if (shop.plan !== 'plus') {
+    return c.json({ error: 'plus_required', message: '라이브 카운터는 Plus 플랜에서만 동작합니다.' }, 403);
+  }
+
+  const body = await c.req.json<{ count?: number; recent_count?: number }>().catch(() => ({}));
+  const totalCount = body.count ?? 25;
+  const recentCount = body.recent_count ?? 5;
+
+  if (totalCount < 1 || totalCount > 200) {
+    return c.json({ error: 'invalid_count', message: 'count는 1~200 사이여야 합니다.' }, 400);
+  }
+  if (recentCount < 0 || recentCount > totalCount) {
+    return c.json({ error: 'invalid_recent_count' }, 400);
+  }
+
+  const koreanFirst = ['김','이','박','최','정','강','조','윤','장','임'];
+  const koreanRest = ['민수','지영','영희','철수','수진','서연','준호','지훈','하늘','다은'];
+
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const formatSqlite = (ms: number) => new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
+
+  let inserted = 0;
+  for (let i = 0; i < totalCount; i++) {
+    const userId = crypto.randomUUID();
+    const shopUserId = crypto.randomUUID();
+    const fakeName = `${koreanFirst[i % koreanFirst.length]}${koreanRest[i % koreanRest.length]}${i + 1}`;
+    const encryptedName = await encrypt(fakeName, c.env.ENCRYPTION_KEY);
+
+    let createdMs: number;
+    if (i < recentCount) {
+      createdMs = now - Math.floor(Math.random() * 25 * 60 * 1000); // 최근 0~25분
+    } else {
+      createdMs = sevenDaysAgo + Math.floor(Math.random() * (now - sevenDaysAgo - 30 * 60 * 1000));
+    }
+    const createdAt = formatSqlite(createdMs);
+
+    try {
+      await c.env.DB.batch([
+        c.env.DB.prepare(
+          'INSERT INTO users (user_id, provider, provider_uid, name, created_at) VALUES (?, ?, ?, ?, ?)',
+        ).bind(userId, 'dev', `seed-${userId}`, encryptedName, createdAt),
+        c.env.DB.prepare(
+          'INSERT INTO shop_users (id, shop_id, user_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
+        ).bind(shopUserId, shopId, userId, 'active', createdAt),
+      ]);
+      inserted++;
+    } catch (err) {
+      console.warn('[dev-seed] insert 실패:', err);
+    }
+  }
+
+  return c.json({ ok: true, inserted, total: totalCount, recent: recentCount });
 });
 
 // ─── POST /shops/:id/coupon-pack/retry ──────────────────────

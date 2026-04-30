@@ -8,7 +8,6 @@
  */
 
 import { getSmartTriggerJs } from './smart-triggers';
-import { getExitIntentJs } from './exit-intent';
 import { getLiveCounterJs } from './live-counter';
 import { getCouponPackJs, getSingleCouponCardJs } from './coupon-pack';
 import { getStyleHelpersJs } from './core/style-helpers';
@@ -324,8 +323,7 @@ export const WIDGET_JS = `(function() {
           if (config.kakao_channel_id) {
             self.initKakaoChannel(config);
           }
-          // Exit-intent 쿠폰 게이트 (DEPRECATED D1=A, 2026-04-29):
-          // initExitIntent() 호출 제거 — initExitPopup으로 흡수됨.
+          // Exit-intent 쿠폰 게이트는 initExitPopup으로 완전 통합됨 (2026-04-30 제거).
           // 라이브 가입자 카운터 (R4 W3 Cycle2)
           // 별도 /live-counter 엔드포인트를 fetch하여 threshold + 최근 가입자 데이터 획득
           if (config.client_id) {
@@ -397,8 +395,8 @@ export const WIDGET_JS = `(function() {
     // ─── Smart Trigger Engine ────────────────────────────────────
     ` + getSmartTriggerJs() + `
 
-    // ─── Exit-intent 쿠폰 게이트 ─────────────────────────────────
-    ` + getExitIntentJs() + `
+    // ─── Exit-intent 쿠폰 게이트 [REMOVED 2026-04-30] ─────────────
+    // initExitPopup(features/exit-popup.ts)으로 흡수됨. getExitIntentJs() 호출 제거.
 
     // ─── 라이브 가입자 카운터 ─────────────────────────────────────
     ` + getLiveCounterJs() + `

@@ -48,10 +48,12 @@ export function getExitPopupJs(): string {
       : 0;
 
     // 쿠폰 모드 (D2=A: none / single / pack)
-    var couponMode = (pc && pc.coupon_mode) ? pc.coupon_mode : 'none';
+    // 2026-04-30: Plus 페이지의 쿠폰팩이 기본 운영 흐름이므로 default를 'pack'으로 변경.
+    // 'pack' 모드여도 운영자가 쿠폰팩을 활성화(coupon_pack.active=true)하지 않으면 카드 미노출이라 안전.
+    var couponMode = (pc && pc.coupon_mode) ? pc.coupon_mode : 'pack';
     var couponType = (pc && pc.coupon_type) ? pc.coupon_type : '';
 
-    var presetIdx = pc && pc.preset != null ? pc.preset : 0;
+    var presetIdx = pc && pc.preset != null ? pc.preset : 6;
     var popupPresets = [
       { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
       { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
@@ -86,13 +88,14 @@ export function getExitPopupJs(): string {
 
       // 모달
       var modal = document.createElement('div');
-      modal.style.cssText = 'background:#fff;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;border-radius:' + popupBorderRadius + 'px;opacity:' + (popupOpacity / 100);
+      modal.style.cssText = 'background:#fff;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;border-radius:' + popupBorderRadius + 'px;opacity:' + (popupOpacity / 100) + ';text-align:center';
 
       // 닫기 버튼
       var closeBtn = document.createElement('button');
       closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;padding:4px 8px';
       closeBtn.textContent = '✕';
-      closeBtn.addEventListener('click', function() {
+      closeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
         overlay.remove();
         self.trackEvent('popup_close', {});
       });
@@ -150,8 +153,14 @@ export function getExitPopupJs(): string {
         : popupCta;
       ctaBtn.textContent = ctaText;
       var ctaR = Math.max(6, popupBorderRadius - 6);
-      ctaBtn.style.cssText = 'display:block;width:100%;padding:14px;border-radius:' + ctaR + 'px;background:' + preset.ctaBg + ';color:' + (preset.ctaColor || '#fff') + ';font-size:16px;font-weight:700;cursor:pointer;border:' + (preset.ctaBorder || 'none');
-      ctaBtn.addEventListener('click', function() {
+      // padding/font 톤다운 + 너비 텍스트 크기에 fit (이전: width:100% + padding:14px + font:16px/700 → 너무 강조됨)
+      ctaBtn.style.cssText = 'display:inline-block;padding:10px 24px;border-radius:' + ctaR + 'px;background:' + preset.ctaBg + ';color:' + (preset.ctaColor || '#fff') + ';font-size:14px;font-weight:600;cursor:pointer;opacity:0.92;border:' + (preset.ctaBorder || 'none');
+      // CTA 버튼 클릭은 modal 전체 click 핸들러로 흡수 (아래 modal.addEventListener 참조).
+      // 닫기 버튼만 stopPropagation 으로 차단됨.
+
+      // 닫기 버튼 외 modal 영역 어디든 클릭 시 로그인 이동 (CTA 포함, closeBtn 은 stopPropagation 처리됨)
+      modal.style.cursor = 'pointer';
+      modal.addEventListener('click', function() {
         overlay.remove();
         self.trackEvent('popup_signup', {});
         if (couponMode === 'pack' && couponCardEl) {

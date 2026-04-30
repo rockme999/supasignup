@@ -23,6 +23,20 @@ export function getMiniBannerJs(): string {
 
     var bc = config.banner_config || {};
 
+    // 어드민에서 미니배너 비활성화 토글 OFF 시 즉시 차단 (default: 활성)
+    if (bc.enabled === false) return;
+
+    // 메인/로그인/회원가입 페이지에서 숨기기 (default: ON — 기본 숨김)
+    if (bc.hideOnSpecialPages !== false) {
+      var path = location.pathname.toLowerCase();
+      if (path === '/' || path === '/index.html' ||
+          path.indexOf('/member/login') !== -1 ||
+          path.indexOf('/member/join') !== -1 ||
+          path.indexOf('/member/register') !== -1) {
+        return;
+      }
+    }
+
     // 이전 로그인 기록 감지 시 표시 안 함 (설정에서 활성화된 경우)
     if (bc.hideForReturning && self.hasLoginHistory()) return;
 

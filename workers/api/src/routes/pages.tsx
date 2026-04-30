@@ -32,8 +32,6 @@ import {
   KakaoSettingsPage,
   AiSettingsPage,
   AiBriefingPage,
-  ExitIntentSettingsPage,
-  LiveCounterSettingsPage,
   QuickStartPage,
   GuidePage,
   FaqPage,
@@ -60,11 +58,13 @@ type PageEnv = {
 
 // 현재 owner의 shop을 자동 조회 (단일 쇼핑몰 구조)
 async function getOwnerShop(db: D1Database, ownerId: string) {
+  // Note: exit_intent_config 컬럼은 더 이상 SELECT하지 않음 (DEPRECATED 2026-04-30,
+  //       이탈 감지 팝업으로 통합됨 — popup_config 단일 소스). 컬럼 자체는 보존(스키마/롤백).
   return db.prepare(
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
             enabled_providers, sso_configured, sso_type, sso_verified_at, sso_verified_slots,
             created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
-            shop_identity, exit_intent_config, live_counter_config
+            shop_identity, live_counter_config
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
     coupon_config: string | null;
@@ -72,7 +72,6 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
     widget_style: string | null;
     banner_config: string | null;
     shop_identity: string | null;
-    exit_intent_config: string | null;
     live_counter_config: string | null;
     sso_type: string | null;
     sso_verified_at: string | null;
@@ -110,7 +109,6 @@ export type PlusPerformance = {
   totalCaptured: number;
   byTool: {
     banner: number;
-    exit_intent: number;
     popup: number;
     escalation: number;
   };
@@ -119,31 +117,27 @@ export type PlusPerformance = {
 /**
  * Plus 성과 지표 조회 — 도구별 attribution (최근 7일).
  *
- * - Exit-intent: widget.exit_intent_signup 직접 이벤트
- * - 이탈 팝업: popup_signup 직접 이벤트
+ * - 이탈 팝업: popup_signup 직접 이벤트 (구 Exit-intent 게이트 흡수)
  * - 미니배너: banner_click → 30분 이내 signup_complete (attribution)
  * - 에스컬레이션: escalation_click → 30분 이내 signup_complete (attribution)
+ *
+ * 변경 이력:
+ *   2026-04-30 — Exit-intent 단독 도구 제거 (이탈 감지 팝업으로 통합됨).
+ *   과거 widget.exit_intent_signup 이벤트는 더 이상 신규 발생하지 않으며 통계에서도 제외.
  */
 export async function getPlusPerformance(
   env: Env,
   shopId: string,
 ): Promise<PlusPerformance> {
   const results = await env.DB.batch([
-    // [0] Exit-intent 직접 가입
-    env.DB.prepare(`
-      SELECT COUNT(DISTINCT visitor_id) AS n FROM funnel_events
-      WHERE shop_id = ? AND event_type = 'widget.exit_intent_signup'
-        AND created_at >= datetime('now', '-7 days')
-    `).bind(shopId),
-
-    // [1] 이탈 팝업 직접 가입
+    // [0] 이탈 팝업 직접 가입
     env.DB.prepare(`
       SELECT COUNT(DISTINCT visitor_id) AS n FROM funnel_events
       WHERE shop_id = ? AND event_type = 'popup_signup'
         AND created_at >= datetime('now', '-7 days')
     `).bind(shopId),
 
-    // [2] 미니배너 attribution: banner_click → 30분 내 signup_complete
+    // [1] 미니배너 attribution: banner_click → 30분 내 signup_complete
     env.DB.prepare(`
       SELECT COUNT(DISTINCT b.visitor_id) AS n
       FROM funnel_events b
@@ -158,7 +152,7 @@ export async function getPlusPerformance(
         AND b.visitor_id IS NOT NULL
     `).bind(shopId),
 
-    // [3] 에스컬레이션 attribution: escalation_click → 30분 내 signup_complete
+    // [2] 에스컬레이션 attribution: escalation_click → 30분 내 signup_complete
     env.DB.prepare(`
       SELECT COUNT(DISTINCT b.visitor_id) AS n
       FROM funnel_events b
@@ -174,16 +168,14 @@ export async function getPlusPerformance(
     `).bind(shopId),
   ]);
 
-  const exitIntent = (results[0] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
-  const popup = (results[1] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
-  const banner = (results[2] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
-  const escalation = (results[3] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+  const popup = (results[0] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+  const banner = (results[1] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
+  const escalation = (results[2] as D1Result<{ n: number }>).results?.[0]?.n ?? 0;
 
   return {
-    totalCaptured: exitIntent + popup + banner + escalation,
+    totalCaptured: popup + banner + escalation,
     byTool: {
       banner,
-      exit_intent: exitIntent,
       popup,
       escalation,
     },
@@ -423,7 +415,7 @@ pages.get('/dashboard', async (c) => {
   // Plus 플랜 — 성과 지표 조회 (Free는 불필요)
   const plusPerformancePromise = shop.plan !== 'free'
     ? getPlusPerformance(c.env, shop.shop_id)
-    : Promise.resolve<PlusPerformance>({ totalCaptured: 0, byTool: { banner: 0, exit_intent: 0, popup: 0, escalation: 0 } });
+    : Promise.resolve<PlusPerformance>({ totalCaptured: 0, byTool: { banner: 0, popup: 0, escalation: 0 } });
 
   // 최신 AI 브리핑 (홈 카드용) — 모든 운영자 대상. performance도 함께 조회해 카드 미리보기 노출
   const latestBriefingPromise = c.env.DB.prepare(
@@ -1189,8 +1181,9 @@ pages.get('/dashboard/settings/banner', async (c) => {
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
   const bannerConfig = shop.banner_config ? JSON.parse(shop.banner_config) : null;
+  const liveCounterConfig = shop.live_counter_config ? JSON.parse(shop.live_counter_config) : null;
   return c.html(
-    <BannerSettingsPage shop={shop} shopId={shop.shop_id} bannerConfig={bannerConfig} isCafe24={c.get('isCafe24')} />
+    <BannerSettingsPage shop={shop} shopId={shop.shop_id} bannerConfig={bannerConfig} liveCounterConfig={liveCounterConfig} isCafe24={c.get('isCafe24')} />
   );
 });
 
@@ -1200,8 +1193,31 @@ pages.get('/dashboard/settings/popup', async (c) => {
   const ownerId = c.get('ownerId');
   const shop = await getOwnerShop(c.env.DB, ownerId);
   if (!shop) return c.redirect('/dashboard');
+  // 미리보기용: 쿠폰팩 디자인/애니 + 단일 쿠폰 활성 상태
+  let couponPackPreview: { design?: string; anim_mode?: boolean } | null = null;
+  let couponConfigPreview: Record<string, { enabled?: boolean; discount_amount?: number; discount_rate?: number }> | null = null;
+  try {
+    if (shop.coupon_config) {
+      const cc = JSON.parse(shop.coupon_config);
+      if (cc && typeof cc === 'object') {
+        if (cc.pack && typeof cc.pack === 'object') {
+          couponPackPreview = { design: cc.pack.design, anim_mode: cc.pack.anim_mode };
+        }
+        couponConfigPreview = {
+          shipping: cc.shipping || null,
+          amount: cc.amount || null,
+          rate: cc.rate || null,
+        };
+      }
+    }
+  } catch (_) { /* swallow */ }
   return c.html(
-    <PopupSettingsPage shop={shop} isCafe24={c.get('isCafe24')} />
+    <PopupSettingsPage
+      shop={shop}
+      isCafe24={c.get('isCafe24')}
+      couponPackPreview={couponPackPreview}
+      couponConfigPreview={couponConfigPreview}
+    />
   );
 });
 
@@ -1232,41 +1248,13 @@ pages.get('/dashboard/settings/kakao', async (c) => {
   );
 });
 
-// ─── Settings: Exit-intent [Plus] ───────────────────────────
+// ─── Settings: Exit-intent [REMOVED 2026-04-30 → 이탈 감지 팝업으로 통합] ─
+// 외부 북마크 호환성을 위해 301 redirect 유지. Exit-intent 단독 페이지/컴포넌트/PUT 핸들러는 삭제됨.
+pages.get('/dashboard/settings/exit-intent', (c) => c.redirect('/dashboard/settings/popup', 301));
 
-pages.get('/dashboard/settings/exit-intent', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-  const exitIntentConfig = shop.exit_intent_config
-    ? JSON.parse(shop.exit_intent_config)
-    : null;
-  return c.html(
-    <ExitIntentSettingsPage
-      shop={shop}
-      exitIntentConfig={exitIntentConfig}
-      isCafe24={c.get('isCafe24')}
-    />
-  );
-});
-
-// ─── Settings: Live Counter [Plus] ──────────────────────────
-
-pages.get('/dashboard/settings/live-counter', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-  const liveCounterConfig = shop.live_counter_config
-    ? JSON.parse(shop.live_counter_config)
-    : null;
-  return c.html(
-    <LiveCounterSettingsPage
-      shop={shop}
-      liveCounterConfig={liveCounterConfig}
-      isCafe24={c.get('isCafe24')}
-    />
-  );
-});
+// ─── Settings: Live Counter [Plus] — 미니배너 페이지에 통합됨 ──────────
+// 기존 URL은 banner 페이지로 redirect (사이드 메뉴 통합 — 2026-04-30)
+pages.get('/dashboard/settings/live-counter', (c) => c.redirect('/dashboard/settings/banner', 301));
 
 // ─── Settings: Coupon Pack [Plus] — redirect to General Settings ────────────
 

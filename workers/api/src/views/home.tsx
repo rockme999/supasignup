@@ -223,7 +223,7 @@ export const HomePage: FC<{
                       Plus 도구로 추가 가입 : {plusPerformance!.totalCaptured}명
                     </div>
                     <div style="font-size:12px;color:#64748b;line-height:1.5">
-                      미니배너·Exit-intent·이탈 팝업·에스컬레이션 합계
+                      미니배너·이탈 팝업·에스컬레이션 합계
                     </div>
                   </a>
                 )}
@@ -239,8 +239,8 @@ export const HomePage: FC<{
                       <span style="font-size:11px;color:#94a3b8">도구별 기여</span>
                     </div>
                     <div style="font-size:13px;color:#475569;line-height:1.8">
-                      미니배너 {plusPerformance!.byTool.banner} · Exit-intent {plusPerformance!.byTool.exit_intent}<br />
-                      이탈 팝업 {plusPerformance!.byTool.popup} · 에스컬레이션 {plusPerformance!.byTool.escalation}
+                      미니배너 {plusPerformance!.byTool.banner} · 이탈 팝업 {plusPerformance!.byTool.popup}<br />
+                      에스컬레이션 {plusPerformance!.byTool.escalation}
                     </div>
                   </a>
                 )}

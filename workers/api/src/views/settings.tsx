@@ -16,7 +16,7 @@ import {
   type CouponConfigUI,
 } from './shared';
 import { buildCouponPackHtml, COUPON_PACK_CSS } from '../widget/coupon-pack';
-import { COUPON_PACK_DEFINITIONS } from '../services/coupon-pack';
+import { COUPON_PACK_DEFINITIONS, resolveCouponPackState } from '../services/coupon-pack';
 
 // ─── SSO 설정 확인 섹션 ──────────────────────────────────────
 // verifiedAt が null → 미검증: 큰 "설정 확인" 버튼
@@ -2846,6 +2846,11 @@ export const CouponSettingsPage: FC<{
   const cfg = couponConfig ?? DEFAULT_COUPON_CONFIG_UI;
   const cafe24 = cfg.cafe24_coupons ?? {};
 
+  // 쿠폰팩 모드 판별: pack.state === 'active' 또는 'paused' 이면 쿠폰팩 모드, 아니면 기본 쿠폰 모드
+  const pack = cfg.pack;
+  const packState = pack ? resolveCouponPackState(pack) : 'unregistered';
+  const isPackMode = packState === 'active' || packState === 'paused';
+
   type CouponRow = {
     label: string;
     enabled: boolean;
@@ -2878,55 +2883,117 @@ export const CouponSettingsPage: FC<{
     },
   ];
 
+  // 쿠폰팩 5장 row — DEFINITIONS 와 pack.items 매칭 (등록 성공 시 cafe24_coupon_no 채워짐)
+  const packExpireDays = pack?.expire_days ?? 30;
+  const packRows = COUPON_PACK_DEFINITIONS.map((def, i) => ({
+    label: `웰컴팩 #${def.label}`,
+    min_order: def.min_order,
+    discount: def.discount,
+    cafe24_coupon_no: pack?.items?.[i]?.cafe24_coupon_no,
+  }));
+
   return (
     <Layout title="쿠폰 현황" loggedIn currentPath="/dashboard/settings/coupon" isCafe24={isCafe24}>
       <h1>쿠폰 현황</h1>
-      <p style="font-size:14px;color:#64748b;margin-bottom:24px">가입 시 자동 발급되는 쿠폰 설정 및 현황입니다.</p>
+      <p style="font-size:14px;color:#64748b;margin-bottom:24px">
+        {isPackMode
+          ? '가입 시 자동 발급되는 쿠폰팩 5장의 설정 및 현황입니다.'
+          : '가입 시 자동 발급되는 쿠폰 설정 및 현황입니다.'}
+      </p>
 
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h2 style="margin-bottom:0">쿠폰 설정 현황</h2>
-          <a href="/dashboard/settings/general#couponSettingsCard" class="btn btn-outline btn-sm">설정 변경 →</a>
-        </div>
+      {isPackMode ? (
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px">
+              <h2 style="margin-bottom:0">쿠폰팩 현황</h2>
+              {packState === 'active'
+                ? <span class="badge badge-green">활성</span>
+                : <span class="badge badge-gray">일시정지</span>}
+            </div>
+            <a href="/dashboard/settings/coupon-pack" class="btn btn-outline btn-sm">쿠폰팩 설정 →</a>
+          </div>
 
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1e40af">
-          기본 설정에서 쿠폰 3종을 개별 토글/세부설정할 수 있습니다. 저장 시 카페24에 쿠폰이 자동 생성되고 가입 시 자동 발급됩니다.
-          <a href="/dashboard/settings/general" style="margin-left:8px;font-weight:600;color:#2563eb">기본 설정으로 이동 →</a>
-        </div>
+          <div style={`background:${packState === 'active' ? '#eff6ff' : '#fef3c7'};border:1px solid ${packState === 'active' ? '#bfdbfe' : '#fde68a'};border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:${packState === 'active' ? '#1e40af' : '#92400e'}`}>
+            {packState === 'active'
+              ? '카페24 자동 발급 이벤트로 등록되어 있어 신규 회원 가입 시 5장이 자동으로 발급됩니다.'
+              : 'Plus 플랜이 만료되거나 다운그레이드되어 자동 발급이 일시정지되었습니다. Plus 복귀 시 자동 재개됩니다.'}
+          </div>
 
-        <div style="overflow-x:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>쿠폰 종류</th>
-                <th style="width:80px">상태</th>
-                <th>할인 내용</th>
-                <th style="width:100px">유효기간</th>
-                <th style="width:110px">카페24 쿠폰 #</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
                 <tr>
-                  <td style="font-size:13px;font-weight:500">{row.label}</td>
-                  <td>
-                    {row.enabled
-                      ? <span class="badge badge-green">활성</span>
-                      : <span class="badge badge-gray">비활성</span>}
-                  </td>
-                  <td style="font-size:13px">{row.enabled ? row.detail : '-'}</td>
-                  <td style="font-size:13px">{row.enabled ? `발급일 +${row.expire_days}일` : '-'}</td>
-                  <td style="font-size:12px">
-                    {row.coupon_no
-                      ? <code style="color:#059669">#{row.coupon_no}</code>
-                      : <span style="color:#94a3b8">{row.enabled ? '생성 대기' : '-'}</span>}
-                  </td>
+                  <th>쿠폰</th>
+                  <th>최소 주문 금액</th>
+                  <th>할인 금액</th>
+                  <th style="width:100px">유효기간</th>
+                  <th style="width:130px">카페24 쿠폰 #</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {packRows.map((row) => (
+                  <tr>
+                    <td style="font-size:13px;font-weight:500">{row.label}</td>
+                    <td style="font-size:13px">{row.min_order.toLocaleString()}원 이상</td>
+                    <td style="font-size:13px">{row.discount.toLocaleString()}원 할인</td>
+                    <td style="font-size:13px">발급일 +{packExpireDays}일</td>
+                    <td style="font-size:12px">
+                      {row.cafe24_coupon_no
+                        ? <code style="color:#059669">#{row.cafe24_coupon_no}</code>
+                        : <span style="color:#94a3b8">{packState === 'active' ? '등록 대기' : '미등록'}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 style="margin-bottom:0">쿠폰 설정 현황</h2>
+            <a href="/dashboard/settings/general#couponSettingsCard" class="btn btn-outline btn-sm">설정 변경 →</a>
+          </div>
+
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1e40af">
+            기본 설정에서 쿠폰 3종을 개별 토글/세부설정할 수 있습니다. 저장 시 카페24에 쿠폰이 자동 생성되고 가입 시 자동 발급됩니다.
+            <a href="/dashboard/settings/general" style="margin-left:8px;font-weight:600;color:#2563eb">기본 설정으로 이동 →</a>
+          </div>
+
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>쿠폰 종류</th>
+                  <th style="width:80px">상태</th>
+                  <th>할인 내용</th>
+                  <th style="width:100px">유효기간</th>
+                  <th style="width:110px">카페24 쿠폰 #</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr>
+                    <td style="font-size:13px;font-weight:500">{row.label}</td>
+                    <td>
+                      {row.enabled
+                        ? <span class="badge badge-green">활성</span>
+                        : <span class="badge badge-gray">비활성</span>}
+                    </td>
+                    <td style="font-size:13px">{row.enabled ? row.detail : '-'}</td>
+                    <td style="font-size:13px">{row.enabled ? `발급일 +${row.expire_days}일` : '-'}</td>
+                    <td style="font-size:12px">
+                      {row.coupon_no
+                        ? <code style="color:#059669">#{row.coupon_no}</code>
+                        : <span style="color:#94a3b8">{row.enabled ? '생성 대기' : '-'}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* 발급 히스토리 */}
       <div class="card">
@@ -2951,6 +3018,11 @@ export const CouponSettingsPage: FC<{
             if (type === 'shipping') return '무료배송';
             if (type === 'amount') return '정액할인';
             if (type === 'rate') return '정률할인';
+            // 쿠폰팩 발급 (type='pack' 또는 'pack-1' ~ 'pack-5')
+            if (type && type.indexOf('pack') === 0) {
+              var n = type.replace('pack', '').replace('-', '');
+              return n ? '쿠폰팩 #' + n : '쿠폰팩';
+            }
             return type;
           }
 

@@ -119,6 +119,8 @@ export async function decryptShopTokens(
   return { access_token, refresh_token };
 }
 
+// Note: 'exit_intent_config'는 2026-04-30 이탈 팝업 통합으로 코드에서 제외 (write 차단).
+//        컬럼 자체는 DB에 잔존하나 ALLOWED 목록에 없으면 updateShop()이 무시함.
 const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'shop_name',
   'shop_url',
@@ -134,19 +136,18 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'banner_config',
   'popup_config',
   'escalation_config',
-  'exit_intent_config',
   'live_counter_config',
 ]);
 
 export async function updateShop(
   db: D1Database,
   shopId: string,
-  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'exit_intent_config' | 'live_counter_config'>>,
+  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'live_counter_config'>>,
 ): Promise<void> {
   const sets: string[] = [];
   const values: unknown[] = [];
 
-  const JSON_COLUMNS = new Set(['enabled_providers', 'allowed_redirect_uris', 'widget_style', 'coupon_config', 'banner_config', 'popup_config', 'escalation_config', 'exit_intent_config', 'live_counter_config']);
+  const JSON_COLUMNS = new Set(['enabled_providers', 'allowed_redirect_uris', 'widget_style', 'coupon_config', 'banner_config', 'popup_config', 'escalation_config', 'live_counter_config']);
 
   for (const [key, value] of Object.entries(data)) {
     if (!ALLOWED_UPDATE_COLUMNS.has(key)) continue;

@@ -2,6 +2,7 @@
  * Shared constants, types, and utilities for dashboard SSR pages.
  */
 import { WidgetStyle, DEFAULT_WIDGET_STYLE } from '@supasignup/bg-core';
+import type { CouponPackConfig } from '../services/coupon-pack';
 export type { WidgetStyle };
 export { DEFAULT_WIDGET_STYLE };
 
@@ -62,6 +63,8 @@ export type CouponConfigUI = {
     amount_coupon_no?: number;
     rate_coupon_no?: number;
   };
+  /** Plus 플랜의 쿠폰팩 설정. state==='active' 또는 'paused' 면 쿠폰팩 모드. */
+  pack?: CouponPackConfig;
 };
 
 export const DEFAULT_COUPON_CONFIG_UI: CouponConfigUI = {

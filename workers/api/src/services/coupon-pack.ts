@@ -129,32 +129,31 @@ async function createPackCoupon(
   const formatKRW = (n: number) => n.toLocaleString('ko-KR');
   const couponName = `신규 가입 웰컴 쿠폰 ${item.label} - ${formatKRW(item.discount)}원 할인 (${formatKRW(item.min_order)}원 이상)`;
 
+  // 카페24 공식 spec 기반 정확한 body (2026-04-30):
+  //  - coupon_type / discount_type 은 spec에 없음 → 제거
+  //  - benefit_type:'A' = 할인금액
+  //  - available_order_price_type valid 값은 'U'/'I' 만 ('O' 잘못됨) → 'U' (모든 상품의 주문 금액)
+  //  - 자동발급 회원가입 5필드: issue_type:'A' + issue_sub_type:'J' + issue_member_join:'T' + issue_member_join_recommend:'F' + issue_member_join_type:'N'
   const body = {
     shop_no: 1,
     request: {
       coupon_name: couponName,
-      benefit_type: 'A',                    // A = 정액 할인
+      benefit_type: 'A',                    // A = 할인금액 (정액 할인)
       discount_amount: {
-        benefit_price: item.discount,        // 정수
+        benefit_price: String(item.discount),
       },
-      available_period_type: 'R',           // R = 발급일로부터 N일 (자동발급이라 발급일 기준 필수)
-      available_day_from_issued: expireDays, // 30일
+      available_period_type: 'R',           // R = 발급일로부터 N일
+      available_day_from_issued: expireDays,
       available_site: ['W', 'M'],
-      available_scope: 'O',                 // O = 주문쿠폰
-      available_amount_type: 'E',
       available_coupon_count_by_order: 1,
-      available_price_type: 'O',            // O = 주문금액 기준
-      available_min_price: item.min_order,  // 최소 주문 금액
-      available_payment_method: ['all'],
-      issue_type: 'A',                      // A = 자동 발급
-      issue_sub_type: 'J',                  // J = 가입 시
-      issue_member_join: 'T',               // 활성화
+      available_price_type: 'O',            // O = 주문 금액 기준
+      available_order_price_type: 'U',      // U = 모든 상품의 주문 금액 (spec 의 valid 값)
+      available_min_price: String(item.min_order),
+      issue_type: 'A',                      // A = 조건부 자동 발급
+      issue_sub_type: 'J',                  // J = 회원 가입
+      issue_member_join: 'T',
       issue_member_join_recommend: 'F',
       issue_member_join_type: 'N',          // N = 제한 없음
-      issue_count_per_once: 1,
-      issue_reserved: 'F',
-      issue_order_date: 'F',
-      send_sms_for_issue: 'F',
     },
   };
 

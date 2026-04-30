@@ -122,9 +122,7 @@ widget.get('/config', async (c) => {
       : null,
     // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
     kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
-    // exit_intent_config: DEPRECATED (D1=A, 2026-04-29) — 위젯은 더 이상 이 필드를 사용하지 않음.
-    // 데이터 보존 목적으로 null 반환 (차후 마이그레이션에서 컬럼 삭제 예정).
-    exit_intent_config: null,
+    // exit_intent_config: REMOVED 2026-04-30 — 이탈 감지 팝업으로 통합. 위젯은 popup_config만 사용.
     // coupon_config: 이탈 팝업 coupon_mode='single' 카드 레이블 표시용 (민감 정보 제외)
     coupon_config: shop.plan !== 'free'
       ? safeParseJsonObject(shop.coupon_config, null, `widget.coupon_config shop_id=${shop.shop_id}`)
@@ -160,10 +158,12 @@ const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
   'widget_style.save_attempt_locked',        // 저장 클릭 시 결제 모달 노출
   'billing.upgrade_modal_shown',             // 결제 모달 노출
   'billing.upgrade_completed_via_design_preview', // 결제 모달 → 결제 완료
-  // R4 W2 Smart trigger + Exit-intent funnel 이벤트 4종
-  'widget.exit_intent_shown',               // Exit-intent 모달 노출
-  'widget.exit_intent_signup',              // Exit-intent 모달에서 가입 완료
-  'widget.exit_intent_dismissed',           // Exit-intent 모달 그냥 닫기
+  // R4 W2 Smart trigger 이벤트
+  // exit_intent_* 이벤트는 신규 위젯에서 더 이상 발생하지 않음 (2026-04-30 이탈 팝업 통합).
+  // 다만 카페24몰에 캐싱된 구 위젯 스크립트가 잠시 동안 전송할 수 있어 호환성 차원에서 수용.
+  'widget.exit_intent_shown',               // [legacy] Exit-intent 모달 노출
+  'widget.exit_intent_signup',              // [legacy] Exit-intent 모달에서 가입 완료
+  'widget.exit_intent_dismissed',           // [legacy] Exit-intent 모달 그냥 닫기
   'widget.scroll_trigger_fired',            // Smart trigger (scroll-depth) 발동
   // R4 W3 Cycle2 라이브 가입자 카운터 funnel 이벤트 2종
   'widget.live_counter_shown',              // 라이브 카운터 sticky UI 노출

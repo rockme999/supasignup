@@ -1,13 +1,16 @@
 /**
  * Plus-only feature pages: BannerSettingsPage, PopupSettingsPage, EscalationSettingsPage,
- * KakaoSettingsPage, AiSettingsPage, AiBriefingPage, LiveCounterSettingsPage, ExitIntentSettingsPage
+ * KakaoSettingsPage, AiSettingsPage, AiBriefingPage, LiveCounterSettingsPage
  * + PlusLockOverlay.
  *
  * AiReportsPage: deprecated — /dashboard/ai-reports는 /dashboard/ai-briefing으로 301 redirect됨.
  * CouponPackSettingsPage: 제거 — 기본 설정 페이지(settings.tsx)로 통합됨.
+ * ExitIntentSettingsPage: 제거(2026-04-30) — 이탈 감지 팝업(PopupSettingsPage)으로 통합됨.
+ *   /dashboard/settings/exit-intent → /dashboard/settings/popup 으로 301 redirect.
  */
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
+import { buildCouponPackHtml, COUPON_PACK_CSS } from '../widget/coupon-pack';
 
 export const AiReportsPage: FC<{
   shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
@@ -336,11 +339,12 @@ const PlusLockOverlay: FC<{ feature: string }> = ({ feature }) => {
 };
 
 export const BannerSettingsPage: FC<{
-  shop: { plan: string; shop_name?: string | null } | null;
+  shop: { plan: string; shop_id?: string; shop_name?: string | null } | null;
   shopId?: string;
-  bannerConfig?: { preset: number; text: string; borderRadius: number; icon: string; position: string; fullWidth?: boolean; paddingX?: number; height?: number; animation?: string; opacity?: number; bold?: boolean; italic?: boolean; hideForReturning?: boolean; anchorSelector?: string } | null;
+  bannerConfig?: { enabled?: boolean; hideOnSpecialPages?: boolean; preset: number; text: string; borderRadius: number; icon: string; position: string; fullWidth?: boolean; paddingX?: number; height?: number; animation?: string; opacity?: number; bold?: boolean; italic?: boolean; hideForReturning?: boolean; anchorSelector?: string } | null;
+  liveCounterConfig?: { enabled?: boolean; position?: string; show_toast?: boolean; show_counter?: boolean } | null;
   isCafe24?: boolean;
-}> = ({ shop, shopId, bannerConfig, isCafe24 }) => {
+}> = ({ shop, shopId, bannerConfig, liveCounterConfig, isCafe24 }) => {
   const isPlus = shop != null && shop.plan !== 'free';
   const bc = bannerConfig || { preset: 0, text: '', borderRadius: 10, icon: '⚡', position: 'floating', fullWidth: true, paddingX: 24, height: 44 };
   const presetStyles = [
@@ -354,46 +358,97 @@ export const BannerSettingsPage: FC<{
     { bg: '#111827', color: '#fff', border: 'none' },
   ];
   const ps = presetStyles[bc.preset] || presetStyles[0];
+  // 라이브 카운터 초기값 — 통합 미리보기 element 초기 좌표 결정용
+  const lcInit = liveCounterConfig || {};
+  const lcEnabledInit = lcInit.enabled !== false;
+  const lcPositionInit = lcInit.position || 'bottom-right';
+  const lcShowToastInit = lcInit.show_toast !== false;
+  const lcShowCounterInit = lcInit.show_counter !== false;
+  // 카운터/토스트 초기 좌표 (LiveCounterSection 의 posMap 과 동일한 좌표계)
+  const lcCounterStyleInit = (() => {
+    const map: Record<string, string> = {
+      'bottom-right': 'bottom:16px;right:16px;top:auto;left:auto',
+      'bottom-left':  'bottom:16px;left:16px;top:auto;right:auto',
+      'top-right':    'top:16px;right:16px;bottom:auto;left:auto',
+      'top-left':     'top:16px;left:16px;bottom:auto;right:auto',
+    };
+    return map[lcPositionInit] || map['bottom-right'];
+  })();
+  const lcToastStyleInit = (() => {
+    const map: Record<string, string> = {
+      'bottom-right': 'bottom:100px;right:16px;top:auto;left:auto',
+      'bottom-left':  'bottom:100px;left:16px;top:auto;right:auto',
+      'top-right':    'top:100px;right:16px;bottom:auto;left:auto',
+      'top-left':     'top:100px;left:16px;bottom:auto;right:auto',
+    };
+    return map[lcPositionInit] || map['bottom-right'];
+  })();
   return (
-    <Layout title="미니배너" loggedIn currentPath="/dashboard/settings/banner" isCafe24={isCafe24}>
-      <h1>미니배너</h1>
+    <Layout title="미니배너 & 라이브 카운터" loggedIn currentPath="/dashboard/settings/banner" isCafe24={isCafe24}>
+      <h1>미니배너 &amp; 라이브 카운터</h1>
       {!isPlus
         ? <PlusLockOverlay feature="미니배너" />
         : (
           <div>
-            <div class="card">
-              <h2>미니배너 설정</h2>
-              <p style="font-size:13px;color:#64748b;margin-bottom:20px">로그인 페이지 상단에 회원가입 유도 배너가 표시됩니다.</p>
-              <div id="bannerSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
-              {/* 미리보기 영역 (상단) */}
-              {/* 미리보기 (모의 네비게이션 + 배너) */}
-              <div style="margin-bottom:20px">
-                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-                <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden">
-                  {/* 모의 top_nav_box */}
-                  <div style="background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                    <span style="font-size:16px;font-weight:700;color:#111">{shop?.shop_name || '쇼핑몰'}</span>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  </div>
-                  {/* 배너 미리보기 */}
-                  <div style="text-align:center">
-                    <div
-                      id="bannerPreview"
-                      style={`${(bc.fullWidth !== false) ? 'width:100%' : 'width:fit-content;padding:0 ' + (bc.paddingX || 24) + 'px'};height:30px;margin:0 auto;background:${ps.bg};border:${ps.border};border-radius:${bc.borderRadius}px;opacity:${(bc.opacity != null ? bc.opacity : 90) / 100};display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer`}
-                    >
-                      <span style={`color:${ps.color};font-size:14px;font-weight:${bc.bold ? '600' : '400'};font-style:${bc.italic ? 'italic' : 'normal'}`} id="bannerPreviewText">
-                        <span id="bannerPreviewIcon">{bc.icon || '⚡'}</span> {bc.text || '번개가입으로 회원 혜택을 받으세요!'}
-                      </span>
-                    </div>
-                  </div>
-                  {/* 모의 콘텐츠 */}
-                  <div style="padding:16px;background:#f9fafb;border-top:1px solid #f0f0f0">
-                    <div style="background:#e5e7eb;border-radius:8px;height:120px;display:flex;align-items:center;justify-content:center">
-                      <span style="font-size:12px;color:#9ca3af">페이지 콘텐츠 영역</span>
-                    </div>
+            {/* ── 카드 1: 통합 미리보기 ───────────────────────── */}
+            <div class="card" style="margin-bottom:16px">
+              <h2>통합 미리보기</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:16px">미니배너와 라이브 카운터가 함께 표시되는 모습입니다. 아래 설정을 변경하면 즉시 반영됩니다.</p>
+              <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden">
+                {/* 모의 top_nav_box */}
+                <div style="background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  <span style="font-size:16px;font-weight:700;color:#111">{shop?.shop_name || '쇼핑몰'}</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                {/* 배너 미리보기 */}
+                <div style="text-align:center">
+                  <div
+                    id="bannerPreview"
+                    style={`${(bc.fullWidth !== false) ? 'width:100%' : 'width:fit-content;padding:0 ' + (bc.paddingX || 24) + 'px'};height:30px;margin:0 auto;background:${ps.bg};border:${ps.border};border-radius:${bc.borderRadius}px;opacity:${(bc.opacity != null ? bc.opacity : 90) / 100};display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer`}
+                  >
+                    <span style={`color:${ps.color};font-size:14px;font-weight:${bc.bold ? '600' : '400'};font-style:${bc.italic ? 'italic' : 'normal'}`} id="bannerPreviewText">
+                      <span id="bannerPreviewIcon">{bc.icon || '⚡'}</span> {bc.text || '번개가입으로 회원 혜택을 받으세요!'}
+                    </span>
                   </div>
                 </div>
+                {/* 모의 페이지 콘텐츠 영역 — 라이브 카운터/토스트가 이 안에 absolute 배치 */}
+                <div id="lcPreviewArea" style="position:relative;background:#f9fafb;border-top:1px solid #f0f0f0;height:240px;overflow:hidden">
+                  <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(45deg,#f9fafb 0px,#f9fafb 10px,#f1f5f9 10px,#f1f5f9 20px);opacity:0.4"></div>
+                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#9ca3af">쇼핑몰 페이지 콘텐츠 영역</div>
+                  <div id="lcPreviewCounter" style={`position:absolute;${lcCounterStyleInit};background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;transition:all 0.2s;display:${(lcEnabledInit && lcShowCounterInit) ? 'block' : 'none'}`}>
+                    <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">오늘 12명이 가입했어요</div>
+                    <div style="font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:3px">
+                      <span>⚡</span> 번개가입
+                    </div>
+                  </div>
+                  <div id="lcPreviewToast" style={`position:absolute;${lcToastStyleInit};background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;opacity:0.75;transition:all 0.2s;display:${(lcEnabledInit && lcShowToastInit) ? 'block' : 'none'}`}>
+                    <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:2px">김O자님이 가입했어요</div>
+                    <div style="font-size:11px;color:#94a3b8">3분 전</div>
+                  </div>
+                  <div id="lcPreviewDisabled" style={`display:${lcEnabledInit ? 'none' : 'block'};position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#94a3b8;background:#fff;padding:8px 16px;border-radius:8px;border:1px dashed #cbd5e1;z-index:2`}>라이브 카운터 비활성화됨</div>
+                </div>
+              </div>
+              <p style="font-size:11px;color:#94a3b8;margin-top:8px">"번개가입" 배지는 제거할 수 없습니다 (브랜드 신뢰도 차별화).</p>
+            </div>
+
+            {/* ── 카드 2: 미니배너 ────────────────────────────── */}
+            <div class="card" style="margin-bottom:16px">
+              <h2>미니배너</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:16px">로그인 페이지 상단에 회원가입 유도 배너가 표시됩니다.</p>
+              <div id="bannerSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
+
+              {/* 활성화 토글 (collapsible 밖, 카드 상단) — 클릭 가능, banner_config.enabled 저장 */}
+              <div style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">배너 활성화</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div id="bannerEnabledToggle" data-value={bc.enabled !== false ? 'true' : 'false'}
+                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.enabled !== false ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                    <div style={`position:absolute;top:2px;${bc.enabled !== false ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                  </div>
+                  <span id="bannerEnabledLabel" style="font-size:13px;color:#374151">{bc.enabled !== false ? '활성화됨' : '비활성화됨'}</span>
+                </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:6px">비활성화 시 미니배너가 표시되지 않습니다.</p>
               </div>
 
               {/* 설정 영역 (펼치기/접기) */}
@@ -403,20 +458,9 @@ export const BannerSettingsPage: FC<{
                   <span id="bannerSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
                 </div>
                 <div id="bannerSettingsBody" style="display:none">
-                  <div style="display:flex;gap:24px;margin-bottom:16px">
-                    <div class="form-group" style="flex:1">
-                      <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px">
-                        <span>배너 활성화</span>
-                        <span style="font-size:12px;color:#64748b;font-weight:400">(위젯 설치 시 자동 활성화)</span>
-                      </label>
-                      <div style="display:flex;align-items:center;gap:8px">
-                        <div style="width:40px;height:22px;background:linear-gradient(135deg,#f472b6 0%,#db2777 100%);border-radius:11px;position:relative;cursor:not-allowed;opacity:0.7">
-                          <div style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%"></div>
-                        </div>
-                        <span style="font-size:13px;color:#374151">활성화됨</span>
-                      </div>
-                    </div>
-                    <div class="form-group" style="flex:1">
+                  {/* 표시 조건 토글 2종 — 한 줄 가로 배치, 좁은 화면에선 자동 줄바꿈 */}
+                  <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px">
+                    <div class="form-group" style="margin:0">
                       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:12px">이전 로그인 기록 감지 시 표시 안함</label>
                       <div style="display:flex;align-items:center;gap:8px">
                         <div id="bannerHideReturningToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideForReturning ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'}`}>
@@ -424,6 +468,16 @@ export const BannerSettingsPage: FC<{
                         </div>
                       </div>
                       <p style="font-size:11px;color:#94a3b8;margin-top:6px">켜면 로그인 이력이 있는 방문자에게 배너를 표시하지 않습니다.</p>
+                    </div>
+                    <div class="form-group" style="margin:0">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:12px">메인/로그인/회원가입 페이지에서 숨기기</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div id="bannerHideSpecialToggle" data-value={bc.hideOnSpecialPages !== false ? 'true' : 'false'}
+                          style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${bc.hideOnSpecialPages !== false ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'};transition:background 0.2s`}>
+                          <div style={`position:absolute;top:2px;${bc.hideOnSpecialPages !== false ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                        </div>
+                      </div>
+                      <p style="font-size:11px;color:#94a3b8;margin-top:6px">켜면 쇼핑몰 메인 페이지와 로그인·회원가입 페이지에서는 미니배너가 표시되지 않습니다. (기본 ON)</p>
                     </div>
                   </div>
                   <div style="display:flex;gap:24px;margin-bottom:16px">
@@ -770,6 +824,24 @@ export const BannerSettingsPage: FC<{
                   });
                 });
 
+                // 배너 활성화 토글 (collapsible 밖, 카드 상단)
+                var bannerEnabled = document.getElementById('bannerEnabledToggle').getAttribute('data-value') === 'true';
+                var enabledToggle = document.getElementById('bannerEnabledToggle');
+                if (enabledToggle) {
+                  enabledToggle.addEventListener('click', function() {
+                    bannerEnabled = !bannerEnabled;
+                    this.setAttribute('data-value', bannerEnabled ? 'true' : 'false');
+                    this.style.background = bannerEnabled ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db';
+                    var dot = this.querySelector('div');
+                    if (dot) { dot.style.right = bannerEnabled ? '2px' : ''; dot.style.left = bannerEnabled ? '' : '2px'; }
+                    var lbl = document.getElementById('bannerEnabledLabel');
+                    if (lbl) lbl.textContent = bannerEnabled ? '활성화됨' : '비활성화됨';
+                    // 통합 미리보기에서 배너 element 즉시 visibility 토글
+                    var preview = document.getElementById('bannerPreview');
+                    if (preview) preview.style.display = bannerEnabled ? '' : 'none';
+                  });
+                }
+
                 var hideReturningToggle = document.getElementById('bannerHideReturningToggle');
                 if (hideReturningToggle) {
                   hideReturningToggle.addEventListener('click', function() {
@@ -784,6 +856,19 @@ export const BannerSettingsPage: FC<{
                       dot.style.right = 'auto';
                       dot.style.left = '2px';
                     }
+                  });
+                }
+
+                // 메인/로그인/회원가입 페이지에서 숨기기 토글 (기본 ON)
+                var hideSpecialToggle = document.getElementById('bannerHideSpecialToggle');
+                var hideOnSpecialPages = hideSpecialToggle ? hideSpecialToggle.getAttribute('data-value') === 'true' : true;
+                if (hideSpecialToggle) {
+                  hideSpecialToggle.addEventListener('click', function() {
+                    hideOnSpecialPages = !hideOnSpecialPages;
+                    this.setAttribute('data-value', hideOnSpecialPages ? 'true' : 'false');
+                    this.style.background = hideOnSpecialPages ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db';
+                    var dot = this.querySelector('div');
+                    if (dot) { dot.style.right = hideOnSpecialPages ? '2px' : ''; dot.style.left = hideOnSpecialPages ? '' : '2px'; }
                   });
                 }
 
@@ -819,6 +904,7 @@ export const BannerSettingsPage: FC<{
                     var radiusSlider = document.getElementById('bannerBorderRadius');
 
                     var payload = {
+                      enabled: bannerEnabled,
                       preset: currentBannerPreset,
                       text: (textInput && textInput.value) || '번개가입으로 회원 혜택을 받으세요!',
                       borderRadius: radiusSlider ? parseInt(radiusSlider.value) : 10,
@@ -830,6 +916,7 @@ export const BannerSettingsPage: FC<{
                       animation: currentAnimation,
                       anchorSelector: (document.getElementById('bannerAnchor') || {}).value || '#top_nav_box',
                       hideForReturning: hideForReturning,
+                      hideOnSpecialPages: hideOnSpecialPages,
                       fullWidth: isFullWidth,
                       paddingX: bannerPaddingSlider ? parseInt(bannerPaddingSlider.value) : 24
                     };
@@ -1013,6 +1100,7 @@ export const BannerSettingsPage: FC<{
                 })();
               })();
             `}} />
+            <LiveCounterSection shop={shop} shopId={shopId || ''} liveCounterConfig={liveCounterConfig} />
           </div>
         )
       }
@@ -1024,23 +1112,53 @@ export const BannerSettingsPage: FC<{
 export const PopupSettingsPage: FC<{
   shop: { shop_id: string; plan: string } | null;
   isCafe24?: boolean;
-}> = ({ shop, isCafe24 }) => {
+  couponPackPreview?: { design?: string; anim_mode?: boolean } | null;
+  couponConfigPreview?: Record<string, { enabled?: boolean; discount_amount?: number; discount_rate?: number }> | null;
+}> = ({ shop, isCafe24, couponPackPreview, couponConfigPreview }) => {
   const isPlus = shop != null && shop.plan !== 'free';
   const shopId = shop?.shop_id || '';
+  // 쿠폰팩 미리보기: 운영자가 설정한 디자인/애니가 있으면 그걸 사용, 없으면 brand+anim
+  const cpDesign = (['dark', 'brand', 'illust', 'minimal'] as const).includes(
+    (couponPackPreview?.design as 'dark' | 'brand' | 'illust' | 'minimal') ?? 'brand'
+  ) ? (couponPackPreview?.design as 'dark' | 'brand' | 'illust' | 'minimal') : 'brand';
+  const cpAnim = couponPackPreview?.anim_mode !== false; // 기본 true
+  const couponPackHtml = buildCouponPackHtml({ design: cpDesign, anim_mode: cpAnim, size: 'sm' });
+  // 단일 쿠폰 미리보기용 데이터 (서버에서 미리 빌드하지 않고 클라이언트에서 토글)
+  const ccShipping = couponConfigPreview?.shipping ?? null;
+  const ccAmount = couponConfigPreview?.amount ?? null;
+  const ccRate = couponConfigPreview?.rate ?? null;
+  const ccShippingEnabled = ccShipping?.enabled === true;
+  const ccAmountEnabled = ccAmount?.enabled === true;
+  const ccRateEnabled = ccRate?.enabled === true;
+  const ccAmountVal = ccAmount?.discount_amount ?? 0;
+  const ccRateVal = ccRate?.discount_rate ?? 0;
   return (
     <Layout title="이탈 감지 팝업" loggedIn currentPath="/dashboard/settings/popup" isCafe24={isCafe24}>
-      <h1>이탈 감지 팝업</h1>
+      <h1 style="margin-bottom:4px">이탈 감지 팝업</h1>
+      <p style="font-size:13px;color:#64748b;margin-bottom:4px">PC: 마우스가 브라우저 밖으로 나갈 때 / 모바일: 급격한 스크롤 업 감지 시 표시됩니다.</p>
+      <p style="font-size:13px;color:#64748b;margin-bottom:20px">팝업을 보여준 뒤 가입까지 이어지지 않은 이탈 방문자를 재유도합니다.</p>
       {!isPlus
         ? <PlusLockOverlay feature="이탈 감지 팝업" />
         : (
           <div>
+            {/* COUPON_PACK_CSS는 미리보기용으로 1회 주입 (위젯 측은 이탈 팝업 표시 시점에 별도로 주입됨) */}
+            <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
+
+            {/* ── Card 1: 미리보기 + 핵심 활성화 ─────────────────── */}
             <div class="card">
-              <h2>이탈 감지 팝업 설정</h2>
-              <p style="font-size:13px;color:#64748b;margin-bottom:4px">PC: 마우스가 브라우저 밖으로 나갈 때 / 모바일: 급격한 스크롤 업 감지 시 표시됩니다.</p>
-              <p style="font-size:13px;color:#64748b;margin-bottom:20px">팝업을 보여준 뒤 가입까지 이어지지 않은 이탈 방문자를 재유도합니다.</p>
-              {/* 미리보기 영역 (상단) */}
-              <div style="margin-bottom:20px">
-                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <h2 style="margin:0">미리보기 &amp; 활성화</h2>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div id="popupEnabledToggle" style="width:40px;height:22px;background:#2563eb;border-radius:11px;position:relative;cursor:pointer">
+                    <div id="popupEnabledKnob" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                  </div>
+                  <span id="popupEnabledLabel" style="font-size:13px;color:#374151;font-weight:600">활성화됨</span>
+                </div>
+              </div>
+
+              {/* 미리보기 */}
+              <div style="margin-bottom:16px">
+                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">팝업 미리보기</p>
                 <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px;position:relative;overflow:hidden">
                   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;user-select:none">
                     <div style="font-size:64px;line-height:1;margin-bottom:4px">&#129302;</div>
@@ -1048,7 +1166,7 @@ export const PopupSettingsPage: FC<{
                     <p style="font-size:11px;color:#111827;margin:2px 0 0">(test text)</p>
                   </div>
                   <p style="font-size:11px;color:#94a3b8;margin-bottom:12px;text-align:center;position:relative">이탈 감지 시 표시되는 팝업</p>
-                  <div id="popupPreviewCard" style="background:white;max-width:320px;margin:0 auto;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
+                  <div id="popupPreviewCard" style="background:white;max-width:340px;margin:0 auto;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
                     <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:#6b7280;line-height:24px;text-align:center">
                       &#10005;
                     </div>
@@ -1059,170 +1177,215 @@ export const PopupSettingsPage: FC<{
                       <h3 id="popupPreviewTitle" style="font-size:20px;font-weight:700;margin:0 0 8px;color:#111827">잠깐만요!</h3>
                       <p id="popupPreviewBody" style="font-size:14px;color:#6b7280;margin:0">지금 가입하면 특별 혜택을 드려요!</p>
                     </div>
-                    <button id="popupPreviewCta" style="width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">혜택 받고 가입하기</button>
+                    {/* 쿠폰팩 카드 미리보기 (coupon_mode='pack' 일 때 표시) */}
+                    <div id="popupPreviewCouponPack" style="display:flex;justify-content:center;margin:16px 0 12px"
+                      dangerouslySetInnerHTML={{__html: couponPackHtml}} />
+                    {/* 단일 쿠폰 카드 미리보기 (coupon_mode='single' 일 때 표시) */}
+                    <div id="popupPreviewCouponSingle" style="display:none;margin:16px 0 12px">
+                      <div id="popupPreviewSingleInner" style="position:relative;width:100%;max-width:300px;margin:0 auto;height:84px;background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:12px;display:flex;align-items:center;gap:14px;padding:0 18px;box-sizing:border-box;overflow:hidden">
+                        <div id="popupPreviewSingleAccent" style="position:absolute;left:0;top:0;width:5px;height:100%;background:#059669;border-radius:12px 0 0 12px"></div>
+                        <div id="popupPreviewSingleIcon" style="font-size:24px;flex-shrink:0">🚚</div>
+                        <div>
+                          <div id="popupPreviewSingleLabel" style="font-size:14px;font-weight:700;color:#059669;margin-bottom:3px">무료배송 쿠폰</div>
+                          <div style="font-size:11px;color:#6b7280">가입 즉시 자동 지급</div>
+                        </div>
+                        <div id="popupPreviewSingleDash" style="position:absolute;right:0;top:0;bottom:0;width:3px;border-right:1.5px dashed #a7f3d0"></div>
+                      </div>
+                      <div id="popupPreviewSingleWarn" style="display:none;text-align:center;font-size:11px;color:#dc2626;margin-top:6px">선택한 쿠폰이 기본 설정에서 비활성화되어 있어 위젯에서는 표시되지 않습니다.</div>
+                    </div>
+                    <div style="text-align:center"><button id="popupPreviewCta" style="display:inline-block;padding:9px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;opacity:0.92">혜택 받고 가입하기</button></div>
                   </div>
                 </div>
               </div>
-              {/* 설정 영역 (펼치기/접기) */}
-              <div>
-                <div id="popupSettingsToggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:16px">
-                  <span style="font-size:14px;font-weight:600;color:#374151">상세 설정</span>
-                  <span id="popupSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
+
+              {/* 핵심 동작 옵션 — 각 슬라이더/토글 단독 줄 */}
+              <div class="form-group" style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">노출 범위</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div id="popupAllPagesToggle" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;cursor:pointer">
+                    <div id="popupAllPagesKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
+                  </div>
+                  <span id="popupAllPagesLabel" style="font-size:13px;color:#374151">로그인 페이지만</span>
                 </div>
-                <div id="popupSettingsBody" style="display:none">
-                  <div style="display:flex;gap:24px;margin-bottom:16px">
-                    <div class="form-group" style="flex:1">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">팝업 활성화</label>
-                      <div style="display:flex;align-items:center;gap:8px">
-                        <div id="popupEnabledToggle" style="width:40px;height:22px;background:#2563eb;border-radius:11px;position:relative;cursor:pointer">
-                          <div id="popupEnabledKnob" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
-                        </div>
-                        <span id="popupEnabledLabel" style="font-size:13px;color:#374151">활성화됨</span>
-                      </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:4px">켜면 모든 페이지에서 비로그인 방문자에게 이탈 감지 시 팝업 표시</p>
+              </div>
+              <div style="margin-bottom:16px">
+                <label style="font-size:13px;font-weight:600;color:#475569;display:flex;justify-content:space-between;margin-bottom:6px" for="popupCooldown">
+                  <span>재노출 간격 <span style="font-weight:400;color:#94a3b8">(이 시간 내 1회만 노출)</span></span>
+                  <span id="popupCooldownValue">24시간</span>
+                </label>
+                <input type="range" min="1" max="168" value="24" id="popupCooldown" style="width:100%" />
+              </div>
+            </div>
+
+            {/* ── Card 2: 쿠폰 카드 표시 모드 ─────────────────────── */}
+            <div class="card">
+              <h2>쿠폰 카드 표시 모드</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:16px">팝업 안에 쿠폰 그래픽 카드를 노출합니다. 카드가 있는 팝업의 가입 전환율이 더 높습니다.</p>
+              <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <label class="popup-coupon-mode-card" data-mode="pack" style="flex:1;min-width:200px;padding:14px 16px;border:2px solid #2563eb;border-radius:10px;cursor:pointer;background:#eff6ff;display:flex;align-items:flex-start;gap:10px">
+                  <input type="radio" name="popupCouponMode" value="pack" checked style="margin-top:3px;cursor:pointer" />
+                  <div>
+                    <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:2px">쿠폰팩 카드 (Plus)</div>
+                    <div style="font-size:11px;color:#475569;line-height:1.5">5만원 상당 신규회원 쿠폰팩을 큼지막한 카드로 노출. <strong>전환율 최고</strong>.</div>
+                  </div>
+                </label>
+                <label class="popup-coupon-mode-card" data-mode="single" style="flex:1;min-width:200px;padding:14px 16px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;background:#fff;display:flex;align-items:flex-start;gap:10px">
+                  <input type="radio" name="popupCouponMode" value="single" style="margin-top:3px;cursor:pointer" />
+                  <div>
+                    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:2px">단일 쿠폰 카드</div>
+                    <div style="font-size:11px;color:#64748b;line-height:1.5">기본 쿠폰 1종을 그래픽 카드로 노출. 무료배송/정액/정률 중 선택.</div>
+                  </div>
+                </label>
+                <label class="popup-coupon-mode-card" data-mode="none" style="flex:1;min-width:200px;padding:14px 16px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;background:#fff;display:flex;align-items:flex-start;gap:10px">
+                  <input type="radio" name="popupCouponMode" value="none" style="margin-top:3px;cursor:pointer" />
+                  <div>
+                    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:2px">없음</div>
+                    <div style="font-size:11px;color:#64748b;line-height:1.5">텍스트만으로 가입 유도. 카드 그래픽 미노출.</div>
+                  </div>
+                </label>
+              </div>
+
+              {/* 단일 쿠폰일 때만 표시: 쿠폰 종류 */}
+              <div id="popupCouponTypeRow" style="display:none;margin-top:16px;padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCouponType">쿠폰 종류 <span style="font-weight:400;color:#94a3b8">(단일 쿠폰 모드)</span></label>
+                <select id="popupCouponType" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:240px">
+                  <option value="shipping">무료배송 쿠폰</option>
+                  <option value="amount">정액 할인 쿠폰</option>
+                  <option value="rate">정률 할인 쿠폰</option>
+                </select>
+                <p style="font-size:11px;color:#94a3b8;margin-top:6px">선택한 쿠폰이 <a href="/dashboard/settings/coupons" style="color:#2563eb;text-decoration:underline">기본 설정 → 쿠폰</a>에서 활성화되어 있어야 위젯에 노출됩니다.</p>
+              </div>
+
+              {/* 쿠폰팩일 때 안내 (운영자가 쿠폰팩 미설정이면 경고) */}
+              <div id="popupCouponPackInfo" style="margin-top:16px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af">
+                쿠폰팩 카드는 <a href="/dashboard/settings/coupons" style="color:#2563eb;font-weight:600;text-decoration:underline">기본 설정 → 쿠폰팩</a>에서 활성화한 디자인/애니로 표시됩니다.
+              </div>
+            </div>
+
+            {/* ── Card 3: 디자인/카피 (collapsible) ──────────────── */}
+            <div class="card">
+              <div id="popupSettingsToggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                <div>
+                  <h2 style="margin:0">디자인 &amp; 문구</h2>
+                  <p style="font-size:12px;color:#64748b;margin:4px 0 0">팝업 색상, 아이콘, 제목/본문/CTA 문구, 모서리, 투명도, 스크롤 트리거</p>
+                </div>
+                <span id="popupSettingsArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
+              </div>
+              <div id="popupSettingsBody" style="display:none;margin-top:16px">
+                <div style="display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap">
+                  <div style="flex:1;min-width:280px">
+                    <div class="form-group" style="margin-bottom:12px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupTitle">팝업 제목 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
+                      <input type="text" id="popupTitle" maxlength={20} placeholder="잠깐만요!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
                     </div>
-                    <div class="form-group" style="flex:1">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">노출 범위</label>
-                      <div style="display:flex;align-items:center;gap:8px">
-                        <div id="popupAllPagesToggle" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;cursor:pointer">
-                          <div id="popupAllPagesKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s"></div>
-                        </div>
-                        <span id="popupAllPagesLabel" style="font-size:13px;color:#374151">모든 페이지에서</span>
+                    <div class="form-group" style="margin-bottom:12px">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupBody">팝업 본문 <span style="font-weight:400;color:#94a3b8">(최대 100자)</span></label>
+                      <textarea id="popupBody" maxlength={100} rows={3} placeholder="지금 가입하면 특별 혜택을 드려요!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
+                    </div>
+                    <div class="form-group">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCta">버튼 텍스트 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
+                      <input type="text" id="popupCta" maxlength={20} placeholder="혜택 받고 가입하기" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
+                    </div>
+                    <div id="aiPopupSuggestion" style="display:none;margin-top:12px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="color:#1e40af;font-weight:600">AI 추천 문구</span>
+                        <button id="applyPopupCopy" type="button" style="padding:2px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer">적용</button>
                       </div>
-                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">켜면 모든 페이지에서 비로그인 방문자에게 이탈 감지시 팝업 표시</p>
+                      <div style="display:grid;gap:4px;color:#1e40af">
+                        <div>제목: <span id="aiPopupTitle"></span></div>
+                        <div>본문: <span id="aiPopupBody"></span></div>
+                        <div>버튼: <span id="aiPopupCta"></span></div>
+                      </div>
                     </div>
                   </div>
-                  <div style="display:flex;gap:20px;margin-bottom:16px;max-width:75%">
-                    <div style="flex:1">
-                      <div class="form-group" style="margin-bottom:12px">
-                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupTitle">팝업 제목 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
-                        <input type="text" id="popupTitle" maxlength={20} placeholder="잠깐만요!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
-                      </div>
-                      <div class="form-group" style="margin-bottom:12px">
-                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupBody">팝업 본문 <span style="font-weight:400;color:#94a3b8">(최대 100자)</span></label>
-                        <textarea id="popupBody" maxlength={100} rows={3} placeholder="지금 가입하면 특별 혜택을 드려요!" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
-                      </div>
-                      <div class="form-group">
-                        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCta">버튼 텍스트 <span style="font-weight:400;color:#94a3b8">(최대 20자)</span></label>
-                        <input type="text" id="popupCta" maxlength={20} placeholder="혜택 받고 가입하기" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box" />
-                      </div>
-                      <div id="aiPopupSuggestion" style="display:none;margin-top:12px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                          <span style="color:#1e40af;font-weight:600">AI 추천 문구</span>
-                          <button id="applyPopupCopy" type="button" style="padding:2px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer">적용</button>
-                        </div>
-                        <div style="display:grid;gap:4px;color:#1e40af">
-                          <div>제목: <span id="aiPopupTitle"></span></div>
-                          <div>본문: <span id="aiPopupBody"></span></div>
-                          <div>버튼: <span id="aiPopupCta"></span></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div style="flex-shrink:0">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
-                      <div style="display:flex;gap:6px">
-                        <button class="popup-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
-                        <button class="popup-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
-                        <button class="popup-icon-btn" data-icon="🛍️" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🛍️</button>
-                        <button class="popup-icon-btn" data-icon="💝" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">💝</button>
-                        <button class="popup-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
-                      </div>
+                  <div style="flex-shrink:0">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">아이콘</label>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <button class="popup-icon-btn" data-icon="⚡" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">⚡</button>
+                      <button class="popup-icon-btn" data-icon="🎁" style="width:36px;height:36px;border-radius:50%;border:2px solid #2563eb;background:#f8fafc;font-size:16px;cursor:pointer">🎁</button>
+                      <button class="popup-icon-btn" data-icon="🛍️" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">🛍️</button>
+                      <button class="popup-icon-btn" data-icon="💝" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:16px;cursor:pointer">💝</button>
+                      <button class="popup-icon-btn" data-icon="" style="width:36px;height:36px;border-radius:50%;border:2px solid transparent;background:#f8fafc;font-size:11px;cursor:pointer;color:#6b7280">없음</button>
                     </div>
                   </div>
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">색상 프리셋</label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap">
-                      <div class="popup-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:linear-gradient(135deg,#2563eb,#ec4899);display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">기본 블루</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">그린</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ea580c,#f59e0b);display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">오렌지</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#6b7280;display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="4" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">흑백 심플</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="5" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ec4899,#f43f5e);display:flex;align-items:center;justify-content:center">
-                        <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">핑크</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="6" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #93c5fd;overflow:hidden;background:#eff6ff;display:flex;align-items:center;justify-content:center">
-                        <span style="color:#2563eb;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑 테두리</span>
-                      </div>
-                      <div class="popup-preset-card" data-preset="7" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #d1d5db;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center">
-                        <span style="color:#374151;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색 테두리</span>
-                      </div>
+                </div>
+                <div style="margin-bottom:16px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">버튼 색상</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <div class="popup-preset-card" data-preset="6" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:3px solid #2563eb;overflow:hidden;background:#eff6ff;display:flex;align-items:center;justify-content:center">
+                      <span style="color:#2563eb;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">파랑 테두리</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="7" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid #d1d5db;overflow:hidden;background:#ffffff;display:flex;align-items:center;justify-content:center">
+                      <span style="color:#374151;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색 테두리</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="0" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#2563eb,#ec4899);display:flex;align-items:center;justify-content:center">
+                      <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">기본 블루</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="1" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center">
+                      <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">그린</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="2" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ea580c,#f59e0b);display:flex;align-items:center;justify-content:center">
+                      <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">오렌지</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="3" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#6b7280;display:flex;align-items:center;justify-content:center">
+                      <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">회색</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="4" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center">
+                      <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">흑백 심플</span>
+                    </div>
+                    <div class="popup-preset-card" data-preset="5" style="width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;overflow:hidden;background:linear-gradient(135deg,#ec4899,#f43f5e);display:flex;align-items:center;justify-content:center">
+                      <span style="color:white;font-size:9px;font-weight:600;text-align:center;line-height:1.3;padding:4px">핑크</span>
                     </div>
                   </div>
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">모서리 둥글기</label>
-                    <div style="display:flex;align-items:center;gap:12px">
-                      <input type="range" min="8" max="24" value="16" id="popupBorderRadius" style="flex:1" />
-                      <span id="popupBorderRadiusValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">16px</span>
-                    </div>
-                  </div>
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">투명도</label>
-                    <div style="display:flex;align-items:center;gap:12px">
-                      <input type="range" min="10" max="100" value="100" id="popupOpacity" style="flex:1" />
-                      <span id="popupOpacityValue" style="font-size:13px;min-width:36px;text-align:right;color:#374151">100%</span>
-                    </div>
-                  </div>
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCooldown">재노출 간격 (시간) <span style="font-weight:400;color:#94a3b8">해당 시간에 1회만 노출됩니다.</span></label>
-                    <div style="display:flex;align-items:center;gap:12px">
-                      <input type="range" min="1" max="168" value="24" id="popupCooldown" style="flex:1" />
-                      <span id="popupCooldownValue" style="font-size:13px;min-width:48px;text-align:right;color:#374151">24시간</span>
-                    </div>
-                  </div>
-                  {/* ── 스크롤 깊이 트리거 (Exit-intent에서 이식) ── */}
-                  <div style="margin-bottom:16px">
-                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupScrollDepth">스크롤 깊이 추가 트리거 <span style="font-weight:400;color:#94a3b8">설정 시 이탈 감지 + 스크롤 양쪽에서 팝업 발동</span></label>
-                    <select id="popupScrollDepth" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:200px">
-                      <option value="0">사용 안함</option>
-                      <option value="30">30% 스크롤</option>
-                      <option value="50">50% 스크롤</option>
-                      <option value="60">60% 스크롤</option>
-                      <option value="80">80% 스크롤</option>
-                    </select>
-                  </div>
-                  {/* ── 쿠폰 모드 (D2=A) ── */}
-                  <div style="margin-bottom:16px;padding:16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px">
-                    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:12px;color:#374151">쿠폰 카드 표시 모드</label>
-                    <div style="margin-bottom:12px">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCouponMode">쿠폰 모드</label>
-                      <select id="popupCouponMode" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:220px">
-                        <option value="none">없음 (쿠폰 카드 미노출)</option>
-                        <option value="single">단일 쿠폰 카드</option>
-                        <option value="pack">쿠폰팩 카드 (Plus 전용)</option>
-                      </select>
-                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">팝업에 쿠폰 그래픽 카드를 노출합니다. "쿠폰팩"은 Plus 플랜 + 쿠폰팩 활성화 시 동작합니다.</p>
-                    </div>
-                    <div id="popupCouponTypeRow" style="display:none;margin-bottom:4px">
-                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupCouponType">쿠폰 종류 <span style="font-weight:400;color:#94a3b8">(단일 쿠폰 모드일 때만)</span></label>
-                      <select id="popupCouponType" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:220px">
-                        <option value="shipping">무료배송 쿠폰</option>
-                        <option value="amount">정액 할인 쿠폰</option>
-                        <option value="rate">정률 할인 쿠폰</option>
-                      </select>
-                      <p style="font-size:11px;color:#94a3b8;margin-top:4px">선택한 쿠폰이 기본 설정에서 활성화되어 있어야 카드가 표시됩니다.</p>
-                    </div>
-                  </div>
-                  <div style="display:flex;gap:8px">
-                    <button id="popupSaveBtn" style="flex:1;padding:10px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">저장</button>
-                    <button id="popupResetBtn" style="padding:10px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:14px;cursor:pointer">기본값 되돌리기</button>
-                  </div>
-                  <div id="popupSaveStatus" style="display:none;padding:10px 16px;border-radius:8px;margin-top:12px;font-size:13px"></div>
+                </div>
+                {/* 슬라이더 — settings.tsx 위젯 디자인 페이지와 동일 패턴 (라벨+값 위, 슬라이더 width:100%) */}
+                <div style="margin-bottom:16px">
+                  <label style="font-size:13px;font-weight:600;color:#475569;display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>모서리 둥글기</span>
+                    <span id="popupBorderRadiusValue">16px</span>
+                  </label>
+                  <input type="range" min="8" max="24" value="16" id="popupBorderRadius" style="width:100%" />
+                </div>
+                <div style="margin-bottom:16px">
+                  <label style="font-size:13px;font-weight:600;color:#475569;display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>투명도</span>
+                    <span id="popupOpacityValue">100%</span>
+                  </label>
+                  <input type="range" min="10" max="100" value="100" id="popupOpacity" style="width:100%" />
+                </div>
+                <div style="margin-bottom:4px">
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="popupScrollDepth">스크롤 깊이 추가 트리거 <span style="font-weight:400;color:#94a3b8">설정 시 이탈 감지 + 스크롤 양쪽에서 팝업 발동</span></label>
+                  <select id="popupScrollDepth" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:200px">
+                    <option value="0">사용 안함</option>
+                    <option value="30">30% 스크롤</option>
+                    <option value="50">50% 스크롤</option>
+                    <option value="60">60% 스크롤</option>
+                    <option value="80">80% 스크롤</option>
+                  </select>
                 </div>
               </div>
+            </div>
+
+            {/* ── Card 4: 저장 ──────────────────────────────────── */}
+            <div class="card">
+              <div style="display:flex;gap:8px">
+                <button id="popupSaveBtn" style="flex:1;padding:12px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">저장</button>
+                <button id="popupResetBtn" style="padding:12px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:14px;cursor:pointer">기본값 되돌리기</button>
+              </div>
+              <div id="popupSaveStatus" style="display:none;padding:10px 16px;border-radius:8px;margin-top:12px;font-size:13px"></div>
             </div>
             <script dangerouslySetInnerHTML={{__html: `
               (function() {
                 var SHOP_ID = '${shopId}';
-                var DEFAULTS = { enabled: true, title: '잠깐만요!', body: '지금 가입하면 특별 혜택을 드려요!', ctaText: '혜택 받고 가입하기', preset: 0, borderRadius: 16, opacity: 100, icon: '🎁', allPages: false, cooldownHours: 24, frequency_cap_hours: 24, scroll_depth_threshold: 0, coupon_mode: 'none', coupon_type: '' };
+                // default 'pack': 페이지 진입자는 모두 Plus이므로 쿠폰팩 모드를 기본으로
+                var DEFAULTS = { enabled: true, title: '잠깐만요!', body: '지금 가입하면 특별 혜택을 드려요!', ctaText: '혜택 받고 가입하기', preset: 6, borderRadius: 16, opacity: 100, icon: '🎁', allPages: false, cooldownHours: 24, frequency_cap_hours: 24, scroll_depth_threshold: 0, coupon_mode: 'pack', coupon_type: 'shipping' };
+                // 단일 쿠폰 미리보기용 운영자 쿠폰 설정 (server-side에서 주입)
+                var SINGLE_COUPON_CFG = {
+                  shipping: { enabled: ${ccShippingEnabled ? 'true' : 'false'}, label: '\\ubb34\\ub8cc\\ubc30\\uc1a1 \\ucfe0\\ud3f0' },
+                  amount: { enabled: ${ccAmountEnabled ? 'true' : 'false'}, amount: ${ccAmountVal} },
+                  rate: { enabled: ${ccRateEnabled ? 'true' : 'false'}, rate: ${ccRateVal} }
+                };
                 var popupPresets = [
                   { ctaBg: '#2563eb', iconBg: 'linear-gradient(135deg, #2563eb, #ec4899)' },
                   { ctaBg: '#059669', iconBg: 'linear-gradient(135deg, #059669, #10b981)' },
@@ -1355,22 +1518,90 @@ export const PopupSettingsPage: FC<{
                   });
                 }
 
-                // ── 쿠폰 모드 ──
-                var couponModeSel = document.getElementById('popupCouponMode');
+                // ── 쿠폰 모드 (라디오 카드 + 미리보기 토글) ──
                 var couponTypeRow = document.getElementById('popupCouponTypeRow');
                 var couponTypeSel = document.getElementById('popupCouponType');
-                function updateCouponTypeRowVisibility() {
-                  if (couponTypeRow) couponTypeRow.style.display = (state.coupon_mode === 'single') ? 'block' : 'none';
-                }
-                if (couponModeSel) {
-                  couponModeSel.addEventListener('change', function() {
-                    state.coupon_mode = this.value;
-                    updateCouponTypeRowVisibility();
+                var couponPackInfo = document.getElementById('popupCouponPackInfo');
+                var modeCards = document.querySelectorAll('.popup-coupon-mode-card');
+                var previewPack = document.getElementById('popupPreviewCouponPack');
+                var previewSingle = document.getElementById('popupPreviewCouponSingle');
+                var previewSingleAccent = document.getElementById('popupPreviewSingleAccent');
+                var previewSingleIcon = document.getElementById('popupPreviewSingleIcon');
+                var previewSingleLabel = document.getElementById('popupPreviewSingleLabel');
+                var previewSingleInner = document.getElementById('popupPreviewSingleInner');
+                var previewSingleDash = document.getElementById('popupPreviewSingleDash');
+                var previewSingleWarn = document.getElementById('popupPreviewSingleWarn');
+
+                function renderModeCards() {
+                  modeCards.forEach(function(card) {
+                    var mode = card.dataset.mode;
+                    var radio = card.querySelector('input[type=radio]');
+                    var selected = (mode === state.coupon_mode);
+                    if (radio) radio.checked = selected;
+                    if (selected) {
+                      card.style.border = '2px solid #2563eb';
+                      card.style.background = '#eff6ff';
+                    } else {
+                      card.style.border = '2px solid #e5e7eb';
+                      card.style.background = '#fff';
+                    }
                   });
                 }
+
+                function renderSingleCouponPreview() {
+                  // 쿠폰 종류별 라벨/색상 (위젯 renderSingleCouponCard 와 동일한 룰)
+                  var t = state.coupon_type || 'shipping';
+                  var cfg = SINGLE_COUPON_CFG[t] || SINGLE_COUPON_CFG.shipping;
+                  var label = '', accent = '#2563eb', bg = '#eff6ff', border = '#bfdbfe', icon = '🎁';
+                  if (t === 'shipping') {
+                    label = '\\ubb34\\ub8cc\\ubc30\\uc1a1 \\ucfe0\\ud3f0'; // 무료배송 쿠폰
+                    accent = '#059669'; bg = '#ecfdf5'; border = '#a7f3d0'; icon = '\\uD83D\\uDE9A';
+                  } else if (t === 'amount') {
+                    var amt = SINGLE_COUPON_CFG.amount.amount || 0;
+                    label = (amt > 0 ? amt.toLocaleString() + '\\uc6d0 ' : '') + '\\ud560\\uc778 \\ucfe0\\ud3f0';
+                    accent = '#ea580c'; bg = '#fff7ed'; border = '#fed7aa'; icon = '\\uD83D\\uDCB0';
+                  } else if (t === 'rate') {
+                    var rate = SINGLE_COUPON_CFG.rate.rate || 0;
+                    label = (rate > 0 ? rate + '% ' : '') + '\\ud560\\uc778 \\ucfe0\\ud3f0';
+                    accent = '#7c3aed'; bg = '#f5f3ff'; border = '#ddd6fe'; icon = '\\uD83C\\uDFF7';
+                  }
+                  if (previewSingleInner) {
+                    previewSingleInner.style.background = bg;
+                    previewSingleInner.style.borderColor = border;
+                  }
+                  if (previewSingleAccent) previewSingleAccent.style.background = accent;
+                  if (previewSingleIcon) previewSingleIcon.textContent = icon;
+                  if (previewSingleLabel) {
+                    previewSingleLabel.textContent = label;
+                    previewSingleLabel.style.color = accent;
+                  }
+                  if (previewSingleDash) previewSingleDash.style.borderRightColor = border;
+                  if (previewSingleWarn) previewSingleWarn.style.display = cfg.enabled ? 'none' : 'block';
+                }
+
+                function updateCouponModeUI() {
+                  // 1) mode 카드 selected 상태
+                  renderModeCards();
+                  // 2) 단일 쿠폰 종류 select 표시 여부
+                  if (couponTypeRow) couponTypeRow.style.display = (state.coupon_mode === 'single') ? 'block' : 'none';
+                  // 3) 쿠폰팩 안내 박스
+                  if (couponPackInfo) couponPackInfo.style.display = (state.coupon_mode === 'pack') ? 'block' : 'none';
+                  // 4) 미리보기 카드 토글
+                  if (previewPack) previewPack.style.display = (state.coupon_mode === 'pack') ? 'flex' : 'none';
+                  if (previewSingle) previewSingle.style.display = (state.coupon_mode === 'single') ? 'block' : 'none';
+                  if (state.coupon_mode === 'single') renderSingleCouponPreview();
+                }
+
+                modeCards.forEach(function(card) {
+                  card.addEventListener('click', function() {
+                    state.coupon_mode = this.dataset.mode;
+                    updateCouponModeUI();
+                  });
+                });
                 if (couponTypeSel) {
                   couponTypeSel.addEventListener('change', function() {
                     state.coupon_type = this.value;
+                    if (state.coupon_mode === 'single') renderSingleCouponPreview();
                   });
                 }
 
@@ -1425,10 +1656,9 @@ export const PopupSettingsPage: FC<{
                   renderAllPages();
                   // 스크롤 깊이
                   if (scrollDepthSel) scrollDepthSel.value = String(state.scroll_depth_threshold || 0);
-                  // 쿠폰 모드
-                  if (couponModeSel) couponModeSel.value = state.coupon_mode || 'none';
+                  // 쿠폰 모드 (라디오 카드 + 미리보기)
                   if (couponTypeSel && state.coupon_type) couponTypeSel.value = state.coupon_type;
-                  updateCouponTypeRowVisibility();
+                  updateCouponModeUI();
                 }
 
                 // ── 저장 ──
@@ -2464,237 +2694,6 @@ export const AiSettingsPage: FC<{
   );
 };
 
-// ─── Exit-intent 쿠폰 게이트 설정 [Plus] ─────────────────────
-
-export const ExitIntentSettingsPage: FC<{
-  shop: { shop_id: string; plan: string } | null;
-  exitIntentConfig?: {
-    enabled?: boolean;
-    frequency_cap_hours?: number;
-    scroll_depth_threshold?: number;
-    coupon_type?: string | null;
-    headline?: string;
-    body?: string;
-  } | null;
-  isCafe24?: boolean;
-}> = ({ shop, exitIntentConfig, isCafe24 }) => {
-  const isPlus = shop != null && shop.plan !== 'free';
-  const shopId = shop?.shop_id || '';
-  const ei = exitIntentConfig ?? {};
-  const enabled = ei.enabled !== false;
-  const capHours = ei.frequency_cap_hours ?? 24;
-  const scrollDepth = ei.scroll_depth_threshold ?? 60;
-  const couponType = ei.coupon_type ?? '';
-  const headline = ei.headline ?? '잠깐만요!';
-  const bodyText = ei.body ?? '지금 가입하면 {coupon} 즉시 받을 수 있어요.';
-
-  return (
-    <Layout title="Exit-intent 쿠폰 게이트" loggedIn currentPath="/dashboard/settings/exit-intent" isCafe24={isCafe24}>
-      <h1>Exit-intent 쿠폰 게이트</h1>
-      {/* DEPRECATED 안내 배너 (D1=A, 2026-04-29) */}
-      <div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:flex-start;gap:14px">
-        <span style="font-size:22px;flex-shrink:0">⚠️</span>
-        <div>
-          <p style="font-size:14px;font-weight:700;color:#92400e;margin:0 0 6px">이 기능은 이탈 감지 팝업으로 통합되었습니다.</p>
-          <p style="font-size:13px;color:#78350f;margin:0 0 10px;line-height:1.6">
-            Exit-intent 쿠폰 게이트의 모든 기능(스크롤 깊이 트리거, 빈도 제한, 쿠폰 모드)은 이제 <strong>이탈 감지 팝업</strong> 설정 페이지로 이동했습니다.
-            위젯은 더 이상 이 페이지의 설정을 읽지 않습니다. <strong>이 페이지는 2026-05-29에 삭제됩니다.</strong>
-          </p>
-          <a href="/dashboard/settings/popup" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#f59e0b;color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none">
-            이탈 감지 팝업 설정으로 이동 →
-          </a>
-        </div>
-      </div>
-      {!isPlus
-        ? <PlusLockOverlay feature="Exit-intent 쿠폰 게이트" />
-        : (
-          <div style="opacity:0.5;pointer-events:none">
-            <p style="font-size:13px;color:#64748b;margin-bottom:20px">
-              (아래는 레거시 설정입니다. 위 안내에 따라 이탈 감지 팝업 페이지를 이용하세요.)
-            </p>
-
-            <div class="card">
-              <h2>기본 설정</h2>
-              <div style="max-width:560px">
-                {/* ON/OFF 토글 */}
-                <div class="form-group" style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-                  <label style="font-size:14px;font-weight:600;color:#374151;min-width:120px">활성화</label>
-                  <div id="eiEnabledToggle" data-on={enabled ? 'true' : 'false'}
-                    style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${enabled ? '#2563eb' : '#d1d5db'}`}>
-                    <div id="eiEnabledKnob" style={`position:absolute;top:2px;width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s;${enabled ? 'right:2px' : 'left:2px'}`}></div>
-                  </div>
-                  <span id="eiEnabledLabel" style="font-size:13px;color:#374151">{enabled ? '활성화됨' : '비활성'}</span>
-                </div>
-
-                {/* Frequency cap */}
-                <div class="form-group" style="margin-bottom:20px">
-                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#374151">재노출 방지 시간 (Frequency cap)</label>
-                  <select id="eiCapHours" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:200px">
-                    <option value="1" selected={capHours === 1}>1시간</option>
-                    <option value="6" selected={capHours === 6}>6시간</option>
-                    <option value="24" selected={capHours === 24}>24시간 (권장)</option>
-                    <option value="168" selected={capHours === 168}>7일</option>
-                  </select>
-                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">같은 방문자에게 설정 시간 내 재노출하지 않습니다.</p>
-                </div>
-
-                {/* Scroll-depth */}
-                <div class="form-group" style="margin-bottom:20px">
-                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#374151">Scroll-depth 추가 트리거 (0 = 비활성)</label>
-                  <select id="eiScrollDepth" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:200px">
-                    <option value="0" selected={scrollDepth === 0}>사용 안함</option>
-                    <option value="30" selected={scrollDepth === 30}>30% 스크롤</option>
-                    <option value="50" selected={scrollDepth === 50}>50% 스크롤</option>
-                    <option value="60" selected={scrollDepth === 60}>60% 스크롤 (권장)</option>
-                    <option value="80" selected={scrollDepth === 80}>80% 스크롤</option>
-                  </select>
-                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">설정 시 이탈 감지 + 스크롤 깊이 양쪽에서 모달이 트리거됩니다.</p>
-                </div>
-
-                {/* 연동 쿠폰 */}
-                <div class="form-group" style="margin-bottom:20px">
-                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#374151">연동 쿠폰 종류</label>
-                  <select id="eiCouponType" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:200px">
-                    <option value="" selected={!couponType}>사용 안함</option>
-                    <option value="shipping" selected={couponType === 'shipping'}>무료배송 쿠폰</option>
-                    <option value="amount" selected={couponType === 'amount'}>정액할인 쿠폰</option>
-                    <option value="rate" selected={couponType === 'rate'}>정률할인 쿠폰</option>
-                  </select>
-                  <p style="font-size:11px;color:#94a3b8;margin-top:4px">기본 설정의 쿠폰 활성화 여부와 연동됩니다. 선택한 쿠폰이 비활성이면 모달에 표시되지 않습니다.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="card" style="margin-top:16px">
-              <h2>모달 문구 설정</h2>
-              <div style="max-width:560px">
-                {/* 헤드라인 */}
-                <div class="form-group" style="margin-bottom:16px">
-                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#374151">헤드라인 (최대 30자)</label>
-                  <input id="eiHeadline" type="text" value={headline} maxlength={30}
-                    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box" />
-                </div>
-
-                {/* 본문 */}
-                <div class="form-group" style="margin-bottom:16px">
-                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#374151">본문 (최대 120자, {'{coupon}'}은 쿠폰명으로 치환)</label>
-                  <textarea id="eiBody" maxlength={120} rows={3}
-                    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box;resize:vertical">
-                    {bodyText}
-                  </textarea>
-                </div>
-              </div>
-
-              {/* 미리보기 */}
-              <div style="margin-top:16px">
-                <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">모달 미리보기</p>
-                <div style="background:#f8fafc;border:2px dashed #e5e7eb;border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center">
-                  <div id="eiPreviewCard" style="background:#fff;max-width:320px;width:100%;padding:24px 20px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center">
-                    <h3 id="eiPreviewTitle" style="font-size:20px;font-weight:700;color:#111827;margin:0 0 8px">{headline}</h3>
-                    <p id="eiPreviewBody" style="font-size:13px;color:#4b5563;margin:0 0 16px;line-height:1.5">{bodyText}</p>
-                    <div style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:600;margin-bottom:16px;display:inline-block">
-                      무료배송 쿠폰 (예시)
-                    </div>
-                    <div style="background:#03C75A;color:#fff;border-radius:10px;padding:11px;font-size:14px;font-weight:600;margin-bottom:8px">
-                      네이버로 가입하기
-                    </div>
-                    <div style="background:#FEE500;color:#191919;border-radius:10px;padding:11px;font-size:14px;font-weight:600;margin-bottom:12px">
-                      카카오로 가입하기
-                    </div>
-                    <button style="background:none;border:none;color:#9ca3af;font-size:13px;cursor:pointer">그냥 닫기</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style="margin-top:20px;display:flex;gap:12px">
-              <button id="eiSaveBtn" class="btn btn-primary" style="min-width:120px">저장</button>
-              <span id="eiSaveResult" style="font-size:13px;color:#22c55e;display:none;align-items:center;gap:4px">저장되었습니다.</span>
-            </div>
-
-            <script dangerouslySetInnerHTML={{__html: `
-              (function() {
-                var shopId = '${shopId}';
-                var changed = false;
-
-                function markChanged() { changed = true; }
-
-                // 토글 동작
-                var toggle = document.getElementById('eiEnabledToggle');
-                var knob = document.getElementById('eiEnabledKnob');
-                var label = document.getElementById('eiEnabledLabel');
-                var isOn = toggle.dataset.on === 'true';
-
-                function setToggle(on) {
-                  isOn = on;
-                  toggle.dataset.on = on ? 'true' : 'false';
-                  toggle.style.background = on ? '#2563eb' : '#d1d5db';
-                  if (on) { knob.style.right = '2px'; knob.style.left = ''; }
-                  else { knob.style.left = '2px'; knob.style.right = ''; }
-                  label.textContent = on ? '활성화됨' : '비활성';
-                  markChanged();
-                }
-                toggle.addEventListener('click', function() { setToggle(!isOn); });
-
-                // 입력 필드 change 감지
-                ['eiCapHours','eiScrollDepth','eiCouponType','eiHeadline','eiBody'].forEach(function(id) {
-                  var el = document.getElementById(id);
-                  if (el) el.addEventListener('input', function() {
-                    markChanged();
-                    if (id === 'eiHeadline') document.getElementById('eiPreviewTitle').textContent = el.value || '잠깐만요!';
-                    if (id === 'eiBody') document.getElementById('eiPreviewBody').textContent = el.value;
-                  });
-                  if (el && el.tagName === 'SELECT') el.addEventListener('change', markChanged);
-                });
-
-                // 저장
-                document.getElementById('eiSaveBtn').addEventListener('click', async function() {
-                  var btn = this;
-                  btn.disabled = true;
-                  btn.textContent = '저장 중...';
-                  var result = document.getElementById('eiSaveResult');
-                  result.style.display = 'none';
-
-                  var payload = {
-                    enabled: isOn,
-                    frequency_cap_hours: parseInt(document.getElementById('eiCapHours').value, 10),
-                    scroll_depth_threshold: parseInt(document.getElementById('eiScrollDepth').value, 10),
-                    coupon_type: document.getElementById('eiCouponType').value || null,
-                    headline: document.getElementById('eiHeadline').value.trim() || '잠깐만요!',
-                    body: document.getElementById('eiBody').value.trim() || '지금 가입하면 즉시 혜택을 받을 수 있어요.',
-                  };
-
-                  try {
-                    var resp = await fetch('/api/dashboard/shops/' + shopId + '/exit-intent-config', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'same-origin',
-                      body: JSON.stringify(payload),
-                    });
-                    if (resp.ok) {
-                      changed = false;
-                      result.style.display = 'inline-flex';
-                      setTimeout(function() { result.style.display = 'none'; }, 3000);
-                    } else {
-                      var d = await resp.json();
-                      alert('저장 실패: ' + (d.message || d.error || '알 수 없는 오류'));
-                    }
-                  } catch (e) {
-                    alert('네트워크 오류가 발생했습니다.');
-                  } finally {
-                    btn.disabled = false;
-                    btn.textContent = '저장';
-                  }
-                });
-              })();
-            `}} />
-          </div>
-        )
-      }
-    </Layout>
-  );
-};
-
 // ─── AI 브리핑 상세 페이지 (/dashboard/ai-briefing) ──────────────
 
 export type AiBriefingRow = {
@@ -3098,17 +3097,23 @@ export const AiBriefingPage: FC<{
 };
 
 // ─── Live Counter Settings Page (Plus 전용) ──────────────────
-export const LiveCounterSettingsPage: FC<{
-  shop: { plan: string; shop_id: string; shop_name?: string | null } | null;
+/**
+ * LiveCounterSection — 미니배너 페이지 안에 embedded 되는 라이브 카운터 섹션.
+ * Layout/h1 없이 카드들만 렌더. parent가 PlusLockOverlay 분기를 처리하므로 isPlus 시에만 본문 반환.
+ */
+const LiveCounterSection: FC<{
+  shop: { plan: string; shop_name?: string | null } | null;
+  shopId: string;
   liveCounterConfig?: {
     enabled?: boolean;
     position?: string;
     show_toast?: boolean;
     show_counter?: boolean;
   } | null;
-  isCafe24?: boolean;
-}> = ({ shop, liveCounterConfig, isCafe24 }) => {
+}> = ({ shop, shopId, liveCounterConfig }) => {
   const isPlus = shop != null && shop.plan !== 'free';
+  if (!isPlus || !shop) return null;
+
   const lc = liveCounterConfig || {};
   const enabled = lc.enabled !== false;
   const position = lc.position || 'bottom-right';
@@ -3123,12 +3128,7 @@ export const LiveCounterSettingsPage: FC<{
   ];
 
   return (
-    <Layout title="라이브 가입자 카운터" loggedIn currentPath="/dashboard/settings/live-counter" isCafe24={isCafe24}>
-      <h1>라이브 가입자 카운터</h1>
-      {!isPlus ? (
-        <PlusLockOverlay feature="라이브 가입자 카운터" />
-      ) : (
-        <div>
+    <div>
           <div class="card" style="margin-bottom:16px">
             <h2>라이브 가입자 카운터</h2>
             <p style="font-size:13px;color:#64748b;margin-bottom:20px">
@@ -3137,28 +3137,7 @@ export const LiveCounterSettingsPage: FC<{
             </p>
             <div id="lcSaveMsg" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
 
-            {/* 미리보기 */}
-            <div style="margin-bottom:20px">
-              <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-              <div id="lcPreviewArea" style="position:relative;background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;height:280px;overflow:hidden">
-                <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(45deg,#f9fafb 0px,#f9fafb 10px,#f1f5f9 10px,#f1f5f9 20px);opacity:0.4"></div>
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#9ca3af">쇼핑몰 페이지</div>
-                <div id="lcPreviewCounter" style="position:absolute;bottom:16px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;transition:all 0.2s">
-                  <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">오늘 12명이 가입했어요</div>
-                  <div style="font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:3px">
-                    <span>⚡</span> 번개가입
-                  </div>
-                </div>
-                <div id="lcPreviewToast" style="position:absolute;bottom:100px;right:16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,0.13);min-width:160px;opacity:0.75;transition:all 0.2s">
-                  <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:2px">김O자님이 가입했어요</div>
-                  <div style="font-size:11px;color:#94a3b8">3분 전</div>
-                </div>
-                <div id="lcPreviewDisabled" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#94a3b8;background:#fff;padding:8px 16px;border-radius:8px;border:1px dashed #cbd5e1">비활성화됨</div>
-              </div>
-              <p style="font-size:11px;color:#94a3b8;margin-top:6px">
-                "번개가입" 배지는 제거할 수 없습니다 (브랜드 신뢰도 차별화).
-              </p>
-            </div>
+            {/* 미리보기는 상단 통합 미리보기 카드에 흡수됨 — 여기서는 렌더하지 않음 */}
 
             {/* 설정 */}
             <div style="display:flex;flex-direction:column;gap:20px">
@@ -3175,22 +3154,30 @@ export const LiveCounterSettingsPage: FC<{
                 <p style="font-size:11px;color:#94a3b8;margin-top:6px">비활성화 시 카운터와 토스트 모두 표시되지 않습니다.</p>
               </div>
 
-              {/* 위치 선택 */}
+              {/* 설정 영역 (펼치기/접기) — 미니배너 페이지와 동일 UX, 기본 접힘 */}
               <div>
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">표시 위치</label>
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  {positions.map(p => (
-                    <label id={`lc-pos-${p.value}`}
-                      style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${position === p.value ? '#2563eb' : '#e5e7eb'};background:${position === p.value ? '#eff6ff' : '#fff'};transition:all 0.15s`}>
-                      <input type="radio" name="lcPosition" value={p.value} checked={position === p.value} style="display:none" />
-                      {p.label}
-                    </label>
-                  ))}
+                <div id="lcDetailToggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:16px">
+                  <span style="font-size:14px;font-weight:600;color:#374151">상세 설정</span>
+                  <span id="lcDetailArrow" style="font-size:18px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
                 </div>
-              </div>
+                <div id="lcDetailSection" style="display:none;flex-direction:column;gap:20px">
+              {/* 위치 / Sticky / 토스트 — 한 줄 가로 배치, 좁은 화면에선 자동 줄바꿈 */}
+              <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+                {/* 위치 선택 */}
+                <div>
+                  <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">표시 위치</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    {positions.map(p => (
+                      <label id={`lc-pos-${p.value}`}
+                        style={`display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:2px solid ${position === p.value ? '#2563eb' : '#e5e7eb'};background:${position === p.value ? '#eff6ff' : '#fff'};transition:all 0.15s`}>
+                        <input type="radio" name="lcPosition" value={p.value} checked={position === p.value} style="display:none" />
+                        {p.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-              {/* 카운터 / 토스트 개별 토글 */}
-              <div style="display:flex;gap:24px">
+                {/* Sticky 카운터 토글 */}
                 <div>
                   <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Sticky 카운터 표시</label>
                   <div id="lcCounterToggle" data-value={showCounter ? 'true' : 'false'}
@@ -3199,6 +3186,8 @@ export const LiveCounterSettingsPage: FC<{
                   </div>
                   <p style="font-size:11px;color:#94a3b8;margin-top:4px">오늘 가입자 수 표시</p>
                 </div>
+
+                {/* 가입 토스트 토글 */}
                 <div>
                   <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">가입 토스트 표시</label>
                   <div id="lcToastToggle" data-value={showToast ? 'true' : 'false'}
@@ -3213,6 +3202,8 @@ export const LiveCounterSettingsPage: FC<{
               <div>
                 <button id="lcSaveBtn" class="btn btn-primary" style="width:auto">설정 저장</button>
               </div>
+                </div> {/* lcDetailSection 끝 */}
+              </div> {/* 설정 영역 wrapper 끝 */}
             </div>
           </div>
 
@@ -3227,7 +3218,7 @@ export const LiveCounterSettingsPage: FC<{
 
           <script dangerouslySetInnerHTML={{__html: `
             (function() {
-              var shopId = '${shop.shop_id}';
+              var shopId = '${shopId}';
 
               // 토글 헬퍼
               function makeToggle(id, onChange) {
@@ -3255,19 +3246,19 @@ export const LiveCounterSettingsPage: FC<{
                 var toastEl = document.getElementById('lcPreviewToast');
                 var disabledEl = document.getElementById('lcPreviewDisabled');
                 if (!counterEl || !toastEl || !disabledEl) return;
-                // 위치 매핑 (카운터) — 사용자 시각 기준 swap (bottom-* 선택 시 미리보기에서도 하단)
+                // 위치 매핑 (카운터) — bottom-* 는 하단, top-* 는 상단 (위젯 live-counter.ts와 동일 좌표계)
                 var posMap = {
-                  'bottom-right': { top: '16px', bottom: 'auto', left: 'auto', right: '16px' },
-                  'bottom-left':  { top: '16px', bottom: 'auto', left: '16px', right: 'auto' },
-                  'top-right':    { top: 'auto', bottom: '16px', left: 'auto', right: '16px' },
-                  'top-left':     { top: 'auto', bottom: '16px', left: '16px', right: 'auto' }
+                  'bottom-right': { top: 'auto', bottom: '16px', left: 'auto', right: '16px' },
+                  'bottom-left':  { top: 'auto', bottom: '16px', left: '16px', right: 'auto' },
+                  'top-right':    { top: '16px', bottom: 'auto', left: 'auto', right: '16px' },
+                  'top-left':     { top: '16px', bottom: 'auto', left: '16px', right: 'auto' }
                 };
                 var p = posMap[position] || posMap['bottom-right'];
                 ['top','bottom','left','right'].forEach(function(k){ counterEl.style[k] = p[k]; });
-                // 토스트는 카운터에서 vertical offset 84px
+                // 토스트는 카운터로부터 vertical offset 100px — 카운터와 같은 모서리 방향에서 안쪽으로 한 칸
                 var t = Object.assign({}, p);
-                if (position.indexOf('bottom') === 0) { t.top = '100px'; t.bottom = 'auto'; }
-                else { t.bottom = '100px'; t.top = 'auto'; }
+                if (position.indexOf('bottom') === 0) { t.bottom = '100px'; t.top = 'auto'; }
+                else { t.top = '100px'; t.bottom = 'auto'; }
                 ['top','bottom','left','right'].forEach(function(k){ toastEl.style[k] = t[k]; });
                 // 표시/숨김
                 counterEl.style.display = (enabled && showCounter) ? 'block' : 'none';
@@ -3283,6 +3274,19 @@ export const LiveCounterSettingsPage: FC<{
               });
               makeToggle('lcCounterToggle', function() { updatePreview(); });
               makeToggle('lcToastToggle', function() { updatePreview(); });
+
+              // 상세 설정 펼치기/접기 (미니배너 페이지와 동일 UX, 기본 접힘)
+              var detailToggle = document.getElementById('lcDetailToggle');
+              var detailSection = document.getElementById('lcDetailSection');
+              var detailArrow = document.getElementById('lcDetailArrow');
+              var detailOpen = false;
+              if (detailToggle && detailSection) {
+                detailToggle.addEventListener('click', function() {
+                  detailOpen = !detailOpen;
+                  detailSection.style.display = detailOpen ? 'flex' : 'none';
+                  if (detailArrow) detailArrow.style.transform = detailOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+                });
+              }
 
               // 위치 라디오
               document.querySelectorAll('input[name="lcPosition"]').forEach(function(input) {
@@ -3344,9 +3348,7 @@ export const LiveCounterSettingsPage: FC<{
               });
             })();
           `}} />
-        </div>
-      )}
-    </Layout>
+    </div>
   );
 };
 

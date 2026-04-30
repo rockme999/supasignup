@@ -140,11 +140,9 @@ const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/sso-guide', label: 'SSO 설정 가이드', icon: <IconBook /> },
   { path: '/dashboard/settings/providers', label: '로그인 디자인', icon: <IconPalette /> },
   { path: '/dashboard/settings/coupon', label: '쿠폰 현황', icon: <IconTicket /> },
-  { path: '/dashboard/settings/banner', label: '미니배너', icon: <IconFlag />, plus: true },
+  { path: '/dashboard/settings/banner', label: '미니배너 & 라이브', icon: <IconFlag />, plus: true },
   { path: '/dashboard/settings/escalation', label: '에스컬레이션', icon: <IconTrending />, plus: true },
   { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
-  { path: '/dashboard/settings/exit-intent', label: 'Exit-intent (통합됨)', icon: <IconBell />, plus: true },
-  { path: '/dashboard/settings/live-counter', label: '라이브 카운터', icon: <IconTrending />, plus: true },
   { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
   { path: '/dashboard/ai-briefing', label: 'AI 브리핑', icon: <IconSparkle />, plus: true },
 ];
