@@ -70,10 +70,10 @@ export function getRenderJs(): string {
     // bgDebug() 헬퍼로 통일 (기존 직접 indexOf 패턴 교체)
     bgLog('render: applied preset =', preset, 'style =', s, 'plan =', this.config && this.config.plan);
 
-    // dark-wrap이 적용될 가능성이 있는 preset은 inline-flex로 배치 (inline-block + flex children)
-    // — 일반 preset은 flex로 페이지 가운데 정렬.
-    // (이전 회귀: 컨테이너에 'display:flex !important' inline을 박아 dark-wrap CSS의
-    //  'display:inline-block'을 무력화 → wrap이 페이지 폭을 다 차지해 둥근 배경/모서리가 안 보임)
+    // 모든 일반/Plus 프리셋: block-level flex column + max-width 제한
+    // → base CSS의 '.bg-widget { margin: 16px auto }' 가 자동 가운데 정렬을 수행.
+    // (회귀 1 [구]: max-width 부재 + display:flex → wrap이 페이지 폭 다 차지해 둥근 배경/모서리 안 보임 → max-width로 해결)
+    // (회귀 2 [구]: dark-wrap 후보 3종에 inline-flex 사용 → inline 박스라 margin:auto 무력화 → 좌측 치우침 → display:flex 복귀로 해결)
     var willMaybeWrap = DARK_BG_PRESETS.indexOf(preset) !== -1;
     if (preset === 'icon-only') {
       // icon-only: icons laid out in a row
@@ -83,12 +83,6 @@ export function getRenderJs(): string {
       bgSetImp(this.container, 'align-items', 'center');
       bgSetImp(this.container, 'justify-content', 'center');
       bgSetImp(this.container, 'max-width', 'none');
-    } else if (willMaybeWrap) {
-      // dark-wrap 후보 preset: inline-flex로 — wrapper가 자식 폭에 fit 하면서 자식들은 flex column 정렬
-      bgSetImp(this.container, 'display', 'inline-flex');
-      bgSetImp(this.container, 'flex-direction', 'column');
-      bgSetImp(this.container, 'align-items', 'center');
-      bgSetImp(this.container, 'max-width', (buttonWidth + 32) + 'px');
     } else {
       bgSetImp(this.container, 'display', 'flex');
       bgSetImp(this.container, 'flex-direction', 'column');
@@ -299,8 +293,8 @@ export function getRenderJs(): string {
             var paths = iconSpan.querySelectorAll('path');
             for (var pi = 0; pi < paths.length; pi++) { paths[pi].setAttribute('fill', oFill); }
           }
-        } else if (isPlusPreset && provider !== 'google') {
-          // Plus 프리셋: 배경 톤에 따라 아이콘 fill 자동 결정 (구글 4색 제외)
+        } else if (isPlusPreset) {
+          // Plus 프리셋: 배경 톤에 따라 아이콘 fill 자동 결정 (구글 포함 6종 모두 단색 통일)
           // 다크 배경: glass, neon, liquid, gradient → 흰색
           // 라이트 배경: soft, pulse → 검정
           var PLUS_DARK_PRESETS = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];

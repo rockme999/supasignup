@@ -1059,12 +1059,10 @@ export const ProvidersPage: FC<{
                   var iconWrapP = document.createElement('span');
                   iconWrapP.style.cssText = 'flex-shrink:0;display:flex;align-items:center';
                   iconWrapP.innerHTML = providerIcons[p];
-                  // Plus 프리셋: 배경 톤에 따라 아이콘 fill 자동 결정 (구글 4색 제외)
-                  if (p !== 'google') {
-                    var PLUS_DARK_SET = new Set(['glassmorphism','neon-glow','liquid-glass','gradient-flow']);
-                    var plusFill = PLUS_DARK_SET.has(style.preset) ? '#ffffff' : '#374151';
-                    iconWrapP.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', plusFill); });
-                  }
+                  // Plus 프리셋: 배경 톤에 따라 아이콘 fill 자동 결정 (구글 포함 6종 모두 단색 통일)
+                  var PLUS_DARK_SET = new Set(['glassmorphism','neon-glow','liquid-glass','gradient-flow']);
+                  var plusFill = PLUS_DARK_SET.has(style.preset) ? '#ffffff' : '#374151';
+                  iconWrapP.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', plusFill); });
                   btn.appendChild(iconWrapP);
                 }
                 var textSpanP = document.createElement('span');
