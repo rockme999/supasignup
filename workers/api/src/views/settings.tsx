@@ -616,7 +616,11 @@ export const ProvidersPage: FC<{
       <div class="card">
         <h2>위젯 미리보기</h2>
         <p style="font-size:13px; color:#64748b; margin-bottom:16px">쇼핑몰에 표시될 소셜 로그인 버튼의 실제 모습입니다.</p>
-        <div id="previewFrame" style="background:#f8fafc; border:2px solid #e5e7eb; border-radius:12px; padding:32px; min-height:200px; display:flex; align-items:center; justify-content:center;">
+        <div id="previewFrame" style="background:#f8fafc; border:2px solid #e5e7eb; border-radius:12px; padding:32px; min-height:200px; display:flex; align-items:center; justify-content:center; position:relative;">
+          <div id="previewModeToggle" style="position:absolute; top:12px; right:12px; display:flex; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:2px; font-size:12px; gap:2px; z-index:1">
+            <button type="button" data-mode="pc" style="padding:4px 12px; border:none; background:#3b82f6; color:#fff; border-radius:6px; cursor:pointer; font-weight:500">PC</button>
+            <button type="button" data-mode="mobile" style="padding:4px 12px; border:none; background:transparent; color:#64748b; border-radius:6px; cursor:pointer; font-weight:500">모바일</button>
+          </div>
           <div id="previewButtons" style="display:flex; flex-direction:column; align-items:center;"></div>
         </div>
       </div>
@@ -707,7 +711,7 @@ export const ProvidersPage: FC<{
           .bg-preset-liquid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--bg-mx,50%) var(--bg-my,30%),rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.06) 45%,transparent 70%);pointer-events:none}
           .bg-preset-liquid::after{content:"";position:absolute;top:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none}
           .bg-preset-liquid:hover{box-shadow:inset 0 0 24px rgba(255,255,255,0.12),0 12px 40px rgba(31,38,135,0.28),0 4px 12px rgba(0,0,0,0.22)!important;transform:translateY(-1px)!important}
-          .bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%!important;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}
+          .bg-preset-gradient{background-size:200% 200%!important;background-image:linear-gradient(135deg,#f093fb 0%,#f5576c 25%,#fda085 50%,#f6d365 75%,#a18cd1 100%)!important;background-position:0% 50%;border:none!important;color:#fff!important;font-weight:600!important;box-shadow:0 3px 14px rgba(240,147,251,0.35)!important;text-shadow:0 1px 2px rgba(0,0,0,0.15)!important;transition:background-position 0.5s ease,box-shadow 0.3s ease,transform 0.2s ease!important}
           .bg-preset-gradient:hover{background-position:100% 50%!important;box-shadow:0 6px 24px rgba(240,147,251,0.5)!important;transform:translateY(-1px)!important}
           .bg-preset-soft{background:#ffffff!important;border:1px solid rgba(0,0,0,0.06)!important;color:#374151!important;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.07),0 16px 32px rgba(0,0,0,0.04)!important;transition:box-shadow 0.25s ease,transform 0.25s ease!important}
           .bg-preset-soft:hover{transform:translateY(-3px)!important;box-shadow:0 2px 4px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.10),0 24px 48px rgba(0,0,0,0.06)!important}
@@ -718,6 +722,41 @@ export const ProvidersPage: FC<{
           .bg-preset-pulse-d3{animation-delay:0.8s!important}
           .bg-preset-pulse-d4{animation-delay:1.2s!important}
           @keyframes bg-pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.35),0 1px 3px rgba(0,0,0,0.06)}50%{box-shadow:0 0 0 7px rgba(99,102,241,0),0 1px 3px rgba(0,0,0,0.06)}}
+          /* ── 모바일 시뮬레이션 keyframes (위젯 animations-css.ts 와 동일) ── */
+          @keyframes bg-mobile-glass{0%,6.25%,100%{transform:translateY(0);filter:brightness(1) drop-shadow(0 0 0 transparent)}3%{transform:translateY(-1px);filter:brightness(1.1) drop-shadow(0 6px 18px rgba(0,0,0,0.18))}}
+          @keyframes bg-mobile-neon{0%,6.25%,100%{transform:translateY(0);filter:brightness(1) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent)}3%{transform:translateY(-1px);filter:brightness(1.3) drop-shadow(0 0 16px rgba(99,102,241,0.9)) drop-shadow(0 0 32px rgba(99,102,241,0.6)) drop-shadow(0 0 48px rgba(99,102,241,0.35))}}
+          @keyframes bg-mobile-liquid{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.015);filter:brightness(1.08)}}
+          @keyframes bg-mobile-liquid-shine{0%,100%{transform:translateX(-25%);opacity:0.55}50%{transform:translateX(25%);opacity:1}}
+          @keyframes bg-mobile-gradient{0%,6.25%,100%{background-position:0% 50%;transform:translateY(0);filter:drop-shadow(0 0 0 transparent)}3%{background-position:100% 50%;transform:translateY(-1px);filter:drop-shadow(0 4px 12px rgba(240,147,251,0.4))}}
+          @keyframes bg-mobile-soft{0%,6.25%,100%{transform:translateY(0);filter:drop-shadow(0 1px 2px rgba(0,0,0,0.04))}3%{transform:translateY(-3px);filter:drop-shadow(0 8px 20px rgba(0,0,0,0.12))}}
+          @keyframes bg-mobile-pulse{0%,6.25%,100%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}3%{transform:scale(1.02);filter:drop-shadow(0 0 10px rgba(99,102,241,0.5))}}
+          /* ── 모바일 시뮬레이션 활성 시 (.bg-mobile-sim) — 위젯 미디어쿼리 룰 미러링 ── */
+          .bg-mobile-sim .bg-preset-glass{animation:bg-mobile-glass 8s ease-in-out infinite}
+          .bg-mobile-sim .bg-preset-neon{animation:bg-mobile-neon 8s ease-in-out infinite}
+          .bg-mobile-sim .bg-preset-liquid{animation:bg-mobile-liquid 8s ease-in-out infinite}
+          /* 모바일 시뮬 모드의 liquid ::before — 광택 alpha 강화 + 마우스 추적 없이 중심 고정. 미리보기 박스는 작아 위젯 기본 alpha(0.28) 으론 sweep 가시성이 약함. animation-play-state running !important 로 어떤 외부 영향도 차단 */
+          .bg-mobile-sim .bg-preset-liquid::before{animation:bg-mobile-liquid-shine 7s ease-in-out infinite!important;animation-play-state:running!important;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.15) 45%,transparent 70%)!important}
+          .bg-mobile-sim .bg-preset-gradient{animation:bg-mobile-gradient 8s ease-in-out infinite}
+          .bg-mobile-sim .bg-preset-soft{animation:bg-mobile-soft 8s ease-in-out infinite}
+          .bg-mobile-sim .bg-preset-pulse{animation-name:bg-pulseRing,bg-mobile-pulse!important;animation-duration:2s,8s!important;animation-iteration-count:infinite,infinite!important;animation-timing-function:ease-in-out,ease-in-out!important}
+          /* delay 클래스 — .bg-mobile-sim 안에서만 활성. PC 모드에선 무효 */
+          .bg-mobile-sim .bg-mobile-anim-d1{animation-delay:8s!important}
+          .bg-mobile-sim .bg-mobile-anim-d2{animation-delay:8.3s!important}
+          .bg-mobile-sim .bg-mobile-anim-d3{animation-delay:8.6s!important}
+          .bg-mobile-sim .bg-mobile-anim-d4{animation-delay:8.9s!important}
+          .bg-mobile-sim .bg-mobile-anim-d5{animation-delay:9.2s!important}
+          .bg-mobile-sim .bg-mobile-anim-d6{animation-delay:9.5s!important}
+          .bg-mobile-sim .bg-mobile-pulse-d1{animation-delay:0s,8s!important}
+          .bg-mobile-sim .bg-mobile-pulse-d2{animation-delay:0s,8.3s!important}
+          .bg-mobile-sim .bg-mobile-pulse-d3{animation-delay:0s,8.6s!important}
+          .bg-mobile-sim .bg-mobile-pulse-d4{animation-delay:0s,8.9s!important}
+          .bg-mobile-sim .bg-mobile-pulse-d5{animation-delay:0s,9.2s!important}
+          .bg-mobile-sim .bg-mobile-pulse-d6{animation-delay:0s,9.5s!important}
+          /* 자동 다크 wrapper — 위젯 presets-css.ts 와 동일. 밝은 미리보기 배경에 dark-bg 프리셋(glass/neon/liquid)이 묻혀 보이지 않게 어두운 wrap 자동 적용 */
+          .bg-dark-wrap{padding:14px 16px;border-radius:12px!important;display:inline-block!important;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto}
+          .bg-dark-wrap-glassmorphism{background:linear-gradient(135deg,#667eea,#764ba2,#f093fb)!important}
+          .bg-dark-wrap-neon-glow{background:#0a0a14!important}
+          .bg-dark-wrap-liquid-glass{background:linear-gradient(160deg,#0f2027,#203a43,#2c5364)!important}
           /* 미리보기 버튼 공통 */
           .bg-prv-btn{display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s ease;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
         `}} />
@@ -996,10 +1035,50 @@ export const ProvidersPage: FC<{
             return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
           }
 
+          // ── 미리보기 모드 토글 (PC ↔ 모바일) ──
+          (function() {
+            var toggleBtns = document.querySelectorAll('#previewModeToggle button');
+            var previewButtons = document.getElementById('previewButtons');
+            toggleBtns.forEach(function(b) {
+              b.addEventListener('click', function() {
+                var mode = b.getAttribute('data-mode');
+                if (mode === 'mobile') {
+                  previewButtons.classList.add('bg-mobile-sim');
+                } else {
+                  previewButtons.classList.remove('bg-mobile-sim');
+                }
+                toggleBtns.forEach(function(bb) {
+                  if (bb.getAttribute('data-mode') === mode) {
+                    bb.style.background = '#3b82f6';
+                    bb.style.color = '#fff';
+                  } else {
+                    bb.style.background = 'transparent';
+                    bb.style.color = '#64748b';
+                  }
+                });
+              });
+            });
+          })();
+
           var renderPreview = window.renderProviderPreview = function() {
             var providers = getEnabledProviders();
             var container = document.getElementById('previewButtons');
             container.innerHTML = '';
+            // 자동 dark-wrap — dark-bg 프리셋(glass/neon/liquid)이면 외곽 previewFrame 배경을 어두운 그라디언트로 변경
+            // (위젯에서는 wrap이 위젯 컨테이너 자체에 적용되지만 미리보기는 frame+container 2단계라 wrap을 컨테이너에 두면 이중 박스가 됨 → 외곽 frame에 배경만 부여)
+            var previewFrame = document.getElementById('previewFrame');
+            previewFrame.classList.remove('bg-dark-wrap-glassmorphism');
+            previewFrame.classList.remove('bg-dark-wrap-neon-glow');
+            previewFrame.classList.remove('bg-dark-wrap-liquid-glass');
+            // container 잔재도 정리 (이전 버전에서 부여된 적 있어 안전 차원)
+            container.classList.remove('bg-dark-wrap');
+            container.classList.remove('bg-dark-wrap-glassmorphism');
+            container.classList.remove('bg-dark-wrap-neon-glow');
+            container.classList.remove('bg-dark-wrap-liquid-glass');
+            var DARK_BG_PRESETS = ['glassmorphism','neon-glow','liquid-glass'];
+            if (DARK_BG_PRESETS.indexOf(style.preset) !== -1) {
+              previewFrame.classList.add('bg-dark-wrap-' + style.preset);
+            }
             var justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
             container.style.gap = style.buttonGap + 'px';
             var justifyContent = justifyMap[style.align] || 'center';
@@ -1034,8 +1113,10 @@ export const ProvidersPage: FC<{
             };
             var plusClass = PLUS_CLASS_MAP[style.preset] || '';
             var isPlusPreset = !!plusClass;
-            var pulseDelayClasses = ['bg-preset-pulse-d1','bg-preset-pulse-d2','bg-preset-pulse-d3','bg-preset-pulse-d4'];
-            var pulseIdx = 0;
+            // 모바일 시뮬레이션 delay 클래스 (위젯 render.ts 와 동일 패턴) — bg-mobile-sim 클래스가 활성일 때만 효과 발현
+            var animDelayClasses = ['bg-mobile-anim-d1','bg-mobile-anim-d2','bg-mobile-anim-d3','bg-mobile-anim-d4','bg-mobile-anim-d5','bg-mobile-anim-d6'];
+            var pulseDelayClasses = ['bg-mobile-pulse-d1','bg-mobile-pulse-d2','bg-mobile-pulse-d3','bg-mobile-pulse-d4','bg-mobile-pulse-d5','bg-mobile-pulse-d6'];
+            var plusIdx = 0;
 
             providers.forEach(function(p) {
               var btn = document.createElement('div');
@@ -1049,10 +1130,13 @@ export const ProvidersPage: FC<{
                 var w = style.buttonWidth;
                 var justifyContent2 = justifyMap[style.align] || 'center';
                 var baseClass = 'bg-prv-btn ' + plusClass;
+                // 인덱스별 delay 클래스 — pulse는 별도(두 delay), liquid는 제외, 나머지 4종 공통
                 if (style.preset === 'pulse') {
-                  baseClass += ' ' + (pulseDelayClasses[pulseIdx % 4]);
-                  pulseIdx++;
+                  baseClass += ' ' + (pulseDelayClasses[plusIdx] || pulseDelayClasses[0]);
+                } else if (style.preset !== 'liquid-glass') {
+                  baseClass += ' ' + (animDelayClasses[plusIdx] || animDelayClasses[0]);
                 }
+                plusIdx++;
                 btn.className = baseClass;
                 btn.style.cssText = 'width:' + w + 'px;height:' + btnHeight + 'px;padding:0 16px 0 ' + style.paddingLeft + 'px;gap:' + style.iconGap + 'px;justify-content:' + justifyContent2 + ';border-radius:' + style.borderRadius + 'px';
                 if (style.showIcon && providerIcons[p]) {
