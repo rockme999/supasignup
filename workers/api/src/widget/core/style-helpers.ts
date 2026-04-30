@@ -33,7 +33,7 @@ export function getStyleHelpersJs(): string {
       while (node && node !== document.documentElement) {
         var bg = window.getComputedStyle(node).backgroundColor;
         if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
-          var m = bg.match(/rgba?\\\\(([^)]+)\\\\)/);
+          var m = bg.match(/rgba?\\(([^)]+)\\)/);
           if (m) {
             var p = m[1].split(',').map(function(x) { return parseFloat(x.trim()); });
             // 알파값이 0.5 이하면 투명으로 간주하고 계속 올라감

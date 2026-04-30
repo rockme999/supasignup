@@ -24,6 +24,18 @@ import { getBaseCss } from './styles/base-css';
 import { getPresetsCss } from './styles/presets-css';
 import { getAnimationsCss } from './styles/animations-css';
 
+// 빌드 타임에 CSS 룰들을 평가하여 단일 string으로 inline.
+// (이전 회귀: template literal 안에서 [...getBaseCss(),...].join('\n')을 그대로 적어
+//  IIFE 안에 함수 호출 코드가 그대로 남아 브라우저 런타임에 ReferenceError 발생.
+//  WIDGET_CSS는 init() 첫 줄에서 사용되므로 위젯 전체가 첫 진입에서 throw됐음.)
+const __WIDGET_CSS_INLINE__ = JSON.stringify(
+  [
+    ...getBaseCss(),
+    ...getPresetsCss(),
+    ...getAnimationsCss(),
+  ].join('\n')
+);
+
 export const WIDGET_JS = `(function() {
   'use strict';
 
@@ -105,11 +117,7 @@ export const WIDGET_JS = `(function() {
     }
   };
 
-  var WIDGET_CSS = [
-    ...getBaseCss(),
-    ...getPresetsCss(),
-    ...getAnimationsCss(),
-  ].join('\\n');
+  var WIDGET_CSS = ` + __WIDGET_CSS_INLINE__ + `;
 
 ` + getStyleHelpersJs() + `
 
