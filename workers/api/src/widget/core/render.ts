@@ -110,7 +110,7 @@ export function getRenderJs(): string {
 
     // 커스텀 텍스트1: 상단 타이틀 아래, 작은 폰트 (Plus 전용)
     if (isPlus && s.customText1Enabled !== false && preset !== 'icon-only') {
-      var t1text = (s.customText1 != null ? s.customText1 : '아이디 비밀번호 입력없이\\n번개가입! 번개로그인!').toString();
+      var t1text = (s.customText1 != null ? s.customText1 : '아이디 비밀번호 입력없이 번개가입! 번개로그인!').toString();
       if (t1text) {
         var t1 = document.createElement('div');
         t1.className = 'bg-custom-text-1';

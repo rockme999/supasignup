@@ -180,7 +180,7 @@ export interface WidgetStyle {
   couponPackGap?: number; // 소셜 버튼과 쿠폰팩 사이 간격(px). 기본 12
   // ── Plus 전용: 커스텀 텍스트 2종 ──────────────────────────
   customText1Enabled?: boolean; // 텍스트1(상단 타이틀 아래, 작은 폰트) 노출 여부. 기본 true
-  customText1?: string; // 텍스트1 본문. 기본 '아이디 비밀번호 입력없이\n번개가입! 번개로그인!'
+  customText1?: string; // 텍스트1 본문. 기본 '아이디 비밀번호 입력없이 번개가입! 번개로그인!'
   customText2Enabled?: boolean; // 텍스트2(소셜과 쿠폰팩 사이, 큰 폰트 볼드) 노출 여부. 기본 true
   customText2?: string; // 텍스트2 본문. 기본 '회원가입 즉시 사용가능한 쿠폰팩 증정'
 }
@@ -205,7 +205,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   couponPackPosition: 'below',
   couponPackGap: 12,
   customText1Enabled: true,
-  customText1: '아이디 비밀번호 입력없이\n번개가입! 번개로그인!',
+  customText1: '아이디 비밀번호 입력없이 번개가입! 번개로그인!',
   customText2Enabled: true,
   customText2: '회원가입 즉시 사용가능한 쿠폰팩 증정',
 };

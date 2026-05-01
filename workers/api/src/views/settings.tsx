@@ -495,7 +495,7 @@ export const ProvidersPage: FC<{
   const couponPackPositionDefault = (ws.couponPackPosition ?? 'below') as 'above' | 'below';
   const couponPackGapDefault = ws.couponPackGap ?? 12;
   const customText1EnabledDefault = isPlus ? (ws.customText1Enabled !== false) : false;
-  const customText1Default = ws.customText1 ?? '아이디 비밀번호 입력없이\n번개가입! 번개로그인!';
+  const customText1Default = ws.customText1 ?? '아이디 비밀번호 입력없이 번개가입! 번개로그인!';
   const customText2EnabledDefault = isPlus ? (ws.customText2Enabled !== false) : false;
   const customText2Default = ws.customText2 ?? '회원가입 즉시 사용가능한 쿠폰팩 증정';
   const cpDesignList: Array<{ value: 'dark' | 'brand' | 'illust' | 'minimal'; label: string }> = [
@@ -1140,7 +1140,7 @@ export const ProvidersPage: FC<{
             couponPackPosition: widgetStyle.couponPackPosition || 'below',
             couponPackGap: (widgetStyle.couponPackGap != null ? widgetStyle.couponPackGap : 12),
             customText1Enabled: widgetStyle.customText1Enabled !== false,
-            customText1: widgetStyle.customText1 != null ? widgetStyle.customText1 : '아이디 비밀번호 입력없이\\n번개가입! 번개로그인!',
+            customText1: widgetStyle.customText1 != null ? widgetStyle.customText1 : '아이디 비밀번호 입력없이 번개가입! 번개로그인!',
             customText2Enabled: widgetStyle.customText2Enabled !== false,
             customText2: widgetStyle.customText2 != null ? widgetStyle.customText2 : '회원가입 즉시 사용가능한 쿠폰팩 증정'
           };
@@ -1874,7 +1874,7 @@ export const ProvidersPage: FC<{
               if (!confirm('위젯 디자인 전체(기본/세부/추가옵션)를 기본값으로 되돌리고 저장하시겠습니까?')) return;
               var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:'',
                 showCouponPack:true,couponPackPosition:'below',couponPackGap:12,
-                customText1Enabled:true,customText1:'아이디 비밀번호 입력없이\\n번개가입! 번개로그인!',
+                customText1Enabled:true,customText1:'아이디 비밀번호 입력없이 번개가입! 번개로그인!',
                 customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'};
               Object.assign(style, defaults);
               // UI 컨트롤 동기화
@@ -1912,7 +1912,7 @@ export const ProvidersPage: FC<{
               var posR = document.querySelector('input[name=cpPosition][value="below"]'); if (posR) posR.checked = true;
               var ocg = document.getElementById('optCpGap'); if (ocg) { ocg.value = 12; var ocgv = document.getElementById('optCpGapVal'); if (ocgv) ocgv.textContent = '12px'; }
               var ot1e = document.getElementById('optText1Enabled'); if (ot1e) ot1e.checked = true;
-              var ot1 = document.getElementById('optText1'); if (ot1) ot1.value = '아이디 비밀번호 입력없이\\n번개가입! 번개로그인!';
+              var ot1 = document.getElementById('optText1'); if (ot1) ot1.value = '아이디 비밀번호 입력없이 번개가입! 번개로그인!';
               var ot2e = document.getElementById('optText2Enabled'); if (ot2e) ot2e.checked = true;
               var ot2 = document.getElementById('optText2'); if (ot2) ot2.value = '회원가입 즉시 사용가능한 쿠폰팩 증정';
               renderPreview();
@@ -1952,7 +1952,7 @@ export const ProvidersPage: FC<{
           var SECTION_DEFAULTS = {
             basic:  {preset:'default',buttonLabel:'{name}로 시작하기'},
             detail: {align:'left',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:''},
-            extra:  {showCouponPack:true,couponPackPosition:'below',couponPackGap:12,customText1Enabled:true,customText1:'아이디 비밀번호 입력없이\\n번개가입! 번개로그인!',customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'}
+            extra:  {showCouponPack:true,couponPackPosition:'below',couponPackGap:12,customText1Enabled:true,customText1:'아이디 비밀번호 입력없이 번개가입! 번개로그인!',customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'}
           };
 
           // 부분 저장: 해당 섹션 필드만 PUT

@@ -285,7 +285,7 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     couponPackPosition: body.couponPackPosition ?? currentStyle.couponPackPosition ?? 'below',
     couponPackGap: body.couponPackGap ?? currentStyle.couponPackGap ?? 12,
     customText1Enabled: isFree ? false : (body.customText1Enabled ?? currentStyle.customText1Enabled ?? true),
-    customText1: body.customText1 ?? currentStyle.customText1 ?? '아이디 비밀번호 입력없이\n번개가입! 번개로그인!',
+    customText1: body.customText1 ?? currentStyle.customText1 ?? '아이디 비밀번호 입력없이 번개가입! 번개로그인!',
     customText2Enabled: isFree ? false : (body.customText2Enabled ?? currentStyle.customText2Enabled ?? true),
     customText2: body.customText2 ?? currentStyle.customText2 ?? '회원가입 즉시 사용가능한 쿠폰팩 증정',
   };
