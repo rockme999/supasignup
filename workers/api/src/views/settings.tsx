@@ -1854,9 +1854,13 @@ export const ProvidersPage: FC<{
             });
           }
 
+          // 전체 저장/리셋 버튼은 카드 외부 마지막 row에 위치 — 이 IIFE 평가 시점엔 DOM에
+          // 아직 파싱 전. 다음 마이크로태스크에서 등록.
+          setTimeout(function() {
           // 저장 버튼
           var saveBtn = document.getElementById('saveStyleBtn');
-          if (saveBtn) {
+          if (saveBtn && !saveBtn.__dsBound) {
+            saveBtn.__dsBound = true;
             saveBtn.addEventListener('click', function() {
               // Plus 프리셋 + free 플랜 → 결제 모달
               if (PLUS_PRESETS.has(style.preset) && shopPlan === 'free') {
@@ -1869,7 +1873,8 @@ export const ProvidersPage: FC<{
 
           // 기본값으로 되돌리기
           var resetBtn = document.getElementById('resetStyleBtn');
-          if (resetBtn) {
+          if (resetBtn && !resetBtn.__dsBound) {
+            resetBtn.__dsBound = true;
             resetBtn.addEventListener('click', async function() {
               if (!confirm('위젯 디자인 전체(기본/세부/추가옵션)를 기본값으로 되돌리고 저장하시겠습니까?')) return;
               var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true,widgetPosition:'before',customSelector:'',
@@ -1921,6 +1926,7 @@ export const ProvidersPage: FC<{
               await saveStyle();
             });
           }
+          }, 0);
 
           // ─── Accordion 헤더 토글 (펼침/접힘) ───
           // setTimeout — 이 스크립트 평가 시점에 Plus 옵션 카드는 아직 DOM에 없을 수 있어
