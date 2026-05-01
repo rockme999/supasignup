@@ -766,9 +766,18 @@ export const ProvidersPage: FC<{
         )}
       </div>
 
-      {/* Widget design settings */}
-      <div class="card">
-        <h2>위젯 디자인</h2>
+      {/* Widget design settings — 3 accordion 섹션: 기본선택 / 세부조정 / 추가옵션 */}
+      <div class="card" id="widgetDesignCard">
+        <h2 style="margin-bottom:12px">위젯 디자인</h2>
+
+        {/* ─── 섹션 1: 기본 선택 (프리셋 + 표시 토글 + 버튼 문구) ─── */}
+        <div class="ds-section" style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;overflow:hidden">
+          <button type="button" class="ds-section-header" data-target="dsBasicBody" aria-expanded="true"
+            style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:none;padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px;color:#1e293b">
+            <span>기본 선택</span>
+            <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s">&#9660;</span>
+          </button>
+          <div id="dsBasicBody" class="ds-section-body" style="padding:14px 16px">
 
         {/* Free 프리셋 — 5종 */}
         <p style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px">기본 프리셋</p>
@@ -948,6 +957,25 @@ export const ProvidersPage: FC<{
             <input type="text" id="labelCustom" placeholder="예: {name}로 시작하기 ({name}=프로바이더명)" style="display:none; margin-top:8px; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; width:100%" value={ws.buttonLabel} />
             <p style="font-size:11px; color:#94a3b8; margin-top:4px">{'{name}'} 은 프로바이더명으로 대체됩니다</p>
           </div>
+        </div>
+        {/* /grid1 (기본선택 슬라이더 영역) */}
+
+        <div class="ds-section-actions" style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0">
+          <button type="button" class="ds-reset-btn" data-section="basic" style="padding:6px 14px;font-size:12px;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer">기본값</button>
+          <button type="button" class="ds-save-btn" data-section="basic" style="padding:6px 16px;font-size:12px;color:#fff;background:#2563eb;border:none;border-radius:6px;cursor:pointer;font-weight:600">저장</button>
+        </div>
+          </div>{/* /dsBasicBody */}
+        </div>{/* /Section 1 (기본선택) */}
+
+        {/* ─── 섹션 2: 세부 조정 (정렬 ~ 위젯 삽입 위치) ─── */}
+        <div class="ds-section" style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;overflow:hidden">
+          <button type="button" class="ds-section-header" data-target="dsDetailBody" aria-expanded="false"
+            style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:none;padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px;color:#1e293b">
+            <span>세부 조정</span>
+            <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
+          </button>
+          <div id="dsDetailBody" class="ds-section-body" style="padding:14px 16px;display:none">
+        <div style="display:grid; gap:16px">
           <div>
             <label style="font-size:13px; font-weight:600; color:#475569; display:block; margin-bottom:4px">정렬</label>
             <div style="display:flex; gap:8px; margin-top:4px">
@@ -1024,11 +1052,16 @@ export const ProvidersPage: FC<{
             </div>
           </div>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-top:12px">
-          <button id="resetStyleBtn" type="button" style="padding:8px 16px; font-size:13px; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer">기본값으로 되돌리기</button>
-          <button id="saveStyleBtn" type="button" disabled style="padding:8px 24px; font-size:13px; color:#fff; background:#2563eb; border:none; border-radius:6px; cursor:pointer; font-weight:600; opacity:0.5">디자인 저장</button>
+        {/* /grid2 (세부조정 슬라이더 영역) */}
+
+        <div class="ds-section-actions" style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0">
+          <button type="button" class="ds-reset-btn" data-section="detail" style="padding:6px 14px;font-size:12px;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer">기본값</button>
+          <button type="button" class="ds-save-btn" data-section="detail" style="padding:6px 16px;font-size:12px;color:#fff;background:#2563eb;border:none;border-radius:6px;cursor:pointer;font-weight:600">저장</button>
         </div>
+          </div>{/* /dsDetailBody */}
+        </div>{/* /Section 2 (세부조정) */}
       </div>
+      {/* /widgetDesignCard */}
 
       {/* Plus 업그레이드 결제 모달 */}
       <div id="plusUpgradeModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
@@ -1829,8 +1862,11 @@ export const ProvidersPage: FC<{
           var resetBtn = document.getElementById('resetStyleBtn');
           if (resetBtn) {
             resetBtn.addEventListener('click', async function() {
-              if (!confirm('위젯 디자인을 기본값으로 되돌리고 저장하시겠습니까?')) return;
-              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:''};
+              if (!confirm('위젯 디자인 전체(기본/세부/추가옵션)를 기본값으로 되돌리고 저장하시겠습니까?')) return;
+              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:'',
+                showCouponPack:true,couponPackPosition:'below',couponPackGap:12,
+                customText1Enabled:true,customText1:'아이디 비밀번호 입력없이\\n번개가입! 번개로그인!',
+                customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'};
               Object.assign(style, defaults);
               // UI 컨트롤 동기화
               document.getElementById('btnWidth').value = defaults.buttonWidth; document.getElementById('widthValue').textContent = defaults.buttonWidth + 'px';
@@ -1862,12 +1898,90 @@ export const ProvidersPage: FC<{
               if (csi) csi.value = '';
               var csw = document.getElementById('customSelectorWrap');
               if (csw) csw.style.display = 'none';
+              // Plus 옵션 UI 동기화
+              var ocp = document.getElementById('optShowCouponPack'); if (ocp) ocp.checked = true;
+              var posR = document.querySelector('input[name=cpPosition][value="below"]'); if (posR) posR.checked = true;
+              var ocg = document.getElementById('optCpGap'); if (ocg) { ocg.value = 12; var ocgv = document.getElementById('optCpGapVal'); if (ocgv) ocgv.textContent = '12px'; }
+              var ot1e = document.getElementById('optText1Enabled'); if (ot1e) ot1e.checked = true;
+              var ot1 = document.getElementById('optText1'); if (ot1) ot1.value = '아이디 비밀번호 입력없이\\n번개가입! 번개로그인!';
+              var ot2e = document.getElementById('optText2Enabled'); if (ot2e) ot2e.checked = true;
+              var ot2 = document.getElementById('optText2'); if (ot2) ot2.value = '회원가입 즉시 사용가능한 쿠폰팩 증정';
               renderPreview();
               markChanged();
               // 즉시 저장까지 실행
               await saveStyle();
             });
           }
+
+          // ─── Accordion 헤더 토글 (펼침/접힘) ───
+          document.querySelectorAll('.ds-section-header').forEach(function(hdr) {
+            hdr.addEventListener('click', function() {
+              var targetId = hdr.dataset.target;
+              var body = document.getElementById(targetId);
+              if (!body) return;
+              var expanded = hdr.getAttribute('aria-expanded') === 'true';
+              var next = !expanded;
+              body.style.display = next ? '' : 'none';
+              hdr.setAttribute('aria-expanded', next ? 'true' : 'false');
+              var arrow = hdr.querySelector('.ds-arrow');
+              if (arrow) arrow.style.transform = next ? '' : 'rotate(-90deg)';
+            });
+          });
+
+          // ─── 섹션별 필드 매핑 (부분 저장/리셋) ───
+          var SECTION_FIELDS = {
+            basic:  ['preset', 'buttonLabel'],
+            detail: ['align','buttonWidth','buttonHeight','buttonGap','borderRadius','showIcon','iconGap','paddingLeft','showTitle','showPoweredBy','widgetPosition','customSelector'],
+            extra:  ['showCouponPack','couponPackPosition','couponPackGap','customText1Enabled','customText1','customText2Enabled','customText2']
+          };
+          var SECTION_DEFAULTS = {
+            basic:  {preset:'default',buttonLabel:'{name}로 시작하기'},
+            detail: {align:'left',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:''},
+            extra:  {showCouponPack:true,couponPackPosition:'below',couponPackGap:12,customText1Enabled:true,customText1:'아이디 비밀번호 입력없이\\n번개가입! 번개로그인!',customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'}
+          };
+
+          // 부분 저장: 해당 섹션 필드만 PUT
+          async function saveSection(section) {
+            var fields = SECTION_FIELDS[section] || [];
+            var payload = {};
+            fields.forEach(function(k) { if (style[k] !== undefined) payload[k] = style[k]; });
+            var sid = document.getElementById('providerForm').dataset.shopId;
+            var resp = await apiCall('PUT', '/api/dashboard/shops/' + sid + '/widget-style', payload);
+            if (resp.ok) {
+              showToast('success', '저장되었습니다.');
+            } else {
+              showToast('error', '저장에 실패했습니다.');
+            }
+          }
+
+          // 부분 리셋: 해당 섹션 필드만 default로 되돌리고 즉시 저장 → reload (UI 동기화 단순화)
+          async function resetSection(section) {
+            if (!confirm('이 섹션의 설정을 기본값으로 되돌리고 저장하시겠습니까?')) return;
+            var defaults = SECTION_DEFAULTS[section] || {};
+            Object.assign(style, defaults);
+            var sid = document.getElementById('providerForm').dataset.shopId;
+            var resp = await apiCall('PUT', '/api/dashboard/shops/' + sid + '/widget-style', defaults);
+            if (resp.ok) {
+              showToast('success', '기본값으로 되돌렸습니다.');
+              setTimeout(function() { location.reload(); }, 600);
+            } else {
+              showToast('error', '되돌리기 실패');
+            }
+          }
+
+          // 부분 저장/리셋 버튼 핸들러
+          document.querySelectorAll('.ds-save-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var sec = btn.dataset.section;
+              if (sec) saveSection(sec);
+            });
+          });
+          document.querySelectorAll('.ds-reset-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var sec = btn.dataset.section;
+              if (sec) resetSection(sec);
+            });
+          });
 
           // 쿠폰팩 size 토글 클릭 핸들러 (Plus + packConfig 있을 때만 DOM에 존재)
           (function() {
@@ -1909,12 +2023,17 @@ export const ProvidersPage: FC<{
           }
         })();
       `}} />
-      {/* ─── Plus 위젯 옵션: 쿠폰팩 / 텍스트 ─── (v2.5.0) */}
+      {/* ─── Plus 위젯 옵션: 쿠폰팩 / 텍스트 (collapsible 카드) ─── (v2.5.0) */}
       <div class="card" id="plusWidgetOptionsCard" style={`${!isPlus ? 'opacity:0.85' : ''}`}>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <h2 style="margin:0">위젯 추가 옵션</h2>
-          <span class="badge badge-purple">Plus</span>
-        </div>
+        <button type="button" class="ds-section-header" data-target="dsExtraBody" aria-expanded="true"
+          style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;cursor:pointer;margin-bottom:12px">
+          <span style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px;font-weight:700;color:#0f172a">추가 옵션</span>
+            <span class="badge badge-purple">Plus</span>
+          </span>
+          <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s">&#9660;</span>
+        </button>
+        <div id="dsExtraBody" class="ds-section-body">
         <p style="font-size:13px;color:#64748b;margin-bottom:16px">
           {isPlus
             ? '쿠폰팩 노출/위치/디자인과 안내 텍스트를 위젯에 추가할 수 있습니다.'
@@ -1975,32 +2094,20 @@ export const ProvidersPage: FC<{
 
           {/* 텍스트1 */}
           <div style="margin-bottom:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600">
-                <input type="checkbox" id="optText1Enabled" checked={customText1EnabledDefault} disabled={!isPlus} />
-                텍스트1 (상단 타이틀 아래, 작은 글씨)
-              </label>
-              <button type="button" id="optText1AiBtn" disabled={!isPlus}
-                style={`padding:4px 10px;border:1px solid #d1d5db;background:#fff;color:#64748b;border-radius:6px;font-size:11px;cursor:${isPlus ? 'pointer' : 'not-allowed'}`}>
-                ✨ AI 생성
-              </button>
-            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:6px">
+              <input type="checkbox" id="optText1Enabled" checked={customText1EnabledDefault} disabled={!isPlus} />
+              텍스트1 (상단 타이틀 아래, 작은 글씨)
+            </label>
             <textarea id="optText1" rows={2} disabled={!isPlus} maxlength={200}
               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box">{customText1Default}</textarea>
           </div>
 
           {/* 텍스트2 */}
           <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600">
-                <input type="checkbox" id="optText2Enabled" checked={customText2EnabledDefault} disabled={!isPlus} />
-                텍스트2 (소셜과 쿠폰팩 사이, 큰 글씨 볼드)
-              </label>
-              <button type="button" id="optText2AiBtn" disabled={!isPlus}
-                style={`padding:4px 10px;border:1px solid #d1d5db;background:#fff;color:#64748b;border-radius:6px;font-size:11px;cursor:${isPlus ? 'pointer' : 'not-allowed'}`}>
-                ✨ AI 생성
-              </button>
-            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:6px">
+              <input type="checkbox" id="optText2Enabled" checked={customText2EnabledDefault} disabled={!isPlus} />
+              텍스트2 (소셜과 쿠폰팩 사이, 큰 글씨 볼드)
+            </label>
             <textarea id="optText2" rows={2} disabled={!isPlus} maxlength={200}
               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;font-family:inherit;resize:vertical;box-sizing:border-box">{customText2Default}</textarea>
           </div>
@@ -2084,45 +2191,25 @@ export const ProvidersPage: FC<{
                 } catch(e) {}
               });
             }
-            // AI 생성 버튼 — POST /api/ai/copy 호출
-            async function aiGen(targetId, ctx, btn) {
-              if (!isPlus) return;
-              var ta = document.getElementById(targetId);
-              if (!ta || !btn) return;
-              var orig = btn.textContent;
-              btn.textContent = '생성 중…'; btn.disabled = true;
-              try {
-                var resp = await apiCall('POST', '/api/ai/copy', { shop_id: shopId, context: ctx });
-                if (resp.ok) {
-                  var data = await resp.json();
-                  var copies = (data && data.copies) || [];
-                  if (copies.length > 0) {
-                    ta.value = copies[0];
-                    ta.dispatchEvent(new Event('input'));
-                    showToast('success', 'AI가 ' + copies.length + '개 추천: 첫 번째 적용. 다른 카피는 콘솔에서 확인하세요.');
-                    console.log('[AI 카피 추천]', copies);
-                  } else {
-                    showToast('warn', 'AI 응답이 비어 있습니다.');
-                  }
-                } else {
-                  var err = await resp.json();
-                  showToast('error', err.message || 'AI 생성 실패');
-                }
-              } catch(e) { showToast('error', 'AI 생성 중 오류'); }
-              finally { btn.textContent = orig; btn.disabled = !isPlus; }
-            }
-            var t1Btn = document.getElementById('optText1AiBtn');
-            if (t1Btn) t1Btn.addEventListener('click', function() {
-              aiGen('optText1', '소셜 로그인 위젯의 상단 안내 문구. 짧고 친근하게 (2줄, 각 줄 15자 내외). 가입/로그인 편의성 강조.', t1Btn);
-            });
-            var t2Btn = document.getElementById('optText2AiBtn');
-            if (t2Btn) t2Btn.addEventListener('click', function() {
-              aiGen('optText2', '회원 가입 시 쿠폰팩 증정을 강조하는 1줄 광고 문구. 임팩트 있게.', t2Btn);
-            });
             // 초기 sync
             syncStyle();
           })();
         `}} />
+
+        <div class="ds-section-actions" style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0">
+          <button type="button" class="ds-reset-btn" data-section="extra" disabled={!isPlus}
+            style={`padding:6px 14px;font-size:12px;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:${isPlus ? 'pointer' : 'not-allowed'}`}>기본값</button>
+          <button type="button" class="ds-save-btn" data-section="extra" disabled={!isPlus}
+            style={`padding:6px 16px;font-size:12px;color:#fff;background:#2563eb;border:none;border-radius:6px;cursor:${isPlus ? 'pointer' : 'not-allowed'};font-weight:600`}>저장</button>
+        </div>
+        </div>{/* /dsExtraBody */}
+      </div>
+      {/* /plusWidgetOptionsCard */}
+
+      {/* ─── 카드 외부: 전체 기본값/전체 저장 ─── */}
+      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding:0 4px">
+        <button id="resetStyleBtn" type="button" style="padding:8px 16px;font-size:13px;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer">전체 기본값으로 되돌리기</button>
+        <button id="saveStyleBtn" type="button" disabled style="padding:8px 24px;font-size:13px;color:#fff;background:#2563eb;border:none;border-radius:6px;cursor:pointer;font-weight:600;opacity:0.5">전체 디자인 저장</button>
       </div>
 
       </div>{/* end right column */}
