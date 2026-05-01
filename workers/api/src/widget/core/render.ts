@@ -147,6 +147,29 @@ export function getRenderJs(): string {
       this.container.appendChild(iconRow);
     }
 
+    // Plus 쿠폰팩 카드: 소셜 영역 다음, powered by 직전에 노출
+    // 조건: config.coupon_pack.active === true 인 Plus 플랜 (서버에서 보장).
+    // icon-only preset에서는 시각적으로 어울리지 않아 미노출.
+    var cp = this.config && this.config.coupon_pack;
+    if (cp && cp.active && preset !== 'icon-only' && typeof this.renderCouponPackCard === 'function') {
+      try {
+        var cpHtml = this.renderCouponPackCard({
+          design: cp.design || 'brand',
+          anim_mode: cp.anim_mode !== false,
+          total_amount: cp.total_amount || 55000,
+          items_count: cp.items_count || 5,
+          size: cp.size || 'md'
+        });
+        if (cpHtml) {
+          var cpWrap = document.createElement('div');
+          cpWrap.className = 'bg-coupon-pack-wrap';
+          cpWrap.style.cssText = 'display:flex;justify-content:center;align-items:center;margin-top:12px;width:100%';
+          cpWrap.innerHTML = cpHtml;
+          this.container.appendChild(cpWrap);
+        }
+      } catch (e) { bgLog('render: coupon pack render failed', e); }
+    }
+
     // Powered by (showPoweredBy: default true)
     if (s.showPoweredBy !== false) {
       var powered = document.createElement('div');

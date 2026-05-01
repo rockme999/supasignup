@@ -1531,6 +1531,45 @@ dashboard.post('/shops/:id/dev-seed-signups', async (c) => {
   return c.json({ ok: true, inserted, total: totalCount, recent: recentCount });
 });
 
+// ─── PUT /shops/:id/coupon-pack-size ────────────────────────
+/**
+ * 쿠폰팩 size만 변경 (위젯 미리보기 토글에서 호출).
+ * 기존 PUT /coupon-pack은 enabled 필수라 size 단독 변경 케이스에 부적합 → 분리.
+ */
+dashboard.put('/shops/:id/coupon-pack-size', async (c) => {
+  const ownerId = c.get('ownerId');
+  const shopId = c.req.param('id');
+
+  const shop = await getShopById(c.env.DB, shopId);
+  if (!shop || shop.owner_id !== ownerId) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+  if (shop.plan !== 'plus') {
+    return c.json({ error: 'plus_required', message: '쿠폰팩은 Plus 플랜에서만 사용할 수 있습니다.' }, 403);
+  }
+
+  const body = await c.req.json<{ size?: CouponPackSize }>();
+  const VALID_SIZES: CouponPackSize[] = ['lg', 'md', 'sm', 'xs'];
+  if (!body.size || !VALID_SIZES.includes(body.size)) {
+    return c.json({ error: 'invalid_size', message: `size는 ${VALID_SIZES.join(' | ')} 중 하나여야 합니다.` }, 400);
+  }
+
+  // 기존 coupon_config 파싱 후 pack.size 만 갱신
+  let existing: CouponConfig & { pack?: CouponPackConfig } = { ...DEFAULT_COUPON_CONFIG };
+  if (shop.coupon_config) {
+    try { existing = { ...existing, ...JSON.parse(shop.coupon_config) }; } catch { /* keep default */ }
+  }
+  existing.pack = { ...(existing.pack ?? {} as CouponPackConfig), size: body.size };
+
+  await updateShop(c.env.DB, shopId, { coupon_config: JSON.stringify(existing) });
+  // 위젯 캐시 무효화
+  await Promise.all([
+    c.env.KV.delete(`widget_config:${shop.client_id}`),
+    purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+  ]);
+  return c.json({ ok: true, size: body.size });
+});
+
 // ─── POST /shops/:id/coupon-pack/retry ──────────────────────
 /**
  * 쿠폰팩 부분 실패 항목 재시도.

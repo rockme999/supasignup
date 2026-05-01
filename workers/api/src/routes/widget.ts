@@ -267,6 +267,7 @@ function buildCouponPackField(
   anim_mode: boolean;
   total_amount: number;
   items_count: number;
+  size: string;
 } | null {
   // Plus 플랜이 아니면 노출하지 않음
   if (plan === 'free' || !couponConfigRaw) return null;
@@ -283,7 +284,7 @@ function buildCouponPackField(
 
   const state = resolveCouponPackState(pack);
   if (state !== 'active') {
-    return { active: false, design: 'brand', anim_mode: true, total_amount: 0, items_count: 0 };
+    return { active: false, design: 'brand', anim_mode: true, total_amount: 0, items_count: 0, size: 'md' };
   }
 
   // total_amount: items 의 discount 합계
@@ -296,6 +297,7 @@ function buildCouponPackField(
     anim_mode: pack.anim_mode !== false,
     total_amount: totalAmount > 0 ? totalAmount : 55000,
     items_count: itemsCount > 0 ? itemsCount : 5,
+    size: (pack as { size?: string }).size ?? 'md',
   };
 }
 
