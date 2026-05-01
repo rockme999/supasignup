@@ -2013,20 +2013,26 @@ export const ProvidersPage: FC<{
             });
           }, 0);
 
-          // 쿠폰팩 size 토글 클릭 핸들러 (Plus + packConfig 있을 때만 DOM에 존재)
-          (function() {
-            var btns = document.querySelectorAll('#cpSizeToggle .cp-size-btn');
+          // 쿠폰팩 size 토글 — 미리보기 헤더(#cpSizeToggle) + 추가옵션 섹션(#cpSizeToggleExtra)
+          // 두 그룹 모두에서 동작 + 동기화. setTimeout 으로 등록 (추가옵션은 IIFE 후 DOM 파싱).
+          setTimeout(function() {
+            var btns = document.querySelectorAll('.cp-size-btn');
             if (!btns.length) return;
+            function syncAll(size) {
+              window.__bgCpCurrentSize = size;
+              btns.forEach(function(b) {
+                var active = b.dataset.size === size;
+                b.style.background = active ? '#3b82f6' : '#fff';
+                b.style.color = active ? '#fff' : '#64748b';
+                b.style.borderColor = active ? '#3b82f6' : '#d1d5db';
+              });
+            }
             btns.forEach(function(btn) {
+              if (btn.__cpSizeBound) return;
+              btn.__cpSizeBound = true;
               btn.addEventListener('click', async function() {
                 var size = btn.dataset.size;
-                window.__bgCpCurrentSize = size;
-                btns.forEach(function(b) {
-                  var active = b.dataset.size === size;
-                  b.style.background = active ? '#3b82f6' : '#fff';
-                  b.style.color = active ? '#fff' : '#64748b';
-                  b.style.borderColor = active ? '#3b82f6' : '#d1d5db';
-                });
+                syncAll(size);
                 renderPreview();
                 // 비동기 저장 (실패해도 미리보기는 유지)
                 try {
@@ -2034,7 +2040,7 @@ export const ProvidersPage: FC<{
                 } catch(e) { /* ignore */ }
               });
             });
-          })();
+          }, 0);
 
           // Initial state
           try { renderPreview(); } catch(e) { console.error('renderPreview init error:', e); }
@@ -2097,6 +2103,16 @@ export const ProvidersPage: FC<{
             <div style="display:flex;align-items:center;gap:8px">
               <input type="range" id="optCpGap" min="0" max="60" value={couponPackGapDefault} disabled={!isPlus} style="flex:1" />
               <span id="optCpGapVal" style="font-size:12px;color:#64748b;min-width:42px">{couponPackGapDefault}px</span>
+            </div>
+            <label style="font-size:13px;color:#475569">크기</label>
+            <div style="display:flex;gap:2px" id="cpSizeToggleExtra">
+              {cpSizes.map(s => {
+                const active = s === cpInitialSize;
+                return (
+                  <button type="button" class="cp-size-btn" data-size={s} disabled={!isPlus}
+                    style={`padding:3px 9px;border:1px solid ${active ? '#3b82f6' : '#d1d5db'};background:${active ? '#3b82f6' : '#fff'};color:${active ? '#fff' : '#64748b'};border-radius:5px;font-size:11px;font-weight:500;cursor:${isPlus ? 'pointer' : 'not-allowed'};text-transform:uppercase`}>{s}</button>
+                );
+              })}
             </div>
           </div>
           {/* 디자인 4종 */}
