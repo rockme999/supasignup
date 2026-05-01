@@ -779,12 +779,12 @@ export const ProvidersPage: FC<{
 
         {/* ─── 섹션 1: 기본 선택 (프리셋 + 표시 토글 + 버튼 문구) ─── */}
         <div class="ds-section" style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;overflow:hidden">
-          <button type="button" class="ds-section-header" data-target="dsBasicBody" aria-expanded="true"
+          <button type="button" class="ds-section-header" data-target="dsBasicBody" aria-expanded="false"
             style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:none;padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px;color:#1e293b">
             <span>기본 선택</span>
-            <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s">&#9660;</span>
+            <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
           </button>
-          <div id="dsBasicBody" class="ds-section-body" style="padding:14px 16px">
+          <div id="dsBasicBody" class="ds-section-body" style="padding:14px 16px;display:none">
 
         {/* Free 프리셋 — 5종 */}
         <p style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px">기본 프리셋</p>
@@ -1067,8 +1067,8 @@ export const ProvidersPage: FC<{
         </div>
           </div>{/* /dsDetailBody */}
         </div>{/* /Section 2 (세부조정) */}
-      </div>
-      {/* /widgetDesignCard */}
+
+      {/* /widgetDesignCard 의 닫기 div는 Plus 추가 옵션 섹션 다음에 위치 — 결제 모달은 position:fixed라 DOM 위치 무관 */}
 
       {/* Plus 업그레이드 결제 모달 */}
       <div id="plusUpgradeModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
@@ -2038,17 +2038,18 @@ export const ProvidersPage: FC<{
           }
         })();
       `}} />
-      {/* ─── Plus 위젯 옵션: 쿠폰팩 / 텍스트 (collapsible 카드) ─── (v2.5.0) */}
-      <div class="card" id="plusWidgetOptionsCard" style={`${!isPlus ? 'opacity:0.85' : ''}`}>
-        <button type="button" class="ds-section-header" data-target="dsExtraBody" aria-expanded="true"
-          style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;cursor:pointer;margin-bottom:12px">
+      {/* ─── 섹션 3: 추가 옵션 (Plus) — 위젯 디자인 카드 안 셋째 섹션 ─── (v2.5.0) */}
+      <div class="ds-section" id="plusWidgetOptionsCard"
+        style={`border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;overflow:hidden${!isPlus ? ';opacity:0.85' : ''}`}>
+        <button type="button" class="ds-section-header" data-target="dsExtraBody" aria-expanded="false"
+          style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:none;padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px;color:#1e293b">
           <span style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:18px;font-weight:700;color:#0f172a">추가 옵션</span>
+            <span>추가 옵션</span>
             <span class="badge badge-purple">Plus</span>
           </span>
-          <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s">&#9660;</span>
+          <span class="ds-arrow" style="font-size:11px;color:#94a3b8;transition:transform 0.2s;transform:rotate(-90deg)">&#9660;</span>
         </button>
-        <div id="dsExtraBody" class="ds-section-body">
+        <div id="dsExtraBody" class="ds-section-body" style="padding:14px 16px;display:none">
         <p style="font-size:13px;color:#64748b;margin-bottom:16px">
           {isPlus
             ? '쿠폰팩 노출/위치/디자인과 안내 텍스트를 위젯에 추가할 수 있습니다.'
@@ -2227,8 +2228,9 @@ export const ProvidersPage: FC<{
             style={`padding:6px 16px;font-size:12px;color:#fff;background:#2563eb;border:none;border-radius:6px;cursor:${isPlus ? 'pointer' : 'not-allowed'};font-weight:600`}>저장</button>
         </div>
         </div>{/* /dsExtraBody */}
-      </div>
-      {/* /plusWidgetOptionsCard */}
+      </div>{/* /Section 3 (추가 옵션) */}
+
+      </div>{/* /widgetDesignCard — 3 섹션 모두 포함 */}
 
       {/* ─── 카드 외부: 전체 기본값/전체 저장 ─── */}
       <div style="display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding:0 4px">
