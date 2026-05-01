@@ -1316,7 +1316,9 @@ export const ProvidersPage: FC<{
             // 상단 타이틀
             if (style.showTitle) {
               var titleDiv = document.createElement('div');
-              titleDiv.style.cssText = 'font-size:13px;color:#666;text-align:center;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;width:100%';
+              // glassmorphism: 그라디언트 배경 → 회색 텍스트 가독성 보정
+              var titleColor = (style.preset === 'glassmorphism') ? '#cbd5e1' : '#666';
+              titleDiv.style.cssText = 'font-size:13px;color:' + titleColor + ';text-align:center;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;width:100%';
               titleDiv.innerHTML = '<span style="font-size:16px">\\u26A1</span><span>간편 로그인</span>';
               container.appendChild(titleDiv);
             }
@@ -1326,7 +1328,8 @@ export const ProvidersPage: FC<{
             // 텍스트1: 상단 타이틀 아래, 작은 폰트
             if (isPlusPreview && style.customText1Enabled !== false && style.customText1 && style.preset !== 'icon-only') {
               var t1 = document.createElement('div');
-              t1.style.cssText = 'width:100%;text-align:center;font-size:12px;color:#64748b;line-height:1.5;margin:6px 0 12px;white-space:pre-line';
+              var t1Color = (style.preset === 'glassmorphism') ? '#cbd5e1' : '#64748b';
+              t1.style.cssText = 'width:100%;text-align:center;font-size:12px;color:' + t1Color + ';line-height:1.5;margin:6px 0 12px;white-space:pre-line';
               t1.textContent = String(style.customText1).replace(/\\\\n/g, '\\n');
               container.appendChild(t1);
             }
@@ -1373,7 +1376,10 @@ export const ProvidersPage: FC<{
               if (!style.customText2) return null;
               if (style.preset === 'icon-only') return null;
               var t2 = document.createElement('div');
-              t2.style.cssText = 'width:100%;text-align:center;font-size:15px;font-weight:700;color:#0f172a;line-height:1.5;white-space:pre-line';
+              // 어두운 배경 4종: 연한 회색 텍스트 (가독성)
+              var DARK_TEXT_PRESETS_PV = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+              var t2Color = DARK_TEXT_PRESETS_PV.indexOf(style.preset) !== -1 ? '#e5e7eb' : '#0f172a';
+              t2.style.cssText = 'width:100%;text-align:center;font-size:15px;font-weight:700;color:' + t2Color + ';line-height:1.5;white-space:pre-line';
               t2.textContent = String(style.customText2).replace(/\\\\n/g, '\\n');
               return t2;
             }

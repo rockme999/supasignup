@@ -90,7 +90,7 @@ export function getRenderJs(): string {
       bgSetImp(this.container, 'max-width', (buttonWidth + 32) + 'px');
     }
 
-    // Title (showTitle: default false)
+    // Title (default true)
     if (s.showTitle !== false) {
       var title = document.createElement('div');
       title.className = 'bg-widget-title';
@@ -102,6 +102,10 @@ export function getRenderJs(): string {
       var titleText = document.createElement('span');
       titleText.textContent = ' 간편 로그인';
       title.appendChild(titleText);
+      // glassmorphism: 보라/핑크 그라디언트 배경에 회색(#666) 텍스트는 안 보임 → 연한 회색으로 보정
+      if (preset === 'glassmorphism') {
+        bgSetImp(title, 'color', '#cbd5e1');
+      }
       this.container.appendChild(title);
     }
 
@@ -117,7 +121,8 @@ export function getRenderJs(): string {
         bgSetImp(t1, 'width', '100%');
         bgSetImp(t1, 'text-align', 'center');
         bgSetImp(t1, 'font-size', '12px');
-        bgSetImp(t1, 'color', '#64748b');
+        // glassmorphism 만 그라디언트 배경에 #64748b 가독성 떨어짐 → 보정
+        bgSetImp(t1, 'color', preset === 'glassmorphism' ? '#cbd5e1' : '#64748b');
         bgSetImp(t1, 'line-height', '1.5');
         bgSetImp(t1, 'margin', '6px 0 12px');
         bgSetImp(t1, 'white-space', 'pre-line');
@@ -197,7 +202,9 @@ export function getRenderJs(): string {
         bgSetImp(ct2El, 'text-align', 'center');
         bgSetImp(ct2El, 'font-size', '15px');
         bgSetImp(ct2El, 'font-weight', '700');
-        bgSetImp(ct2El, 'color', '#0f172a');
+        // 어두운 배경 4종(glassmorphism/neon-glow/liquid-glass/gradient-flow): 텍스트2 가독성 → 연한 회색
+        var DARK_TEXT_PRESETS = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+        bgSetImp(ct2El, 'color', DARK_TEXT_PRESETS.indexOf(preset) !== -1 ? '#e5e7eb' : '#0f172a');
         bgSetImp(ct2El, 'line-height', '1.5');
         bgSetImp(ct2El, 'white-space', 'pre-line');
         ct2El.textContent = t2text.replace(/\\\\n/g, '\\n');
