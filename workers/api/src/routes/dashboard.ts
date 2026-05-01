@@ -248,6 +248,22 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
   const resolvedPreset = body.preset ?? currentStyle.preset;
   const resolvedPresetTier: 'free' | 'plus' = PLUS_PRESETS_LIST.includes(resolvedPreset) ? 'plus' : 'free';
 
+  // Plus 전용 옵션: Free 플랜이면 모두 OFF + 기본값으로 강제 (보안)
+  const isFree = shop.plan === 'free';
+  const VALID_CP_POSITIONS: NonNullable<WidgetStyle['couponPackPosition']>[] = ['above', 'below'];
+  if (body.couponPackPosition !== undefined && !VALID_CP_POSITIONS.includes(body.couponPackPosition)) {
+    return c.json({ error: 'invalid_couponPackPosition', message: `must be one of: ${VALID_CP_POSITIONS.join(', ')}` }, 400);
+  }
+  if (body.couponPackGap !== undefined && (body.couponPackGap < 0 || body.couponPackGap > 60)) {
+    return c.json({ error: 'invalid_couponPackGap', message: 'couponPackGap must be between 0 and 60' }, 400);
+  }
+  if (body.customText1 !== undefined && typeof body.customText1 === 'string' && body.customText1.length > 200) {
+    return c.json({ error: 'invalid_customText1', message: 'customText1 max 200 chars' }, 400);
+  }
+  if (body.customText2 !== undefined && typeof body.customText2 === 'string' && body.customText2.length > 200) {
+    return c.json({ error: 'invalid_customText2', message: 'customText2 max 200 chars' }, 400);
+  }
+
   const newStyle: WidgetStyle = {
     preset: resolvedPreset,
     presetTier: resolvedPresetTier,
@@ -264,6 +280,14 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     showPoweredBy,
     widgetPosition: body.widgetPosition ?? currentStyle.widgetPosition ?? 'before',
     customSelector: body.customSelector ?? currentStyle.customSelector ?? '',
+    // Plus 전용 — Free면 강제 OFF
+    showCouponPack: isFree ? false : (body.showCouponPack ?? currentStyle.showCouponPack ?? true),
+    couponPackPosition: body.couponPackPosition ?? currentStyle.couponPackPosition ?? 'below',
+    couponPackGap: body.couponPackGap ?? currentStyle.couponPackGap ?? 12,
+    customText1Enabled: isFree ? false : (body.customText1Enabled ?? currentStyle.customText1Enabled ?? true),
+    customText1: body.customText1 ?? currentStyle.customText1 ?? '아이디 비밀번호 입력없이\n번개가입! 번개로그인!',
+    customText2Enabled: isFree ? false : (body.customText2Enabled ?? currentStyle.customText2Enabled ?? true),
+    customText2: body.customText2 ?? currentStyle.customText2 ?? '회원가입 즉시 사용가능한 쿠폰팩 증정',
   };
 
   await updateShop(c.env.DB, shopId, {

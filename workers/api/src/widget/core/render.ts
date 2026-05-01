@@ -105,6 +105,27 @@ export function getRenderJs(): string {
       this.container.appendChild(title);
     }
 
+    // Plus 플랜 여부 — config.plan === 'plus' 일 때만 customText/coupon pack 옵션 사용 가능
+    var isPlus = this.config && this.config.plan && this.config.plan !== 'free';
+
+    // 커스텀 텍스트1: 상단 타이틀 아래, 작은 폰트 (Plus 전용)
+    if (isPlus && s.customText1Enabled !== false && preset !== 'icon-only') {
+      var t1text = (s.customText1 != null ? s.customText1 : '아이디 비밀번호 입력없이\\n번개가입! 번개로그인!').toString();
+      if (t1text) {
+        var t1 = document.createElement('div');
+        t1.className = 'bg-custom-text-1';
+        bgSetImp(t1, 'width', '100%');
+        bgSetImp(t1, 'text-align', 'center');
+        bgSetImp(t1, 'font-size', '12px');
+        bgSetImp(t1, 'color', '#64748b');
+        bgSetImp(t1, 'line-height', '1.5');
+        bgSetImp(t1, 'margin', '6px 0 12px');
+        bgSetImp(t1, 'white-space', 'pre-line');
+        t1.textContent = t1text.replace(/\\\\n/g, '\\n');
+        this.container.appendChild(t1);
+      }
+    }
+
     // Sort providers (last used first)
     var providers = this.sortProviders(this.config.providers);
 
@@ -130,6 +151,68 @@ export function getRenderJs(): string {
       }
     }
 
+    // ── 쿠폰팩 카드 element 생성 (Plus 전용) ──
+    // 조건: isPlus && showCouponPack !== false && cp.active && preset !== 'icon-only'
+    var cp = this.config && this.config.coupon_pack;
+    var cpGap = (s.couponPackGap != null && s.couponPackGap >= 0) ? s.couponPackGap : 12;
+    var cpPosition = s.couponPackPosition || 'below'; // 'above' | 'below'
+    var showCouponPack = isPlus && s.showCouponPack !== false && cp && cp.active && preset !== 'icon-only' && typeof this.renderCouponPackCard === 'function';
+    var cpEl = null;
+    if (showCouponPack) {
+      try {
+        cpEl = this.renderCouponPackCard({
+          design: cp.design || 'brand',
+          anim_mode: cp.anim_mode !== false,
+          total_amount: cp.total_amount || 55000,
+          items_count: cp.items_count || 5,
+          size: cp.size || 'md'
+        });
+        if (cpEl && cpEl.nodeType === 1) {
+          cpEl.classList.add('bg-coupon-pack-wrap');
+          bgSetImp(cpEl, 'width', '100%');
+          var BG_CP_SCALE = { lg: 1.0, md: 0.85, sm: 0.7, xs: 0.55 };
+          var sc = BG_CP_SCALE[cp.size] != null ? BG_CP_SCALE[cp.size] : 0.85;
+          if (sc !== 1.0) {
+            var inner = cpEl.firstChild;
+            if (inner && inner.style) {
+              inner.style.transform = 'scale(' + sc + ')';
+              inner.style.transformOrigin = 'center top';
+            }
+            bgSetImp(cpEl, 'height', Math.round(140 * sc) + 'px');
+            bgSetImp(cpEl, 'align-items', 'flex-start');
+          }
+          // couponPackGap: 소셜과 쿠폰팩 사이 간격 — 위치별로 margin-top/bottom 조절
+          var gapPx = cpGap + 'px';
+          bgSetImp(cpEl, 'margin', cpPosition === 'above' ? ('0 0 ' + gapPx) : (gapPx + ' 0 4px'));
+        } else { cpEl = null; }
+      } catch (e) { bgLog('render: coupon pack render failed', e); cpEl = null; }
+    }
+
+    // 커스텀 텍스트2: 소셜과 쿠폰팩 사이 (Plus 전용, 쿠폰팩 노출 시에만)
+    var ct2El = null;
+    if (isPlus && s.customText2Enabled !== false && cpEl != null && preset !== 'icon-only') {
+      var t2text = (s.customText2 != null ? s.customText2 : '회원가입 즉시 사용가능한 쿠폰팩 증정').toString();
+      if (t2text) {
+        ct2El = document.createElement('div');
+        ct2El.className = 'bg-custom-text-2';
+        bgSetImp(ct2El, 'width', '100%');
+        bgSetImp(ct2El, 'text-align', 'center');
+        bgSetImp(ct2El, 'font-size', '15px');
+        bgSetImp(ct2El, 'font-weight', '700');
+        bgSetImp(ct2El, 'color', '#0f172a');
+        bgSetImp(ct2El, 'line-height', '1.5');
+        bgSetImp(ct2El, 'margin', '8px 0');
+        bgSetImp(ct2El, 'white-space', 'pre-line');
+        ct2El.textContent = t2text.replace(/\\\\n/g, '\\n');
+      }
+    }
+
+    // 쿠폰팩 above 위치: 소셜 영역 직전에 노출 (cpEl → ct2El → 소셜)
+    if (cpEl && cpPosition === 'above') {
+      this.container.appendChild(cpEl);
+      if (ct2El) this.container.appendChild(ct2El);
+    }
+
     // Render buttons (풀버튼 영역)
     for (var i = 0; i < buttonProviders.length; i++) {
       var btn = this.renderButton(buttonProviders[i], i === 0 && this.lastProvider === buttonProviders[i]);
@@ -147,42 +230,10 @@ export function getRenderJs(): string {
       this.container.appendChild(iconRow);
     }
 
-    // Plus 쿠폰팩 카드: 소셜 영역 다음, powered by 직전에 노출
-    // 조건: config.coupon_pack.active === true 인 Plus 플랜 (서버에서 보장).
-    // icon-only preset에서는 시각적으로 어울리지 않아 미노출.
-    // renderCouponPackCard는 DOM Element(wrap div)를 반환 — innerHTML 금지, appendChild 사용.
-    var cp = this.config && this.config.coupon_pack;
-    if (cp && cp.active && preset !== 'icon-only' && typeof this.renderCouponPackCard === 'function') {
-      try {
-        var cpEl = this.renderCouponPackCard({
-          design: cp.design || 'brand',
-          anim_mode: cp.anim_mode !== false,
-          total_amount: cp.total_amount || 55000,
-          items_count: cp.items_count || 5,
-          size: cp.size || 'md'
-        });
-        if (cpEl && cpEl.nodeType === 1) {
-          // 외곽 wrap이 이미 flex 컨테이너 (display:flex;justify-content:center;margin:16px 0 8px).
-          // 위젯 안에 100% 폭을 차지하도록 보정 + bg-coupon-pack-wrap 클래스 부여 (디버깅·셀렉터용).
-          cpEl.classList.add('bg-coupon-pack-wrap');
-          bgSetImp(cpEl, 'width', '100%');
-          // size별 시각적 크기 — 카드 자체는 300×140 고정이라 transform: scale 로 조절
-          var BG_CP_SCALE = { lg: 1.0, md: 0.85, sm: 0.7, xs: 0.55 };
-          var sc = BG_CP_SCALE[cp.size] != null ? BG_CP_SCALE[cp.size] : 0.85;
-          if (sc !== 1.0) {
-            var inner = cpEl.firstChild;
-            if (inner && inner.style) {
-              inner.style.transform = 'scale(' + sc + ')';
-              inner.style.transformOrigin = 'center top';
-            }
-            // 카드 외곽 wrap 높이 보정 — scale 후 실제 차지 공간으로 맞춰 layout 공백 최소화
-            bgSetImp(cpEl, 'height', Math.round(140 * sc) + 'px');
-            bgSetImp(cpEl, 'align-items', 'flex-start');
-            bgSetImp(cpEl, 'margin', '12px 0 4px');
-          }
-          this.container.appendChild(cpEl);
-        }
-      } catch (e) { bgLog('render: coupon pack render failed', e); }
+    // 쿠폰팩 below 위치: 소셜 영역 직후 (ct2El → cpEl → powered by)
+    if (cpEl && cpPosition !== 'above') {
+      if (ct2El) this.container.appendChild(ct2El);
+      this.container.appendChild(cpEl);
     }
 
     // Powered by (showPoweredBy: default true)

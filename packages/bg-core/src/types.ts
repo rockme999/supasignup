@@ -174,6 +174,15 @@ export interface WidgetStyle {
   showPoweredBy: boolean; // 하단 "powered by 번개가입" 표시 여부 (무료 플랜은 항상 true)
   widgetPosition: 'before' | 'after' | 'custom'; // 위젯 삽입 위치: 로그인 폼 앞/뒤/커스텀 셀렉터
   customSelector: string; // 커스텀 CSS 셀렉터 (widgetPosition이 'custom'일 때 사용)
+  // ── Plus 전용: 쿠폰팩 통합 (v2.5.0) ──────────────────────
+  showCouponPack?: boolean; // 위젯에 쿠폰팩 카드 노출 여부 (기본 true). false 시 위젯 표시 안 함
+  couponPackPosition?: 'above' | 'below'; // 쿠폰팩 카드 위치: 소셜 버튼 위(above) 또는 아래(below). 기본 'below'
+  couponPackGap?: number; // 소셜 버튼과 쿠폰팩 사이 간격(px). 기본 12
+  // ── Plus 전용: 커스텀 텍스트 2종 ──────────────────────────
+  customText1Enabled?: boolean; // 텍스트1(상단 타이틀 아래, 작은 폰트) 노출 여부. 기본 true
+  customText1?: string; // 텍스트1 본문. 기본 '아이디 비밀번호 입력없이\n번개가입! 번개로그인!'
+  customText2Enabled?: boolean; // 텍스트2(소셜과 쿠폰팩 사이, 큰 폰트 볼드) 노출 여부. 기본 true
+  customText2?: string; // 텍스트2 본문. 기본 '회원가입 즉시 사용가능한 쿠폰팩 증정'
 }
 
 export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
@@ -191,6 +200,14 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   showPoweredBy: true,
   widgetPosition: 'before',
   customSelector: '',
+  // Plus 전용 기본값 (Free 플랜에서는 server-side 또는 client-side에서 무시)
+  showCouponPack: true,
+  couponPackPosition: 'below',
+  couponPackGap: 12,
+  customText1Enabled: true,
+  customText1: '아이디 비밀번호 입력없이\n번개가입! 번개로그인!',
+  customText2Enabled: true,
+  customText2: '회원가입 즉시 사용가능한 쿠폰팩 증정',
 };
 
 // Env binding types for Workers

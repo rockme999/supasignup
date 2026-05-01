@@ -490,6 +490,20 @@ export const ProvidersPage: FC<{
   const cpAnim = packConfig?.anim_mode !== false;
   const cpInitialSize = (packConfig?.size ?? 'md') as 'lg' | 'md' | 'sm' | 'xs';
   const cpSizes: Array<'lg' | 'md' | 'sm' | 'xs'> = ['lg', 'md', 'sm', 'xs'];
+  // Plus 옵션 default — Free 플랜이면 모두 OFF로 강제 (서버에서도 OFF)
+  const showCouponPackDefault = isPlus ? (ws.showCouponPack !== false) : false;
+  const couponPackPositionDefault = (ws.couponPackPosition ?? 'below') as 'above' | 'below';
+  const couponPackGapDefault = ws.couponPackGap ?? 12;
+  const customText1EnabledDefault = isPlus ? (ws.customText1Enabled !== false) : false;
+  const customText1Default = ws.customText1 ?? '아이디 비밀번호 입력없이\n번개가입! 번개로그인!';
+  const customText2EnabledDefault = isPlus ? (ws.customText2Enabled !== false) : false;
+  const customText2Default = ws.customText2 ?? '회원가입 즉시 사용가능한 쿠폰팩 증정';
+  const cpDesignList: Array<{ value: 'dark' | 'brand' | 'illust' | 'minimal'; label: string }> = [
+    { value: 'dark', label: '#1 다크' },
+    { value: 'brand', label: '#2 브랜드' },
+    { value: 'illust', label: '#3 일러스트' },
+    { value: 'minimal', label: '#4 미니멀' },
+  ];
 
   return (
     <Layout title="소셜 프로바이더" loggedIn currentPath="/dashboard/settings/providers" isCafe24={isCafe24} newBadges={newBadges}>
@@ -1080,8 +1094,17 @@ export const ProvidersPage: FC<{
             showTitle: widgetStyle.showTitle === true,
             showPoweredBy: widgetStyle.showPoweredBy !== false,
             widgetPosition: widgetStyle.widgetPosition || 'before',
-            customSelector: widgetStyle.customSelector || ''
+            customSelector: widgetStyle.customSelector || '',
+            // Plus 위젯 옵션 (Free 플랜이면 서버에서 강제 OFF)
+            showCouponPack: widgetStyle.showCouponPack !== false,
+            couponPackPosition: widgetStyle.couponPackPosition || 'below',
+            couponPackGap: (widgetStyle.couponPackGap != null ? widgetStyle.couponPackGap : 12),
+            customText1Enabled: widgetStyle.customText1Enabled !== false,
+            customText1: widgetStyle.customText1 != null ? widgetStyle.customText1 : '아이디 비밀번호 입력없이\\n번개가입! 번개로그인!',
+            customText2Enabled: widgetStyle.customText2Enabled !== false,
+            customText2: widgetStyle.customText2 != null ? widgetStyle.customText2 : '회원가입 즉시 사용가능한 쿠폰팩 증정'
           };
+          window.__bgStyle = style; // 옵션 카드 스크립트가 동기화에 사용
           var shopPlan = '${shop.plan}';
           var shopId = null; // providerForm에서 읽음
 
@@ -1102,6 +1125,7 @@ export const ProvidersPage: FC<{
             var saveBtn = document.getElementById('saveStyleBtn');
             if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
           }
+          window.markChanged = markChanged; // Plus 옵션 카드 스크립트가 사용
 
           // 상단 타이틀 토글
           document.getElementById('showTitleToggle').addEventListener('change', function() {
@@ -1257,6 +1281,16 @@ export const ProvidersPage: FC<{
               container.appendChild(titleDiv);
             }
 
+            // Plus 위젯 옵션 — 미리보기 미러 (Free 플랜이면 모두 OFF)
+            var isPlusPreview = ${isPlus ? 'true' : 'false'};
+            // 텍스트1: 상단 타이틀 아래, 작은 폰트
+            if (isPlusPreview && style.customText1Enabled !== false && style.customText1 && style.preset !== 'icon-only') {
+              var t1 = document.createElement('div');
+              t1.style.cssText = 'width:100%;text-align:center;font-size:12px;color:#64748b;line-height:1.5;margin:6px 0 12px;white-space:pre-line';
+              t1.textContent = String(style.customText1).replace(/\\\\n/g, '\\n');
+              container.appendChild(t1);
+            }
+
             // Plus 프리셋 클래스 매핑
             var PLUS_CLASS_MAP = {
               'glassmorphism': 'bg-preset-glass',
@@ -1272,6 +1306,47 @@ export const ProvidersPage: FC<{
             var animDelayClasses = ['bg-mobile-anim-d1','bg-mobile-anim-d2','bg-mobile-anim-d3','bg-mobile-anim-d4','bg-mobile-anim-d5','bg-mobile-anim-d6'];
             var pulseDelayClasses = ['bg-mobile-pulse-d1','bg-mobile-pulse-d2','bg-mobile-pulse-d3','bg-mobile-pulse-d4','bg-mobile-pulse-d5','bg-mobile-pulse-d6'];
             var plusIdx = 0;
+
+            // 쿠폰팩 카드 cloneNode 헬퍼 (Plus + showCouponPack + packConfig 시에만 노출)
+            var cpTemplatesElPv = document.getElementById('bgCouponPackTemplates');
+            function makeCpClone() {
+              if (!isPlusPreview) return null;
+              if (style.showCouponPack === false) return null;
+              if (style.preset === 'icon-only') return null;
+              if (!cpTemplatesElPv) return null;
+              var curSize = window.__bgCpCurrentSize || window.__bgCpInitialSize || 'md';
+              var src = cpTemplatesElPv.querySelector('[data-cp-size="' + curSize + '"]');
+              if (!src || !src.firstElementChild) return null;
+              var wrap = document.createElement('div');
+              wrap.className = 'bg-coupon-pack-wrap-pv';
+              var gap = (style.couponPackGap != null ? style.couponPackGap : 12) + 'px';
+              wrap.style.cssText = 'display:flex;justify-content:center;align-items:center;width:100%;margin:' +
+                (style.couponPackPosition === 'above' ? ('0 0 ' + gap) : (gap + ' 0 4px'));
+              wrap.appendChild(src.firstElementChild.cloneNode(true));
+              return wrap;
+            }
+            // 텍스트2 (소셜과 쿠폰팩 사이) — 쿠폰팩 노출 시에만
+            function makeText2() {
+              if (!isPlusPreview) return null;
+              if (style.customText2Enabled === false) return null;
+              if (!style.customText2) return null;
+              if (style.preset === 'icon-only') return null;
+              var t2 = document.createElement('div');
+              t2.style.cssText = 'width:100%;text-align:center;font-size:15px;font-weight:700;color:#0f172a;line-height:1.5;margin:8px 0;white-space:pre-line';
+              t2.textContent = String(style.customText2).replace(/\\\\n/g, '\\n');
+              return t2;
+            }
+
+            // 쿠폰팩 above 위치: 소셜 직전에 [cpClone] [text2] 노출
+            var cpClonePre = null;
+            if (style.couponPackPosition === 'above') {
+              cpClonePre = makeCpClone();
+              if (cpClonePre) {
+                container.appendChild(cpClonePre);
+                var t2Above = makeText2();
+                if (t2Above) container.appendChild(t2Above);
+              }
+            }
 
             buttonProviders.forEach(function(p) {
               var btn = document.createElement('div');
@@ -1441,19 +1516,13 @@ export const ProvidersPage: FC<{
               container.appendChild(msg);
             }
 
-            // Plus 쿠폰팩 카드 삽입 (소셜 영역 다음, powered by 직전)
-            // icon-only preset에서는 미노출 — 위젯 render.ts와 동일 정책
-            var cpTemplatesEl = document.getElementById('bgCouponPackTemplates');
-            if (cpTemplatesEl && providers.length > 0 && style.preset !== 'icon-only') {
-              var curSize = window.__bgCpCurrentSize || window.__bgCpInitialSize || 'md';
-              var cpSrc = cpTemplatesEl.querySelector('[data-cp-size="' + curSize + '"]');
-              if (cpSrc && cpSrc.firstElementChild) {
-                var cpClone = cpSrc.firstElementChild.cloneNode(true);
-                var cpWrap = document.createElement('div');
-                cpWrap.className = 'bg-coupon-pack-wrap';
-                cpWrap.style.cssText = 'display:flex;justify-content:center;align-items:center;margin-top:12px;width:100%';
-                cpWrap.appendChild(cpClone);
-                container.appendChild(cpWrap);
+            // 쿠폰팩 below 위치: 소셜 다음 [text2] [cpClone] (cpAbove면 이미 위에 처리됨)
+            if (style.couponPackPosition !== 'above' && providers.length > 0) {
+              var cpCloneBelow = makeCpClone();
+              if (cpCloneBelow) {
+                var t2Below = makeText2();
+                if (t2Below) container.appendChild(t2Below);
+                container.appendChild(cpCloneBelow);
               }
             }
 
@@ -1823,6 +1892,222 @@ export const ProvidersPage: FC<{
           }
         })();
       `}} />
+      {/* ─── Plus 위젯 옵션: 쿠폰팩 / 텍스트 ─── (v2.5.0) */}
+      <div class="card" id="plusWidgetOptionsCard" style={`${!isPlus ? 'opacity:0.85' : ''}`}>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <h2 style="margin:0">위젯 추가 옵션</h2>
+          <span class="badge badge-purple">Plus</span>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px">
+          {isPlus
+            ? '쿠폰팩 노출/위치/디자인과 안내 텍스트를 위젯에 추가할 수 있습니다.'
+            : 'Plus 플랜에서 사용할 수 있습니다. 다운그레이드 시 모든 옵션은 자동으로 비활성화됩니다.'}
+        </p>
+
+        {/* 쿠폰팩 섹션 */}
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:14px">
+              <input type="checkbox" id="optShowCouponPack" checked={showCouponPackDefault} disabled={!isPlus} />
+              쿠폰팩 위젯에 노출
+            </label>
+            <a href="/dashboard/settings/general#couponSettingsCard" style="font-size:11px;color:#3b82f6">기본 설정에서 활성화 →</a>
+          </div>
+          {/* 위치 + 간격 */}
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:12px 16px;align-items:center;margin-bottom:12px">
+            <label style="font-size:13px;color:#475569">노출 위치</label>
+            <div style="display:flex;gap:6px">
+              <label style={`display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:${isPlus ? 'pointer' : 'not-allowed'};font-size:12px`}>
+                <input type="radio" name="cpPosition" value="above" checked={couponPackPositionDefault === 'above'} disabled={!isPlus} />
+                소셜 버튼 위
+              </label>
+              <label style={`display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;cursor:${isPlus ? 'pointer' : 'not-allowed'};font-size:12px`}>
+                <input type="radio" name="cpPosition" value="below" checked={couponPackPositionDefault === 'below'} disabled={!isPlus} />
+                소셜 버튼 아래
+              </label>
+            </div>
+            <label for="optCpGap" style="font-size:13px;color:#475569">간격</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="optCpGap" min="0" max="60" value={couponPackGapDefault} disabled={!isPlus} style="flex:1" />
+              <span id="optCpGapVal" style="font-size:12px;color:#64748b;min-width:42px">{couponPackGapDefault}px</span>
+            </div>
+          </div>
+          {/* 디자인 4종 */}
+          <div style="margin-bottom:8px">
+            <label style="display:block;font-size:13px;color:#475569;margin-bottom:6px">쿠폰팩 디자인</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              {cpDesignList.map(d => (
+                <label class="cp-design-btn" data-design={d.value}
+                  style={`padding:6px 12px;border:1px solid ${cpDesign === d.value ? '#ec4899' : '#d1d5db'};background:${cpDesign === d.value ? '#fdf2f8' : '#fff'};color:${cpDesign === d.value ? '#be185d' : '#64748b'};border-radius:6px;font-size:12px;cursor:${isPlus ? 'pointer' : 'not-allowed'};font-weight:${cpDesign === d.value ? '600' : '500'}`}>
+                  <input type="radio" name="cpDesignSel" value={d.value} checked={cpDesign === d.value} disabled={!isPlus} style="display:none" />
+                  {d.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          {/* 반짝 효과 */}
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#475569">
+            <input type="checkbox" id="optCpAnim" checked={cpAnim} disabled={!isPlus} />
+            반짝 효과 (애니메이션)
+          </label>
+        </div>
+
+        {/* 텍스트 섹션 */}
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px">
+          <p style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em">안내 텍스트</p>
+
+          {/* 텍스트1 */}
+          <div style="margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="optText1Enabled" checked={customText1EnabledDefault} disabled={!isPlus} />
+                텍스트1 (상단 타이틀 아래, 작은 글씨)
+              </label>
+              <button type="button" id="optText1AiBtn" disabled={!isPlus}
+                style={`padding:4px 10px;border:1px solid #d1d5db;background:#fff;color:#64748b;border-radius:6px;font-size:11px;cursor:${isPlus ? 'pointer' : 'not-allowed'}`}>
+                ✨ AI 생성
+              </button>
+            </div>
+            <textarea id="optText1" rows={2} disabled={!isPlus} maxlength={200}
+              style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box">{customText1Default}</textarea>
+          </div>
+
+          {/* 텍스트2 */}
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="optText2Enabled" checked={customText2EnabledDefault} disabled={!isPlus} />
+                텍스트2 (소셜과 쿠폰팩 사이, 큰 글씨 볼드)
+              </label>
+              <button type="button" id="optText2AiBtn" disabled={!isPlus}
+                style={`padding:4px 10px;border:1px solid #d1d5db;background:#fff;color:#64748b;border-radius:6px;font-size:11px;cursor:${isPlus ? 'pointer' : 'not-allowed'}`}>
+                ✨ AI 생성
+              </button>
+            </div>
+            <textarea id="optText2" rows={2} disabled={!isPlus} maxlength={200}
+              style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;font-family:inherit;resize:vertical;box-sizing:border-box">{customText2Default}</textarea>
+          </div>
+        </div>
+
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var shopId = ${JSON.stringify(shop.shop_id)};
+            var isPlus = ${isPlus ? 'true' : 'false'};
+            // style 객체에 옵션 반영 (saveStyle()이 PUT 시 자동 포함)
+            function syncStyle() {
+              if (!window.__bgStyle) window.__bgStyle = {};
+              var s = window.__bgStyle;
+              s.showCouponPack = !!document.getElementById('optShowCouponPack').checked;
+              var posR = document.querySelector('input[name=cpPosition]:checked');
+              s.couponPackPosition = posR ? posR.value : 'below';
+              s.couponPackGap = parseInt(document.getElementById('optCpGap').value, 10) || 12;
+              s.customText1Enabled = !!document.getElementById('optText1Enabled').checked;
+              s.customText1 = document.getElementById('optText1').value;
+              s.customText2Enabled = !!document.getElementById('optText2Enabled').checked;
+              s.customText2 = document.getElementById('optText2').value;
+            }
+            // 모든 컨트롤 change 이벤트
+            ['optShowCouponPack','optCpGap','optText1Enabled','optText1','optText2Enabled','optText2'].forEach(function(id) {
+              var el = document.getElementById(id);
+              if (!el) return;
+              var ev = (el.tagName === 'INPUT' && el.type === 'range') ? 'input' : (el.tagName === 'TEXTAREA' ? 'input' : 'change');
+              el.addEventListener(ev, function() {
+                if (id === 'optCpGap') {
+                  document.getElementById('optCpGapVal').textContent = el.value + 'px';
+                }
+                syncStyle();
+                if (window.markChanged) window.markChanged();
+                if (window.renderProviderPreview) window.renderProviderPreview();
+              });
+            });
+            document.querySelectorAll('input[name=cpPosition]').forEach(function(r) {
+              r.addEventListener('change', function() {
+                syncStyle();
+                if (window.markChanged) window.markChanged();
+                if (window.renderProviderPreview) window.renderProviderPreview();
+              });
+            });
+            // 디자인 4종 — PUT /coupon-pack 의 design 필드 즉시 저장 (기존 핸들러 활용)
+            document.querySelectorAll('.cp-design-btn').forEach(function(btn) {
+              btn.addEventListener('click', async function() {
+                if (!isPlus) return;
+                var design = btn.dataset.design;
+                document.querySelectorAll('.cp-design-btn').forEach(function(b) {
+                  var active = b.dataset.design === design;
+                  b.style.borderColor = active ? '#ec4899' : '#d1d5db';
+                  b.style.background = active ? '#fdf2f8' : '#fff';
+                  b.style.color = active ? '#be185d' : '#64748b';
+                  b.style.fontWeight = active ? '600' : '500';
+                  var inp = b.querySelector('input');
+                  if (inp) inp.checked = active;
+                });
+                window.__bgCpDesign = design;
+                if (window.renderProviderPreview) window.renderProviderPreview();
+                try {
+                  await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon-pack', {
+                    enabled: true, design: design,
+                    anim_mode: !!document.getElementById('optCpAnim').checked
+                  });
+                } catch(e) {}
+              });
+            });
+            // 반짝 토글 — 즉시 저장
+            var animEl = document.getElementById('optCpAnim');
+            if (animEl) {
+              animEl.addEventListener('change', async function() {
+                if (!isPlus) return;
+                window.__bgCpAnim = !!animEl.checked;
+                if (window.renderProviderPreview) window.renderProviderPreview();
+                try {
+                  await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon-pack', {
+                    enabled: true,
+                    design: (window.__bgCpDesign || ${JSON.stringify(cpDesign)}),
+                    anim_mode: !!animEl.checked
+                  });
+                } catch(e) {}
+              });
+            }
+            // AI 생성 버튼 — POST /api/ai/copy 호출
+            async function aiGen(targetId, ctx, btn) {
+              if (!isPlus) return;
+              var ta = document.getElementById(targetId);
+              if (!ta || !btn) return;
+              var orig = btn.textContent;
+              btn.textContent = '생성 중…'; btn.disabled = true;
+              try {
+                var resp = await apiCall('POST', '/api/ai/copy', { shop_id: shopId, context: ctx });
+                if (resp.ok) {
+                  var data = await resp.json();
+                  var copies = (data && data.copies) || [];
+                  if (copies.length > 0) {
+                    ta.value = copies[0];
+                    ta.dispatchEvent(new Event('input'));
+                    showToast('success', 'AI가 ' + copies.length + '개 추천: 첫 번째 적용. 다른 카피는 콘솔에서 확인하세요.');
+                    console.log('[AI 카피 추천]', copies);
+                  } else {
+                    showToast('warn', 'AI 응답이 비어 있습니다.');
+                  }
+                } else {
+                  var err = await resp.json();
+                  showToast('error', err.message || 'AI 생성 실패');
+                }
+              } catch(e) { showToast('error', 'AI 생성 중 오류'); }
+              finally { btn.textContent = orig; btn.disabled = !isPlus; }
+            }
+            var t1Btn = document.getElementById('optText1AiBtn');
+            if (t1Btn) t1Btn.addEventListener('click', function() {
+              aiGen('optText1', '소셜 로그인 위젯의 상단 안내 문구. 짧고 친근하게 (2줄, 각 줄 15자 내외). 가입/로그인 편의성 강조.', t1Btn);
+            });
+            var t2Btn = document.getElementById('optText2AiBtn');
+            if (t2Btn) t2Btn.addEventListener('click', function() {
+              aiGen('optText2', '회원 가입 시 쿠폰팩 증정을 강조하는 1줄 광고 문구. 임팩트 있게.', t2Btn);
+            });
+            // 초기 sync
+            syncStyle();
+          })();
+        `}} />
+      </div>
+
       </div>{/* end right column */}
       </div>{/* end 2-column grid */}
     </Layout>
@@ -2133,7 +2418,7 @@ export const GeneralSettingsPage: FC<{
 
           {/* ── 미리보기 카드 ── */}
           <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
               <p style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;margin:0">미리보기</p>
               <div style="display:flex;align-items:center;gap:8px">
                 <div id="cpEnabledToggle" data-value={isActiveUi ? 'true' : 'false'}
@@ -2143,6 +2428,10 @@ export const GeneralSettingsPage: FC<{
                 <span id="cpEnabledLabel" style="font-size:12px;font-weight:600;color:#374151">{isActiveUi ? '활성화됨' : '비활성화됨'}</span>
               </div>
             </div>
+            <p style="font-size:11px;color:#94a3b8;margin:0 0 14px">
+              로그인 위젯에서 표시됩니다.
+              {isPlus && <a href="/dashboard/settings/providers" style="margin-left:6px;color:#3b82f6;text-decoration:none">위치/노출 조정 →</a>}
+            </p>
 
             <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
             <div style="display:flex;align-items:center;justify-content:center;background:#f1f5f9;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
