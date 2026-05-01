@@ -181,9 +181,7 @@ export function getRenderJs(): string {
             bgSetImp(cpEl, 'height', Math.round(140 * sc) + 'px');
             bgSetImp(cpEl, 'align-items', 'flex-start');
           }
-          // couponPackGap: 소셜과 쿠폰팩 사이 간격 — 위치별로 margin-top/bottom 조절
-          var gapPx = cpGap + 'px';
-          bgSetImp(cpEl, 'margin', cpPosition === 'above' ? ('0 0 ' + gapPx) : (gapPx + ' 0 4px'));
+          // 마진은 ct2 유무에 따라 아래에서 결정
         } else { cpEl = null; }
       } catch (e) { bgLog('render: coupon pack render failed', e); cpEl = null; }
     }
@@ -201,9 +199,32 @@ export function getRenderJs(): string {
         bgSetImp(ct2El, 'font-weight', '700');
         bgSetImp(ct2El, 'color', '#0f172a');
         bgSetImp(ct2El, 'line-height', '1.5');
-        bgSetImp(ct2El, 'margin', '8px 0');
         bgSetImp(ct2El, 'white-space', 'pre-line');
         ct2El.textContent = t2text.replace(/\\\\n/g, '\\n');
+      }
+    }
+
+    // ── 마진 분배: cpGap을 소셜~쿠폰팩 사이 총 거리로 보고
+    //    텍스트2가 있으면 텍스트2가 중앙에 오도록 양쪽 균등 분배.
+    //    텍스트2 없을 때: 소셜~cpEl 직접 거리 = cpGap.
+    if (cpEl) {
+      var halfGap = Math.max(0, Math.round(cpGap / 2));
+      if (cpPosition === 'above') {
+        // [cpEl] [ct2] [소셜] — cpEl 윗마진은 0, cpEl과 소셜 사이 총 cpGap
+        if (ct2El) {
+          bgSetImp(cpEl, 'margin', '0 0 ' + halfGap + 'px');
+          bgSetImp(ct2El, 'margin', '0 0 ' + halfGap + 'px');
+        } else {
+          bgSetImp(cpEl, 'margin', '0 0 ' + cpGap + 'px');
+        }
+      } else {
+        // [소셜] [ct2] [cpEl] — 소셜과 cpEl 사이 총 cpGap, ct2가 정확히 중앙
+        if (ct2El) {
+          bgSetImp(ct2El, 'margin', halfGap + 'px 0 ' + halfGap + 'px');
+          bgSetImp(cpEl, 'margin', '0 0 4px');
+        } else {
+          bgSetImp(cpEl, 'margin', cpGap + 'px 0 4px');
+        }
       }
     }
 

@@ -1308,6 +1308,7 @@ export const ProvidersPage: FC<{
             var plusIdx = 0;
 
             // 쿠폰팩 카드 cloneNode 헬퍼 (Plus + showCouponPack + packConfig 시에만 노출)
+            // 마진은 makeText2 유무에 따라 호출 측에서 결정.
             var cpTemplatesElPv = document.getElementById('bgCouponPackTemplates');
             function makeCpClone() {
               if (!isPlusPreview) return null;
@@ -1319,31 +1320,40 @@ export const ProvidersPage: FC<{
               if (!src || !src.firstElementChild) return null;
               var wrap = document.createElement('div');
               wrap.className = 'bg-coupon-pack-wrap-pv';
-              var gap = (style.couponPackGap != null ? style.couponPackGap : 12) + 'px';
-              wrap.style.cssText = 'display:flex;justify-content:center;align-items:center;width:100%;margin:' +
-                (style.couponPackPosition === 'above' ? ('0 0 ' + gap) : (gap + ' 0 4px'));
+              wrap.style.cssText = 'display:flex;justify-content:center;align-items:center;width:100%';
               wrap.appendChild(src.firstElementChild.cloneNode(true));
               return wrap;
             }
-            // 텍스트2 (소셜과 쿠폰팩 사이) — 쿠폰팩 노출 시에만
+            // 텍스트2 (소셜과 쿠폰팩 사이) — 쿠폰팩 노출 시에만. margin은 호출측에서 설정.
             function makeText2() {
               if (!isPlusPreview) return null;
               if (style.customText2Enabled === false) return null;
               if (!style.customText2) return null;
               if (style.preset === 'icon-only') return null;
               var t2 = document.createElement('div');
-              t2.style.cssText = 'width:100%;text-align:center;font-size:15px;font-weight:700;color:#0f172a;line-height:1.5;margin:8px 0;white-space:pre-line';
+              t2.style.cssText = 'width:100%;text-align:center;font-size:15px;font-weight:700;color:#0f172a;line-height:1.5;white-space:pre-line';
               t2.textContent = String(style.customText2).replace(/\\\\n/g, '\\n');
               return t2;
             }
+
+            // cpGap을 소셜~쿠폰팩 총 거리로 보고 균등 분배 (위젯 render.ts 와 동일 정책)
+            var cpGapPv = (style.couponPackGap != null ? style.couponPackGap : 12);
+            var halfGapPv = Math.max(0, Math.round(cpGapPv / 2));
 
             // 쿠폰팩 above 위치: 소셜 직전에 [cpClone] [text2] 노출
             var cpClonePre = null;
             if (style.couponPackPosition === 'above') {
               cpClonePre = makeCpClone();
               if (cpClonePre) {
-                container.appendChild(cpClonePre);
                 var t2Above = makeText2();
+                // 마진 분배: cpEl 윗마진 0, ct2 있으면 cpEl/ct2 각 halfGap, 없으면 cpEl 아래 cpGap
+                if (t2Above) {
+                  cpClonePre.style.margin = '0 0 ' + halfGapPv + 'px';
+                  t2Above.style.margin = '0 0 ' + halfGapPv + 'px';
+                } else {
+                  cpClonePre.style.margin = '0 0 ' + cpGapPv + 'px';
+                }
+                container.appendChild(cpClonePre);
                 if (t2Above) container.appendChild(t2Above);
               }
             }
@@ -1517,11 +1527,18 @@ export const ProvidersPage: FC<{
             }
 
             // 쿠폰팩 below 위치: 소셜 다음 [text2] [cpClone] (cpAbove면 이미 위에 처리됨)
+            // ct2가 있으면 정확히 중앙: 소셜~ct2 = halfGap, ct2~cpEl = halfGap.
             if (style.couponPackPosition !== 'above' && providers.length > 0) {
               var cpCloneBelow = makeCpClone();
               if (cpCloneBelow) {
                 var t2Below = makeText2();
-                if (t2Below) container.appendChild(t2Below);
+                if (t2Below) {
+                  t2Below.style.margin = halfGapPv + 'px 0 ' + halfGapPv + 'px';
+                  cpCloneBelow.style.margin = '0 0 4px';
+                  container.appendChild(t2Below);
+                } else {
+                  cpCloneBelow.style.margin = cpGapPv + 'px 0 4px';
+                }
                 container.appendChild(cpCloneBelow);
               }
             }
