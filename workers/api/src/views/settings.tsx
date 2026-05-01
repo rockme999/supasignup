@@ -1552,7 +1552,8 @@ export const ProvidersPage: FC<{
                 ico.style.cssText = 'width:44px;height:44px;border-radius:22px;background:' + icoColor + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s ease' + icoBorder;
                 if (providerIcons[p]) {
                   ico.innerHTML = providerIcons[p];
-                  if (darkFill) {
+                  // Google: 4색 G 로고는 흰 배경에서 그대로 사용 — dark preset 에서도 흰색 fill 적용 안 함
+                  if (darkFill && p !== 'google') {
                     ico.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#ffffff'); });
                   }
                 }

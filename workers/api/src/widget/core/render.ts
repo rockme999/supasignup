@@ -413,9 +413,11 @@ export function getRenderJs(): string {
         for (var ii = 0; ii < ipaths.length; ii++) { ipaths[ii].setAttribute('fill', '#333333'); }
       } else if (iconOnlyOverride) {
         // 아이콘 row: 다크 wrap이 적용될 Plus dark preset이면 fill 흰색 (가독성)
-        // gradient-flow / soft-shadow / pulse 등은 라이트 배경이므로 원본 컬러 유지
+        // soft-shadow / pulse 등은 라이트 배경이므로 원본 컬러 유지
+        // Google: 흰 바탕(#f2f2f2)+4색 G 로고 — 흰색 fill로 덮으면 흰 배경에 흰 아이콘이 되어 보이지 않음.
+        //         가이드라인상으로도 4색 유지 권장 → dark preset 에서도 Google 만 원본 색상 유지.
         var DARK_PRESETS_FILL = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
-        if (DARK_PRESETS_FILL.indexOf(preset) !== -1) {
+        if (DARK_PRESETS_FILL.indexOf(preset) !== -1 && provider !== 'google') {
           var ipaths2 = iconOnly.querySelectorAll('path');
           for (var ii2 = 0; ii2 < ipaths2.length; ii2++) { ipaths2[ii2].setAttribute('fill', '#ffffff'); }
         }
