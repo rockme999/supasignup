@@ -25,6 +25,10 @@ export function getBaseCss(): string[] {
     '.bg-widget .bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
     /* 아이콘 모드 row: 풀버튼 영역 아래에 가로 정렬되는 컴팩트 아이콘 컨테이너 (44×44 터치 타겟) */
     '.bg-widget .bg-icon-row{display:flex!important;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-top:8px;width:100%}',
+    /* 쿠폰팩 카드: 카드 내부 절대 위치 박스가 width:100%+padding 으로 카드 외부로 넘치지 않도록 box-sizing border-box 강제.
+       어드민 미리보기는 글로벌 reset이 border-box여서 정상이나, 카페24 모바일 스킨은 content-box를 강제하는 룰이 있어
+       텍스트가 카드 밖으로 밀려나옴 → 위젯 안 모든 요소를 border-box로 통일 (위젯 외부에 영향 없음, 위젯 안만 명시) */
+    '.bg-widget .bg-cp-card,.bg-widget .bg-cp-card *,.bg-widget .bg-cp-card *::before,.bg-widget .bg-cp-card *::after{box-sizing:border-box!important}',
     '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-widget .bg-btn{font-size:15px}}',
   ];
 }
