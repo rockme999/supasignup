@@ -748,18 +748,25 @@ export const ProvidersPage: FC<{
           </div>
           <div id="previewButtons" style="display:flex; flex-direction:column; align-items:center;"></div>
         </div>
-        {/* 위젯 미리보기 안에 노출되는 쿠폰팩 카드 템플릿 (size 4종 모두 미리 빌드) — Plus 사용자만 */}
+        {/* 위젯 미리보기 안에 노출되는 쿠폰팩 카드 템플릿 — Plus 사용자만.
+            디자인/반짝/크기 모든 조합(4×2×4=32)을 미리 빌드해 클라이언트에서 즉시 변경 반영 */}
         {isPlus && packConfig && (
           <>
             <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
             <div id="bgCouponPackTemplates" style="display:none">
-              {cpSizes.map(s => (
-                <div data-cp-size={s}
-                  dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: cpDesign, anim_mode: cpAnim, size: s })}} />
-              ))}
+              {(['dark','brand','illust','minimal'] as const).flatMap(d =>
+                [true, false].flatMap(a =>
+                  cpSizes.map(s => (
+                    <div data-cp-design={d} data-cp-anim={a ? '1' : '0'} data-cp-size={s}
+                      dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: d, anim_mode: a, size: s })}} />
+                  ))
+                )
+              )}
             </div>
             <script dangerouslySetInnerHTML={{__html: `
               window.__bgCpInitialSize = ${JSON.stringify(cpInitialSize)};
+              window.__bgCpInitialDesign = ${JSON.stringify(cpDesign)};
+              window.__bgCpInitialAnim = ${cpAnim ? 'true' : 'false'};
               window.__bgCpShopId = ${JSON.stringify(shop.shop_id)};
             `}} />
           </>
@@ -1341,7 +1348,7 @@ export const ProvidersPage: FC<{
             var plusIdx = 0;
 
             // 쿠폰팩 카드 cloneNode 헬퍼 (Plus + showCouponPack + packConfig 시에만 노출)
-            // 마진은 makeText2 유무에 따라 호출 측에서 결정.
+            // 32개 템플릿 (4 design × 2 anim × 4 size) 중 현재 design+anim+size 매칭하는 노드 선택.
             var cpTemplatesElPv = document.getElementById('bgCouponPackTemplates');
             function makeCpClone() {
               if (!isPlusPreview) return null;
@@ -1349,7 +1356,9 @@ export const ProvidersPage: FC<{
               if (style.preset === 'icon-only') return null;
               if (!cpTemplatesElPv) return null;
               var curSize = window.__bgCpCurrentSize || window.__bgCpInitialSize || 'md';
-              var src = cpTemplatesElPv.querySelector('[data-cp-size="' + curSize + '"]');
+              var curDesign = window.__bgCpDesign || window.__bgCpInitialDesign || 'brand';
+              var curAnim = (window.__bgCpAnim != null ? window.__bgCpAnim : window.__bgCpInitialAnim) ? '1' : '0';
+              var src = cpTemplatesElPv.querySelector('[data-cp-design="' + curDesign + '"][data-cp-anim="' + curAnim + '"][data-cp-size="' + curSize + '"]');
               if (!src || !src.firstElementChild) return null;
               var wrap = document.createElement('div');
               wrap.className = 'bg-coupon-pack-wrap-pv';
@@ -1914,19 +1923,25 @@ export const ProvidersPage: FC<{
           }
 
           // ─── Accordion 헤더 토글 (펼침/접힘) ───
-          document.querySelectorAll('.ds-section-header').forEach(function(hdr) {
-            hdr.addEventListener('click', function() {
-              var targetId = hdr.dataset.target;
-              var body = document.getElementById(targetId);
-              if (!body) return;
-              var expanded = hdr.getAttribute('aria-expanded') === 'true';
-              var next = !expanded;
-              body.style.display = next ? '' : 'none';
-              hdr.setAttribute('aria-expanded', next ? 'true' : 'false');
-              var arrow = hdr.querySelector('.ds-arrow');
-              if (arrow) arrow.style.transform = next ? '' : 'rotate(-90deg)';
+          // setTimeout — 이 스크립트 평가 시점에 Plus 옵션 카드는 아직 DOM에 없을 수 있어
+          // 페이지 파싱 다음 마이크로태스크로 미뤄 모든 .ds-section-header 가 잡히도록 한다.
+          setTimeout(function() {
+            document.querySelectorAll('.ds-section-header').forEach(function(hdr) {
+              if (hdr.__dsBound) return;
+              hdr.__dsBound = true;
+              hdr.addEventListener('click', function() {
+                var targetId = hdr.dataset.target;
+                var body = document.getElementById(targetId);
+                if (!body) return;
+                var expanded = hdr.getAttribute('aria-expanded') === 'true';
+                var next = !expanded;
+                body.style.display = next ? '' : 'none';
+                hdr.setAttribute('aria-expanded', next ? 'true' : 'false');
+                var arrow = hdr.querySelector('.ds-arrow');
+                if (arrow) arrow.style.transform = next ? '' : 'rotate(-90deg)';
+              });
             });
-          });
+          }, 0);
 
           // ─── 섹션별 필드 매핑 (부분 저장/리셋) ───
           var SECTION_FIELDS = {
@@ -2081,33 +2096,42 @@ export const ProvidersPage: FC<{
               ))}
             </div>
           </div>
-          {/* 반짝 효과 */}
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#475569">
-            <input type="checkbox" id="optCpAnim" checked={cpAnim} disabled={!isPlus} />
-            반짝 효과 (애니메이션)
-          </label>
+          {/* 반짝 효과 (토글) */}
+          <div style="display:flex;align-items:center;gap:10px">
+            <label class="toggle">
+              <input type="checkbox" id="optCpAnim" checked={cpAnim} disabled={!isPlus} />
+              <span class="toggle-slider"></span>
+            </label>
+            <span style="font-size:13px;color:#475569;font-weight:500">반짝 효과 (애니메이션)</span>
+          </div>
         </div>
 
         {/* 텍스트 섹션 */}
         <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px">
           <p style="font-size:12px;font-weight:600;color:#64748b;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em">안내 텍스트</p>
 
-          {/* 텍스트1 */}
+          {/* 텍스트1 (토글) */}
           <div style="margin-bottom:14px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:6px">
-              <input type="checkbox" id="optText1Enabled" checked={customText1EnabledDefault} disabled={!isPlus} />
-              텍스트1 (상단 타이틀 아래, 작은 글씨)
-            </label>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <label class="toggle">
+                <input type="checkbox" id="optText1Enabled" checked={customText1EnabledDefault} disabled={!isPlus} />
+                <span class="toggle-slider"></span>
+              </label>
+              <span style="font-size:13px;font-weight:600;color:#475569">텍스트1 (상단 타이틀 아래, 작은 글씨)</span>
+            </div>
             <textarea id="optText1" rows={2} disabled={!isPlus} maxlength={200}
               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box">{customText1Default}</textarea>
           </div>
 
-          {/* 텍스트2 */}
+          {/* 텍스트2 (토글) */}
           <div>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:6px">
-              <input type="checkbox" id="optText2Enabled" checked={customText2EnabledDefault} disabled={!isPlus} />
-              텍스트2 (소셜과 쿠폰팩 사이, 큰 글씨 볼드)
-            </label>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <label class="toggle">
+                <input type="checkbox" id="optText2Enabled" checked={customText2EnabledDefault} disabled={!isPlus} />
+                <span class="toggle-slider"></span>
+              </label>
+              <span style="font-size:13px;font-weight:600;color:#475569">텍스트2 (소셜과 쿠폰팩 사이, 큰 글씨 볼드)</span>
+            </div>
             <textarea id="optText2" rows={2} disabled={!isPlus} maxlength={200}
               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;font-family:inherit;resize:vertical;box-sizing:border-box">{customText2Default}</textarea>
           </div>
