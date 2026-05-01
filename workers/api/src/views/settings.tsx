@@ -923,7 +923,7 @@ export const ProvidersPage: FC<{
           <div>
             <div class="provider-toggle" style="border:none; padding:0">
               <label class="toggle">
-                <input type="checkbox" id="showTitleToggle" checked={ws.showTitle === true} />
+                <input type="checkbox" id="showTitleToggle" checked={ws.showTitle !== false} />
                 <span class="toggle-slider"></span>
               </label>
               <label style="font-size:13px; font-weight:600; color:#475569; cursor:pointer">상단 타이틀 표시</label>
@@ -1131,7 +1131,7 @@ export const ProvidersPage: FC<{
             showIcon: widgetStyle.showIcon !== false,
             iconGap: widgetStyle.iconGap || 30,
             paddingLeft: widgetStyle.paddingLeft || 100,
-            showTitle: widgetStyle.showTitle === true,
+            showTitle: widgetStyle.showTitle !== false,
             showPoweredBy: widgetStyle.showPoweredBy !== false,
             widgetPosition: widgetStyle.widgetPosition || 'before',
             customSelector: widgetStyle.customSelector || '',

@@ -91,7 +91,7 @@ export function getRenderJs(): string {
     }
 
     // Title (showTitle: default false)
-    if (s.showTitle === true) {
+    if (s.showTitle !== false) {
       var title = document.createElement('div');
       title.className = 'bg-widget-title';
       if (preset === 'icon-only') title.style.width = '100%';
