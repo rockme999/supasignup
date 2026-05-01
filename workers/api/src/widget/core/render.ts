@@ -150,22 +150,37 @@ export function getRenderJs(): string {
     // Plus 쿠폰팩 카드: 소셜 영역 다음, powered by 직전에 노출
     // 조건: config.coupon_pack.active === true 인 Plus 플랜 (서버에서 보장).
     // icon-only preset에서는 시각적으로 어울리지 않아 미노출.
+    // renderCouponPackCard는 DOM Element(wrap div)를 반환 — innerHTML 금지, appendChild 사용.
     var cp = this.config && this.config.coupon_pack;
     if (cp && cp.active && preset !== 'icon-only' && typeof this.renderCouponPackCard === 'function') {
       try {
-        var cpHtml = this.renderCouponPackCard({
+        var cpEl = this.renderCouponPackCard({
           design: cp.design || 'brand',
           anim_mode: cp.anim_mode !== false,
           total_amount: cp.total_amount || 55000,
           items_count: cp.items_count || 5,
           size: cp.size || 'md'
         });
-        if (cpHtml) {
-          var cpWrap = document.createElement('div');
-          cpWrap.className = 'bg-coupon-pack-wrap';
-          cpWrap.style.cssText = 'display:flex;justify-content:center;align-items:center;margin-top:12px;width:100%';
-          cpWrap.innerHTML = cpHtml;
-          this.container.appendChild(cpWrap);
+        if (cpEl && cpEl.nodeType === 1) {
+          // 외곽 wrap이 이미 flex 컨테이너 (display:flex;justify-content:center;margin:16px 0 8px).
+          // 위젯 안에 100% 폭을 차지하도록 보정 + bg-coupon-pack-wrap 클래스 부여 (디버깅·셀렉터용).
+          cpEl.classList.add('bg-coupon-pack-wrap');
+          bgSetImp(cpEl, 'width', '100%');
+          // size별 시각적 크기 — 카드 자체는 300×140 고정이라 transform: scale 로 조절
+          var BG_CP_SCALE = { lg: 1.0, md: 0.85, sm: 0.7, xs: 0.55 };
+          var sc = BG_CP_SCALE[cp.size] != null ? BG_CP_SCALE[cp.size] : 0.85;
+          if (sc !== 1.0) {
+            var inner = cpEl.firstChild;
+            if (inner && inner.style) {
+              inner.style.transform = 'scale(' + sc + ')';
+              inner.style.transformOrigin = 'center top';
+            }
+            // 카드 외곽 wrap 높이 보정 — scale 후 실제 차지 공간으로 맞춰 layout 공백 최소화
+            bgSetImp(cpEl, 'height', Math.round(140 * sc) + 'px');
+            bgSetImp(cpEl, 'align-items', 'flex-start');
+            bgSetImp(cpEl, 'margin', '12px 0 4px');
+          }
+          this.container.appendChild(cpEl);
         }
       } catch (e) { bgLog('render: coupon pack render failed', e); }
     }
