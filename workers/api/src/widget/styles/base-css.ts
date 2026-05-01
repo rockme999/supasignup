@@ -23,6 +23,8 @@ export function getBaseCss(): string[] {
     '.bg-widget .bg-btn-highlight-icon{border:2px solid #3B82F6!important;box-shadow:0 0 0 1px #3B82F6}',
     '.bg-widget .bg-btn-icon{display:flex;align-items:center;flex-shrink:0}',
     '.bg-widget .bg-powered{text-align:center;margin-top:4px;font-size:11px;color:#aaa}',
+    /* 아이콘 모드 row: 풀버튼 영역 아래에 가로 정렬되는 컴팩트 아이콘 컨테이너 (44×44 터치 타겟) */
+    '.bg-widget .bg-icon-row{display:flex!important;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-top:8px;width:100%}',
     '@media(max-width:480px){.bg-widget{margin:12px 8px}.bg-widget .bg-btn{font-size:15px}}',
   ];
 }

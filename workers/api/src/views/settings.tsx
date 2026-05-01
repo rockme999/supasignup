@@ -474,6 +474,7 @@ export const ProvidersPage: FC<{
   newBadges?: Partial<Record<string, boolean>>;
 }> = ({ shop, baseUrl, isCafe24, widgetStyle, newBadges }) => {
   const providers = parseProviders(shop.enabled_providers);
+  const iconProviders = parseProviders(shop.icon_providers);
   const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'telegram'];
   const futureProviders = ['facebook', 'x', 'line', 'toss', 'tiktok'];
   const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
@@ -496,7 +497,11 @@ export const ProvidersPage: FC<{
                 <span style={`display:inline-block;width:12px;height:12px;border-radius:50%;background:${providerColors[p]}`}></span>
                 {providerDisplayNames[p]}
               </span>
-              <div style="margin-left:auto; display:flex; gap:2px">
+              <label class="icon-mode-label" data-provider={p} title="체크하면 풀버튼 대신 작은 아이콘으로 하단에 표시됩니다" style="margin-left:auto; display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#64748b; cursor:pointer; user-select:none">
+                <input type="checkbox" name="icon_providers" value={p} checked={iconProviders.includes(p)} disabled={!providers.includes(p)} style="margin:0" />
+                아이콘
+              </label>
+              <div style="display:flex; gap:2px">
                 <button class="order-btn" data-provider={p} data-dir="up" type="button">▲</button>
                 <button class="order-btn" data-provider={p} data-dir="down" type="button">▼</button>
               </div>
@@ -530,7 +535,16 @@ export const ProvidersPage: FC<{
               }).map(function(row) { return row.dataset.provider; });
             }
 
-            // 순서 버튼 활성화 상태 업데이트
+            // 현재 아이콘 모드인 프로바이더 (활성 + 아이콘 체크된 것만)
+            function getOrderedIconProviders() {
+              return [...form.querySelectorAll('.provider-toggle')].filter(function(row) {
+                var cb = row.querySelector('input[name=providers]');
+                var icon = row.querySelector('input[name=icon_providers]');
+                return cb && cb.checked && icon && icon.checked;
+              }).map(function(row) { return row.dataset.provider; });
+            }
+
+            // 순서 버튼 + 아이콘 체크박스 활성화 상태 업데이트
             function updateOrderButtons() {
               var activeRows = [...form.querySelectorAll('.provider-toggle')].filter(function(row) {
                 var cb = row.querySelector('input[name=providers]');
@@ -545,14 +559,43 @@ export const ProvidersPage: FC<{
                 if (upBtn) upBtn.disabled = idx === 0;
                 if (downBtn) downBtn.disabled = idx === activeRows.length - 1;
               });
+              // 비활성 프로바이더는 아이콘 토글도 disable + 자동 체크 해제
+              form.querySelectorAll('.provider-toggle').forEach(function(row) {
+                var cb = row.querySelector('input[name=providers]');
+                var icon = row.querySelector('input[name=icon_providers]');
+                if (!icon) return;
+                var enabled = cb && cb.checked;
+                icon.disabled = !enabled;
+                if (!enabled) icon.checked = false;
+              });
+              // icon-only preset 시 아이콘 토글 자체를 무력화 (preset이 모두 아이콘 처리)
+              var preset = (window.__bgWidgetPreset || 'default');
+              var isIconOnlyPreset = preset === 'icon-only';
+              form.querySelectorAll('input[name=icon_providers]').forEach(function(icon) {
+                if (isIconOnlyPreset) {
+                  icon.disabled = true;
+                  icon.title = '현재 프리셋이 icon-only입니다 — 모든 프로바이더가 아이콘으로 표시됩니다';
+                }
+              });
             }
 
-            // 프로바이더 저장 (순서 포함)
+            // 프로바이더 저장 (순서 + 아이콘 모드 포함)
             async function saveProviders() {
               var ordered = getOrderedActiveProviders();
+              var iconOrdered = getOrderedIconProviders();
               var shopId = form.dataset.shopId;
-              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', { providers: ordered });
-              if (resp.ok) { showToast('success', '저장되었습니다.'); }
+              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/providers', {
+                providers: ordered,
+                icon_providers: iconOrdered,
+              });
+              if (resp.ok) {
+                // 모든 프로바이더가 아이콘 모드면 경고 toast (UX)
+                if (ordered.length > 0 && iconOrdered.length === ordered.length) {
+                  showToast('warn', '풀버튼이 하나도 없으면 첫인상이 약할 수 있습니다.');
+                } else {
+                  showToast('success', '저장되었습니다.');
+                }
+              }
               else { var data = await resp.json(); showToast('error', data.error || '저장 실패'); }
               return resp.ok;
             }
@@ -570,6 +613,15 @@ export const ProvidersPage: FC<{
                 var ok = await saveProviders();
                 if (!ok) { cb.checked = !cb.checked; }
                 updateOrderButtons();
+                if (window.renderProviderPreview) { setTimeout(window.renderProviderPreview, 50); }
+              });
+            });
+
+            // 아이콘 모드 체크박스 change 핸들러
+            form.querySelectorAll('input[name=icon_providers]').forEach(function(icon) {
+              icon.addEventListener('change', async function() {
+                var ok = await saveProviders();
+                if (!ok) { icon.checked = !icon.checked; }
                 if (window.renderProviderPreview) { setTimeout(window.renderProviderPreview, 50); }
               });
             });
@@ -1035,6 +1087,14 @@ export const ProvidersPage: FC<{
             return [...document.querySelectorAll('#providerForm input[name=providers]:checked')].map(function(i) { return i.value; });
           }
 
+          function getEnabledIconProviders() {
+            return [...document.querySelectorAll('#providerForm .provider-toggle')].filter(function(row) {
+              var cb = row.querySelector('input[name=providers]');
+              var icon = row.querySelector('input[name=icon_providers]');
+              return cb && cb.checked && icon && icon.checked;
+            }).map(function(row) { return row.dataset.provider; });
+          }
+
           // ── 미리보기 모드 토글 (PC ↔ 모바일) ──
           (function() {
             var toggleBtns = document.querySelectorAll('#previewModeToggle button');
@@ -1064,6 +1124,26 @@ export const ProvidersPage: FC<{
             var providers = getEnabledProviders();
             var container = document.getElementById('previewButtons');
             container.innerHTML = '';
+            // 아이콘 모드 split (위젯 render.ts split 로직 미러)
+            // icon-only preset이면 split 비활성 (전부 아이콘 — 기존 동작 유지)
+            var iconList = getEnabledIconProviders();
+            var iconSet = {};
+            for (var ix = 0; ix < iconList.length; ix++) { iconSet[iconList[ix]] = 1; }
+            var splitEnabled = style.preset !== 'icon-only';
+            var iconRowProviders = splitEnabled ? providers.filter(function(p) { return iconSet[p]; }) : [];
+            var buttonProviders = splitEnabled ? providers.filter(function(p) { return !iconSet[p]; }) : providers;
+            // 어드민 form의 아이콘 체크박스 disable 상태 동기화 (icon-only preset 시 disable)
+            window.__bgWidgetPreset = style.preset;
+            var iconForm = document.getElementById('providerForm');
+            if (iconForm) {
+              iconForm.querySelectorAll('input[name=icon_providers]').forEach(function(icon) {
+                var row = icon.closest('.provider-toggle');
+                var providerCb = row && row.querySelector('input[name=providers]');
+                var providerActive = providerCb && providerCb.checked;
+                icon.disabled = !providerActive || !splitEnabled;
+                icon.title = !splitEnabled ? '현재 프리셋이 icon-only입니다 — 모든 프로바이더가 아이콘으로 표시됩니다' : '체크하면 풀버튼 대신 작은 아이콘으로 하단에 표시됩니다';
+              });
+            }
             // 자동 dark-wrap — dark-bg 프리셋(glass/neon/liquid)이면 외곽 previewFrame 배경을 어두운 그라디언트로 변경
             // (위젯에서는 wrap이 위젯 컨테이너 자체에 적용되지만 미리보기는 frame+container 2단계라 wrap을 컨테이너에 두면 이중 박스가 됨 → 외곽 frame에 배경만 부여)
             var previewFrame = document.getElementById('previewFrame');
@@ -1118,7 +1198,7 @@ export const ProvidersPage: FC<{
             var pulseDelayClasses = ['bg-mobile-pulse-d1','bg-mobile-pulse-d2','bg-mobile-pulse-d3','bg-mobile-pulse-d4','bg-mobile-pulse-d5','bg-mobile-pulse-d6'];
             var plusIdx = 0;
 
-            providers.forEach(function(p) {
+            buttonProviders.forEach(function(p) {
               var btn = document.createElement('div');
               var color = providerColors[p] || '#999';
               var textColor = providerTextColors[p] || '#fff';
@@ -1255,6 +1335,29 @@ export const ProvidersPage: FC<{
               }
               container.appendChild(btn);
             });
+
+            // 아이콘 row 렌더 (split 결과의 두 번째 영역) — 단순 원형 아이콘만 (Plus 스타일 미적용)
+            if (iconRowProviders.length > 0) {
+              var iconRow = document.createElement('div');
+              iconRow.className = 'bg-icon-row';
+              iconRow.style.cssText = 'display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-top:8px;width:100%';
+              var DARK_PRESETS_FILL_PV = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+              var darkFill = DARK_PRESETS_FILL_PV.indexOf(style.preset) !== -1;
+              iconRowProviders.forEach(function(p) {
+                var ico = document.createElement('div');
+                var icoColor = providerColors[p] || '#999';
+                var icoBorder = (icoColor === '#f2f2f2' || icoColor === '#FFFFFF' || icoColor === '#ffffff') ? ';border:1px solid #dadce0' : '';
+                ico.style.cssText = 'width:44px;height:44px;border-radius:22px;background:' + icoColor + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s ease' + icoBorder;
+                if (providerIcons[p]) {
+                  ico.innerHTML = providerIcons[p];
+                  if (darkFill) {
+                    ico.querySelectorAll('path').forEach(function(el) { el.setAttribute('fill', '#ffffff'); });
+                  }
+                }
+                iconRow.appendChild(ico);
+              });
+              container.appendChild(iconRow);
+            }
 
             if (providers.length === 0) {
               var msg = document.createElement('p');

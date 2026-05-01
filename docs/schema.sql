@@ -71,6 +71,9 @@
 --                  100,000원 이상 → 10,000원 할인
 --                  200,000원 이상 → 30,000원 할인
 --                카페24 자동 발급(issue_type='A', issue_sub_type='J') 방식 — 가입 시 카페24가 자체 발급.
+--   2026-05-01: shops.icon_providers 추가 (0032) — 아이콘 모드 프로바이더 ID JSON 배열.
+--                enabled_providers의 부분집합으로, 아이콘 row(44×44)로 컴팩트 노출. 빈 배열이면
+--                전부 풀버튼 모드(기존 동작 동일). last-used override는 모드 무관하게 풀버튼 promote.
 
 -- ============================================================
 -- 1. owners — 운영자 계정
@@ -123,6 +126,7 @@ CREATE TABLE IF NOT EXISTS shops (
   sso_verified_slots     TEXT,                                    -- SSO 슬롯 상태 JSON 배열 [{type,status}]
   auto_reply_inquiries   INTEGER NOT NULL DEFAULT 0,              -- AI 자동답변 on/off
   plan                   TEXT NOT NULL DEFAULT 'free',            -- 'free' | 'plus' (CHECK 없음, 앱 레이어 검증)
+  icon_providers         TEXT NOT NULL DEFAULT '[]',              -- JSON 배열: 아이콘 모드인 프로바이더 ID (enabled_providers 부분집합)
   UNIQUE(mall_id, platform)
 );
 

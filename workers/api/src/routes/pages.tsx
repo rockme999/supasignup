@@ -62,7 +62,7 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
   //       이탈 감지 팝업으로 통합됨 — popup_config 단일 소스). 컬럼 자체는 보존(스키마/롤백).
   return db.prepare(
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
-            enabled_providers, sso_configured, sso_type, sso_verified_at, sso_verified_slots,
+            enabled_providers, icon_providers, sso_configured, sso_type, sso_verified_at, sso_verified_slots,
             created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
             shop_identity, live_counter_config
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
@@ -88,6 +88,7 @@ type ShopRow = {
   platform: string;
   plan: string;
   enabled_providers: string;
+  icon_providers?: string;
   sso_configured: number;
   sso_type?: string | null;
   sso_verified_at?: string | null;

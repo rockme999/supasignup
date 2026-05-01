@@ -85,6 +85,13 @@ widget.get('/config', async (c) => {
     ? []
     : (safeParseStringArray(shop.enabled_providers, `widget.enabled_providers shop_id=${shop.shop_id}`) as ProviderName[]);
 
+  // 아이콘 모드 프로바이더 (providers 부분집합으로 보장 — DB 측 정합성은 PUT 시 검증, 여기는 방어 필터)
+  const providerSet = new Set(providers);
+  const iconProviders: ProviderName[] = overLimit
+    ? []
+    : (safeParseStringArray(shop.icon_providers, `widget.icon_providers shop_id=${shop.shop_id}`) as ProviderName[])
+        .filter((p) => providerSet.has(p));
+
   // Build SSO callback URI from mall_id for Cafe24 platform
   const ssoType = shop.sso_type || 'sso';
   const ssoCallbackUri = shop.platform === 'cafe24' && shop.mall_id
@@ -106,6 +113,7 @@ widget.get('/config', async (c) => {
   const config = {
     client_id: shop.client_id,
     providers,
+    iconProviders,
     base_url: c.env.BASE_URL,
     sso_callback_uri: ssoCallbackUri,
     sso_type: ssoType,

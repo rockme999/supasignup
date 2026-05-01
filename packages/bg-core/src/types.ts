@@ -9,6 +9,7 @@ export interface Shop {
   client_id: string;
   client_secret: string;
   enabled_providers: string; // JSON array string
+  icon_providers: string; // JSON array string — 아이콘 모드 프로바이더 ID (enabled_providers 부분집합), 빈 배열이면 전부 풀버튼
   platform_access_token: string | null;
   platform_refresh_token: string | null;
   allowed_redirect_uris: string | null; // JSON array string
@@ -151,6 +152,7 @@ export interface DashboardSession {
 export interface WidgetConfig {
   shop_id: string;
   providers: ProviderName[];
+  iconProviders?: ProviderName[]; // providers 의 부분집합 — 아이콘 row로 렌더되는 프로바이더
   theme: string;
 }
 

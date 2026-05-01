@@ -77,6 +77,7 @@ const TEST_SHOP: Shop = {
   client_id: 'bg_abc123',
   client_secret: 'secret_xyz',
   enabled_providers: '["google","kakao"]',
+  icon_providers: '[]',
   platform_access_token: null,
   platform_refresh_token: null,
   allowed_redirect_uris: '["https://testmall.cafe24api.com/api/v2/oauth/callback"]',

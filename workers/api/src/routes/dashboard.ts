@@ -160,8 +160,9 @@ dashboard.put('/shops/:id/providers', async (c) => {
     return c.json({ error: 'not_found' }, 404);
   }
 
-  const body = await c.req.json<{ providers?: string[] }>();
+  const body = await c.req.json<{ providers?: string[]; icon_providers?: string[] }>();
   const providers = body.providers;
+  const iconProviders = Array.isArray(body.icon_providers) ? body.icon_providers : [];
 
   if (!providers || !Array.isArray(providers) || providers.length === 0) {
     return c.json({ error: 'invalid_providers', message: 'At least one provider required' }, 400);
@@ -174,8 +175,13 @@ dashboard.put('/shops/:id/providers', async (c) => {
     }
   }
 
+  // icon_providers ⊆ providers 검증 (자동으로 비활성 프로바이더 제거)
+  const providerSet = new Set(providers);
+  const filteredIconProviders = iconProviders.filter((p) => providerSet.has(p));
+
   await updateShop(c.env.DB, shopId, {
     enabled_providers: JSON.stringify(providers),
+    icon_providers: JSON.stringify(filteredIconProviders),
   });
 
   // Invalidate widget config cache (KV + 에지)
@@ -184,7 +190,7 @@ dashboard.put('/shops/:id/providers', async (c) => {
     purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
   ]);
 
-  return c.json({ ok: true, providers });
+  return c.json({ ok: true, providers, icon_providers: filteredIconProviders });
 });
 
 // ─── PUT /shops/:id/widget-style ─────────────────────────────

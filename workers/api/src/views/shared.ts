@@ -96,6 +96,7 @@ export type ShopDetail = {
   platform: string;
   plan: string;
   enabled_providers: string;
+  icon_providers?: string;
   created_at: string;
   sso_configured: number;
   sso_type?: string | null;

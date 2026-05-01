@@ -108,10 +108,43 @@ export function getRenderJs(): string {
     // Sort providers (last used first)
     var providers = this.sortProviders(this.config.providers);
 
-    // Render buttons
-    for (var i = 0; i < providers.length; i++) {
-      var btn = this.renderButton(providers[i], i === 0 && this.lastProvider === providers[i]);
+    // 아이콘 모드 split: preset === 'icon-only'면 split 비활성 (전부 아이콘 — 기존 동작 유지)
+    // 그 외 preset에서는 iconProviders subset 을 별도 row로 분리.
+    // last-used override: lastProvider는 모드 무관 풀버튼 promote (icon row에서는 제외)
+    var iconList = (this.config.iconProviders && Array.isArray(this.config.iconProviders))
+      ? this.config.iconProviders
+      : [];
+    var iconSet = {};
+    for (var ix = 0; ix < iconList.length; ix++) { iconSet[iconList[ix]] = 1; }
+    var splitEnabled = preset !== 'icon-only';
+
+    var buttonProviders = [];
+    var iconRowProviders = [];
+    var lastProv = this.lastProvider;
+    for (var k = 0; k < providers.length; k++) {
+      var p = providers[k];
+      if (splitEnabled && iconSet[p] && p !== lastProv) {
+        iconRowProviders.push(p);
+      } else {
+        buttonProviders.push(p);
+      }
+    }
+
+    // Render buttons (풀버튼 영역)
+    for (var i = 0; i < buttonProviders.length; i++) {
+      var btn = this.renderButton(buttonProviders[i], i === 0 && this.lastProvider === buttonProviders[i]);
       this.container.appendChild(btn);
+    }
+
+    // Render icon row (아이콘 모드 프로바이더)
+    if (iconRowProviders.length > 0) {
+      var iconRow = document.createElement('div');
+      iconRow.className = 'bg-icon-row';
+      for (var j = 0; j < iconRowProviders.length; j++) {
+        var iconBtn = this.renderButton(iconRowProviders[j], false, true);
+        iconRow.appendChild(iconBtn);
+      }
+      this.container.appendChild(iconRow);
     }
 
     // Powered by (showPoweredBy: default true)
@@ -181,13 +214,16 @@ export function getRenderJs(): string {
     return sorted;
   };
 
-  BGWidget.prototype.renderButton = function(provider, isHighlight) {
+  BGWidget.prototype.renderButton = function(provider, isHighlight, iconOnlyOverride) {
     var info = PROVIDERS[provider];
     if (!info) return document.createElement('div');
 
     // Style settings
     var s = (this.config && this.config.style) || {};
     var preset = s.preset || 'default';
+    // iconOnlyOverride: 아이콘 row(.bg-icon-row)에서 호출될 때 true → 44×44 아이콘 모드 강제 렌더
+    // 기존 'icon-only' preset 분기를 그대로 재사용 (옵션 B — 시그니처 확장)
+    var isIconMode = preset === 'icon-only' || iconOnlyOverride === true;
     var buttonWidth = s.buttonWidth || 280;
     var buttonHeight = s.buttonHeight !== undefined ? s.buttonHeight : 44;
     var buttonGap = s.buttonGap !== undefined ? s.buttonGap : 8;
@@ -237,11 +273,12 @@ export function getRenderJs(): string {
     var isPlusPreset = PLUS_PRESET_CLASSES.hasOwnProperty(preset);
 
     var btn = document.createElement('a');
-    var highlightClass = isHighlight ? (preset === 'icon-only' ? ' bg-btn-highlight-icon' : ' bg-btn-highlight') : '';
+    var highlightClass = isHighlight ? (isIconMode ? ' bg-btn-highlight-icon' : ' bg-btn-highlight') : '';
     btn.className = 'bg-btn' + highlightClass;
     // Plus 프리셋은 CSS 클래스만으로 스타일 제어 — 인라인 color/bg/border 설정 생략
     // (인라인 style이 남아 있으면 CSS !important와 충돌하여 브랜드 배경색이 잔존)
-    if (!isPlusPreset) {
+    // 단, iconOnlyOverride 일 때는 아이콘 row이므로 Plus 클래스 미적용 → 인라인 색상 활성화 (단순 원형)
+    if (!isPlusPreset || iconOnlyOverride) {
       bgSetImp(btn, 'background-color', bgColor);
       bgSetImp(btn, 'color', textColor);
       if (border) bgSetImp(btn, 'border', border);
@@ -250,7 +287,7 @@ export function getRenderJs(): string {
     // 카페24 모바일 스킨 일부가 .member a {text-decoration:underline!important} 를 깔아둠 → 강제 제거
     bgSetImp(btn, 'text-decoration', 'none');
 
-    if (preset === 'icon-only') {
+    if (isIconMode) {
       bgSetImp(btn, 'width', '44px');
       bgSetImp(btn, 'height', '44px');
       bgSetImp(btn, 'border-radius', Math.min(borderRadius, 22) + 'px');
@@ -264,6 +301,14 @@ export function getRenderJs(): string {
       if (isMono || isOutlineMono) {
         var ipaths = iconOnly.querySelectorAll('path');
         for (var ii = 0; ii < ipaths.length; ii++) { ipaths[ii].setAttribute('fill', '#333333'); }
+      } else if (iconOnlyOverride) {
+        // 아이콘 row: 다크 wrap이 적용될 Plus dark preset이면 fill 흰색 (가독성)
+        // gradient-flow / soft-shadow / pulse 등은 라이트 배경이므로 원본 컬러 유지
+        var DARK_PRESETS_FILL = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+        if (DARK_PRESETS_FILL.indexOf(preset) !== -1) {
+          var ipaths2 = iconOnly.querySelectorAll('path');
+          for (var ii2 = 0; ii2 < ipaths2.length; ii2++) { ipaths2[ii2].setAttribute('fill', '#ffffff'); }
+        }
       }
       btn.appendChild(iconOnly);
     } else {
@@ -313,7 +358,8 @@ export function getRenderJs(): string {
     }
 
     // Plus 프리셋 클래스 적용 + 버튼 인덱스별 딜레이(pulse)
-    if (isPlusPreset) {
+    // 아이콘 row(iconOnlyOverride)는 Plus 스타일 미적용 — 단순 원형/정사각만 (명세 4.4)
+    if (isPlusPreset && !iconOnlyOverride) {
       var plusClass = PLUS_PRESET_CLASSES[preset];
       btn.className = btn.className + ' ' + plusClass;
       // 순차 딜레이: 컨테이너 내 n번째 버튼 계산. liquid 제외한 5종에 적용 (호버 시연 패턴, 8s 후 0.3s 간격 trigger)
