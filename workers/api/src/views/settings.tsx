@@ -1985,18 +1985,27 @@ export const ProvidersPage: FC<{
           }
 
           // 부분 저장/리셋 버튼 핸들러
-          document.querySelectorAll('.ds-save-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-              var sec = btn.dataset.section;
-              if (sec) saveSection(sec);
+          // setTimeout — 추가 옵션 섹션은 이 IIFE 끝난 뒤에 DOM에 파싱됨. 같은 카드 안이지만
+          // IIFE 평가 시점엔 그 마크업이 아직 DOM에 없어 querySelectorAll에 잡히지 않는다.
+          // 다음 마이크로태스크로 미뤄 모든 .ds-save-btn / .ds-reset-btn 가 잡히도록 한다.
+          setTimeout(function() {
+            document.querySelectorAll('.ds-save-btn').forEach(function(btn) {
+              if (btn.__dsBound) return;
+              btn.__dsBound = true;
+              btn.addEventListener('click', function() {
+                var sec = btn.dataset.section;
+                if (sec) saveSection(sec);
+              });
             });
-          });
-          document.querySelectorAll('.ds-reset-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-              var sec = btn.dataset.section;
-              if (sec) resetSection(sec);
+            document.querySelectorAll('.ds-reset-btn').forEach(function(btn) {
+              if (btn.__dsBound) return;
+              btn.__dsBound = true;
+              btn.addEventListener('click', function() {
+                var sec = btn.dataset.section;
+                if (sec) resetSection(sec);
+              });
             });
-          });
+          }, 0);
 
           // 쿠폰팩 size 토글 클릭 핸들러 (Plus + packConfig 있을 때만 DOM에 존재)
           (function() {
