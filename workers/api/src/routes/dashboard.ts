@@ -276,7 +276,7 @@ dashboard.put('/shops/:id/widget-style', async (c) => {
     showIcon: body.showIcon ?? currentStyle.showIcon ?? true,
     iconGap: body.iconGap ?? currentStyle.iconGap ?? 8,
     paddingLeft: body.paddingLeft ?? currentStyle.paddingLeft ?? 16,
-    showTitle: body.showTitle ?? currentStyle.showTitle ?? false,
+    showTitle: body.showTitle ?? currentStyle.showTitle ?? true,
     showPoweredBy,
     widgetPosition: body.widgetPosition ?? currentStyle.widgetPosition ?? 'before',
     customSelector: body.customSelector ?? currentStyle.customSelector ?? '',

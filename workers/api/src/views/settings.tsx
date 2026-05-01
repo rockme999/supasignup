@@ -1872,7 +1872,7 @@ export const ProvidersPage: FC<{
           if (resetBtn) {
             resetBtn.addEventListener('click', async function() {
               if (!confirm('위젯 디자인 전체(기본/세부/추가옵션)를 기본값으로 되돌리고 저장하시겠습니까?')) return;
-              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:'',
+              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true,widgetPosition:'before',customSelector:'',
                 showCouponPack:true,couponPackPosition:'below',couponPackGap:12,
                 customText1Enabled:true,customText1:'아이디 비밀번호 입력없이 번개가입! 번개로그인!',
                 customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'};
@@ -1885,7 +1885,7 @@ export const ProvidersPage: FC<{
               document.getElementById('btnIconGap').value = defaults.iconGap; document.getElementById('iconGapValue').textContent = defaults.iconGap + 'px';
               document.getElementById('btnPaddingLeft').value = defaults.paddingLeft; document.getElementById('paddingLeftValue').textContent = defaults.paddingLeft + 'px';
               document.getElementById('showIconToggle').checked = true;
-              document.getElementById('showTitleToggle').checked = false;
+              document.getElementById('showTitleToggle').checked = true;
               document.getElementById('showPoweredByToggle').checked = true;
               document.getElementById('labelPreset').value = defaults.buttonLabel;
               document.getElementById('labelCustom').style.display = 'none';
@@ -1951,7 +1951,7 @@ export const ProvidersPage: FC<{
           };
           var SECTION_DEFAULTS = {
             basic:  {preset:'default',buttonLabel:'{name}로 시작하기'},
-            detail: {align:'left',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,showIcon:true,iconGap:30,paddingLeft:100,showTitle:false,showPoweredBy:true,widgetPosition:'before',customSelector:''},
+            detail: {align:'left',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true,widgetPosition:'before',customSelector:''},
             extra:  {showCouponPack:true,couponPackPosition:'below',couponPackGap:12,customText1Enabled:true,customText1:'아이디 비밀번호 입력없이 번개가입! 번개로그인!',customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'}
           };
 

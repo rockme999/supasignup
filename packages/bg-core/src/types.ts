@@ -196,7 +196,7 @@ export const DEFAULT_WIDGET_STYLE: WidgetStyle = {
   showIcon: true,
   iconGap: 30,
   paddingLeft: 100,
-  showTitle: false,
+  showTitle: true,
   showPoweredBy: true,
   widgetPosition: 'before',
   customSelector: '',
