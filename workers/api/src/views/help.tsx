@@ -502,7 +502,7 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">카카오 채널</p>
             <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">소셜 가입 시 카카오 채널 추가를 유도하여 마케팅 채널을 확보합니다.</p>
           </div>
-          <a href="/dashboard/settings/kakao" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
+          <a href="/dashboard/settings/general#kakaoChannelCard" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
         </div>
       </div>
 

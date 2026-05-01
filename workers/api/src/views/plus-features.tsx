@@ -1,6 +1,6 @@
 /**
  * Plus-only feature pages: BannerSettingsPage, PopupSettingsPage, EscalationSettingsPage,
- * KakaoSettingsPage, AiSettingsPage, AiBriefingPage, LiveCounterSettingsPage
+ * AiSettingsPage, AiBriefingPage, LiveCounterSettingsPage
  * + PlusLockOverlay.
  *
  * AiReportsPage: deprecated — /dashboard/ai-reports는 /dashboard/ai-briefing으로 301 redirect됨.
@@ -2552,83 +2552,9 @@ export const EscalationSettingsPage: FC<{
 };
 
 
-export const KakaoSettingsPage: FC<{
-  shop: { shop_id: string; plan: string };
-  kakaoChannelId: string;
-  isCafe24?: boolean;
-}> = ({ shop, kakaoChannelId, isCafe24 }) => {
-  const isPlus = shop.plan !== 'free';
-  return (
-    <Layout title="카카오 채널" loggedIn currentPath="/dashboard/settings/kakao" isCafe24={isCafe24}>
-      <h1>카카오 채널</h1>
-      {!isPlus
-        ? <PlusLockOverlay feature="카카오 채널" />
-        : (
-          <div class="card">
-            <h2>카카오 채널 ID</h2>
-            <p style="font-size:13px;color:#64748b;margin-bottom:20px">신규 가입 시 카카오 채널 추가 유도 버튼에 사용됩니다.</p>
-            {/* 미리보기 영역 (상단) */}
-            <div style="margin-bottom:20px">
-              <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
-              <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
-                <p style="font-size:11px;color:#94a3b8;margin-bottom:16px;text-align:center">가입 완료 후 표시되는 버튼</p>
-                <div style="display:flex;justify-content:center">
-                  <button
-                    id="kakaoPreviewBtn"
-                    style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#FEE500;color:#191919;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;max-width:320px;width:100%;justify-content:center"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fill-rule="evenodd" clip-rule="evenodd" d="M10 2C5.582 2 2 4.896 2 8.444c0 2.26 1.5 4.247 3.765 5.378l-.96 3.585a.25.25 0 00.38.275L9.54 15.03c.152.01.306.016.46.016 4.418 0 8-2.896 8-6.444C18 4.896 14.418 2 10 2z" fill="#191919"/>
-                    </svg>
-                    카카오 채널 추가하고 알림 받기
-                  </button>
-                </div>
-                <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">가입 완료 페이지에서 표시됩니다</p>
-              </div>
-            </div>
-            {/* 설정 영역 */}
-            <div>
-              <div class="form-group" style="margin-bottom:16px">
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="kakaoChannelId">카카오 채널 ID</label>
-                <input
-                  type="text"
-                  id="kakaoChannelId"
-                  value={kakaoChannelId}
-                  placeholder="예: _xAbCdE"
-                  style="max-width:320px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
-                />
-                <p style="font-size:12px;color:#94a3b8;margin-top:6px">카카오 채널 프로필 URL(pf.kakao.com/<strong>_xAbCdE</strong>)에서 밑줄로 시작하는 ID를 입력하세요.</p>
-              </div>
-              <button id="saveKakaoBtn" class="btn btn-primary btn-sm">저장</button>
-              <script dangerouslySetInnerHTML={{__html: `
-                document.getElementById('saveKakaoBtn').addEventListener('click', async function() {
-                  var channelId = document.getElementById('kakaoChannelId').value.trim();
-                  var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
-                  if (resp.ok) {
-                    showToast('success', '카카오 채널 ID가 저장되었습니다.');
-                  } else {
-                    var err = await resp.json();
-                    showToast('error', err.error || '저장 중 오류가 발생했습니다.');
-                  }
-                });
-              `}} />
-            </div>
-            <script dangerouslySetInnerHTML={{__html: `
-              document.getElementById('kakaoPreviewBtn').addEventListener('click', function() {
-                var channelId = document.getElementById('kakaoChannelId').value.trim();
-                if (channelId) {
-                  window.open('https://pf.kakao.com/' + channelId, '_blank');
-                } else {
-                  alert('카카오 채널 ID를 먼저 입력해주세요.');
-                }
-              });
-            `}} />
-          </div>
-        )
-      }
-    </Layout>
-  );
-};
+// ─── KakaoSettingsPage REMOVED 2026-05-01 ───
+// 카카오 채널은 Plus → Free 이동 + GeneralSettingsPage 의 'kakaoChannelCard' 카드로 통합됨.
+// /dashboard/settings/kakao 라우트는 301 redirect (pages.tsx 참조).
 
 // ─── AI Settings Page [Plus] ─────────────────────────────────
 

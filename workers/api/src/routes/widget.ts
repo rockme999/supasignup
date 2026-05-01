@@ -128,8 +128,8 @@ widget.get('/config', async (c) => {
     escalation_config: shop.plan !== 'free'
       ? safeParseJsonObject(shop.escalation_config, null, `widget.escalation_config shop_id=${shop.shop_id}`)
       : null,
-    // kakao_channel_id: free 플랜은 null, 유료 플랜은 shops 테이블 실제 값 반환
-    kakao_channel_id: shop.plan !== 'free' ? (shop.kakao_channel_id || null) : null,
+    // kakao_channel_id: 2026-05-01 Free 플랜도 사용 가능 (Plus 전용 → Free 이동, 기본 설정 페이지로 통합).
+    kakao_channel_id: shop.kakao_channel_id || null,
     // exit_intent_config: REMOVED 2026-04-30 — 이탈 감지 팝업으로 통합. 위젯은 popup_config만 사용.
     // coupon_config: 이탈 팝업 coupon_mode='single' 카드 레이블 표시용 (민감 정보 제외)
     coupon_config: shop.plan !== 'free'

@@ -472,12 +472,24 @@ export const ProvidersPage: FC<{
   isCafe24?: boolean;
   widgetStyle?: WidgetStyle;
   newBadges?: Partial<Record<string, boolean>>;
-}> = ({ shop, baseUrl, isCafe24, widgetStyle, newBadges }) => {
+  packConfig?: {
+    state?: string;
+    design?: 'dark' | 'brand' | 'illust' | 'minimal';
+    anim_mode?: boolean;
+    size?: 'lg' | 'md' | 'sm' | 'xs';
+    items?: Array<{ min_order: number; discount: number }>;
+  } | null;
+}> = ({ shop, baseUrl, isCafe24, widgetStyle, newBadges, packConfig }) => {
   const providers = parseProviders(shop.enabled_providers);
   const iconProviders = parseProviders(shop.icon_providers);
   const allProviders = ['google', 'kakao', 'naver', 'apple', 'discord', 'telegram'];
   const futureProviders = ['facebook', 'x', 'line', 'toss', 'tiktok'];
   const ws = widgetStyle ?? DEFAULT_WIDGET_STYLE;
+  const isPlus = shop.plan !== 'free';
+  const cpDesign = (packConfig?.design ?? 'brand') as 'dark' | 'brand' | 'illust' | 'minimal';
+  const cpAnim = packConfig?.anim_mode !== false;
+  const cpInitialSize = (packConfig?.size ?? 'md') as 'lg' | 'md' | 'sm' | 'xs';
+  const cpSizes: Array<'lg' | 'md' | 'sm' | 'xs'> = ['lg', 'md', 'sm', 'xs'];
 
   return (
     <Layout title="소셜 프로바이더" loggedIn currentPath="/dashboard/settings/providers" isCafe24={isCafe24} newBadges={newBadges}>
@@ -675,6 +687,71 @@ export const ProvidersPage: FC<{
           </div>
           <div id="previewButtons" style="display:flex; flex-direction:column; align-items:center;"></div>
         </div>
+      </div>
+
+      {/* Plus 쿠폰팩 미리보기 + 크기 조절 (1+5번) */}
+      <div class="card" id="couponPackPreviewCard">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <h2 style="margin:0">쿠폰팩 미리보기 <span class="badge badge-purple" style="margin-left:6px">Plus</span></h2>
+          {isPlus && (
+            <div style="display:flex;gap:4px" id="cpSizeToggle">
+              {cpSizes.map(s => {
+                const active = s === cpInitialSize;
+                return (
+                  <button type="button" class="cp-size-btn" data-size={s}
+                    style={`padding:4px 12px;border:1px solid ${active ? '#3b82f6' : '#d1d5db'};background:${active ? '#3b82f6' : '#fff'};color:${active ? '#fff' : '#64748b'};border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;text-transform:uppercase`}>{s}</button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px">
+          {isPlus
+            ? '회원 가입 시 자동 발급되는 웰컴 쿠폰팩 카드 미리보기입니다. 크기 토글로 즉시 비교할 수 있습니다.'
+            : '쿠폰팩은 Plus 플랜 전용 기능입니다.'}
+        </p>
+        <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:32px;min-height:200px;display:flex;align-items:center;justify-content:center">
+          {isPlus ? (
+            <>
+              <style dangerouslySetInnerHTML={{__html: COUPON_PACK_CSS}} />
+              {cpSizes.map(s => (
+                <div data-cp-size={s} style={`display:${s === cpInitialSize ? 'block' : 'none'}`}
+                  dangerouslySetInnerHTML={{__html: buildCouponPackHtml({ design: cpDesign, anim_mode: cpAnim, size: s })}} />
+              ))}
+            </>
+          ) : (
+            <div style="text-align:center;color:#94a3b8">
+              <p style="font-size:14px;margin:0 0 12px">쿠폰팩은 Plus 플랜에서 사용할 수 있습니다.</p>
+              <a href="/dashboard/billing" class="btn btn-primary btn-sm" style="display:inline-flex">Plus 업그레이드 →</a>
+            </div>
+          )}
+        </div>
+        {isPlus && (
+          <p style="font-size:12px;color:#94a3b8;margin-top:8px;margin-bottom:0">
+            디자인 변경은 <a href="/dashboard/settings/general#couponSettingsCard" style="color:#3b82f6">기본 설정의 회원 가입 쿠폰 설정</a>에서 가능합니다.
+          </p>
+        )}
+        {isPlus && (
+          <script dangerouslySetInnerHTML={{__html: `
+            (function() {
+              var btns = document.querySelectorAll('#couponPackPreviewCard .cp-size-btn');
+              btns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                  var size = btn.dataset.size;
+                  btns.forEach(function(b) {
+                    var active = b.dataset.size === size;
+                    b.style.background = active ? '#3b82f6' : '#fff';
+                    b.style.color = active ? '#fff' : '#64748b';
+                    b.style.borderColor = active ? '#3b82f6' : '#d1d5db';
+                  });
+                  document.querySelectorAll('#couponPackPreviewCard [data-cp-size]').forEach(function(el) {
+                    el.style.display = el.dataset.cpSize === size ? 'block' : 'none';
+                  });
+                });
+              });
+            })();
+          `}} />
+        )}
       </div>
 
       {/* Widget design settings */}
@@ -1719,6 +1796,7 @@ export const GeneralSettingsPage: FC<{
   email: string;
   name: string;
   shop: ShopSummary | null;
+  kakaoChannelId?: string;
   couponConfig?: CouponConfigUI | null;
   packConfig?: {
     state?: string;
@@ -1731,7 +1809,7 @@ export const GeneralSettingsPage: FC<{
     failures?: Array<{ min_order: number; discount: number }>;
   } | null;
   isCafe24?: boolean;
-}> = ({ email, name, shop, couponConfig, packConfig, isCafe24 }) => {
+}> = ({ email, name, shop, kakaoChannelId, couponConfig, packConfig, isCafe24 }) => {
   // 쿠폰팩 관련 계산
   const isPlus = shop != null && shop.plan !== 'free';
   const pc = packConfig || {};
@@ -2901,6 +2979,69 @@ export const GeneralSettingsPage: FC<{
                   msgEl.textContent = '오류: ' + e.message;
                   btn.disabled = false;
                   btn.textContent = '재시도';
+                }
+              });
+            }
+          })();
+        `}} />
+      </div>
+
+      {/* 카카오 채널 카드 — 2026-05-01 Plus 전용 페이지에서 기본 설정 통합 (Free도 사용 가능) */}
+      <div class="card" id="kakaoChannelCard">
+        <h2>카카오 채널</h2>
+        <p style="font-size:13px;color:#64748b;margin-bottom:20px">신규 가입 완료 후 카카오 채널 추가 유도 버튼이 표시됩니다.</p>
+        <div style="margin-bottom:20px">
+          <p style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">미리보기</p>
+          <div style="background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;padding:24px">
+            <p style="font-size:11px;color:#94a3b8;margin-bottom:16px;text-align:center">가입 완료 후 표시되는 버튼</p>
+            <div style="display:flex;justify-content:center">
+              <button id="kakaoPreviewBtn" type="button"
+                style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#FEE500;color:#191919;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;max-width:320px;width:100%;justify-content:center">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M10 2C5.582 2 2 4.896 2 8.444c0 2.26 1.5 4.247 3.765 5.378l-.96 3.585a.25.25 0 00.38.275L9.54 15.03c.152.01.306.016.46.016 4.418 0 8-2.896 8-6.444C18 4.896 14.418 2 10 2z" fill="#191919"/>
+                </svg>
+                카카오 채널 추가하고 알림 받기
+              </button>
+            </div>
+            <p style="font-size:11px;color:#94a3b8;margin-top:12px;text-align:center">가입 완료 페이지에서 표시됩니다</p>
+          </div>
+        </div>
+        <div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="kakaoChannelId">카카오 채널 ID</label>
+            <input type="text" id="kakaoChannelId"
+              value={kakaoChannelId ?? ''}
+              placeholder="예: _xAbCdE"
+              style="max-width:320px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box"
+            />
+            <p style="font-size:12px;color:#94a3b8;margin-top:6px">카카오 채널 프로필 URL(pf.kakao.com/<strong>_xAbCdE</strong>)에서 밑줄로 시작하는 ID를 입력하세요. 비워두면 비활성화됩니다.</p>
+          </div>
+          <button id="saveKakaoBtn" class="btn btn-primary btn-sm" type="button">저장</button>
+        </div>
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            var saveBtn = document.getElementById('saveKakaoBtn');
+            var previewBtn = document.getElementById('kakaoPreviewBtn');
+            var input = document.getElementById('kakaoChannelId');
+            if (saveBtn) {
+              saveBtn.addEventListener('click', async function() {
+                var channelId = input.value.trim();
+                var resp = await apiCall('PUT', '/api/dashboard/shops/${shop.shop_id}/kakao-channel', { kakao_channel_id: channelId }, this);
+                if (resp.ok) {
+                  showToast('success', '카카오 채널 ID가 저장되었습니다.');
+                } else {
+                  var err = await resp.json();
+                  showToast('error', err.error || '저장 중 오류가 발생했습니다.');
+                }
+              });
+            }
+            if (previewBtn) {
+              previewBtn.addEventListener('click', function() {
+                var channelId = input.value.trim();
+                if (channelId) {
+                  window.open('https://pf.kakao.com/' + channelId, '_blank');
+                } else {
+                  alert('카카오 채널 ID를 먼저 입력해주세요.');
                 }
               });
             }

@@ -29,7 +29,6 @@ import {
   BannerSettingsPage,
   PopupSettingsPage,
   EscalationSettingsPage,
-  KakaoSettingsPage,
   AiSettingsPage,
   AiBriefingPage,
   QuickStartPage,
@@ -1084,6 +1083,7 @@ pages.get('/dashboard/settings/general', async (c) => {
       email={owner.email}
       name={owner.name}
       shop={shop ?? null}
+      kakaoChannelId={shop?.kakao_channel_id ?? ''}
       couponConfig={couponConfig}
       packConfig={packConfig}
       isCafe24={c.get('isCafe24')}
@@ -1120,6 +1120,21 @@ pages.get('/dashboard/settings/providers', async (c) => {
     try { widgetStyle = JSON.parse(shop.widget_style); } catch { /* use default */ }
   }
 
+  // Plus 쿠폰팩 미리보기용 packConfig (GeneralSettingsPage와 동일 추출 로직)
+  let packConfig: {
+    state?: string;
+    design?: 'dark' | 'brand' | 'illust' | 'minimal';
+    anim_mode?: boolean;
+    size?: 'lg' | 'md' | 'sm' | 'xs';
+    items?: Array<{ min_order: number; discount: number }>;
+  } | null = null;
+  if (shop.coupon_config) {
+    try {
+      const parsed = JSON.parse(shop.coupon_config);
+      packConfig = parsed?.pack ?? null;
+    } catch { /* ignore */ }
+  }
+
   // What's New 인디케이터: seen 시각 조회 + 방문 기록 갱신 (병렬)
   let newBadges: Partial<Record<string, boolean>> = {};
   try {
@@ -1146,6 +1161,7 @@ pages.get('/dashboard/settings/providers', async (c) => {
       isCafe24={c.get('isCafe24')}
       widgetStyle={widgetStyle}
       newBadges={newBadges}
+      packConfig={packConfig}
     />
   );
 });
@@ -1233,21 +1249,10 @@ pages.get('/dashboard/settings/escalation', async (c) => {
   );
 });
 
-// ─── Settings: Kakao [Plus] ──────────────────────────────────
-
-pages.get('/dashboard/settings/kakao', async (c) => {
-  const ownerId = c.get('ownerId');
-  const shop = await getOwnerShop(c.env.DB, ownerId);
-  if (!shop) return c.redirect('/dashboard');
-
-  return c.html(
-    <KakaoSettingsPage
-      shop={shop}
-      kakaoChannelId={shop.kakao_channel_id ?? ''}
-      isCafe24={c.get('isCafe24')}
-    />
-  );
-});
+// ─── Settings: Kakao [REMOVED 2026-05-01 → 기본 설정 페이지로 통합] ─
+// 카카오 채널은 Plus → Free 기능 이동 + 기본 설정 페이지에 통합됨.
+// 외부 북마크 호환성을 위해 301 redirect 유지.
+pages.get('/dashboard/settings/kakao', (c) => c.redirect('/dashboard/settings/general#kakaoChannelCard', 301));
 
 // ─── Settings: Exit-intent [REMOVED 2026-04-30 → 이탈 감지 팝업으로 통합] ─
 // 외부 북마크 호환성을 위해 301 redirect 유지. Exit-intent 단독 페이지/컴포넌트/PUT 핸들러는 삭제됨.

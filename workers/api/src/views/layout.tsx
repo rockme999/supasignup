@@ -143,7 +143,7 @@ const settingNavItems: NavItem[] = [
   { path: '/dashboard/settings/banner', label: '미니배너 & 라이브', icon: <IconFlag />, plus: true },
   { path: '/dashboard/settings/escalation', label: '에스컬레이션', icon: <IconTrending />, plus: true },
   { path: '/dashboard/settings/popup', label: '이탈 감지 팝업', icon: <IconBell />, plus: true },
-  { path: '/dashboard/settings/kakao', label: '카카오 채널', icon: <IconChat />, plus: true },
+  // 카카오 채널: 2026-05-01 Plus → Free 이동 + 기본 설정 페이지 통합. 별도 메뉴 제거.
   { path: '/dashboard/ai-briefing', label: 'AI 브리핑', icon: <IconSparkle />, plus: true },
 ];
 

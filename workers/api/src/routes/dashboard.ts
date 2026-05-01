@@ -905,9 +905,7 @@ dashboard.put('/shops/:id/kakao-channel', async (c) => {
 
   if (!shop) return c.json({ error: 'not_found' }, 404);
 
-  if (shop.plan === 'free') {
-    return c.json({ error: 'plus_required', message: '카카오 채널 ID는 Plus 플랜에서만 설정할 수 있습니다.' }, 403);
-  }
+  // 2026-05-01: 카카오 채널 ID는 Free 플랜도 설정 가능하도록 plan check 제거 (기본 설정 페이지로 통합).
 
   const body = await c.req.json<{ kakao_channel_id?: string }>();
   const channelId = (body.kakao_channel_id ?? '').trim();
