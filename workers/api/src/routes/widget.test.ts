@@ -156,6 +156,136 @@ describe('GET /api/widget/config', () => {
   });
 });
 
+// ─── /api/widget/bg-sync (텔레메트리 ingest) ─────────────────
+//
+// Comet/Brave/Safari ITP 등 브라우저 내장 추적 보호가 third-party POST를
+// 트래커로 차단하므로 GET 변형을 도입. POST/GET 모두 동일 핸들러를 공유.
+
+describe('/api/widget/bg-sync', () => {
+  // 정상 shop 응답을 반환하는 D1 mock + visitor_id 추출 가능한 INSERT bind 추적.
+  function createBgSyncApp(shop: Record<string, unknown> | null = {
+    shop_id: 'shop_001',
+    client_id: 'bg_test_cid',
+    mall_id: 'suparain888',
+    shop_url: null,
+    platform: 'cafe24',
+  }) {
+    const kv = createMockKV();
+    const insertRun = vi.fn();
+    const d1First = vi.fn().mockResolvedValue(shop);
+    const d1 = {
+      prepare: vi.fn().mockReturnValue({
+        bind: vi.fn().mockReturnValue({ first: d1First, run: insertRun }),
+      }),
+    };
+    const app = new Hono<{ Bindings: Env }>();
+    app.route('/api/widget', widgetRoutes);
+    const env = { DB: d1, KV: kv, BASE_URL: 'https://bg.suparain.kr' } as unknown as Env;
+    return { app, env, kv, d1, insertRun };
+  }
+
+  // executionCtx mock — INSERT/KV put을 waitUntil로 비동기화하므로 필요
+  const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as unknown as ExecutionContext;
+
+  // ── GET ────────────────────────────────────────────────────
+  it('GET: 정상 호출 시 200 + ok=true + no-store 헤더', async () => {
+    const { app, env } = createBgSyncApp();
+    const url = '/api/widget/bg-sync?client_id=bg_test_cid&event_type=page_view&event_data=' +
+      encodeURIComponent(JSON.stringify({ visitor_id: 'v_abc' }));
+    const resp = await app.request(url, {
+      headers: { Origin: 'https://suparain888.cafe24.com' },
+    }, env, execCtx);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as Record<string, unknown>;
+    expect(body.ok).toBe(true);
+    expect(resp.headers.get('Cache-Control')).toContain('no-store');
+  });
+
+  it('GET: event_type 누락 시 400', async () => {
+    const { app, env } = createBgSyncApp();
+    const resp = await app.request('/api/widget/bg-sync?client_id=bg_test_cid', {
+      headers: { Origin: 'https://suparain888.cafe24.com' },
+    }, env);
+    expect(resp.status).toBe(400);
+  });
+
+  it('GET: 잘못된 event_data JSON 시 400', async () => {
+    const { app, env } = createBgSyncApp();
+    const url = '/api/widget/bg-sync?client_id=bg_test_cid&event_type=page_view&event_data=not_json';
+    const resp = await app.request(url, {
+      headers: { Origin: 'https://suparain888.cafe24.com' },
+    }, env);
+    expect(resp.status).toBe(400);
+    const body = await resp.json() as Record<string, unknown>;
+    expect(body.error).toBe('invalid_event_data');
+  });
+
+  it('GET: 알 수 없는 event_type 시 400', async () => {
+    const { app, env } = createBgSyncApp();
+    const url = '/api/widget/bg-sync?client_id=bg_test_cid&event_type=unknown_event&event_data=' +
+      encodeURIComponent('{}');
+    const resp = await app.request(url, {
+      headers: { Origin: 'https://suparain888.cafe24.com' },
+    }, env);
+    expect(resp.status).toBe(400);
+    const body = await resp.json() as Record<string, unknown>;
+    expect(body.error).toBe('invalid_event_type');
+  });
+
+  it('GET: Origin 불일치 시 403', async () => {
+    const { app, env } = createBgSyncApp();
+    const url = '/api/widget/bg-sync?client_id=bg_test_cid&event_type=page_view&event_data=' +
+      encodeURIComponent('{}');
+    const resp = await app.request(url, {
+      headers: { Origin: 'https://attacker.com' },
+    }, env);
+    expect(resp.status).toBe(403);
+  });
+
+  // ── POST (legacy + primary 호환성) ─────────────────────────
+  it('POST /bg-sync: 정상 호출 시 200', async () => {
+    const { app, env } = createBgSyncApp();
+    const resp = await app.request('/api/widget/bg-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'https://suparain888.cafe24.com' },
+      body: JSON.stringify({
+        client_id: 'bg_test_cid',
+        event_type: 'page_view',
+        event_data: { visitor_id: 'v_abc' },
+      }),
+    }, env, execCtx);
+    expect(resp.status).toBe(200);
+  });
+
+  it('POST /event (legacy alias): 정상 호출 시 200', async () => {
+    const { app, env } = createBgSyncApp();
+    const resp = await app.request('/api/widget/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'https://suparain888.cafe24.com' },
+      body: JSON.stringify({
+        client_id: 'bg_test_cid',
+        event_type: 'page_view',
+        event_data: {},
+      }),
+    }, env, execCtx);
+    expect(resp.status).toBe(200);
+  });
+});
+
+// ─── widget/buttons.js: GET 호출로 변환 검증 ──────────────────
+describe('widget/buttons.js trackEvent', () => {
+  it('uses GET /bg-sync with URLSearchParams (Comet/Brave 우회)', () => {
+    // POST/sendBeacon 잔재가 없는지 확인
+    expect(WIDGET_JS).not.toContain("navigator.sendBeacon");
+    // GET 호출 패턴 + keepalive + no-referrer 정책 포함
+    expect(WIDGET_JS).toContain("method: 'GET'");
+    expect(WIDGET_JS).toContain("keepalive: true");
+    expect(WIDGET_JS).toContain("referrerPolicy: 'no-referrer'");
+    // bg-sync 경로 유지
+    expect(WIDGET_JS).toContain("/api/widget/bg-sync");
+  });
+});
+
 // ─── GET /widget/buttons.js ──────────────────────────────────
 
 describe('GET /widget/buttons.js', () => {

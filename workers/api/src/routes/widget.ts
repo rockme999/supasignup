@@ -183,58 +183,70 @@ const VALID_EVENT_TYPES: ReadonlySet<string> = new Set([
 const MAX_PAGE_URL_LEN = 2048;
 const MAX_EVENT_DATA_JSON_LEN = 4096;
 
-widget.post('/event', async (c) => {
-  // IP 기반 rate limit: 1분당 최대 60건 (page_view 추가로 상향)
+// 위젯 텔레메트리 ingest — funnel_events INSERT.
+// 광고 차단기/프라이버시 확장이 'event'/'track' 패턴을 차단하는 문제로
+// `/bg-sync` 경로를 primary로 도입. 기존 `/event`는 30일 alias 유지 (캐시된 구 위젯 호환).
+// 30일 후 alias 제거 또는 410 Gone 변경 검토.
+//
+// 또한 Comet/Brave Shields/Safari ITP 등 브라우저 내장 추적 보호는
+// third-party origin으로의 POST를 데이터 수집 트래커로 분류해 차단.
+// → GET 변형(`GET /bg-sync`)을 도입해 우회. POST/GET 둘 다 같은 핸들러를 공유.
+type WidgetEventBody = {
+  client_id: string;
+  event_type: string;
+  event_data?: Record<string, unknown>;
+  page_url?: string;
+};
+
+// 텔레메트리 응답 공통 헤더: 캐시/프리페치 차단 + CORS.
+// GET 변형이 CDN/브라우저 캐시에 잡히면 후속 호출이 서버 도달하지 않아 데이터 누락.
+const TELEMETRY_RESPONSE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  'Pragma': 'no-cache',
+  'Access-Control-Allow-Origin': '*',
+} as const;
+
+// 검증된 body로 INSERT 수행 (POST/GET 공통 경로).
+const processWidgetEvent = async (
+  c: import('hono').Context<{ Bindings: Env }>,
+  body: WidgetEventBody,
+): Promise<Response> => {
+  // IP 기반 rate limit: 1분당 최대 60건 (POST + GET 합산)
   const ip = c.req.header('cf-connecting-ip') || 'unknown';
   const rateKey = `rate:event:${ip}`;
   const current = await c.env.KV.get(rateKey);
   if (current && parseInt(current) >= 60) {
-    return c.json({ error: 'rate_limit_exceeded' }, 429);
-  }
-
-  // body 파싱 (잘못된 JSON 방어)
-  let body: {
-    client_id: string;
-    event_type: string;
-    event_data?: Record<string, unknown>;
-    page_url?: string;
-  };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'invalid_json' }, 400);
+    return c.json({ error: 'rate_limit_exceeded' }, 429, TELEMETRY_RESPONSE_HEADERS);
   }
 
   if (!body.client_id || !body.event_type) {
-    return c.json({ error: 'missing_params' }, 400);
+    return c.json({ error: 'missing_params' }, 400, TELEMETRY_RESPONSE_HEADERS);
   }
 
   if (!VALID_EVENT_TYPES.has(body.event_type)) {
-    return c.json({ error: 'invalid_event_type' }, 400);
+    return c.json({ error: 'invalid_event_type' }, 400, TELEMETRY_RESPONSE_HEADERS);
   }
 
   // 페이로드 크기 제한 — 무제한 INSERT/스토리지 어뷰즈 방어
   if (body.page_url && body.page_url.length > MAX_PAGE_URL_LEN) {
-    return c.json({ error: 'page_url_too_long' }, 400);
+    return c.json({ error: 'page_url_too_long' }, 400, TELEMETRY_RESPONSE_HEADERS);
   }
   const eventData = body.event_data || {};
   const eventDataJson = JSON.stringify(eventData);
   if (eventDataJson.length > MAX_EVENT_DATA_JSON_LEN) {
-    return c.json({ error: 'event_data_too_large' }, 400);
+    return c.json({ error: 'event_data_too_large' }, 400, TELEMETRY_RESPONSE_HEADERS);
   }
 
   // shop 조회
   const shop = await getShopByClientId(c.env.DB, body.client_id);
   if (!shop) {
-    return c.json({ error: 'invalid_client_id' }, 404);
+    return c.json({ error: 'invalid_client_id' }, 404, TELEMETRY_RESPONSE_HEADERS);
   }
 
   // Origin 검증 — 남의 쇼핑몰 client_id로 가짜 이벤트 주입 차단
-  // (가장 악용이 쉬운 벡터: 경쟁사가 타겟 대시보드·AI 브리핑을 오염)
-  // 카페24 기본 도메인({mall_id}.cafe24.com) 또는 shop.shop_url에 등록된 커스텀 도메인만 허용.
   const originHeader = c.req.header('Origin') ?? c.req.header('Referer') ?? '';
   if (originHeader && !isOriginAllowedForShop(originHeader, shop.mall_id, shop.shop_url, shop.platform)) {
-    return c.json({ error: 'origin_not_allowed' }, 403);
+    return c.json({ error: 'origin_not_allowed' }, 403, TELEMETRY_RESPONSE_HEADERS);
   }
 
   // funnel_events 테이블에 D1으로 영구 저장
@@ -253,8 +265,54 @@ widget.post('/event', async (c) => {
     c.env.KV.put(rateKey, String((parseInt(current || '0')) + 1), { expirationTtl: 60 })
   );
 
-  return c.json({ ok: true });
-});
+  return c.json({ ok: true }, 200, TELEMETRY_RESPONSE_HEADERS);
+};
+
+// POST 핸들러 — body는 JSON.
+const handleWidgetEventPost = async (c: import('hono').Context<{ Bindings: Env }>) => {
+  let body: WidgetEventBody;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_json' }, 400, TELEMETRY_RESPONSE_HEADERS);
+  }
+  return processWidgetEvent(c, body);
+};
+
+// GET 핸들러 — body는 query string. event_data만 JSON 인코딩 필요.
+// Comet/Brave Shields/Safari ITP 등 브라우저 내장 추적 보호가 third-party POST를 차단하는 환경 우회용.
+const handleWidgetEventGet = async (c: import('hono').Context<{ Bindings: Env }>) => {
+  const clientId = c.req.query('client_id') ?? '';
+  const eventType = c.req.query('event_type') ?? '';
+  const pageUrl = c.req.query('page_url');
+  const eventDataRaw = c.req.query('event_data');
+
+  let eventData: Record<string, unknown> | undefined;
+  if (eventDataRaw) {
+    try {
+      const parsed = JSON.parse(eventDataRaw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        eventData = parsed as Record<string, unknown>;
+      } else {
+        return c.json({ error: 'invalid_event_data' }, 400, TELEMETRY_RESPONSE_HEADERS);
+      }
+    } catch {
+      return c.json({ error: 'invalid_event_data' }, 400, TELEMETRY_RESPONSE_HEADERS);
+    }
+  }
+
+  const body: WidgetEventBody = {
+    client_id: clientId,
+    event_type: eventType,
+    event_data: eventData,
+    page_url: pageUrl,
+  };
+  return processWidgetEvent(c, body);
+};
+
+widget.post('/bg-sync', handleWidgetEventPost);  // primary (광고 차단 회피)
+widget.get('/bg-sync', handleWidgetEventGet);    // 브라우저 내장 추적 보호(Comet/Brave/Safari ITP) 우회
+widget.post('/event', handleWidgetEventPost);    // legacy alias — 30일 후 제거 검토
 
 // ─── coupon_pack 응답 필드 빌더 ──────────────────────────────────
 // state === 'active'이면 위젯에 표시할 메타데이터를 반환, 그 외는 null.

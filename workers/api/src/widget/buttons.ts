@@ -376,18 +376,38 @@ export const WIDGET_JS = `(function() {
     for (var k in meta) { if (meta.hasOwnProperty(k)) merged[k] = meta[k]; }
     if (eventData) { for (var j in eventData) { if (eventData.hasOwnProperty(j)) merged[j] = eventData[j]; } }
 
-    var url = this.baseUrl + '/api/widget/event';
-    var payload = JSON.stringify({
-      client_id: this.config.client_id,
-      event_type: eventType,
-      event_data: merged,
-      page_url: window.location.href
-    });
-    // Beacon API 사용 (페이지 이탈 시에도 전송 보장)
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
-    } else {
-      fetch(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' }, credentials: 'omit', keepalive: true }).catch(function() {});
+    // /bg-sync GET: 브라우저 내장 추적 보호(Comet/Brave Shields/Safari ITP/Edge Strict)가
+    // third-party origin으로의 POST를 데이터 수집 트래커로 분류해 차단하는 문제 회피.
+    // GET은 이미지 픽셀과 동일한 형태라 차단 룰 통과율이 압도적으로 높음.
+    // 서버는 POST /bg-sync, POST /event(legacy alias), GET /bg-sync 3종을 동시 운영.
+    //
+    // sendBeacon은 POST만 지원이라 제거. 대신 keepalive: true로 페이지 이탈 시에도 in-flight 유지.
+    // (W3C Fetch 스펙상 keepalive=true 요청은 페이지 unload 후에도 완료 보장, 64KB 한도)
+    var qs = 'client_id=' + encodeURIComponent(this.config.client_id) +
+             '&event_type=' + encodeURIComponent(eventType) +
+             '&event_data=' + encodeURIComponent(JSON.stringify(merged));
+    var fullUrl = window.location.href;
+    var qsWithUrl = qs + '&page_url=' + encodeURIComponent(fullUrl);
+
+    // URL 길이 가드 (8000 byte) — 카페24 상품 페이지의 매우 긴 URL + 큰 event_data 케이스 방어.
+    // 초과 시 page_url을 origin+pathname만 남겨 query string 제거.
+    var url = this.baseUrl + '/api/widget/bg-sync?' + qsWithUrl;
+    if (url.length > 8000) {
+      var trimmedUrl = window.location.origin + window.location.pathname;
+      url = this.baseUrl + '/api/widget/bg-sync?' + qs + '&page_url=' + encodeURIComponent(trimmedUrl);
+    }
+
+    try {
+      fetch(url, {
+        method: 'GET',
+        credentials: 'omit',
+        cache: 'no-store',
+        keepalive: true,
+        // visitor_id 등이 외부 도메인 navigation 시 Referer로 새지 않도록 차단.
+        referrerPolicy: 'no-referrer'
+      }).catch(function() {});
+    } catch (e) {
+      // 일부 환경에서 keepalive+GET 조합이 throw하면 무시 (텔레메트리 누락 허용)
     }
   };
 
