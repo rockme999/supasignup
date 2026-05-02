@@ -2884,7 +2884,7 @@ export const GeneralSettingsPage: FC<{
                 <p style="font-size:11px;color:#94a3b8;margin-top:6px">이탈 팝업 안에서의 카드 표시 크기입니다</p>
               </div>
 
-              {/* 만료 일수 */}
+              {/* 만료 일수 — 카페24 정책상 등록 후 변경 불가 (active 쿠폰의 metadata-only PUT 거부) */}
               <div>
                 <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px" htmlFor="cpExpireDays">쿠폰 만료 일수</label>
                 <div style="display:flex;align-items:center;gap:10px">
@@ -2894,16 +2894,22 @@ export const GeneralSettingsPage: FC<{
                     min="7"
                     max="90"
                     value={cpExpireDays}
-                    style="width:80px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center"
+                    readOnly={cpState !== 'unregistered'}
+                    style={cpState === 'unregistered'
+                      ? "width:80px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center"
+                      : "width:80px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:center;background:#f3f4f6;color:#9ca3af;cursor:not-allowed"}
                   />
                   <span style="font-size:13px;color:#374151">일</span>
                 </div>
-                <p style="font-size:11px;color:#94a3b8;margin-top:6px">
-                  회원이 쿠폰을 받은 날부터 며칠간 사용 가능한지 — 7~90일, 기본 30일
-                </p>
-                {isPlus && cpState === 'active' && (
-                  <p style="font-size:11px;color:#059669;margin-top:2px">
-                    변경 시 카페24 쿠폰 마스터에 즉시 반영됩니다 (이미 발급된 쿠폰은 유지).
+                {cpState === 'unregistered' ? (
+                  <p style="font-size:11px;color:#94a3b8;margin-top:6px">
+                    회원이 쿠폰을 받은 날부터 며칠간 사용 가능한지 — 7~90일, 기본 30일.
+                    <br />
+                    <strong style="color:#92400e">등록 후에는 카페24 정책상 만료일을 변경할 수 없습니다.</strong> 신중히 결정해 주세요.
+                  </p>
+                ) : (
+                  <p style="font-size:11px;color:#92400e;margin-top:6px;padding:8px 10px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px">
+                    <strong>등록된 쿠폰의 만료일은 변경할 수 없습니다.</strong> 카페24 정책상 활성/일시정지 상태인 쿠폰의 metadata 변경이 차단됩니다. 만료일을 바꾸려면 쿠폰팩을 비활성화 후 다시 활성화(재등록)하거나, 카페24 어드민에서 직접 변경하세요.
                   </p>
                 )}
               </div>

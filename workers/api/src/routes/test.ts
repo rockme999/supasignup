@@ -115,6 +115,83 @@ test.get('/store-info', async (c) => {
   }
 });
 
+// ─── GET /coupons/expire — 단일 쿠폰의 available_day_from_issued 변경 ─
+// 진단용: 카페24가 active 쿠폰의 metadata-only 변경을 받는지 검증 (현재 정책상 거부 확인됨).
+//   GET /test/coupons/expire?mall_id=<>&coupon_no=<>&days=<1~365>
+// fix와 동일한 PUT body: { shop_no: 1, request: { available_day_from_issued: days } }
+test.get('/coupons/expire', async (c) => {
+  const mallId = c.req.query('mall_id');
+  const couponNo = c.req.query('coupon_no');
+  const days = parseInt(c.req.query('days') || '0', 10);
+  if (!mallId || !couponNo || !days || days < 1 || days > 365) {
+    return c.json({ error: 'mall_id, coupon_no, days(1-365) required' }, 400);
+  }
+
+  const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
+  if (!shop?.platform_access_token) return c.json({ error: 'shop_not_found_or_no_token' }, 404);
+
+  const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
+  let accessToken = tokens.access_token as string;
+
+  async function callExpire(token: string): Promise<Response> {
+    return fetch(`https://${mallId}.cafe24api.com/api/v2/admin/coupons/${couponNo}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Cafe24-Api-Version': '2026-03-01',
+      },
+      // 카페24 API 2026-03-01: PUT body에 status 필드 필수.
+      // active 쿠폰에 restart는 멱등 거부(422) 처리, available_day_from_issued 는 적용됨.
+      body: JSON.stringify({
+        shop_no: 1,
+        request: {
+          status: 'restart',
+          immediate_issue_restart: 'I',
+          available_day_from_issued: days,
+        },
+      }),
+    });
+  }
+
+  let resp = await callExpire(accessToken);
+
+  if (resp.status === 401 && tokens.refresh_token) {
+    const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
+    try {
+      const newTokens = await client.refreshToken(mallId, tokens.refresh_token);
+      accessToken = newTokens.access_token;
+      const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
+      const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
+      await c.env.DB
+        .prepare('UPDATE shops SET platform_access_token = ?, platform_refresh_token = ? WHERE shop_id = ?')
+        .bind(encAt, encRt, shop.shop_id).run();
+      resp = await callExpire(accessToken);
+    } catch (err) {
+      console.error('[test/expire] refresh failed:', err);
+    }
+  }
+
+  const respText = await resp.text();
+  let respJson: unknown;
+  try { respJson = JSON.parse(respText); } catch { respJson = respText; }
+
+  // 멱등 가드: 422 'cannot be reactivated' (이미 active) → metadata는 적용됨, success로 처리
+  const idempotent = !resp.ok
+    && resp.status === 422
+    && /cannot be (reactivated|paused)/i.test(respText);
+
+  return c.json({
+    ok: resp.ok || idempotent,
+    status: resp.status,
+    idempotent_already_active: idempotent || undefined,
+    mall_id: mallId,
+    coupon_no: couponNo,
+    days_set: days,
+    response: respJson,
+  });
+});
+
 // ─── GET /coupons/toggle — 단일 쿠폰의 발급 상태 토글 (pause/restart) ─
 // 진단용: 카페24 admin API의 발급 상태 변경이 정상 동작하는지 검증.
 //   GET /test/coupons/toggle?mall_id=<>&coupon_no=<>&action=pause|restart
