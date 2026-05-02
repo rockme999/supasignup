@@ -413,7 +413,10 @@ export function getRenderJs(): string {
     if (isIconMode) {
       bgSetImp(btn, 'width', '44px');
       bgSetImp(btn, 'height', '44px');
-      bgSetImp(btn, 'border-radius', Math.min(borderRadius, 22) + 'px');
+      // iconOnlyOverride (일반 preset 의 일부 아이콘 모드): 항상 원형 — 미리보기와 통일.
+      // preset === 'icon-only' (전체 아이콘): 사용자 borderRadius 그대로 (기존 동작 유지).
+      var iconRadius = iconOnlyOverride ? 22 : Math.min(borderRadius, 22);
+      bgSetImp(btn, 'border-radius', iconRadius + 'px');
       bgSetImp(btn, 'justify-content', 'center');
       bgSetImp(btn, 'margin', '4px');
       bgSetImp(btn, 'padding', '0');
