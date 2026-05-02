@@ -364,19 +364,23 @@ export function getRenderJs(): string {
     var isOutlineMono = preset === 'outline-mono';
 
     // mono preset: override colors
-    if (isMono) {
+    // 아이콘 row(iconOnlyOverride)에서는 mono/outline/outline-mono 분기를 우회 —
+    // 풀버튼 디자인(흰 배경 + 컬러 테두리/회색 fill)은 풀버튼에만 적용.
+    // 아이콘 row는 항상 브랜드 색상 원형 + 원본 fill로 통일 (어드민 미리보기와 동일).
+    if (isMono && !iconOnlyOverride) {
       bgColor = '#ffffff';
       textColor = '#333333';
       border = '1px solid #d1d5db';
-    } else if (isOutline) {
+    } else if (isOutline && !iconOnlyOverride) {
       textColor = '#333333';
       bgColor = '#ffffff';
       border = '2px solid ' + ((originalColor === '#f2f2f2' || originalColor === '#FFFFFF' || originalColor === '#ffffff') ? '#d1d5db' : originalColor);
-    } else if (isOutlineMono) {
+    } else if (isOutlineMono && !iconOnlyOverride) {
       textColor = '#333333';
       bgColor = '#ffffff';
       border = '2px solid #d1d5db';
     } else if (bgColor === '#f2f2f2' || bgColor === '#FFFFFF' || bgColor === '#ffffff') {
+      // 흰 배경 프로바이더(예: Google): 아이콘 row에서도 회색 테두리 유지 (시인성)
       border = '1px solid #dadce0';
     }
 
@@ -417,15 +421,17 @@ export function getRenderJs(): string {
       var iconOnly = document.createElement('span');
       iconOnly.className = 'bg-btn-icon';
       iconOnly.innerHTML = info.icon;
-      if (isMono || isOutlineMono) {
+      if ((isMono || isOutlineMono) && !iconOnlyOverride) {
+        // mono/outline-mono preset의 'icon-only' preset 케이스에서만 회색 fill 적용.
+        // 아이콘 row(.bg-icon-row)는 브랜드 원형 + 원본 fill로 통일.
         var ipaths = iconOnly.querySelectorAll('path');
         for (var ii = 0; ii < ipaths.length; ii++) { ipaths[ii].setAttribute('fill', '#333333'); }
       } else if (iconOnlyOverride) {
-        // 아이콘 row: 다크 wrap이 적용될 Plus dark preset이면 fill 흰색 (가독성)
-        // soft-shadow / pulse 등은 라이트 배경이므로 원본 컬러 유지
-        // Google: 흰 바탕(#f2f2f2)+4색 G 로고 — 흰색 fill로 덮으면 흰 배경에 흰 아이콘이 되어 보이지 않음.
-        //         가이드라인상으로도 4색 유지 권장 → dark preset 에서도 Google 만 원본 색상 유지.
-        var DARK_PRESETS_FILL = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+        // 아이콘 row: dark-wrap이 적용될 Plus dark preset 3종에서만 fill 흰색 (가독성).
+        // gradient-flow는 light 배경 그라디언트라 흰색 아이콘이 오히려 안 보이므로 제외 (텍스트2 처리와 동일 정합성).
+        // soft-shadow / pulse / mono / outline / outline-mono / default / gradient-flow 는 원본 fill 유지 → 단순 원형.
+        // Google: 흰 바탕(#f2f2f2)+4색 G 로고 — 가이드라인상 4색 유지 권장 → dark preset 에서도 Google 만 원본 색상 유지.
+        var DARK_PRESETS_FILL = ['glassmorphism','neon-glow','liquid-glass'];
         if (DARK_PRESETS_FILL.indexOf(preset) !== -1 && provider !== 'google') {
           var ipaths2 = iconOnly.querySelectorAll('path');
           for (var ii2 = 0; ii2 < ipaths2.length; ii2++) { ipaths2[ii2].setAttribute('fill', '#ffffff'); }
@@ -497,7 +503,8 @@ export function getRenderJs(): string {
     }
 
     // outline / outline-mono preset: hover fill effect
-    if (isOutline || isOutlineMono) {
+    // 아이콘 row(iconOnlyOverride)는 풀버튼 호버 색 보정 대상 아님 — 단순 원형 유지.
+    if ((isOutline || isOutlineMono) && !iconOnlyOverride) {
       // 원본 아이콘 SVG 저장 (mouseleave 복원용)
       var iconEl = btn.querySelector('.bg-btn-icon');
       if (iconEl) btn.setAttribute('data-icon-html', iconEl.innerHTML);

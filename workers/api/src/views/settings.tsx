@@ -1551,7 +1551,9 @@ export const ProvidersPage: FC<{
               var iconRow = document.createElement('div');
               iconRow.className = 'bg-icon-row';
               iconRow.style.cssText = 'display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-top:8px;width:100%';
-              var DARK_PRESETS_FILL_PV = ['glassmorphism','neon-glow','liquid-glass','gradient-flow'];
+              // 위젯 render.ts와 동기화: dark preset 3종(glass/neon/liquid)에서만 흰색 fill.
+              // gradient-flow는 light 배경 그라디언트라 흰색 아이콘이 오히려 안 보이므로 제외.
+              var DARK_PRESETS_FILL_PV = ['glassmorphism','neon-glow','liquid-glass'];
               var darkFill = DARK_PRESETS_FILL_PV.indexOf(style.preset) !== -1;
               iconRowProviders.forEach(function(p) {
                 var ico = document.createElement('div');
