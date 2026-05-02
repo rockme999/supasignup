@@ -140,9 +140,22 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge badge-green" style="font-size:11px">Plus</span>
-          <span>AI 추천 문구 자동 적용: 토글을 켜면 AI가 매주 마케팅 문구를 자동 업데이트합니다</span>
+          <span>AI 추천 문구 자동 적용: 토글을 켜면 AI가 매주 마케팅 문구(미니배너/팝업/에스컬레이션/위젯 텍스트1·2)를 자동 업데이트합니다</span>
         </div>
       </div>
+    </div>
+
+    {/* 최신 기능 (v2.5.x) */}
+    <div class="card" style="margin-bottom:16px;background:#fef9c3;border:1px solid #fde68a">
+      <h2 style="margin-bottom:8px;color:#854d0e">최신 기능 한눈에 보기 <span style="font-size:11px;font-weight:500;color:#a16207;margin-left:4px">(v2.5.0+)</span></h2>
+      <ul style="font-size:13px;color:#713f12;line-height:1.9;padding-left:18px;margin:0">
+        <li><strong>아이콘 모드 프로바이더</strong> <span style="font-size:11px;color:#a16207">(v2.5.0)</span> — 로그인 디자인 페이지 각 row 우측 <code>□ 아이콘</code> 체크박스로 일부 프로바이더만 44×44 원형 아이콘으로 컴팩트 노출. last-used override 유지.</li>
+        <li><strong>위젯 안 쿠폰팩 카드</strong> <span style="font-size:11px;color:#a16207">(v2.5.1, Plus)</span> — 5장 ₩55,000 쿠폰팩을 로그인 위젯 자체에 직접 표시. 위치/간격/크기/디자인 4종/반짝 효과 조정 가능.</li>
+        <li><strong>위젯 안내 텍스트1·2</strong> <span style="font-size:11px;color:#a16207">(v2.5.1, Plus)</span> — 상단 작은 안내 + 소셜~쿠폰팩 사이 큰 볼드 임팩트 문구. 다크 프리셋 가독성 자동 보정.</li>
+        <li><strong>가입/로그인 후 원래 페이지 자동 복귀</strong> <span style="font-size:11px;color:#a16207">(v2.5.1)</span> — 상품 페이지에서 로그인 → 가입 후 그 상품 페이지로 자동 복귀. 가입 직후 이탈 방지.</li>
+        <li><strong>로그인 디자인 3-accordion 재구성</strong> <span style="font-size:11px;color:#a16207">(v2.5.1)</span> — 기본 선택 / 세부 조정 / 추가 옵션 3단 아코디언 + 카드별 [기본값][저장] / 카드 외부 [전체 기본값][전체 저장]. 모두 기본 접힘.</li>
+        <li><strong>카카오톡 채널</strong> <span style="font-size:11px;color:#a16207">(v2.5.0+ Free)</span> — Plus 전용에서 Free로 이동. <a href="/dashboard/settings/general#kakaoChannelCard" style="color:#854d0e;font-weight:600">기본 설정 페이지 최상단</a>에서 설정.</li>
+      </ul>
     </div>
 
     {/* 확인 */}
@@ -428,12 +441,56 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">버튼 문구</td>
             <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">{'{name}'}이 각 서비스명(Google, 카카오 등)으로 자동 치환됩니다.</td>
           </tr>
+          <tr>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">상단 타이틀 <span style="font-size:11px;color:#a16207;font-weight:500">(v2.5.1)</span></td>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">위젯 최상단 타이틀(예: "회원가입 / 로그인"). <strong>v2.5.1부터 기본값 ON</strong>으로 변경되었습니다(이전 OFF). 토글로 자유롭게 끄고 켤 수 있습니다.</td>
+          </tr>
+          <tr style="background:#f8fafc">
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">아이콘 모드 프로바이더 <span style="font-size:11px;color:#a16207;font-weight:500">(v2.5.0)</span></td>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">각 프로바이더 row 우측 <code>□ 아이콘</code> 체크박스를 켜면 풀버튼 영역 아래에 44×44 원형 아이콘으로 컴팩트하게 노출됩니다. 자주 쓰이는 프로바이더(카카오·네이버)는 풀버튼, 보조 프로바이더(디스코드·텔레그램 등)는 아이콘으로 운영하면 화면 길이를 줄일 수 있습니다. 직전 사용 프로바이더는 모드와 무관하게 풀버튼으로 자동 promote (last-used override).</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">위젯 안내 텍스트1·2 <span style="font-size:11px;color:#a16207;font-weight:500">(v2.5.1, Plus)</span></td>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">상단 타이틀 아래 작은 안내(텍스트1)와 소셜 버튼~쿠폰팩 사이의 큰 볼드 임팩트 문구(텍스트2)를 추가할 수 있습니다. 각각 토글로 ON/OFF 가능하며, 다크 프리셋(글래스모피즘·네온 글로우·리퀴드 글래스)에서도 가독성이 자동 보정됩니다. AI 추천 문구도 이 2개 영역에 자동 적용됩니다.</td>
+          </tr>
+          <tr style="background:#f8fafc">
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-weight:500;color:#1e293b">위젯 안 쿠폰팩 카드 <span style="font-size:11px;color:#a16207;font-weight:500">(v2.5.1, Plus)</span></td>
+            <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#475569">5장 ₩55,000 가치 쿠폰팩을 위젯 자체에 카드로 직접 노출합니다. 노출 위치(소셜 위/아래), 간격(0~60px), 크기(LG/MD/SM/XS), 디자인 4종(다크/브랜드/일러스트/미니멀), 반짝 효과를 조정 가능합니다. 이탈 팝업의 쿠폰팩과 같은 객체이므로 디자인·애니메이션이 양쪽에서 자동 동기화됩니다.</td>
+          </tr>
         </tbody>
       </table>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-top:16px;font-size:13px;color:#1e40af;line-height:1.8">
+        <strong>로그인 디자인 페이지 구성 (v2.5.1 재구성)</strong><br />
+        설정이 <strong>3개 아코디언</strong>으로 정리되어 있습니다:
+        <ol style="padding-left:20px;margin:6px 0 0">
+          <li><strong>기본 선택</strong> — 프리셋, 정렬, 활성 프로바이더, 상단 타이틀 등 핵심 옵션</li>
+          <li><strong>세부 조정</strong> — 너비/높이/간격/모서리/문구 등 미세 튜닝</li>
+          <li><strong>추가 옵션</strong> — 위젯 쿠폰팩, 위젯 안내 텍스트1·2 (Plus 전용)</li>
+        </ol>
+        모든 아코디언은 기본 접힘 상태이며, 각 카드에 <strong>[기본값][저장]</strong> 버튼, 카드 외부에 <strong>[전체 기본값][전체 저장]</strong> 버튼이 있어 단위별 / 일괄 적용이 모두 가능합니다.
+      </div>
 
       <div style="margin-top:14px">
         <a href="/dashboard/settings/providers" class="btn btn-outline btn-sm" style="display:inline-flex;width:auto">디자인 설정 →</a>
       </div>
+    </div>
+
+    {/* 5-1. 가입/로그인 후 원래 페이지 자동 복귀 (v2.5.1) */}
+    <div class="card" style="margin-bottom:16px">
+      <h2 style="margin-bottom:8px">5-1. 가입/로그인 후 원래 페이지 자동 복귀 <span style="font-size:12px;color:#a16207;font-weight:500;margin-left:6px">(v2.5.1)</span></h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px">고객이 상품 상세나 장바구니에서 로그인을 시도한 경우, 소셜 가입/로그인 후 <strong>원래 보던 페이지로 자동 복귀</strong>합니다.</p>
+
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:12px;font-size:13px;color:#166534;line-height:1.8">
+        <strong>예시 시나리오</strong><br />
+        상품 상세 페이지 → "로그인" 클릭 → 로그인 페이지 → 소셜 가입 → <strong>다시 그 상품 페이지로 자동 이동</strong>
+      </div>
+
+      <ul style="font-size:13px;color:#475569;line-height:1.8;padding-left:18px;margin:0">
+        <li>URL 파라미터 + localStorage 폴백 두 단계로 구현되어 있어, 가입 직전 보던 컨텍스트(상품·카테고리·장바구니 등)를 유실하지 않습니다.</li>
+        <li>가입 직후 메인 페이지로 강제 이동하지 않으므로, 가입 → 즉시 이탈을 방지합니다.</li>
+        <li>운영자 별도 설정 없이 자동으로 동작합니다.</li>
+      </ul>
     </div>
 
     {/* 6. Plus 기능 */}
@@ -479,8 +536,8 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 추천 마케팅 문구</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">AI 브리핑 생성 시 쇼핑몰 정체성에 맞는 마케팅 문구 7종이 자동 생성됩니다: 미니배너, 팝업(제목/본문/CTA), 에스컬레이션(토스트/배너/버튼). 각 설정 페이지에서 'AI 추천' 영역에 표시되며 원클릭 적용 가능합니다.</p>
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">AI 추천 마케팅 문구 (9종)</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">AI 브리핑 생성 시 쇼핑몰 정체성과 현재 활성 기능에 맞는 마케팅 문구 9종이 자동 생성됩니다: 미니배너, 팝업(제목/본문/CTA), 에스컬레이션(토스트/배너/버튼), 위젯 안내 텍스트1·2. 각 설정 페이지에서 'AI 추천' 영역에 표시되며 원클릭 적용 가능합니다.</p>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
@@ -499,15 +556,47 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
-            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">카카오 채널</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">소셜 가입 시 카카오 채널 추가를 유도하여 마케팅 채널을 확보합니다.</p>
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">쿠폰팩 (5장 ₩55,000) <span style="font-size:11px;color:#a16207;font-weight:500;margin-left:4px">(Plus)</span></p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">신규 회원 가입 시 5단계 단계별 할인 쿠폰을 자동 발급합니다. 이탈 팝업 / 위젯 쿠폰팩 카드와 동일한 객체로 동기화됩니다.</p>
           </div>
-          <a href="/dashboard/settings/general#kakaoChannelCard" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
+          <a href="/dashboard/settings/coupon" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
+        </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">위젯 안 쿠폰팩 카드 <span style="font-size:11px;color:#a16207;font-weight:500;margin-left:4px">(v2.5.1, Plus)</span></p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">로그인 위젯 자체에 쿠폰팩 카드를 직접 노출합니다. 노출 위치(소셜 위/아래), 간격, 크기(LG/MD/SM/XS), 디자인 4종, 반짝 효과를 조정 가능합니다. 자세한 설명은 위 "5. 위젯 디자인 설정" 표 참조.</p>
+          </div>
+          <a href="/dashboard/settings/providers" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
+        </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">위젯 안내 텍스트1·2 <span style="font-size:11px;color:#a16207;font-weight:500;margin-left:4px">(v2.5.1, Plus)</span></p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">위젯 상단 작은 안내(텍스트1)와 소셜~쿠폰팩 사이 큰 볼드 임팩트 문구(텍스트2)를 추가합니다. AI 추천 문구도 이 2개 영역에 자동 적용됩니다. 다크 프리셋에서 가독성 자동 보정.</p>
+          </div>
+          <a href="/dashboard/settings/providers" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
         </div>
       </div>
 
       <div style="margin-top:16px;text-align:center">
         <a href="/dashboard/billing" class="btn btn-primary btn-sm" style="display:inline-flex;width:auto">Plus 업그레이드 →</a>
+      </div>
+    </div>
+
+    {/* 6-1. Free 기능 (Plus에서 이동) */}
+    <div class="card" style="margin-bottom:16px">
+      <h2 style="margin-bottom:8px">6-1. 카카오톡 채널 자동 연결 <span style="font-size:12px;color:#a16207;font-weight:500;margin-left:6px">(v2.5.0+ Free)</span></h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px">고객이 가입 완료 후 쇼핑몰의 카카오톡 채널 추가를 유도하여 마케팅 채널을 확보합니다.</p>
+
+      <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;line-height:1.7">
+        <strong>v2.5.0부터 Free 플랜에서도 사용 가능합니다.</strong> 이전에는 Plus 전용이었으나, 모든 운영자가 활용할 수 있도록 Free로 이동되었습니다.
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;color:#475569;line-height:1.8">
+        <strong>설정 위치 (v2.5.1 통합):</strong> 별도 사이드 메뉴가 제거되고 <a href="/dashboard/settings/general#kakaoChannelCard" style="color:#2563eb;font-weight:600">기본 설정 페이지 최상단</a>으로 통합되었습니다. 카카오 채널 ID를 입력하시면 동작하며, 비워두면 자동 비활성화됩니다. (기존 별도 메뉴 URL은 자동 리다이렉트)
+      </div>
+
+      <div style="margin-top:12px">
+        <a href="/dashboard/settings/general#kakaoChannelCard" class="btn btn-outline btn-sm" style="display:inline-flex;width:auto">카카오 채널 설정 →</a>
       </div>
     </div>
 
@@ -593,10 +682,12 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">"powered by 번개가입" 제거</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">AI 쇼핑몰 정체성 분석</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (10회/일)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (10회/일)</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">AI 주간 브리핑</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (매주 월 9시 KST)</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">AI 추천 마케팅 문구</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (월 10회)</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">AI 추천 마케팅 문구 (9종)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (월 10회)</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">이탈 감지 팝업 + 재방문 미니배너</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">방문 회차별 에스컬레이션 메시지</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">카카오톡 채널 자동 연결</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">쿠폰팩 (5장 ₩55,000)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">위젯 안 쿠폰팩 카드 + 안내 텍스트1·2</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">카카오톡 채널 자동 연결</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (v2.5.0+)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
             </tbody>
           </table>
         </div>
@@ -784,7 +875,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </div>
       </details>
 
-      <details style="padding:12px 0">
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
           <span style="color:#94a3b8;font-size:12px">▶</span> 로그인 페이지에 소셜 버튼이 안 보여요
         </summary>
@@ -798,6 +889,20 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <strong style="color:#1e40af">참고</strong>
             <p style="color:#1e40af;margin-top:4px">회원가입 페이지(<code>/member/join.html</code>)에서는 SSO 버튼이 표시되지 않습니다. 이는 카페24 플랫폼의 제한 사항으로, <strong>로그인 페이지에서만</strong> 소셜 로그인 버튼이 동작합니다.</p>
           </div>
+        </div>
+      </details>
+
+      <details style="padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
+          <span style="color:#94a3b8;font-size:12px">▶</span> 프로바이더가 너무 많아 화면이 길어지는데, 일부만 풀버튼으로 노출할 수 있나요? (v2.5.0)
+        </summary>
+        <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
+          <p>네, <strong>아이콘 모드 프로바이더</strong> 기능을 사용하세요. <a href="/dashboard/settings/providers" style="color:#2563eb">로그인 디자인 페이지</a>의 각 프로바이더 row 우측 <code>□ 아이콘</code> 체크박스를 켜면, 해당 프로바이더는 풀버튼 영역 아래에 <strong>44×44 작은 원형 아이콘 row</strong>로 컴팩트하게 표시됩니다.</p>
+          <ul style="margin-top:6px;padding-left:18px">
+            <li>자주 쓰이는 카카오·네이버는 풀버튼, 보조 프로바이더(디스코드·텔레그램 등)는 아이콘 — 식으로 운영하면 화면 길이를 줄이면서도 모든 가입 경로를 유지할 수 있습니다.</li>
+            <li><strong>last-used 우선</strong>: 직전 로그인한 프로바이더는 모드와 무관하게 풀버튼으로 자동 promote ("이전에 사용" 라벨 표시)</li>
+            <li><code>icon-only</code> preset을 선택하면 모든 프로바이더가 아이콘 처리되어 이 토글은 비활성화됩니다.</li>
+          </ul>
         </div>
       </details>
     </div>
@@ -922,12 +1027,14 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               </tr>
             </thead>
             <tbody>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">미니배너</td><td style="padding:6px 12px;border:1px solid #e2e8f0">쇼핑몰 내 소셜 가입 유도 배너</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">이탈 감지 팝업</td><td style="padding:6px 12px;border:1px solid #e2e8f0">페이지 이탈 시 소셜 가입 유도 팝업</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">에스컬레이션</td><td style="padding:6px 12px;border:1px solid #e2e8f0">재방문 감지 후 자동 혜택 제공</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">카카오 채널 연동</td><td style="padding:6px 12px;border:1px solid #e2e8f0">신규 가입 시 카카오 채널 추가 유도</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">미니배너 & 라이브 카운터</td><td style="padding:6px 12px;border:1px solid #e2e8f0">가입 유도 슬라이드 카드 + 실시간 가입자 수 표시</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">이탈 감지 팝업</td><td style="padding:6px 12px;border:1px solid #e2e8f0">페이지 이탈 시 가입 유도 + 쿠폰팩 카드 노출 (4종 카드 구성)</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">에스컬레이션</td><td style="padding:6px 12px;border:1px solid #e2e8f0">재방문 감지 후 자동 혜택 강도 조절</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">AI 주간 보고서</td><td style="padding:6px 12px;border:1px solid #e2e8f0">가입 성과 주간 분석 리포트</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">AI 추천 마케팅 문구</td><td style="padding:6px 12px;border:1px solid #e2e8f0">쇼핑몰 맞춤 AI 카피 자동 생성</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">AI 추천 마케팅 문구 (9종)</td><td style="padding:6px 12px;border:1px solid #e2e8f0">쇼핑몰 맞춤 AI 카피 자동 생성 — 미니배너/팝업/에스컬레이션/위젯 안내 텍스트1·2</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">쿠폰팩 (5장 ₩55,000)</td><td style="padding:6px 12px;border:1px solid #e2e8f0">신규 회원 가입 시 5단계 단계별 할인 쿠폰 자동 발급</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">위젯 안 쿠폰팩 카드</td><td style="padding:6px 12px;border:1px solid #e2e8f0">로그인 위젯 자체에 쿠폰팩 카드 직접 표시 (v2.5.1)</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">위젯 안내 텍스트1·2</td><td style="padding:6px 12px;border:1px solid #e2e8f0">상단 작은 안내 + 소셜~쿠폰팩 사이 큰 볼드 임팩트 문구 (v2.5.1)</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">쿠폰 3종 동시 발급</td><td style="padding:6px 12px;border:1px solid #e2e8f0">무료배송, 정액, 정률 쿠폰 동시 제공</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">세부 설정 커스터마이징</td><td style="padding:6px 12px;border:1px solid #e2e8f0">각 기능의 세부 옵션 제어 가능</td></tr>
             </tbody>
@@ -946,12 +1053,49 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         </div>
       </details>
 
-      <details style="padding:12px 0">
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
           <span style="color:#94a3b8;font-size:12px">▶</span> 카카오톡 채널 자동 연결은 어떻게 쓰나요?
         </summary>
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
-          <p>Plus 요금제에서 제공되는 기능으로, 고객이 카카오 로그인 후 쇼핑몰의 카카오톡 채널로 자동 친구 추가를 유도합니다. 관리자 &gt; 설정 &gt; 카카오 채널 ID 입력 후 활성화하시면 동작합니다.</p>
+          <p><strong>v2.5.0부터 Free 플랜에서도 사용 가능합니다.</strong> 고객이 가입 완료 후 쇼핑몰의 카카오톡 채널 추가를 유도합니다.</p>
+          <p style="margin-top:6px">설정 위치: <a href="/dashboard/settings/general#kakaoChannelCard" style="color:#2563eb">기본 설정 &gt; 카카오 채널 카드</a>에서 카카오 채널 ID를 입력하시면 동작합니다. 비워두면 자동으로 비활성화됩니다.</p>
+          <p style="margin-top:6px;color:#64748b;font-size:12px">v2.5.1: 별도 사이드 메뉴 항목이 제거되고 기본 설정 페이지 최상단으로 통합되었습니다. 기존 URL은 자동 리다이렉트됩니다.</p>
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
+          <span style="color:#94a3b8;font-size:12px">▶</span> 위젯 안에 쿠폰팩 카드를 직접 보여줄 수 있나요? (v2.5.1)
+        </summary>
+        <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
+          <p>네, 가입 시 받는 5장 ₩55,000 가치 쿠폰팩이 <em>이탈 팝업뿐 아니라 로그인 위젯 자체</em>에 카드로 표시됩니다 (Plus 전용).</p>
+          <p style="margin-top:6px"><a href="/dashboard/settings/providers" style="color:#2563eb">로그인 디자인 &gt; 추가 옵션</a> 섹션에서 노출 위치(소셜 위/아래), 간격(0~60px), 크기(LG/MD/SM/XS), 디자인 4종(다크/브랜드/일러스트/미니멀), 반짝 효과를 조정 가능합니다.</p>
+          <p style="margin-top:6px">이탈 팝업의 쿠폰팩과 같은 객체이므로 디자인·애니메이션이 양쪽에서 자동 동기화됩니다.</p>
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
+          <span style="color:#94a3b8;font-size:12px">▶</span> 위젯 안에 안내 문구를 추가할 수 있나요? (v2.5.1)
+        </summary>
+        <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
+          <p>네, 두 영역에 안내 문구를 표시할 수 있습니다 (Plus 전용).</p>
+          <ul style="padding-left:18px;margin-top:6px">
+            <li><strong>텍스트1</strong> — 상단 타이틀 아래, 작은 글씨 (기본 ON, "아이디 비밀번호 입력없이 번개가입! 번개로그인!")</li>
+            <li><strong>텍스트2</strong> — 소셜 버튼과 쿠폰팩 사이, 큰 볼드 (기본 ON, "회원가입 즉시 사용가능한 쿠폰팩 증정")</li>
+          </ul>
+          <p style="margin-top:6px">각 영역마다 토글로 ON/OFF 가능하며, AI 추천 문구도 이 2개 영역에 자동 적용됩니다 (월요일 자동 브리핑과 함께 갱신). 다크 프리셋(글래스모피즘·네온 글로우·리퀴드 글래스)에서도 가독성이 자동 보정됩니다.</p>
+        </div>
+      </details>
+
+      <details style="padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
+          <span style="color:#94a3b8;font-size:12px">▶</span> 가입 / 로그인 후 어떤 페이지로 이동하나요? (v2.5.1)
+        </summary>
+        <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
+          <p><strong>원래 보던 페이지로 자동 복귀</strong>합니다. 예: 상품 상세 페이지에서 "로그인" 클릭 → 로그인 페이지 → 소셜 가입 → 다시 그 상품 페이지로 자동 이동.</p>
+          <p style="margin-top:6px">URL 파라미터 + localStorage 폴백으로 구현되어 있어, 가입 직전 보던 컨텍스트(상품, 카테고리, 장바구니 등)를 잃지 않고 가입 직후 이탈을 방지합니다.</p>
         </div>
       </details>
     </div>
@@ -1002,20 +1146,24 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
       <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 추천 마케팅 문구란 무엇인가요?</summary>
         <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
-          AI 브리핑 생성 시 쇼핑몰 정체성에 맞는 <strong>마케팅 문구 7종</strong>이 자동 생성됩니다:<br /><br />
+          AI 브리핑 생성 시 쇼핑몰 정체성과 <em>현재 활성화된 기능</em>에 맞는 <strong>마케팅 문구 9종</strong>이 자동 생성됩니다 (v2.5.1):<br /><br />
           - 미니배너 문구<br />
           - 에스컬레이션 토스트 메시지<br />
           - 에스컬레이션 플로팅 배너 문구 + 버튼 텍스트<br />
-          - 이탈 감지 팝업 제목 + 본문 + CTA 버튼<br /><br />
-          각 설정 페이지에서 <strong>'AI 추천'</strong> 영역에 추천 문구가 표시되며, 적용 버튼으로 원클릭 적용할 수 있습니다.
+          - 이탈 감지 팝업 제목 + 본문 + CTA 버튼<br />
+          - 위젯 안내 텍스트1 (상단 타이틀 아래 작은 글씨)<br />
+          - 위젯 안내 텍스트2 (소셜~쿠폰팩 사이 큰 볼드)<br /><br />
+          각 설정 페이지에서 <strong>'AI 추천'</strong> 영역에 추천 문구가 표시되며, 적용 버튼으로 원클릭 적용할 수 있습니다.<br /><br />
+          <span style="font-size:12px;color:#64748b">v2.5.1: AI가 <em>현재 활성 기능</em>을 정확히 알고 카피를 생성합니다. 쿠폰팩(5장 ₩55,000)이 활성이면 "쿠폰팩 증정" 같은 정확한 표현, 단일 쿠폰만 활성이면 그 쿠폰 종류·금액에 맞는 표현, 비활성 기능은 카피에 포함되지 않습니다.</span>
         </div>
       </details>
 
       <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
         <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b">AI 추천 문구 자동 적용이란?</summary>
         <div style="margin-top:8px;font-size:13px;color:#475569;line-height:1.7;padding-left:8px">
-          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a>에서 <strong>'AI 추천 문구 자동 적용'</strong> 토글을 켜면, AI 브리핑가 생성될 때마다 추천 문구가 미니배너, 이탈 감지 팝업, 에스컬레이션 설정에 자동 반영됩니다.<br /><br />
-          매주 월요일 자동 보고서와 함께 마케팅 문구도 자동 업데이트되므로, 항상 최신 트렌드에 맞는 문구가 유지됩니다.
+          <a href="/dashboard/settings/general" style="color:#2563eb">기본 설정</a>에서 <strong>'AI 추천 문구 자동 적용'</strong> 토글을 켜면, AI 브리핑이 생성될 때마다 추천 문구가 미니배너, 이탈 감지 팝업, 에스컬레이션, <strong>위젯 안내 텍스트1·2</strong> 설정에 자동 반영됩니다.<br /><br />
+          매주 월요일 자동 보고서와 함께 마케팅 문구도 자동 업데이트되므로, 항상 최신 트렌드에 맞는 문구가 유지됩니다.<br /><br />
+          <span style="font-size:12px;color:#64748b">위젯 안내 텍스트1·2의 경우 운영자가 토글로 비활성화한 경우에는 자동 적용되지 않아, 직접 끄신 설정은 보존됩니다.</span>
         </div>
       </details>
 
