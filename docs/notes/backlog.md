@@ -4,6 +4,27 @@
 
 ---
 
+## 0. 프로덕션 운영 모니터링 (다음 세션 즉시 시작)
+
+### 0-1. AI 자동답변 4/22→5/1 회귀 추적
+- **현황**: 4/22 02:38 inquiry(suparain999, "디자인 프리셋 종류")는 18초 후 정상 자동답변. 5/1 05:47 inquiry(sik59, "로그인 문의")는 status='pending' 그대로 + `ai_auto_reply_failures` 0건.
+- **원인 미확정**: 코드는 정상 (전역 토글 ON, dashboard.ts:986-990 호출 분기), 실패 기록도 없음 — `autoReplyInquiry` 함수가 silent fail 또는 호출 자체 안 됨.
+- **다음 점검**: 새 inquiry 발생 시 wrangler tail로 실시간 로그 확인 → `[auto-reply]` 로그 출력 여부, 실패 시 reason. Cloudflare Workers AI binding 상태 + D1 INSERT 실패 가능성.
+- **운영자 영향**: 자동답변 토글 ON인데 답변 안 가는 inquiry 발생 가능 → 다음 사례 시 즉시 진단.
+
+### 0-2. suparain999 orphan 쿠폰 5장 정리 (운영자 수동)
+- 카페24 어드민 → 프로모션 → 쿠폰 관리에서 D1 매핑 안 된 5장 status='D' 처리 권장.
+- D1 매핑된 5장: cafe24_coupon_no `6085083913400005278`, `5280`, `5282`, `5284`, `5286` (보존)
+- 나머지 5장(같은 이름)은 삭제 — 신규 가입자에게 10장 발급되는 위험 차단.
+- 향후 이중 등록은 v2.5.1 fix(KV mutex + enabled:true 제거 + body.enabled===undefined 분기)로 차단됨.
+
+### 0-3. v2.5.1 추가 핫픽스 프로덕션 배포 미완료
+- 직전 commit `ec82741` (미니배너 isTabSticky 가드 보강) — 스테이징만 배포, 프로덕션 미반영.
+- 다른 미배포 commit: `a0e0452` (이중 등록 fix + fullWidth 기본값 OFF), `78c3834` (UI 톤 다듬기)
+- **다음 세션**: `git push origin main` + `printf 'yes\nyes\n' | bash scripts/deploy.sh production` 컨펌 진행.
+
+---
+
 ## 1. 쿠폰팩 만료일 변경 — 삭제 + 재생성 패턴
 
 **현재 상태 (v2.5.1)**: 등록된 쿠폰팩(`state in (active, paused)`)의 만료일 변경 기능 폐지. 운영자가 만료일 입력은 readonly, 카페24 어드민에서 직접 변경하도록 안내.
