@@ -1744,15 +1744,20 @@ export const ProvidersPage: FC<{
           });
 
           async function saveStyle() {
-            shopId = document.getElementById('providerForm').dataset.shopId;
-            var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style);
-            if (resp.ok) {
-              styleChanged = false;
-              var saveBtn = document.getElementById('saveStyleBtn');
-              if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.5'; }
-              showToast('success', '디자인이 저장되었습니다.');
-            } else {
-              showToast('error', '저장에 실패했습니다.');
+            try {
+              shopId = document.getElementById('providerForm').dataset.shopId;
+              var resp = await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/widget-style', style);
+              if (resp.ok) {
+                styleChanged = false;
+                // 토스트 먼저 띄우고 disabled 처리 — 어떤 사이드 이펙트가 토스트를 가리는 일 방지
+                showToast('success', '디자인이 저장되었습니다.');
+                var saveBtn = document.getElementById('saveStyleBtn');
+                if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.5'; }
+              } else {
+                showToast('error', '저장에 실패했습니다.');
+              }
+            } catch(e) {
+              showToast('error', '저장 중 오류가 발생했습니다.');
             }
           }
 
