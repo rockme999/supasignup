@@ -121,8 +121,10 @@ export function getRenderJs(): string {
         bgSetImp(t1, 'width', '100%');
         bgSetImp(t1, 'text-align', 'center');
         bgSetImp(t1, 'font-size', '12px');
-        // glassmorphism 만 그라디언트 배경에 #64748b 가독성 떨어짐 → 보정
-        bgSetImp(t1, 'color', preset === 'glassmorphism' ? '#cbd5e1' : '#64748b');
+        // 어두운 배경(glassmorphism / neon-glow / liquid-glass): 연한 회색으로 가독성 보정.
+        // gradient-flow 는 light 배경 그라디언트라 연한 회색이면 오히려 안 보임 → 기본값 유지.
+        var T1_DARK_PRESETS = ['glassmorphism','neon-glow','liquid-glass'];
+        bgSetImp(t1, 'color', T1_DARK_PRESETS.indexOf(preset) !== -1 ? '#cbd5e1' : '#64748b');
         bgSetImp(t1, 'line-height', '1.5');
         bgSetImp(t1, 'margin', '6px 0 12px');
         bgSetImp(t1, 'white-space', 'pre-line');

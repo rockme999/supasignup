@@ -1328,7 +1328,9 @@ export const ProvidersPage: FC<{
             // 텍스트1: 상단 타이틀 아래, 작은 폰트
             if (isPlusPreview && style.customText1Enabled !== false && style.customText1 && style.preset !== 'icon-only') {
               var t1 = document.createElement('div');
-              var t1Color = (style.preset === 'glassmorphism') ? '#cbd5e1' : '#64748b';
+              // 어두운 배경 3종(gradient-flow 제외 — light 그라디언트라 연한 회색이면 안 보임)
+              var T1_DARK_PRESETS_PV = ['glassmorphism','neon-glow','liquid-glass'];
+              var t1Color = T1_DARK_PRESETS_PV.indexOf(style.preset) !== -1 ? '#cbd5e1' : '#64748b';
               t1.style.cssText = 'width:100%;text-align:center;font-size:12px;color:' + t1Color + ';line-height:1.5;margin:6px 0 12px;white-space:pre-line';
               t1.textContent = String(style.customText1).replace(/\\\\n/g, '\\n');
               container.appendChild(t1);
