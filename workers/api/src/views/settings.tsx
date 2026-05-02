@@ -2207,7 +2207,7 @@ export const ProvidersPage: FC<{
                 if (window.renderProviderPreview) window.renderProviderPreview();
               });
             });
-            // 디자인 4종 — PUT /coupon-pack 의 design 필드 즉시 저장 (기존 핸들러 활용)
+            // 디자인 4종 — metadata 즉시 저장. enabled 필드 보내지 않음 (서버에서 등록/해제 트리거 차단).
             document.querySelectorAll('.cp-design-btn').forEach(function(btn) {
               btn.addEventListener('click', async function() {
                 if (!isPlus) return;
@@ -2225,13 +2225,13 @@ export const ProvidersPage: FC<{
                 if (window.renderProviderPreview) window.renderProviderPreview();
                 try {
                   await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon-pack', {
-                    enabled: true, design: design,
+                    design: design,
                     anim_mode: !!document.getElementById('optCpAnim').checked
                   });
                 } catch(e) {}
               });
             });
-            // 반짝 토글 — 즉시 저장
+            // 반짝 토글 — metadata 즉시 저장 (enabled 필드 안 보냄)
             var animEl = document.getElementById('optCpAnim');
             if (animEl) {
               animEl.addEventListener('change', async function() {
@@ -2240,7 +2240,6 @@ export const ProvidersPage: FC<{
                 if (window.renderProviderPreview) window.renderProviderPreview();
                 try {
                   await apiCall('PUT', '/api/dashboard/shops/' + shopId + '/coupon-pack', {
-                    enabled: true,
                     design: (window.__bgCpDesign || ${JSON.stringify(cpDesign)}),
                     anim_mode: !!animEl.checked
                   });

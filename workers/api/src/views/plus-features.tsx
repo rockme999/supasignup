@@ -346,7 +346,7 @@ export const BannerSettingsPage: FC<{
   isCafe24?: boolean;
 }> = ({ shop, shopId, bannerConfig, liveCounterConfig, isCafe24 }) => {
   const isPlus = shop != null && shop.plan !== 'free';
-  const bc = bannerConfig || { preset: 0, text: '', borderRadius: 10, icon: '⚡', position: 'floating', fullWidth: true, paddingX: 24, height: 44 };
+  const bc = bannerConfig || { preset: 0, text: '', borderRadius: 10, icon: '⚡', position: 'floating', fullWidth: false, paddingX: 24, height: 44 };
   const presetStyles = [
     { bg: '#ffffff', color: '#111827', border: '1px solid #d1d5db' },
     { bg: '#f3f4f6', color: '#4b5563', border: '1px solid #d1d5db' },
@@ -405,7 +405,7 @@ export const BannerSettingsPage: FC<{
                 <div style="text-align:center">
                   <div
                     id="bannerPreview"
-                    style={`${(bc.fullWidth !== false) ? 'width:100%' : 'width:fit-content;padding:0 ' + (bc.paddingX || 24) + 'px'};height:30px;margin:0 auto;background:${ps.bg};border:${ps.border};border-radius:${bc.borderRadius}px;opacity:${(bc.opacity != null ? bc.opacity : 90) / 100};display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer`}
+                    style={`${(bc.fullWidth === true) ? 'width:100%;padding:0 16px' : 'width:fit-content;padding:0 ' + (bc.paddingX || 24) + 'px'};height:30px;margin:0 auto;background:${ps.bg};border:${ps.border};border-radius:${bc.borderRadius}px;opacity:${(bc.opacity != null ? bc.opacity : 90) / 100};display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer`}
                   >
                     <span style={`color:${ps.color};font-size:14px;font-weight:${bc.bold ? '600' : '400'};font-style:${bc.italic ? 'italic' : 'normal'}`} id="bannerPreviewText">
                       <span id="bannerPreviewIcon">{bc.icon || '⚡'}</span> {bc.text || '번개가입으로 회원 혜택을 받으세요!'}
@@ -578,11 +578,11 @@ export const BannerSettingsPage: FC<{
                   <div style="margin-bottom:16px">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
                       <span style="font-size:13px;font-weight:600">전체 너비</span>
-                      <div id="bannerFullWidthToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${(bc.fullWidth !== false) ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'}`}>
-                        <div style={`position:absolute;top:2px;${(bc.fullWidth !== false) ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
+                      <div id="bannerFullWidthToggle" style={`width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;background:${(bc.fullWidth === true) ? 'linear-gradient(135deg,#f472b6 0%,#db2777 100%)' : '#d1d5db'}`}>
+                        <div style={`position:absolute;top:2px;${(bc.fullWidth === true) ? 'right:2px' : 'left:2px'};width:18px;height:18px;background:white;border-radius:50%;transition:all 0.2s`}></div>
                       </div>
                     </div>
-                    <div id="bannerPaddingGroup" style={`opacity:${(bc.fullWidth !== false) ? '0.4' : '1'};pointer-events:${(bc.fullWidth !== false) ? 'none' : 'auto'}`}>
+                    <div id="bannerPaddingGroup" style={`opacity:${(bc.fullWidth === true) ? '0.4' : '1'};pointer-events:${(bc.fullWidth === true) ? 'none' : 'auto'}`}>
                       <label style="display:block;font-size:12px;color:#64748b;margin-bottom:6px">좌우 여백</label>
                       <div style="display:flex;align-items:center;gap:12px">
                         <input type="range" min="12" max="80" value={String(bc.paddingX || 24)} id="bannerPaddingX" style="flex:1" />
@@ -699,7 +699,7 @@ export const BannerSettingsPage: FC<{
                   });
                 }
 
-                var isFullWidth = ${bc.fullWidth !== false ? 'true' : 'false'};
+                var isFullWidth = ${bc.fullWidth === true ? 'true' : 'false'};
                 var toggleEl = document.getElementById('bannerFullWidthToggle');
                 var paddingGroup = document.getElementById('bannerPaddingGroup');
                 var preview = document.getElementById('bannerPreview');

@@ -1337,6 +1337,29 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
   const mergedAnim:   boolean             = body.anim_mode ?? prevPack?.anim_mode ?? true;
   const mergedExpiry: number              = body.expire_days ?? prevPack?.expire_days ?? 30;
   const mergedSize:   CouponPackSize      = body.size ?? prevPack?.size ?? 'lg';
+  // ── enabled 미지정: metadata 만 갱신 (등록/해제 트리거 안 함) ──
+  // 클라이언트가 디자인/반짝/크기 즉시 저장 시 enabled 필드 안 보냄.
+  // unregistered 상태에서도 design/anim_mode/size 만 DB에 저장 (다음 활성화 시 활용).
+  // 의도하지 않은 신규 등록 차단 (suparain999 이중 등록 사례 fix).
+  if (body.enabled === undefined) {
+    const newPack: CouponPackConfig = withPackDefaults({
+      ...(prevPack ?? {}),
+      design: mergedDesign,
+      anim_mode: mergedAnim,
+      size: mergedSize,
+    });
+    const newConfig = { ...existingConfig, pack: newPack };
+    await c.env.DB
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(newConfig), shopId)
+      .run();
+    await Promise.all([
+      c.env.KV.delete(`widget_config:${shop.client_id}`),
+      purgeWidgetConfigCache(shop.client_id, c.env.BASE_URL),
+    ]);
+    return c.json({ ok: true, pack: newPack, items: prevPack?.items ?? [], failures: [] });
+  }
+
   if (body.enabled) {
     // ── 활성화 경로 분기 ──────────────────────────────────────
     // 이미 등록된 쿠폰팩(active|paused)은 metadata(design/anim_mode/size)만 갱신.
@@ -1377,7 +1400,28 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
     }
 
     // ── unregistered 상태에서 활성화: 5개 쿠폰 카페24 신규 등록 ──
-    const result = await registerCouponPack(c.env, shop);
+    // 이중 등록 방지 KV mutex (suparain999 사례: 동시 PUT 두 번으로 카페24에 5+5=10장 누적된 적 있음).
+    // 첫 요청이 lock 획득 후 등록 진행, 동시 두번째 요청은 409 즉시 반환 → 운영자에게 안내.
+    // 30초 TTL: registerCouponPack 평균 3~5초 + 충분 버퍼. finally 에서 명시 해제.
+    const registerLockKey = `coupon_pack_register:${shop.shop_id}`;
+    const existingLock = await c.env.KV.get(registerLockKey);
+    if (existingLock) {
+      console.warn(`[CouponPack] 이중 등록 시도 차단 (lock 보유 중): mall=${shop.mall_id}`);
+      return c.json({
+        ok: false,
+        error: 'register_in_progress',
+        message: '쿠폰팩 등록이 이미 진행 중입니다. 잠시 후 다시 시도해 주세요.',
+      }, 409);
+    }
+    await c.env.KV.put(registerLockKey, '1', { expirationTtl: 30 });
+
+    let result: Awaited<ReturnType<typeof registerCouponPack>>;
+    try {
+      result = await registerCouponPack(c.env, shop);
+    } finally {
+      // 명시 해제 — 30초 TTL 의존하지 않고 즉시 풀어 다음 요청 허용
+      await c.env.KV.delete(registerLockKey).catch(() => { /* best-effort */ });
+    }
 
     const now = new Date().toISOString();
     const packActive = result.items.length > 0;
