@@ -713,28 +713,7 @@ dashboard.put('/shops/:id/coupon', async (c) => {
     rate?: { enabled?: boolean; expire_days?: number; discount_rate?: number; min_order?: number };
   }>();
 
-  const isFree = shop.plan === 'free';
-
-  // 무료 플랜: 정률할인 사용 불가, 1종만 허용
-  if (isFree) {
-    if (body.rate?.enabled) {
-      return c.json({ error: 'plan_limit', message: '무료 플랜에서는 정률할인 쿠폰을 사용할 수 없습니다.' }, 403);
-    }
-    const shippingOn = body.shipping?.enabled ?? false;
-    const amountOn = body.amount?.enabled ?? false;
-    if (shippingOn && amountOn) {
-      return c.json({ error: 'plan_limit', message: '무료 플랜에서는 쿠폰 1종만 사용할 수 있습니다.' }, 403);
-    }
-    // 무료 플랜: 세부 설정 강제 기본값
-    if (body.shipping) {
-      body.shipping.expire_days = 30;
-    }
-    if (body.amount) {
-      body.amount.expire_days = 30;
-      body.amount.discount_amount = 3000;
-      body.amount.min_order = 0;
-    }
-  }
+  // Free/Plus 동일: 3종 모두 활성화 + 세부 설정 자유 변경. 검증은 공통.
 
   const VALID_EXPIRE_DAYS = [3, 7, 10, 20, 30];
 
@@ -1420,10 +1399,32 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
 
     const newConfig = { ...existingConfig, pack: newPack };
 
-    await c.env.DB
-      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
-      .bind(JSON.stringify(newConfig), shopId)
-      .run();
+    // 활성화 성공 시 위젯 쿠폰팩 노출 + 안내 텍스트1·2도 자동 ON
+    // (Free→Plus 승급 후 첫 활성화 시 widget_style이 false로 강제 저장돼 안 보이는 문제 방지)
+    let widgetStyleUpdated: string | null = null;
+    if (packActive) {
+      let ws: Record<string, unknown> = {};
+      if (shop.widget_style) {
+        try { ws = JSON.parse(shop.widget_style) as Record<string, unknown>; } catch { /* keep empty */ }
+      }
+      let changed = false;
+      if (ws.showCouponPack !== true) { ws.showCouponPack = true; changed = true; }
+      if (ws.customText1Enabled !== true) { ws.customText1Enabled = true; changed = true; }
+      if (ws.customText2Enabled !== true) { ws.customText2Enabled = true; changed = true; }
+      if (changed) widgetStyleUpdated = JSON.stringify(ws);
+    }
+
+    if (widgetStyleUpdated) {
+      await c.env.DB
+        .prepare("UPDATE shops SET coupon_config = ?, widget_style = ?, updated_at = datetime('now') WHERE shop_id = ?")
+        .bind(JSON.stringify(newConfig), widgetStyleUpdated, shopId)
+        .run();
+    } else {
+      await c.env.DB
+        .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+        .bind(JSON.stringify(newConfig), shopId)
+        .run();
+    }
 
     // KV + 엣지 캐시 무효화
     await Promise.all([
@@ -1440,12 +1441,26 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
       pack: newPack,
       items: result.items,
       failures: result.failures,
+      widget_style_auto_enabled: widgetStyleUpdated ? true : undefined,
     });
 
   } else {
     // ── 비활성화: 자동 발급 중지 ───────────────────────────────
-    // unregisterCouponPack은 예외를 던지지 않음 (내부 로그만)
-    await unregisterCouponPack(c.env, shop);
+    // 카페24 쿠폰 일시정지 (status=pause). 부분 실패 시 state 미갱신 + 502 응답으로 운영자에게 안내.
+    // 호출부가 멱등하게 재시도 가능 (운영자가 다시 OFF 토글 → 남은 쿠폰만 다시 시도).
+    const unregisterResult = await unregisterCouponPack(c.env, shop);
+
+    if (!unregisterResult.success) {
+      console.error(
+        `[CouponPack] 운영자 비활성화 부분 실패: mall=${shop.mall_id}, 실패 coupon_no=${unregisterResult.failures.join(',')}`,
+      );
+      return c.json({
+        ok: false,
+        error: 'partial_unregister_fail',
+        failures: unregisterResult.failures,
+        message: '카페24 쿠폰 자동 발급 중지에 일부 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      }, 502);
+    }
 
     const newPack: CouponPackConfig = withPackDefaults({
       ...(prevPack ?? {}),
@@ -1578,12 +1593,17 @@ dashboard.put('/shops/:id/coupon-pack-size', async (c) => {
     return c.json({ error: 'invalid_size', message: `size는 ${VALID_SIZES.join(' | ')} 중 하나여야 합니다.` }, 400);
   }
 
-  // 기존 coupon_config 파싱 후 pack.size 만 갱신
+  // 기존 coupon_config 파싱 후 pack.size 만 갱신.
+  // 단 pack 자체가 미존재(쿠폰팩 미등록 상태)면 size만 박지 않는다 — 빈 객체로 박히면
+  // resolveCouponPackState 가 'unregistered' 로 처리해 위젯엔 안 뜨지만 데이터 위생상 거부.
   let existing: CouponConfig & { pack?: CouponPackConfig } = { ...DEFAULT_COUPON_CONFIG };
   if (shop.coupon_config) {
     try { existing = { ...existing, ...JSON.parse(shop.coupon_config) }; } catch { /* keep default */ }
   }
-  existing.pack = { ...(existing.pack ?? {} as CouponPackConfig), size: body.size };
+  if (!existing.pack || (!existing.pack.state && !existing.pack.enabled)) {
+    return c.json({ error: 'pack_not_registered', message: '쿠폰팩이 먼저 등록되어 있어야 합니다.' }, 409);
+  }
+  existing.pack = { ...existing.pack, size: body.size };
 
   await updateShop(c.env.DB, shopId, { coupon_config: JSON.stringify(existing) });
   // 위젯 캐시 무효화

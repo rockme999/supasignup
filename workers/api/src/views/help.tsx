@@ -154,6 +154,7 @@ export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string }
         <li><strong>위젯 안내 텍스트1·2</strong> <span style="font-size:11px;color:#a16207">(v2.5.1, Plus)</span> — 상단 작은 안내 + 소셜~쿠폰팩 사이 큰 볼드 임팩트 문구. 다크 프리셋 가독성 자동 보정.</li>
         <li><strong>가입/로그인 후 원래 페이지 자동 복귀</strong> <span style="font-size:11px;color:#a16207">(v2.5.1)</span> — 상품 페이지에서 로그인 → 가입 후 그 상품 페이지로 자동 복귀. 가입 직후 이탈 방지.</li>
         <li><strong>로그인 디자인 3-accordion 재구성</strong> <span style="font-size:11px;color:#a16207">(v2.5.1)</span> — 기본 선택 / 세부 조정 / 추가 옵션 3단 아코디언 + 카드별 [기본값][저장] / 카드 외부 [전체 기본값][전체 저장]. 모두 기본 접힘.</li>
+        <li><strong>라이브 가입자 카운터</strong> <span style="font-size:11px;color:#a16207">(Plus)</span> — 위젯 영역에 실시간 가입자 수 + 신규 가입 토스트 표시. 일 평균 가입자 ≥ 3명 통과 시 자동 활성. <a href="/dashboard/settings/banner" style="color:#854d0e;font-weight:600">미니배너 페이지에서 함께 설정</a>.</li>
         <li><strong>카카오톡 채널</strong> <span style="font-size:11px;color:#a16207">(v2.5.0+ Free)</span> — Plus 전용에서 Free로 이동. <a href="/dashboard/settings/general#kakaoChannelCard" style="color:#854d0e;font-weight:600">기본 설정 페이지 최상단</a>에서 설정.</li>
       </ul>
     </div>
@@ -502,7 +503,14 @@ export const GuidePage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
           <div style="flex:1">
             <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">미니배너</p>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 상단에 소셜 가입 유도 배너를 표시합니다. 프리셋, 텍스트, 위치, 높이, 여백을 자유롭게 설정할 수 있습니다.</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">쇼핑몰 상단/하단에 소셜 가입 유도 배너를 표시합니다. 프리셋, 텍스트, 위치, 높이, 여백을 자유롭게 설정할 수 있습니다. 라이브 카운터와 같은 페이지에서 함께 설정합니다.</p>
+          </div>
+          <a href="/dashboard/settings/banner" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
+        </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+          <div style="flex:1">
+            <p style="font-size:14px;font-weight:600;color:#1e293b;margin:0 0 4px">라이브 가입자 카운터</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.7">위젯 영역에 실시간 가입자 수와 신규 가입 토스트를 표시해 사회적 증거(social proof)로 가입을 유도합니다. 위치(좌하단/우하단), 카운터/토스트 노출 여부를 토글로 제어할 수 있습니다. 일 평균 가입자 ≥ 3명 임계값 통과 시 자동으로 활성화됩니다 (미달 시 자동 비활성). 미니배너 페이지에 통합되어 있습니다.</p>
           </div>
           <a href="/dashboard/settings/banner" style="flex-shrink:0;font-size:13px;color:#3b82f6;text-decoration:none;white-space:nowrap;padding-top:2px">설정 →</a>
         </div>
@@ -678,7 +686,7 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <tbody>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 6종 1클릭 가입</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">로그인 버튼 디자인 커스텀</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
-              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">가입 쿠폰</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">1종 (정률 할인)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">3종 (무료배송/정액/정률)</td></tr>
+              <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">가입 쿠폰 3종 (무료배송/정액/정률)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">"powered by 번개가입" 제거</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">AI 쇼핑몰 정체성 분석</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (10회/일)</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (10회/일)</td></tr>
               <tr><td style="padding:6px 12px;border:1px solid #e2e8f0">AI 주간 브리핑</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">❌</td><td style="padding:6px 12px;border:1px solid #e2e8f0;text-align:center">✅ (매주 월 9시 KST)</td></tr>
@@ -711,12 +719,12 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Free</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">무료</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 로그인 6종 + 가입 쿠폰 1종</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">소셜 로그인 6종 + 가입 쿠폰 3종</td>
               </tr>
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Plus</td>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0">월 6,900원 / 연 79,000원</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">미니배너, 이탈감지 팝업, 에스컬레이션, AI 브리핑, 쿠폰 3종 등</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">웰컴 쿠폰팩 5장(₩55,000), 미니배너, 이탈감지 팝업, 에스컬레이션, AI 브리핑 등</td>
               </tr>
             </tbody>
           </table>
@@ -982,11 +990,11 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
             <tbody>
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Free</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">1종 (정률 할인)</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">3종 (무료배송 / 정액 할인 / 정률 할인) — 금액·율·기간·최소주문 자유 설정</td>
               </tr>
               <tr>
                 <td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600">Plus</td>
-                <td style="padding:6px 12px;border:1px solid #e2e8f0">3종 (무료배송, 정액 할인, 정률 할인)</td>
+                <td style="padding:6px 12px;border:1px solid #e2e8f0">3종 + 웰컴 쿠폰팩 5장 (총 ₩55,000 가치 단계별 자동 발급)</td>
               </tr>
             </tbody>
           </table>
@@ -1050,6 +1058,21 @@ export const FaqPage: FC<{ isCafe24?: boolean }> = ({ isCafe24 }) => (
         <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
           <p>네, 모든 기존 설정은 그대로 유지되며 Plus 기능이 추가로 활성화됩니다.</p>
           <p style="margin-top:6px">다운그레이드 시에는 Plus 기능이 즉시 비활성화되지만, 설정 데이터는 보존됩니다. 재구독 시 이전 설정이 그대로 복원됩니다.</p>
+        </div>
+      </details>
+
+      <details style="border-bottom:1px solid #f1f5f9;padding:12px 0">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#1e293b;list-style:none;display:flex;align-items:center;gap:8px">
+          <span style="color:#94a3b8;font-size:12px">▶</span> 라이브 가입자 카운터는 무엇인가요?
+        </summary>
+        <div style="margin-top:10px;font-size:13px;color:#475569;line-height:1.8;padding-left:16px">
+          <p>위젯 영역에 <strong>실시간 가입자 수와 신규 가입 토스트</strong>를 표시해 사회적 증거(social proof)로 가입을 유도하는 Plus 전용 기능입니다.</p>
+          <ul style="padding-left:18px;margin:8px 0">
+            <li>위치: 좌하단 / 우하단 선택</li>
+            <li>카운터 / 토스트 노출 여부 각각 토글</li>
+            <li><strong>일 평균 가입자 ≥ 3명 임계값</strong> 통과 시 자동 활성화 (미달 시 자동 비활성 — 비어 보이는 카운터로 인한 역효과 방지)</li>
+            <li>미니배너와 같은 페이지(<a href="/dashboard/settings/banner" style="color:#2563eb">미니배너 &amp; 라이브</a>)에서 함께 설정</li>
+          </ul>
         </div>
       </details>
 

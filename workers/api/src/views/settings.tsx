@@ -1887,59 +1887,29 @@ export const ProvidersPage: FC<{
             });
           }
 
-          // 기본값으로 되돌리기
+          // 전체 기본값으로 되돌리기 — resetSection 패턴과 동일하게 PUT + reload
+          // (UI 동기화 코드의 element 접근에서 throw 가 발생하면 핸들러 중단되던 문제 회피)
           var resetBtn = document.getElementById('resetStyleBtn');
           if (resetBtn && !resetBtn.__dsBound) {
             resetBtn.__dsBound = true;
             resetBtn.addEventListener('click', async function() {
               if (!confirm('위젯 디자인 전체(기본/세부/추가옵션)를 기본값으로 되돌리고 저장하시겠습니까?')) return;
-              var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true,widgetPosition:'before',customSelector:'',
-                showCouponPack:true,couponPackPosition:'below',couponPackGap:12,
-                customText1Enabled:true,customText1:'아이디 비밀번호 입력없이 번개가입! 번개로그인!',
-                customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'};
-              Object.assign(style, defaults);
-              // UI 컨트롤 동기화
-              document.getElementById('btnWidth').value = defaults.buttonWidth; document.getElementById('widthValue').textContent = defaults.buttonWidth + 'px';
-              document.getElementById('btnHeight').value = defaults.buttonHeight; document.getElementById('heightValue').textContent = defaults.buttonHeight + 'px';
-              document.getElementById('btnGap').value = defaults.buttonGap; document.getElementById('gapValue').textContent = defaults.buttonGap + 'px';
-              document.getElementById('btnRadius').value = defaults.borderRadius; document.getElementById('radiusValue').textContent = defaults.borderRadius + 'px';
-              document.getElementById('btnIconGap').value = defaults.iconGap; document.getElementById('iconGapValue').textContent = defaults.iconGap + 'px';
-              document.getElementById('btnPaddingLeft').value = defaults.paddingLeft; document.getElementById('paddingLeftValue').textContent = defaults.paddingLeft + 'px';
-              document.getElementById('showIconToggle').checked = true;
-              document.getElementById('showTitleToggle').checked = true;
-              document.getElementById('showPoweredByToggle').checked = true;
-              document.getElementById('labelPreset').value = defaults.buttonLabel;
-              document.getElementById('labelCustom').style.display = 'none';
-              document.getElementById('btnWidth').disabled = false;
-              document.querySelectorAll('.preset-card').forEach(function(c) { c.classList.remove('active'); });
-              var defCard = document.querySelector('.preset-card[data-preset="default"]');
-              if (defCard) defCard.classList.add('active');
-              document.querySelectorAll('.align-btn').forEach(function(b) { b.classList.remove('active'); });
-              var defAlign = document.querySelector('.align-btn[data-align="left"]');
-              if (defAlign) defAlign.classList.add('active');
-              // 위치 토글 리셋
-              document.querySelectorAll('.position-btn').forEach(function(b) {
-                b.style.border = '1px solid #d1d5db'; b.style.background = '#fff'; b.style.color = '#475569'; b.style.fontWeight = '400';
-              });
-              var defPos = document.querySelector('.position-btn[data-position="before"]');
-              if (defPos) { defPos.style.border = '1px solid #2563eb'; defPos.style.background = '#eff6ff'; defPos.style.color = '#2563eb'; defPos.style.fontWeight = '600'; }
-              // 커스텀 셀렉터 리셋
-              var csi = document.getElementById('customSelectorInput');
-              if (csi) csi.value = '';
-              var csw = document.getElementById('customSelectorWrap');
-              if (csw) csw.style.display = 'none';
-              // Plus 옵션 UI 동기화
-              var ocp = document.getElementById('optShowCouponPack'); if (ocp) ocp.checked = true;
-              var posR = document.querySelector('input[name=cpPosition][value="below"]'); if (posR) posR.checked = true;
-              var ocg = document.getElementById('optCpGap'); if (ocg) { ocg.value = 12; var ocgv = document.getElementById('optCpGapVal'); if (ocgv) ocgv.textContent = '12px'; }
-              var ot1e = document.getElementById('optText1Enabled'); if (ot1e) ot1e.checked = true;
-              var ot1 = document.getElementById('optText1'); if (ot1) ot1.value = '아이디 비밀번호 입력없이 번개가입! 번개로그인!';
-              var ot2e = document.getElementById('optText2Enabled'); if (ot2e) ot2e.checked = true;
-              var ot2 = document.getElementById('optText2'); if (ot2) ot2.value = '회원가입 즉시 사용가능한 쿠폰팩 증정';
-              renderPreview();
-              markChanged();
-              // 즉시 저장까지 실행
-              await saveStyle();
+              try {
+                var defaults = {preset:'default',buttonWidth:370,buttonHeight:45,buttonGap:6,borderRadius:5,align:'left',buttonLabel:'{name}로 시작하기',showIcon:true,iconGap:30,paddingLeft:100,showTitle:true,showPoweredBy:true,widgetPosition:'before',customSelector:'',
+                  showCouponPack:true,couponPackPosition:'below',couponPackGap:12,
+                  customText1Enabled:true,customText1:'아이디 비밀번호 입력없이 번개가입! 번개로그인!',
+                  customText2Enabled:true,customText2:'회원가입 즉시 사용가능한 쿠폰팩 증정'};
+                var sid = document.getElementById('providerForm').dataset.shopId;
+                var resp = await apiCall('PUT', '/api/dashboard/shops/' + sid + '/widget-style', defaults);
+                if (resp.ok) {
+                  showToast('success', '전체 기본값으로 되돌렸습니다.');
+                  setTimeout(function() { location.reload(); }, 600);
+                } else {
+                  showToast('error', '되돌리기 실패');
+                }
+              } catch(e) {
+                showToast('error', '되돌리기 중 오류가 발생했습니다.');
+              }
             });
           }
           }, 0);
@@ -2169,6 +2139,13 @@ export const ProvidersPage: FC<{
             </div>
             <textarea id="optText1" rows={2} disabled={!isPlus} maxlength={200}
               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box">{customText1Default}</textarea>
+            {/* AI 추천 (Plus 전용) — 동적으로 주입됨 */}
+            <div id="aiText1Suggestion" style="display:none;margin-top:6px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
+              <span style="color:#1e40af;font-weight:600">AI 추천</span>
+              <span style="color:#475569"> · </span>
+              <span id="aiText1CopyText" style="color:#1e293b"></span>
+              <button type="button" id="applyText1Copy" style="margin-left:8px;padding:2px 8px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer">적용</button>
+            </div>
           </div>
 
           {/* 텍스트2 (토글) */}
@@ -2182,6 +2159,13 @@ export const ProvidersPage: FC<{
             </div>
             <textarea id="optText2" rows={2} disabled={!isPlus} maxlength={200}
               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;font-family:inherit;resize:vertical;box-sizing:border-box">{customText2Default}</textarea>
+            {/* AI 추천 (Plus 전용) — 동적으로 주입됨 */}
+            <div id="aiText2Suggestion" style="display:none;margin-top:6px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px">
+              <span style="color:#1e40af;font-weight:600">AI 추천</span>
+              <span style="color:#475569"> · </span>
+              <span id="aiText2CopyText" style="color:#1e293b"></span>
+              <button type="button" id="applyText2Copy" style="margin-left:8px;padding:2px 8px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer">적용</button>
+            </div>
           </div>
         </div>
 
@@ -2265,6 +2249,50 @@ export const ProvidersPage: FC<{
             }
             // 초기 sync
             syncStyle();
+
+            // AI 추천 문구 로드 (Plus 전용 — Free는 textarea 자체가 disabled라 의미 없음)
+            if (isPlus) {
+              (async function() {
+                try {
+                  if (!shopId) return;
+                  var resp = await fetch('/api/dashboard/shops/' + shopId + '/ai-copy', { credentials: 'same-origin' });
+                  if (!resp.ok) return;
+                  var data = await resp.json();
+                  var copy = data.copy;
+                  if (!copy) return;
+                  if (copy.widgetText1) {
+                    var box1 = document.getElementById('aiText1Suggestion');
+                    var txt1 = document.getElementById('aiText1CopyText');
+                    if (box1 && txt1) {
+                      txt1.textContent = copy.widgetText1;
+                      box1.style.display = 'block';
+                      var btn1 = document.getElementById('applyText1Copy');
+                      if (btn1) btn1.addEventListener('click', function() {
+                        var t = document.getElementById('optText1');
+                        if (!t) return;
+                        t.value = copy.widgetText1;
+                        t.dispatchEvent(new Event('input'));
+                      });
+                    }
+                  }
+                  if (copy.widgetText2) {
+                    var box2 = document.getElementById('aiText2Suggestion');
+                    var txt2 = document.getElementById('aiText2CopyText');
+                    if (box2 && txt2) {
+                      txt2.textContent = copy.widgetText2;
+                      box2.style.display = 'block';
+                      var btn2 = document.getElementById('applyText2Copy');
+                      if (btn2) btn2.addEventListener('click', function() {
+                        var t = document.getElementById('optText2');
+                        if (!t) return;
+                        t.value = copy.widgetText2;
+                        t.dispatchEvent(new Event('input'));
+                      });
+                    }
+                  }
+                } catch(e) {}
+              })();
+            }
           })();
         `}} />
 
@@ -2514,7 +2542,7 @@ export const GeneralSettingsPage: FC<{
               </div>
             </div>
             {/* 정률할인 쿠폰 카드 */}
-            <div id="couponCard_rate" style={`border:1px solid #e5e7eb;border-radius:10px;padding:16px${!isPlus ? ';opacity:0.5;pointer-events:none' : ''}`}>
+            <div id="couponCard_rate" style="border:1px solid #e5e7eb;border-radius:10px;padding:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <label class="toggle" style="flex-shrink:0">
@@ -3142,20 +3170,14 @@ export const GeneralSettingsPage: FC<{
               return parseInt(sel.value, 10) || 0;
             }
 
-            // 토글 ON/OFF에 따라 세부 설정 영역 활성화/비활성화
+            // 토글 ON/OFF에 따라 세부 설정 영역 활성화/비활성화 (Free/Plus 동일)
             function bindToggleDetail(checkboxId, detailId) {
               var cb = document.getElementById(checkboxId);
               var detail = document.getElementById(detailId);
               function applyState() {
                 var inputs = detail.querySelectorAll('select, input');
-                // 무료 플랜: 세부 설정은 항상 disabled (토글 ON/OFF 무관)
-                if (IS_FREE) {
-                  inputs.forEach(function(el) { el.disabled = true; });
-                  detail.style.opacity = cb.checked ? '0.6' : '0.4';
-                } else {
-                  inputs.forEach(function(el) { el.disabled = !cb.checked; });
-                  detail.style.opacity = cb.checked ? '1' : '0.4';
-                }
+                inputs.forEach(function(el) { el.disabled = !cb.checked; });
+                detail.style.opacity = cb.checked ? '1' : '0.4';
               }
               cb.addEventListener('change', applyState);
               applyState();
@@ -3199,48 +3221,10 @@ export const GeneralSettingsPage: FC<{
               showBadge('coupon_amount_no_badge', c24.amount_coupon_no);
               showBadge('coupon_rate_no_badge', c24.rate_coupon_no);
 
-              // 토글 바인딩
+              // 토글 바인딩 — Free/Plus 동일하게 토글 ON 시 세부 설정 활성화
               bindToggleDetail('coupon_shipping_enabled', 'couponDetail_shipping');
               bindToggleDetail('coupon_amount_enabled', 'couponDetail_amount');
               bindToggleDetail('coupon_rate_enabled', 'couponDetail_rate');
-
-              // 무료 플랜: 세부 설정 disabled + 1종만 허용
-              if (IS_FREE) {
-                // 세부 설정(금액/기간/최소구매) 모두 disabled
-                document.querySelectorAll('#couponDetail_shipping select, #couponDetail_amount select, #couponDetail_amount input, #couponDetail_rate select, #couponDetail_rate input').forEach(function(el) { el.disabled = true; });
-                // 정률할인 강제 OFF
-                document.getElementById('coupon_rate_enabled').checked = false;
-                document.getElementById('coupon_rate_enabled').disabled = true;
-                applyFreeToggleConstraint();
-              }
-            }
-
-            // 무료 플랜: 1종만 허용 (무료배송 ↔ 정액할인 상호 배타)
-            function applyFreeToggleConstraint() {
-              if (!IS_FREE) return;
-              var shipCb = document.getElementById('coupon_shipping_enabled');
-              var amtCb = document.getElementById('coupon_amount_enabled');
-              // 둘 다 켜져있으면 나중에 켠 쪽만 유지 (초기 로드 시 shipping 우선)
-              if (shipCb.checked && amtCb.checked) {
-                amtCb.checked = false;
-              }
-              bindToggleDetail('coupon_shipping_enabled', 'couponDetail_shipping');
-              bindToggleDetail('coupon_amount_enabled', 'couponDetail_amount');
-            }
-
-            if (IS_FREE) {
-              document.getElementById('coupon_shipping_enabled').addEventListener('change', function() {
-                if (this.checked) {
-                  document.getElementById('coupon_amount_enabled').checked = false;
-                  bindToggleDetail('coupon_amount_enabled', 'couponDetail_amount');
-                }
-              });
-              document.getElementById('coupon_amount_enabled').addEventListener('change', function() {
-                if (this.checked) {
-                  document.getElementById('coupon_shipping_enabled').checked = false;
-                  bindToggleDetail('coupon_shipping_enabled', 'couponDetail_shipping');
-                }
-              });
             }
 
             bindCustomToggle('coupon_amount_preset', 'coupon_amount_custom', null);
@@ -3593,10 +3577,15 @@ export const CouponSettingsPage: FC<{
   const cfg = couponConfig ?? DEFAULT_COUPON_CONFIG_UI;
   const cafe24 = cfg.cafe24_coupons ?? {};
 
-  // 쿠폰팩 모드 판별: pack.state === 'active' 또는 'paused' 이면 쿠폰팩 모드, 아니면 기본 쿠폰 모드
+  // 쿠폰팩 모드 판별:
+  //  - Plus + (active | paused) → 쿠폰팩 카드 표시 (paused는 "일시정지" 배지)
+  //  - Free + paused → 단일 쿠폰 모드로 폴백 + 상단 안내 배너 (Plus 복귀 시 재개)
+  //  - 그 외 → 단일 쿠폰 모드
+  const isPlus = shop.plan !== 'free';
   const pack = cfg.pack;
   const packState = pack ? resolveCouponPackState(pack) : 'unregistered';
-  const isPackMode = packState === 'active' || packState === 'paused';
+  const isPackMode = isPlus && (packState === 'active' || packState === 'paused');
+  const showFreePausedNotice = !isPlus && packState === 'paused';
 
   type CouponRow = {
     label: string;
@@ -3647,6 +3636,14 @@ export const CouponSettingsPage: FC<{
           ? '가입 시 자동 발급되는 쿠폰팩 5장의 설정 및 현황입니다.'
           : '가입 시 자동 발급되는 쿠폰 설정 및 현황입니다.'}
       </p>
+
+      {showFreePausedNotice && (
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e">
+          <strong>Plus 쿠폰팩 일시정지 상태</strong> — Plus 만료 또는 다운그레이드로 5장 자동 발급이 중단되었습니다.
+          쿠폰 정보(카페24 쿠폰 번호 5개)는 보존되어 있어 Plus 복귀 시 자동 재개됩니다.
+          현재는 아래 무료 쿠폰 설정만 적용됩니다.
+        </div>
+      )}
 
       {isPackMode ? (
         <div class="card">
