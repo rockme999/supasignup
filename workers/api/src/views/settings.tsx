@@ -2905,11 +2905,11 @@ export const GeneralSettingsPage: FC<{
                   <p style="font-size:11px;color:#94a3b8;margin-top:6px">
                     회원이 쿠폰을 받은 날부터 며칠간 사용 가능한지 — 7~90일, 기본 30일.
                     <br />
-                    <strong style="color:#92400e">등록 후에는 카페24 정책상 만료일을 변경할 수 없습니다.</strong> 신중히 결정해 주세요.
+                    등록 후 만료일 변경 기능은 <strong style="color:#0369a1">향후 버전에서 지원 예정</strong>이니 신중히 결정해 주세요.
                   </p>
                 ) : (
-                  <p style="font-size:11px;color:#92400e;margin-top:6px;padding:8px 10px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px">
-                    <strong>등록된 쿠폰의 만료일은 변경할 수 없습니다.</strong> 카페24 정책상 활성/일시정지 상태인 쿠폰의 metadata 변경이 차단됩니다. 만료일을 바꾸려면 쿠폰팩을 비활성화 후 다시 활성화(재등록)하거나, 카페24 어드민에서 직접 변경하세요.
+                  <p style="font-size:11px;color:#0369a1;margin-top:6px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px">
+                    <strong>등록된 쿠폰의 만료일 변경 기능은 향후 버전에서 지원 예정입니다.</strong> 지금 변경하시려면 쿠폰팩을 비활성화 후 다시 활성화(재등록)하거나, 카페24 어드민에서 직접 변경하세요.
                   </p>
                 )}
               </div>
