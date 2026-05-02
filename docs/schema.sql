@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS shops (
   banner_config          TEXT,                                    -- Plus: 미니배너 설정 JSON
   popup_config           TEXT,                                    -- Plus: 이탈 팝업 설정 JSON
   escalation_config      TEXT,                                    -- Plus: 에스컬레이션 설정 JSON
-  ai_suggested_copy      TEXT,                                    -- Plus: AI 추천 카피 JSON
+  ai_suggested_copy      TEXT,                                    -- Plus: AI 추천 카피 JSON {banner,toast,floating,floatingBtn,popupTitle,popupBody,popupCta,widgetText1,widgetText2}
   exit_intent_config     TEXT,                                    -- DEPRECATED 2026-04-30 — 이탈 감지 팝업(popup_config)으로 통합. 코드 미사용. 차후 DROP 예정.
   live_counter_config    TEXT,                                    -- Plus: 라이브 가입자 카운터 설정 JSON
   sso_verified_at        TEXT,                                    -- SSO 설정 확인 마지막 성공 시각 (ISO 8601)
