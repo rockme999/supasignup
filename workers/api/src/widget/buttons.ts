@@ -260,16 +260,24 @@ export const WIDGET_JS = `(function() {
     if (this.pageType === 'login') {
       // 이전 페이지 저장 (로그인/가입/동의 페이지가 아닌 마지막 페이지)
       this.saveReturnUrl();
+    }
 
-      // SSO 로그인 완료 후 로그인 페이지에 머무는 경우 → 저장된 이전 페이지로 자동 이동
-      // (카페24 MemberAction.snsLogin()이 return_url을 무시하는 문제 대응)
-      if (this.isUserLoggedIn()) {
-        var returnUrl = this.getReturnUrl();
-        if (returnUrl && returnUrl !== '/member/login.html') {
-          try { localStorage.removeItem('bg_return_url'); } catch(e) {}
-          window.location.href = returnUrl;
-          return;
-        }
+    // 가입/로그인 완료 후 자동 returnUrl redirect — login 외 모든 페이지에서 동작
+    // (카페24 MemberAction.snsLogin()이 return_url 파라미터를 일부 케이스에서 무시 → 메인 페이지로
+    //  돌려보내는 문제의 폴백. localStorage 의 bg_return_url 한 번 소비 후 삭제하므로 무한 루프 없음.)
+    if (this.isUserLoggedIn()) {
+      var returnUrl = this.getReturnUrl();
+      var curPath = window.location.pathname + window.location.search;
+      var safe = returnUrl
+        && returnUrl !== '/'
+        && returnUrl !== '/index.html'
+        && returnUrl.indexOf('/member/login') === -1
+        && returnUrl.indexOf('/member/join') === -1
+        && returnUrl !== curPath;
+      if (safe) {
+        try { localStorage.removeItem('bg_return_url'); } catch(e) {}
+        window.location.href = returnUrl;
+        return;
       }
     }
     this.loadConfig(clientId);
