@@ -12,7 +12,7 @@
 import { Hono } from 'hono';
 import type { Env } from '@supasignup/bg-core';
 import { authMiddleware } from '../middleware/auth';
-import { applyAiCopyToConfigs } from '../services/ai-copy';
+import { applyAiCopyToConfigs, buildActiveFeaturesContext } from '../services/ai-copy';
 import type { AiCopy } from '../services/ai-copy';
 
 // AI 응답 인터페이스 (Cloudflare Workers AI)
@@ -462,8 +462,18 @@ ai.post('/briefing', async (c) => {
   }
 
   const shopName = String(shop.shop_name ?? '쇼핑몰');
+  const activeFeatures = buildActiveFeaturesContext({
+    plan: String(shop.plan ?? 'free'),
+    coupon_config: shop.coupon_config as string | null | undefined,
+    banner_config: shop.banner_config as string | null | undefined,
+    popup_config: shop.popup_config as string | null | undefined,
+    escalation_config: shop.escalation_config as string | null | undefined,
+    widget_style: shop.widget_style as string | null | undefined,
+    kakao_channel_id: shop.kakao_channel_id as string | null | undefined,
+    live_counter_config: shop.live_counter_config as string | null | undefined,
+  });
 
-  const prompt = `당신은 "번개가입" 앱의 AI 어드바이저입니다. 번개가입은 카페24 쇼핑몰에 소셜 로그인(구글, 카카오, 네이버 등)을 통한 1클릭 회원가입 기능을 제공하는 서비스입니다.
+  const prompt = `당신은 "번개가입" 앱의 AI 어드바이저입니다. 번개가입은 카페24 쇼핑몰에 소셜 로그인(구글, 카카오, 네이버, 애플, 디스코드, 텔레그램)을 통한 1클릭 회원가입 기능을 제공하는 서비스입니다.
 
 아래 데이터를 기반으로 쇼핑몰 운영자에게 주간 브리핑을 작성하세요.
 
@@ -474,6 +484,9 @@ ai.post('/briefing', async (c) => {
 ■ 회원가입 혜택 설정
 - ${benefitsText}
 - 쿠폰 발급: ${couponText}
+
+■ 현재 활성 기능 (반드시 이 기능들에만 맞춰 카피를 생성하세요)
+${activeFeatures}
 
 ■ 이번 주 소셜 로그인/가입 통계 (최근 7일)
 ${statSummary}
@@ -490,8 +503,12 @@ ${prevBriefingText}
 3. 이전 보고서가 있으면 변화 추이를 언급하세요.
 4. 통계가 없으면 "데이터 부족"이라 쓰고, 억지로 분석하지 마세요.
 5. 금기어: "1초 가입", "1초가입" — 경쟁사 서비스명이므로 절대 사용 금지. 우리 서비스명은 "번개가입"입니다.
+6. **카피 정확성 (매우 중요)** — "현재 활성 기능"에 명시된 혜택만 사용. 활성 기능에 없는 혜택을 *임의로 만들어내지 마세요*.
+   - 쿠폰팩(5장 ₩55,000)이 활성이면: "쿠폰팩 증정", "5장 쿠폰", "₩55,000 가치" 같은 표현 권장. "3천원 할인 쿠폰" 같은 *임의 단일 쿠폰* 표현 금지.
+   - 단일 쿠폰만 활성이면 그 쿠폰 종류·금액·할인율만 사용.
+   - 카카오 채널 ID가 비어 있으면 카카오 채널 관련 카피 금지.
 
-■ 추가로, 이 쇼핑몰의 정체성과 혜택에 맞는 마케팅 문구를 생성해주세요:
+■ 추가로, 이 쇼핑몰의 정체성·혜택·활성 기능에 맞는 마케팅 문구를 생성해주세요:
   - banner: 미니배너에 표시할 한 줄 문구 (30자 이내, 가입 유도)
   - toast: 재방문 고객에게 보여줄 토스트 메시지 (30자 이내, {n}은 방문횟수로 치환됨)
   - floating: 플로팅 배너 문구 (30자 이내, 가입 혜택 강조)
@@ -499,9 +516,11 @@ ${prevBriefingText}
   - popupTitle: 이탈 감지 팝업 제목 (20자 이내, 주의를 끄는 문구)
   - popupBody: 이탈 감지 팝업 본문 (100자 이내, 혜택과 긴급성 강조)
   - popupCta: 팝업 CTA 버튼 텍스트 (20자 이내)
+  - widgetText1: 위젯 상단 타이틀 아래 *작은* 안내 문구 (가입/로그인 편의성 강조). 한 줄 30자 이내. 예: "아이디 비밀번호 입력없이 번개가입! 번개로그인!"
+  - widgetText2: 위젯의 소셜 버튼과 쿠폰팩 사이 *임팩트* 문구 (큰 볼드). 쿠폰팩이 활성이면 쿠폰팩 증정 강조 권장. 25자 이내. 예: "회원가입 즉시 사용가능한 쿠폰팩 증정", "5만원 상당 신규 회원 쿠폰팩 증정"
 
 반드시 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
-{"performance":"지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)","strategy":"이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)","actions":["실행 가능한 액션 1","실행 가능한 액션 2","실행 가능한 액션 3"],"insight":"AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)","headline":"홈 카드 한 줄 요약 (예: '신규 가입 47명 (+12%) · 이번 주 전략 3가지 도착', 40자 이내)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
+{"performance":"지난주 성과 요약 — 데이터 기반 사실만 (2-3줄)","strategy":"이번 주 전략 — 번개가입 기능 범위 내 제안 (2-3줄)","actions":["실행 가능한 액션 1","실행 가능한 액션 2","실행 가능한 액션 3"],"insight":"AI 의견 — 앱 범위 밖의 참고사항이나 트렌드 (1-2줄, 없으면 빈 문자열)","headline":"홈 카드 한 줄 요약 (예: '신규 가입 47명 (+12%) · 이번 주 전략 3가지 도착', 40자 이내)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"...","widgetText1":"...","widgetText2":"..."}}`;
 
   let rawBriefing = '';
   try {
@@ -570,6 +589,7 @@ ${prevBriefingText}
           banner_config: shop.banner_config as string | null | undefined,
           popup_config: shop.popup_config as string | null | undefined,
           escalation_config: shop.escalation_config as string | null | undefined,
+          widget_style: shop.widget_style as string | null | undefined,
         },
         parsed.copy as AiCopy,
       );
