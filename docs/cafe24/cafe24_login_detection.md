@@ -583,6 +583,41 @@ CAFE24API.getLoginProvider(function(err, res) {
 
 ---
 
+## ⚠️ 카페24 자체 인식 불일치 — `statelogon` true / `MemberAction.isLogin()` false (2026-05-02 검증)
+
+### 증상
+회원이 한 번 로그인한 뒤 명시적 로그아웃 없이 시간이 지나면 다음 상태가 동시에 나타날 수 있음:
+- `iscache=F` 쿠키 살아있음
+- `<body>`에 `xans-layout-statelogon` 클래스가 붙어 카페24 헤더가 "로그인됨"(로그아웃/마이페이지 메뉴) 표시
+- 그러나 `MemberAction.isLogin()` 은 `false`
+
+즉 **카페24 서버의 layout 렌더는 "로그인됨"인데 클라이언트 SDK는 "로그아웃됨"** — 카페24 내부적으로 일관성 없음.
+
+### 운영자 시점에서의 헷갈림
+- 운영자가 로그인 페이지에 있다가 새로고침만 했는데 헤더가 "로그아웃 → 마이페이지"로 바뀐 것처럼 보임
+- 실제로는 **이전 로그인 세션 쿠키(`PHPSESSVERIFY` / `ECSESSID` / `iscache=F`)가 잔존하여** 카페24가 페이지를 statelogon으로 렌더한 것
+- 번개가입의 SSO 흐름과 무관 (네트워크 탭에서 `/oauth/sso-start` 호출 없음으로 확인)
+
+### 진단 방법
+콘솔에서:
+```js
+document.cookie.split(';').filter(s => /iscache|MEMBER|EC_USE/.test(s));
+!!document.querySelector('.xans-layout-statelogon');
+typeof MemberAction !== 'undefined' && MemberAction.isLogin && MemberAction.isLogin();
+```
+세 값이 일관되지 않으면(특히 1번에 `iscache=F` 살아있고 2번 true + 3번 false) 본 현상.
+
+### 해결
+- 카페24 측 원인이라 번개가입에서 직접 패치 불가
+- 시크릿/프라이빗 창에서 재현 안 됨 (회원 세션 쿠키 없음)
+- 실제 로그아웃이 필요하면 카페24 헤더의 "로그아웃" 누르면 `iscache=F` 사라지고 statelogoff로 복귀
+
+### 번개가입 측 영향
+- `widget/buttons.ts`의 자동 returnUrl redirect는 **트리거되지 않음** — `bg_return_url`이 만료(3분 TTL) 또는 u==='/' 폴백이라 safe 검증을 통과 못 함
+- `widget/auth/return-url.ts` `getReturnUrl`은 u==='/' 인 데드 데이터를 즉시 정리하도록 보강 (운영자가 메인 페이지에서 로그인 페이지로 이동한 케이스의 잔존 데이터를 깔끔히 제거)
+
+---
+
 ## 10. 참고 자료
 
 - [카페24 Smart Design Support - Login State Module](https://sdsupport.cafe24.com/module/layout/statelog.html)

@@ -13,29 +13,52 @@
  */
 export function getReturnUrlJs(): string {
   return `
-  // 로그인/가입/동의 페이지가 아닌 이전 페이지를 저장
+  // 로그인/가입/동의 페이지가 아닌 이전 페이지를 timestamp와 함께 저장
+  // 3분 TTL: SSO 정상 흐름(보통 수 초~2분)은 커버하면서, 며칠 묵은 referrer가
+  // 카페24 회원 세션 쿠키 잔존 시 "새로고침만으로 자동 redirect"되는 부작용은 차단.
   BGWidget.prototype.saveReturnUrl = function() {
     try {
       var ref = document.referrer;
       if (!ref) return;
-      // new URL() 대신 <a> 태그를 이용한 ES5 URL 파싱
       var refA = document.createElement('a');
       refA.href = ref;
       var refPath = refA.pathname.toLowerCase();
-      // 로그인/가입/동의 페이지는 저장하지 않음
       var skipPages = ['/member/login', '/member/join', '/member/agreement', '/member/modify'];
       for (var i = 0; i < skipPages.length; i++) {
         if (refPath.indexOf(skipPages[i]) >= 0) return;
       }
-      localStorage.setItem('bg_return_url', refA.pathname + refA.search);
+      var payload = { u: refA.pathname + refA.search, t: Date.now() };
+      localStorage.setItem('bg_return_url', JSON.stringify(payload));
     } catch(e) {}
   };
 
-  // 저장된 복귀 URL 반환 (없으면 메인 페이지)
+  // 저장된 복귀 URL 반환 — 3분 이내만 유효, 만료/무효는 메인 페이지 폴백
   BGWidget.prototype.getReturnUrl = function() {
+    var TTL_MS = 3 * 60 * 1000; // 3분
     try {
       var saved = localStorage.getItem('bg_return_url');
-      if (saved && saved !== '/') return saved;
+      if (!saved) return '/index.html';
+      // JSON 포맷({u,t})만 신뢰. 구 포맷(plain string)은 TTL 미상이라 만료 처리.
+      if (saved.charAt(0) !== '{') {
+        try { localStorage.removeItem('bg_return_url'); } catch(_){}
+        return '/index.html';
+      }
+      var parsed = JSON.parse(saved);
+      if (!parsed || typeof parsed.u !== 'string' || typeof parsed.t !== 'number') {
+        try { localStorage.removeItem('bg_return_url'); } catch(_){}
+        return '/index.html';
+      }
+      if (Date.now() - parsed.t > TTL_MS) {
+        try { localStorage.removeItem('bg_return_url'); } catch(_){}
+        return '/index.html';
+      }
+      // u==='/' 또는 빈값은 메인 페이지 의미라 '/index.html' 폴백과 동일.
+      // 데드 데이터로 남기지 말고 즉시 정리해 다음 호출에서 의미 있는 값만 살아남게 한다.
+      if (!parsed.u || parsed.u === '/') {
+        try { localStorage.removeItem('bg_return_url'); } catch(_){}
+        return '/index.html';
+      }
+      return parsed.u;
     } catch(e) {}
     return '/index.html';
   };
