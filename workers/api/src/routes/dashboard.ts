@@ -1399,8 +1399,9 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
 
     const newConfig = { ...existingConfig, pack: newPack };
 
-    // 활성화 성공 시 위젯 쿠폰팩 노출 + 안내 텍스트1·2도 자동 ON
+    // 활성화 성공 시 위젯 쿠폰팩 노출 + 안내 텍스트1·2 — 미설정(undefined)인 경우만 자동 ON.
     // (Free→Plus 승급 후 첫 활성화 시 widget_style이 false로 강제 저장돼 안 보이는 문제 방지)
+    // 운영자가 명시적으로 OFF(false)한 경우는 보존 — services/ai-copy.ts 의 customText1/2 처리와 일관.
     let widgetStyleUpdated: string | null = null;
     if (packActive) {
       let ws: Record<string, unknown> = {};
@@ -1408,9 +1409,9 @@ dashboard.put('/shops/:id/coupon-pack', async (c) => {
         try { ws = JSON.parse(shop.widget_style) as Record<string, unknown>; } catch { /* keep empty */ }
       }
       let changed = false;
-      if (ws.showCouponPack !== true) { ws.showCouponPack = true; changed = true; }
-      if (ws.customText1Enabled !== true) { ws.customText1Enabled = true; changed = true; }
-      if (ws.customText2Enabled !== true) { ws.customText2Enabled = true; changed = true; }
+      if (ws.showCouponPack === undefined) { ws.showCouponPack = true; changed = true; }
+      if (ws.customText1Enabled === undefined) { ws.customText1Enabled = true; changed = true; }
+      if (ws.customText2Enabled === undefined) { ws.customText2Enabled = true; changed = true; }
       if (changed) widgetStyleUpdated = JSON.stringify(ws);
     }
 

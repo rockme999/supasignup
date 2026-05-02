@@ -906,7 +906,9 @@ export async function updatePackExpireDays(
           },
           body: JSON.stringify({
             shop_no: 1,
-            request: { deleted: 'F', available_day_from_issued: newDays },
+            // deleted 필드 제거 — 카페24 API 2026-03-01: deleted는 'D' 외 invalid (422 거부).
+            // available_day_from_issued 만 변경하는 PUT은 다른 status 필드 없이 통과 (재시도 분기와 일치).
+            request: { available_day_from_issued: newDays },
           }),
         },
       );
