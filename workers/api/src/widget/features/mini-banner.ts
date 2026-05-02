@@ -122,9 +122,14 @@ export function getMiniBannerJs(): string {
         // 기준 요소 자체가 tabProduct면 충돌 방지
         if (navBox && tabProduct && navBox === tabProduct) return false;
         if (!tabProduct || !navBox) return false;
+        // 페이지 진입 직후(스크롤 거의 0) 는 검사 제외 — tabProduct 가 페이지 본문 자연 위치에
+        // 있어도 너무 적극적으로 숨겨지던 회귀 방지 (상품 상세 첫 진입에도 배너 노출).
+        if (window.scrollY < 50) return false;
         var navRect = navBox.getBoundingClientRect();
         var tabRect = tabProduct.getBoundingClientRect();
-        return tabRect.top <= navRect.bottom + 5;
+        // tabProduct 가 sticky로 navBox 바로 아래 또는 뷰포트 최상단에 붙은 상태만 검출.
+        // (페이지 본문 자연 위치 — 큰 양수 값 — 은 제외)
+        return tabRect.top <= navRect.bottom + 5 && tabRect.top >= -5;
       };
 
       // 기준 요소가 뷰포트에 보이는지
