@@ -11,6 +11,8 @@ import { PLAN_PRICES, generateId, encrypt } from '@supasignup/bg-core';
 import { Cafe24Client } from '@supasignup/cafe24-client';
 import { authMiddleware } from '../middleware/auth';
 import { decryptShopTokens } from '../db/queries';
+import { resumeCouponPack } from '../services/coupon-pack';
+import type { CouponPackConfig, CouponPackState } from '../services/coupon-pack';
 
 type BillingEnv = {
   Bindings: Env;
@@ -156,6 +158,23 @@ billing.post('/subscribe', async (c) => {
           .bind(shop.shop_id),
       ]);
       await c.env.KV.delete(`webhook:payment:${order.order_id}`);
+
+      // 쿠폰팩 재개 (state: paused → active) — state=unregistered면 내부 no-op
+      try {
+        const shopForResume = await c.env.DB
+          .prepare('SELECT * FROM shops WHERE shop_id = ?')
+          .bind(shop.shop_id)
+          .first<{ shop_id: string; coupon_config: string | null; platform_access_token: string | null; platform_refresh_token: string | null; owner_id: string; mall_id: string }>();
+        if (shopForResume) {
+          const resumeResult = await resumeCouponPack(c.env, shopForResume as any);
+          if (resumeResult.success) {
+            await billingUpdateCouponPackState(c.env.DB, shop.shop_id, shopForResume.coupon_config, 'active');
+          }
+        }
+      } catch (e) {
+        console.error(`[CouponPack] 재개 예외 (deferred payment): shop=${shop.shop_id}`, e);
+      }
+
       console.info(`Deferred payment processed: subscription=${subId}, order=${order.order_id}`);
     }
 
@@ -235,5 +254,27 @@ billing.get('/status/:id', async (c) => {
 
   return c.json({ status: sub.status, plan: sub.plan });
 });
+
+// ─── Helper: coupon_config.pack.state 갱신 ───────────────────
+async function billingUpdateCouponPackState(
+  db: D1Database,
+  shopId: string,
+  couponConfigRaw: string | null,
+  newState: CouponPackState,
+): Promise<void> {
+  if (!couponConfigRaw) return;
+  try {
+    const config = JSON.parse(couponConfigRaw) as { pack?: CouponPackConfig };
+    if (!config.pack) return;
+    config.pack.state = newState;
+    config.pack.enabled = newState === 'active';
+    await db
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(config), shopId)
+      .run();
+  } catch (err) {
+    console.error(`[CouponPack] coupon_config state 갱신 실패 (billing): shop_id=${shopId}`, err);
+  }
+}
 
 export default billing;

@@ -199,61 +199,25 @@ async function createPackCoupon(
 }
 
 /**
- * 등록된 쿠폰의 자동 발급을 일시 중지한다.
- * PUT /api/v2/admin/coupons/{coupon_no} + status=pause
- */
-async function pausePackCoupon(
-  mallId: string,
-  accessToken: string,
-  couponNo: string,
-): Promise<{ ok: boolean; status: number }> {
-  let resp: Response;
-  try {
-    resp = await fetch(
-      `https://${mallId}.cafe24api.com/api/v2/admin/coupons/${couponNo}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Cafe24-Api-Version': CAFE24_API_VERSION,
-        },
-        body: JSON.stringify({
-          shop_no: 1,
-          request: {
-            status: 'pause',
-            immediate_issue_pause: 'I',  // 즉시 발급 중지
-          },
-        }),
-      },
-    );
-  } catch (err) {
-    console.error(`[CouponPack] 쿠폰 일시정지 fetch 오류: mall=${mallId}, coupon_no=${couponNo}`, err);
-    return { ok: false, status: 0 };
-  }
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    console.error(
-      `[CouponPack] 쿠폰 일시정지 실패: mall=${mallId}, coupon_no=${couponNo}, status=${resp.status}, detail=${text}`,
-    );
-    return { ok: false, status: resp.status };
-  }
-
-  console.info(`[CouponPack] 쿠폰 일시정지 성공: mall=${mallId}, coupon_no=${couponNo}`);
-  return { ok: true, status: resp.status };
-}
-
-/**
- * issue_member_join 값을 토글한다 (정지: 'F' / 재개: 'T').
+ * 쿠폰의 발급 상태를 pause/restart로 토글한다.
  * PUT /api/v2/admin/coupons/{coupon_no}
+ *
+ * 카페24 API 2026-03-01: issue_member_join 단독 PUT은 거부됨.
+ * status='pause' + immediate_issue_pause='I'로 발급 자체를 중지.
+ * (이미 발급된 쿠폰은 영향 없음 — is_stopped_issued_coupon 별도 필드)
+ *
+ * @param action 'pause'(발급 중지) | 'restart'(발급 재개)
  */
-async function toggleMemberJoin(
+async function togglePackCoupon(
   mallId: string,
   accessToken: string,
   couponNo: string,
-  issueMemberJoin: 'T' | 'F',
+  action: 'pause' | 'restart',
 ): Promise<{ ok: boolean; status: number }> {
+  const request: Record<string, string> = { status: action };
+  if (action === 'pause') request.immediate_issue_pause = 'I';
+  else request.immediate_issue_restart = 'I';
+
   let resp: Response;
   try {
     resp = await fetch(
@@ -265,29 +229,36 @@ async function toggleMemberJoin(
           'Content-Type': 'application/json',
           'X-Cafe24-Api-Version': CAFE24_API_VERSION,
         },
-        body: JSON.stringify({
-          shop_no: 1,
-          request: { issue_member_join: issueMemberJoin },
-        }),
+        body: JSON.stringify({ shop_no: 1, request }),
       },
     );
   } catch (err) {
     console.error(
-      `[CouponPack] issue_member_join 토글 fetch 오류: mall=${mallId}, coupon_no=${couponNo}`, err,
+      `[CouponPack] ${action} fetch 오류: mall=${mallId}, coupon_no=${couponNo}`, err,
     );
     return { ok: false, status: 0 };
   }
 
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
+    // 카페24는 멱등하지 않음 — 이미 desired state면 422 + "cannot be" 메시지
+    //   restart 시 이미 active: "Coupons in active status cannot be reactivated"
+    //   pause 시 이미 paused: 유사 메시지 추정
+    // 부분 실패 후 재시도 시 이미 적용된 쿠폰을 success로 처리해 부분 실패 누적 회피.
+    if (resp.status === 422 && /cannot be (reactivated|paused)/i.test(text)) {
+      console.info(
+        `[CouponPack] ${action} 멱등 성공 (이미 적용됨): mall=${mallId}, coupon_no=${couponNo}`,
+      );
+      return { ok: true, status: 200 };
+    }
     console.error(
-      `[CouponPack] issue_member_join 토글 실패: mall=${mallId}, coupon_no=${couponNo}, status=${resp.status}, detail=${text}`,
+      `[CouponPack] ${action} 실패: mall=${mallId}, coupon_no=${couponNo}, status=${resp.status}, detail=${text}`,
     );
     return { ok: false, status: resp.status };
   }
 
   console.info(
-    `[CouponPack] issue_member_join=${issueMemberJoin} 토글 성공: mall=${mallId}, coupon_no=${couponNo}`,
+    `[CouponPack] ${action} 성공: mall=${mallId}, coupon_no=${couponNo}`,
   );
   return { ok: true, status: resp.status };
 }
@@ -506,13 +477,13 @@ export async function pauseCouponPack(
   const failedNos: string[] = [];
 
   for (const couponNo of couponNos) {
-    let result = await toggleMemberJoin(shop.mall_id, accessToken, couponNo, 'F');
+    let result = await togglePackCoupon(shop.mall_id, accessToken, couponNo, 'pause');
 
     if (!result.ok && result.status === 401 && tokens.refresh_token) {
       const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
       if (newToken) {
         accessToken = newToken;
-        result = await toggleMemberJoin(shop.mall_id, accessToken, couponNo, 'F');
+        result = await togglePackCoupon(shop.mall_id, accessToken, couponNo, 'pause');
       }
     }
 
@@ -616,13 +587,13 @@ export async function resumeCouponPack(
   const failedNos: string[] = [];
 
   for (const couponNo of couponNos) {
-    let result = await toggleMemberJoin(shop.mall_id, accessToken, couponNo, 'T');
+    let result = await togglePackCoupon(shop.mall_id, accessToken, couponNo, 'restart');
 
     if (!result.ok && result.status === 401 && tokens.refresh_token) {
       const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
       if (newToken) {
         accessToken = newToken;
-        result = await toggleMemberJoin(shop.mall_id, accessToken, couponNo, 'T');
+        result = await togglePackCoupon(shop.mall_id, accessToken, couponNo, 'restart');
       }
     }
 
@@ -756,23 +727,24 @@ export async function retryFailedPackItems(
 }
 
 /**
- * Plus 웰컴 쿠폰팩 자동 발급을 중지한다.
+ * Plus 웰컴 쿠폰팩 자동 발급을 중지한다 (운영자 명시 OFF).
  *
  * - coupon_config.pack.items에서 cafe24_coupon_no 추출
  * - 각 쿠폰 일시 중지 (PUT + status=pause)
- * - coupon_config.pack.enabled = false 업데이트는 **호출부 책임**
- * - 일부 중지 실패해도 예외를 던지지 않음 (로그만)
+ * - coupon_config.pack 갱신은 **호출부 책임** — 부분 실패 시 state='unregistered' 미갱신 권장
+ * - 부분 실패: audit_logs에 'coupon_pack_unregister_fail' 기록, 호출부가 운영자에게 안내
  *
  * @param env  Cloudflare Workers 환경 바인딩
  * @param shop 대상 shop 레코드 (coupon_config.pack.items 포함)
+ * @returns { success, failures: 실패한 coupon_no 목록 }
  */
 export async function unregisterCouponPack(
   env: Env,
   shop: Shop,
-): Promise<void> {
+): Promise<ToggleCouponPackResult> {
   if (!shop.coupon_config) {
     console.info(`[CouponPack] coupon_config 없음, 해제 스킵: mall=${shop.mall_id}`);
-    return;
+    return { success: true, failures: [] };
   }
 
   let pack: CouponPackConfig | null = null;
@@ -781,23 +753,23 @@ export async function unregisterCouponPack(
     pack = config.pack ?? null;
   } catch {
     console.error(`[CouponPack] coupon_config JSON 파싱 실패: mall=${shop.mall_id}`);
-    return;
+    return { success: true, failures: [] };
   }
 
   if (!pack?.items?.length) {
     console.info(`[CouponPack] pack.items 없음, 해제 스킵: mall=${shop.mall_id}`);
-    return;
+    return { success: true, failures: [] };
   }
 
   const couponNos = pack.items.map(i => i.cafe24_coupon_no).filter((n): n is string => !!n);
   if (couponNos.length === 0) {
     console.info(`[CouponPack] 등록된 coupon_no 없음, 해제 스킵: mall=${shop.mall_id}`);
-    return;
+    return { success: true, failures: [] };
   }
 
   if (!shop.platform_access_token) {
     console.error(`[CouponPack] access_token 없음 (해제): mall=${shop.mall_id}`);
-    return;
+    return { success: false, failures: couponNos };
   }
 
   let tokens: { access_token: string | null; refresh_token: string | null };
@@ -805,34 +777,50 @@ export async function unregisterCouponPack(
     tokens = await decryptShopTokens(shop, env.ENCRYPTION_KEY);
   } catch (err) {
     console.error(`[CouponPack] 토큰 복호화 실패 (해제): mall=${shop.mall_id}`, err);
-    return;
+    return { success: false, failures: couponNos };
   }
 
   if (!tokens.access_token) {
     console.error(`[CouponPack] 복호화된 access_token이 null (해제): mall=${shop.mall_id}`);
-    return;
+    return { success: false, failures: couponNos };
   }
 
   let accessToken = tokens.access_token;
+  const failedNos: string[] = [];
 
   for (const couponNo of couponNos) {
-    let result = await pausePackCoupon(shop.mall_id, accessToken, couponNo);
+    let result = await togglePackCoupon(shop.mall_id, accessToken, couponNo, 'pause');
 
     // 401: 토큰 갱신 후 1회 재시도
     if (!result.ok && result.status === 401 && tokens.refresh_token) {
       const newToken = await refreshAndSaveToken(env, shop, tokens.refresh_token);
       if (newToken) {
         accessToken = newToken;
-        result = await pausePackCoupon(shop.mall_id, accessToken, couponNo);
+        result = await togglePackCoupon(shop.mall_id, accessToken, couponNo, 'pause');
       }
     }
 
     if (!result.ok) {
-      console.error(
-        `[CouponPack] 쿠폰 중지 실패 (계속 진행): mall=${shop.mall_id}, coupon_no=${couponNo}`,
-      );
+      failedNos.push(couponNo);
+      try {
+        await env.DB.prepare(
+          "INSERT INTO audit_logs (id, actor_id, action, target_type, target_id, detail, created_at) VALUES (?, ?, 'coupon_pack_unregister_fail', 'shop', ?, ?, datetime('now'))",
+        ).bind(
+          crypto.randomUUID(),
+          shop.owner_id,
+          shop.shop_id,
+          JSON.stringify({ coupon_no: couponNo, status: result.status }),
+        ).run();
+      } catch (err) {
+        console.error(`[CouponPack] audit_log 저장 실패 (해제): mall=${shop.mall_id}`, err);
+      }
     }
   }
+
+  console.info(
+    `[CouponPack] 해제 완료: mall=${shop.mall_id}, 성공=${couponNos.length - failedNos.length}, 실패=${failedNos.length}`,
+  );
+  return { success: failedNos.length === 0, failures: failedNos };
 }
 
 /** updatePackExpireDays 반환 타입 */
@@ -918,7 +906,7 @@ export async function updatePackExpireDays(
           },
           body: JSON.stringify({
             shop_no: 1,
-            request: { available_day_from_issued: newDays },
+            request: { deleted: 'F', available_day_from_issued: newDays },
           }),
         },
       );

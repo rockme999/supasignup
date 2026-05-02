@@ -222,7 +222,7 @@ benefit_type: 'B' 일 때:
 PUT /api/v2/admin/coupons/{coupon_no}
 Scope: mall.write_promotion
 
-일시정지:
+일시정지 (자동/수동 발급 모두 중지, 이미 발급된 쿠폰은 영향 없음):
 { "shop_no": 1, "request": { "status": "pause", "immediate_issue_pause": "I" } }
 
 재개:
@@ -230,8 +230,34 @@ Scope: mall.write_promotion
 
 삭제:
 { "shop_no": 1, "request": { "status": null, "deleted": "D" } }
-// ★ deleted는 'D' (T가 아님!)
+// ★ deleted는 'D' (T가 아님!) — 보내면 진짜 삭제됨
 ```
+
+#### ⚠️ 함정: `issue_member_join` 단독 PUT은 카페24가 거부 (2026-03-01 검증)
+
+**시도 → 실패 사례** (2026-05-02, suparain888 검증):
+```jsonc
+// ❌ 422 "Whether coupon is deleted is a required field. (parameter.deleted)"
+{ "shop_no": 1, "request": { "issue_member_join": "F" } }
+
+// ❌ 422 "Input value in [Whether coupon is deleted] is invalid"
+{ "shop_no": 1, "request": { "deleted": "F", "issue_member_join": "F" } }
+{ "shop_no": 1, "request": { "deleted": false, "issue_member_join": "F" } }
+```
+
+**원인**: `deleted` 필드는 `'D'` 외 값 거부. 보내면 진짜 삭제됨. 그리고 `issue_member_join`만 단독으로 변경하는 PUT 패턴 자체를 카페24가 의미 있는 요청으로 받지 않음 (`status`/`deleted`/`immediate_*` 중 하나는 필요).
+
+**해결**: 자동발급 ON/OFF 토글이 필요할 때도 `status: 'pause' / 'restart'` + `immediate_issue_*: 'I'` 패턴 사용. 이는 자동/수동 발급 전체를 중지/재개하지만 이미 발급된 쿠폰은 영향 없음 (`is_stopped_issued_coupon`은 별도 필드).
+
+**프로젝트 적용**: `services/coupon-pack.ts` `togglePackCoupon(action: 'pause' | 'restart')` 단일 헬퍼로 통합. `pauseCouponPack` / `resumeCouponPack` / `unregisterCouponPack` 모두 같은 path 사용.
+
+#### ⚠️ 함정 2: 카페24는 멱등하지 않음 (status transition 거부)
+
+이미 desired state인 쿠폰에 transition 시도 시 422:
+- `restart` 시 이미 active: `"Coupons in active status cannot be reactivated"`
+- `pause` 시 이미 paused: 유사 메시지 추정
+
+**해결**: 호출 측에서 `status===422 && /cannot be (reactivated|paused)/.test(message)` 인 응답을 success로 처리하는 멱등 가드. 부분 실패 후 재시도, 카페24 어드민에서 수동 변경 시점에서도 안전. `togglePackCoupon` 내부에 가드 내장.
 
 회원별 발급 쿠폰 삭제:
 ```

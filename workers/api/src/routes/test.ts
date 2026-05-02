@@ -115,6 +115,76 @@ test.get('/store-info', async (c) => {
   }
 });
 
+// ─── GET /coupons/toggle — 단일 쿠폰의 발급 상태 토글 (pause/restart) ─
+// 진단용: 카페24 admin API의 발급 상태 변경이 정상 동작하는지 검증.
+//   GET /test/coupons/toggle?mall_id=<>&coupon_no=<>&action=pause|restart
+test.get('/coupons/toggle', async (c) => {
+  const mallId = c.req.query('mall_id');
+  const couponNo = c.req.query('coupon_no');
+  const action = c.req.query('action') as 'pause' | 'restart' | undefined;
+  if (!mallId || !couponNo || (action !== 'pause' && action !== 'restart')) {
+    return c.json({ error: 'mall_id, coupon_no, action=pause|restart required' }, 400);
+  }
+
+  const shop = await getShopByMallId(c.env.DB, mallId, 'cafe24');
+  if (!shop?.platform_access_token) return c.json({ error: 'shop_not_found_or_no_token' }, 404);
+
+  const tokens = await decryptShopTokens(shop, c.env.ENCRYPTION_KEY);
+  let accessToken = tokens.access_token as string;
+
+  async function callToggle(token: string): Promise<Response> {
+    const request: Record<string, string> = { status: action! };
+    if (action === 'pause') request.immediate_issue_pause = 'I';
+    else request.immediate_issue_restart = 'I';
+    return fetch(`https://${mallId}.cafe24api.com/api/v2/admin/coupons/${couponNo}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Cafe24-Api-Version': '2026-03-01',
+      },
+      body: JSON.stringify({ shop_no: 1, request }),
+    });
+  }
+
+  let resp = await callToggle(accessToken);
+
+  if (resp.status === 401 && tokens.refresh_token) {
+    const client = new Cafe24Client(c.env.CAFE24_CLIENT_ID, c.env.CAFE24_CLIENT_SECRET);
+    try {
+      const newTokens = await client.refreshToken(mallId, tokens.refresh_token);
+      accessToken = newTokens.access_token;
+      const encAt = await encrypt(newTokens.access_token, c.env.ENCRYPTION_KEY);
+      const encRt = await encrypt(newTokens.refresh_token, c.env.ENCRYPTION_KEY);
+      await c.env.DB
+        .prepare('UPDATE shops SET platform_access_token = ?, platform_refresh_token = ? WHERE shop_id = ?')
+        .bind(encAt, encRt, shop.shop_id).run();
+      resp = await callToggle(accessToken);
+    } catch (err) {
+      console.error('[test/toggle] refresh failed:', err);
+    }
+  }
+
+  const respText = await resp.text();
+  let respJson: unknown;
+  try { respJson = JSON.parse(respText); } catch { respJson = respText; }
+
+  // 카페24 멱등성 가드: 이미 desired state인 422 응답을 success로 처리
+  const idempotent = !resp.ok
+    && resp.status === 422
+    && /cannot be (reactivated|paused)/i.test(respText);
+
+  return c.json({
+    ok: resp.ok || idempotent,
+    status: resp.status,
+    idempotent_already_in_state: idempotent || undefined,
+    mall_id: mallId,
+    coupon_no: couponNo,
+    action_set: action,
+    response: respJson,
+  });
+});
+
 // ─── GET /coupons — 쿠폰 목록 조회 테스트 ────────────────────
 test.get('/coupons', async (c) => {
   const mallId = c.req.query('mall_id');

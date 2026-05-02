@@ -485,6 +485,21 @@ admin.put('/subscriptions/:id/cancel', async (c) => {
       .bind(sub.shop_id)
       .run();
 
+    // 쿠폰팩 정지 (state: active → paused) — 실패해도 plan 변경 롤백 안 함
+    try {
+      const shopForPause = await c.env.DB.prepare('SELECT * FROM shops WHERE shop_id = ?')
+        .bind(sub.shop_id)
+        .first<{ shop_id: string; client_id: string; coupon_config: string | null; platform_access_token: string | null; platform_refresh_token: string | null; owner_id: string; mall_id: string }>();
+      if (shopForPause) {
+        const pauseResult = await pauseCouponPack(c.env, shopForPause as any);
+        if (pauseResult.success) {
+          await adminUpdateCouponPackState(c.env.DB, sub.shop_id, shopForPause.coupon_config, 'paused');
+        }
+      }
+    } catch (e) {
+      console.error(`[CouponPack] 정지 예외 (admin cancel_subscription): shop=${sub.shop_id}`, e);
+    }
+
     // 캐시 무효화 (KV + 엣지)
     const shop = await c.env.DB.prepare(
       'SELECT client_id FROM shops WHERE shop_id = ?',

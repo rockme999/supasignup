@@ -1,8 +1,10 @@
 import type { D1PreparedStatement } from '@cloudflare/workers-types';
 import type { Env } from '@supasignup/bg-core';
 import { callAI } from '../routes/ai';
-import { applyAiCopyToConfigs } from './ai-copy';
+import { applyAiCopyToConfigs, buildActiveFeaturesContext } from './ai-copy';
 import type { AiCopy } from './ai-copy';
+import { pauseCouponPack } from './coupon-pack';
+import type { CouponPackConfig, CouponPackState } from './coupon-pack';
 
 export async function handleScheduled(env: Env): Promise<void> {
   // 1. 만료된 구독 처리
@@ -58,6 +60,23 @@ async function handleExpiredSubscriptions(env: Env): Promise<void> {
 
   await env.DB.batch(statements);
 
+  // 쿠폰팩 정지 (state: active → paused) — 다운그레이드된 shop에 대해서만 호출
+  // batch 후에 호출 (DB가 이미 plan=free로 갱신된 상태에서 shop을 다시 읽음)
+  for (const shopId of shopsToDowngrade) {
+    try {
+      const shopForPause = await env.DB.prepare('SELECT * FROM shops WHERE shop_id = ?')
+        .bind(shopId)
+        .first<{ shop_id: string; coupon_config: string | null; platform_access_token: string | null; platform_refresh_token: string | null; owner_id: string; mall_id: string }>();
+      if (!shopForPause) continue;
+      const pauseResult = await pauseCouponPack(env, shopForPause as any);
+      if (pauseResult.success) {
+        await scheduledUpdateCouponPackState(env.DB, shopId, shopForPause.coupon_config, 'paused');
+      }
+    } catch (e) {
+      console.error(`[CouponPack] 정지 예외 (scheduled expire): shop=${shopId}`, e);
+    }
+  }
+
   // KV 캐시 삭제 — client_id는 1단계에서 이미 조회했으므로 추가 DB 호출 없음
   const clientIdsSeen = new Set<string>();
   for (const record of results) {
@@ -65,6 +84,28 @@ async function handleExpiredSubscriptions(env: Env): Promise<void> {
       clientIdsSeen.add(record.client_id);
       await env.KV.delete(`widget_config:${record.client_id}`);
     }
+  }
+}
+
+// ─── Helper: coupon_config.pack.state 갱신 ───────────────────
+async function scheduledUpdateCouponPackState(
+  db: D1Database,
+  shopId: string,
+  couponConfigRaw: string | null,
+  newState: CouponPackState,
+): Promise<void> {
+  if (!couponConfigRaw) return;
+  try {
+    const config = JSON.parse(couponConfigRaw) as { pack?: CouponPackConfig };
+    if (!config.pack) return;
+    config.pack.state = newState;
+    config.pack.enabled = newState === 'active';
+    await db
+      .prepare("UPDATE shops SET coupon_config = ?, updated_at = datetime('now') WHERE shop_id = ?")
+      .bind(JSON.stringify(config), shopId)
+      .run();
+  } catch (err) {
+    console.error(`[CouponPack] coupon_config state 갱신 실패 (scheduled): shop_id=${shopId}`, err);
   }
 }
 
@@ -103,7 +144,7 @@ async function handleWeeklyBriefings(env: Env): Promise<void> {
 export async function generateBriefingForShop(env: Env, shopId: string): Promise<void> {
   // 쇼핑몰 전체 정보 조회 (identity, banner_config 등 포함)
   const shop = await env.DB.prepare(
-    `SELECT shop_id, shop_name, shop_identity, banner_config, popup_config, escalation_config, client_id
+    `SELECT shop_id, shop_name, shop_identity, banner_config, popup_config, escalation_config, widget_style, coupon_config, kakao_channel_id, live_counter_config, plan, client_id
      FROM shops WHERE shop_id = ? AND deleted_at IS NULL`
   ).bind(shopId).first<{
     shop_id: string;
@@ -112,6 +153,11 @@ export async function generateBriefingForShop(env: Env, shopId: string): Promise
     banner_config: string | null;
     popup_config: string | null;
     escalation_config: string | null;
+    widget_style: string | null;
+    coupon_config: string | null;
+    kakao_channel_id: string | null;
+    live_counter_config: string | null;
+    plan: string;
     client_id: string;
   }>();
 
@@ -177,18 +223,40 @@ export async function generateBriefingForShop(env: Env, shopId: string): Promise
     prevBriefingText = `[${prevBriefing.created_at}] 성과: ${prevBriefing.performance} / 전략: ${prevBriefing.strategy} / 액션: ${pa.join(', ')}`;
   }
 
-  const prompt = `당신은 "번개가입" 앱의 AI 어드바이저입니다. 번개가입은 카페24 쇼핑몰에 소셜 로그인을 통한 1클릭 회원가입 기능을 제공합니다.
+  const activeFeatures = buildActiveFeaturesContext({
+    plan: shop.plan ?? 'free',
+    coupon_config: shop.coupon_config,
+    banner_config: shop.banner_config,
+    popup_config: shop.popup_config,
+    escalation_config: shop.escalation_config,
+    widget_style: shop.widget_style,
+    kakao_channel_id: shop.kakao_channel_id,
+    live_counter_config: shop.live_counter_config,
+  });
+
+  const prompt = `당신은 "번개가입" 앱의 AI 어드바이저입니다. 번개가입은 카페24 쇼핑몰에 소셜 로그인(구글, 카카오, 네이버, 애플, 디스코드, 텔레그램)을 통한 1클릭 회원가입 기능을 제공합니다.
 
 ■ 쇼핑몰: ${shop.shop_name ?? '쇼핑몰'}
 ■ ${identityText}
 ■ 회원가입 혜택: ${benefitsText}
+■ 현재 활성 기능 (반드시 이 기능들에만 맞춰 카피를 생성하세요)
+${activeFeatures}
 ■ 이번 주 통계: ${statSummary}
 ■ 지난 주 통계: ${prevStatSummary}
 ■ 이전 보고서: ${prevBriefingText}
 
-■ 규칙: 1) 데이터 기반 분석과 AI 의견 구분 2) 번개가입 범위 내 액션만 제안 3) 이전 보고서 대비 변화 언급 4) 데이터 부족 시 억지 분석 금지 5) 금기어: "1초 가입", "1초가입" 절대 사용 금지 (경쟁사 서비스명), 우리 서비스명은 "번개가입"
+■ 규칙
+1) 데이터 기반 분석과 AI 의견 구분
+2) 번개가입 범위 내 액션만 제안 (소셜 로그인, 회원가입 전환, 쿠폰 발급)
+3) 이전 보고서 대비 변화 언급
+4) 데이터 부족 시 억지 분석 금지
+5) 금기어: "1초 가입", "1초가입" 절대 사용 금지 (경쟁사 서비스명). 우리 서비스명은 "번개가입"
+6) **카피 정확성 (매우 중요)** — "현재 활성 기능"에 명시된 혜택만 사용. 활성 기능에 없는 혜택을 임의로 만들어내지 마세요.
+   - 쿠폰팩(5장 ₩55,000)이 활성이면: "쿠폰팩 증정", "5장 쿠폰", "₩55,000 가치" 같은 표현 권장. "3천원 할인 쿠폰" 같은 *임의 단일 쿠폰* 표현 금지.
+   - 단일 쿠폰만 활성이면 그 쿠폰 종류·금액·할인율만 사용.
+   - 카카오 채널 ID가 비어 있으면 카카오 채널 관련 카피 금지.
 
-■ 추가로, 이 쇼핑몰의 정체성과 혜택에 맞는 마케팅 문구를 생성해주세요:
+■ 추가로, 이 쇼핑몰의 정체성·혜택·활성 기능에 맞는 마케팅 문구를 생성해주세요:
   - banner: 미니배너에 표시할 한 줄 문구 (30자 이내, 가입 유도)
   - toast: 재방문 고객에게 보여줄 토스트 메시지 (30자 이내, {n}은 방문횟수로 치환됨)
   - floating: 플로팅 배너 문구 (30자 이내, 가입 혜택 강조)
@@ -196,8 +264,10 @@ export async function generateBriefingForShop(env: Env, shopId: string): Promise
   - popupTitle: 이탈 감지 팝업 제목 (20자 이내, 주의를 끄는 문구)
   - popupBody: 이탈 감지 팝업 본문 (100자 이내, 혜택과 긴급성 강조)
   - popupCta: 팝업 CTA 버튼 텍스트 (20자 이내)
+  - widgetText1: 위젯 상단 타이틀 아래 *작은* 안내 문구 (가입/로그인 편의성 강조, 30자 이내). 예: "아이디 비밀번호 입력없이 번개가입! 번개로그인!"
+  - widgetText2: 위젯의 소셜 버튼과 쿠폰팩 사이 *임팩트* 문구 (큰 볼드, 25자 이내). 쿠폰팩이 활성이면 쿠폰팩 증정 강조 권장. 예: "회원가입 즉시 사용가능한 쿠폰팩 증정", "5만원 상당 신규 회원 쿠폰팩 증정"
 
-JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actions":["액션1","액션2","액션3"],"insight":"앱 범위 밖 참고사항","headline":"홈 카드 한 줄 요약 (예: '신규 가입 47명 (+12%) · 이번 주 전략 3가지 도착', 40자 이내)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"..."}}`;
+JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actions":["액션1","액션2","액션3"],"insight":"앱 범위 밖 참고사항","headline":"홈 카드 한 줄 요약 (예: '신규 가입 47명 (+12%) · 이번 주 전략 3가지 도착', 40자 이내)","copy":{"banner":"...","toast":"...","floating":"...","floatingBtn":"...","popupTitle":"...","popupBody":"...","popupCta":"...","widgetText1":"...","widgetText2":"..."}}`;
 
   const raw = await callAI(env, [
     { role: 'system', content: 'You are a Korean e-commerce marketing advisor. Always respond with valid JSON only, no markdown, no explanation.' },
