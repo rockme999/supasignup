@@ -114,8 +114,17 @@ dashboard.put('/shops/:id', async (c) => {
   // Prevent direct modification of protected fields
   const allowed = [
     'shop_name', 'shop_url', 'allowed_redirect_uris', 'sso_configured', 'sso_type', 'shop_identity',
-    'auto_briefing_email', 'auto_briefing_alimtalk',  // AI 주간 브리핑 발송 토글 (0/1)
+    // 알림 발송 토글 (0/1)
+    'auto_briefing_email', 'auto_briefing_alimtalk',
+    'update_news_email', 'update_news_alimtalk',
+    // 카톡 채널 친구 추가 (Phase 2 B-1)
+    'kakao_channel_added', 'kakao_channel_added_at',
   ];
+  const BOOLEAN_KEYS = new Set([
+    'auto_briefing_email', 'auto_briefing_alimtalk',
+    'update_news_email', 'update_news_alimtalk',
+    'kakao_channel_added',
+  ]);
   const updates: Record<string, unknown> = {};
 
   for (const key of allowed) {
@@ -128,10 +137,18 @@ dashboard.put('/shops/:id', async (c) => {
           return c.json({ error: 'invalid_sso_type', message: 'sso_type must be one of: sso, sso1, sso2' }, 400);
         }
         updates[key] = body[key];
-      } else if (key === 'auto_briefing_email' || key === 'auto_briefing_alimtalk') {
+      } else if (BOOLEAN_KEYS.has(key)) {
         // 0 또는 1만 허용
         const v = body[key];
         updates[key] = v === 1 || v === true ? 1 : 0;
+      } else if (key === 'kakao_channel_added_at') {
+        // ISO 8601 string only — 빈값/null 허용 (등록 해제 시)
+        const v = body[key];
+        if (v === null || v === undefined || v === '') {
+          updates[key] = null;
+        } else if (typeof v === 'string') {
+          updates[key] = v;
+        }
       } else {
         updates[key] = body[key];
       }

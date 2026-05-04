@@ -140,12 +140,16 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'live_counter_config',
   'auto_briefing_email',
   'auto_briefing_alimtalk',
+  'kakao_channel_added',
+  'kakao_channel_added_at',
+  'update_news_email',
+  'update_news_alimtalk',
 ]);
 
 export async function updateShop(
   db: D1Database,
   shopId: string,
-  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'icon_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'live_counter_config' | 'auto_briefing_email' | 'auto_briefing_alimtalk'>>,
+  data: Partial<Pick<Shop, 'shop_name' | 'shop_url' | 'enabled_providers' | 'icon_providers' | 'allowed_redirect_uris' | 'plan' | 'sso_configured' | 'widget_style' | 'coupon_config' | 'platform_access_token' | 'platform_refresh_token' | 'shop_identity' | 'banner_config' | 'popup_config' | 'escalation_config' | 'live_counter_config' | 'auto_briefing_email' | 'auto_briefing_alimtalk' | 'kakao_channel_added' | 'kakao_channel_added_at' | 'update_news_email' | 'update_news_alimtalk'>>,
 ): Promise<void> {
   const sets: string[] = [];
   const values: unknown[] = [];

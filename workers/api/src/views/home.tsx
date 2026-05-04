@@ -17,6 +17,7 @@ type HomeShop = {
   sso_configured: number;
   monthly_signups: number;
   coupon_enabled: boolean;
+  kakao_channel_added?: number;       // 0/1 — 카톡 채널 친구 추가 여부 (Phase 2)
 };
 
 export type HomeBriefing = {
@@ -33,7 +34,8 @@ export const HomePage: FC<{
   plusPerformance?: PlusPerformance | null;
   latestBriefing?: HomeBriefing | null;
   isCafe24?: boolean;
-}> = ({ shop, stats, funnelSummary, lossAversion, plusPerformance, latestBriefing, isCafe24 }) => {
+  kakaoChannelPfid?: string;          // 친구 추가 안내 카드용
+}> = ({ shop, stats, funnelSummary, lossAversion, plusPerformance, latestBriefing, isCafe24, kakaoChannelPfid = '_aUbxbX' }) => {
   // 앱 미설치 상태
   if (!shop) {
     return (
@@ -55,6 +57,42 @@ export const HomePage: FC<{
     <Layout title="대시보드" loggedIn currentPath="/dashboard" isCafe24={isCafe24}>
       <h1>대시보드</h1>
       <p style="font-size:14px;color:#64748b;margin-bottom:16px">쇼핑몰 현황을 한눈에 확인하세요.</p>
+
+      {/* 카톡 채널 친구 추가 권유 — 미추가 + dismiss 안 한 운영자에게만 노출 */}
+      {(shop.kakao_channel_added ?? 0) === 0 && (
+        <div
+          id="kakaoChannelInviteCard"
+          data-shop-id={shop.shop_id}
+          data-pfid={kakaoChannelPfid}
+          style="display:none;margin-bottom:16px;padding:14px 18px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fcd34d;border-radius:10px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"
+        >
+          <div style="flex:1;min-width:240px">
+            <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:4px">💛 카톡으로도 받아보세요</div>
+            <div style="font-size:12px;color:#78350f;line-height:1.55">
+              <strong>@번개가입</strong> 친구 추가하면 매주 AI 브리핑·새 기능 소식을 카톡으로도 받을 수 있어요.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <a
+              href={`https://pf.kakao.com/${kakaoChannelPfid}`}
+              target="_blank"
+              rel="noopener"
+              id="kakaoChannelInviteAddBtn"
+              style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fee500;color:#3c1e1e;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap"
+            >
+              💬 친구 추가
+            </a>
+            <button
+              id="kakaoChannelInviteDismissBtn"
+              type="button"
+              style="padding:6px 10px;background:transparent;color:#92400e;border:none;font-size:12px;cursor:pointer;white-space:nowrap"
+              title="7일간 안 보기"
+            >
+              나중에
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* SSO 미설정 경고 */}
       {!shop.sso_configured && (
@@ -442,6 +480,42 @@ export const HomePage: FC<{
           modal.addEventListener('click', function(e) {
             if (e.target === modal) modal.style.display = 'none';
           });
+        })();
+      `}} />
+
+      {/* 카톡 채널 친구 추가 권유 카드 — dismiss/show 로직 (7일간 숨기기, localStorage) */}
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var card = document.getElementById('kakaoChannelInviteCard');
+          if (!card) return;
+
+          var DISMISS_KEY = 'bg_kakao_invite_dismissed_until';
+          var dismissedUntil = parseInt(localStorage.getItem(DISMISS_KEY) || '0', 10);
+          if (Date.now() < dismissedUntil) return;
+          card.style.display = 'flex';
+
+          var dismissBtn = document.getElementById('kakaoChannelInviteDismissBtn');
+          if (dismissBtn) {
+            dismissBtn.addEventListener('click', function() {
+              var sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+              localStorage.setItem(DISMISS_KEY, String(Date.now() + sevenDaysMs));
+              card.style.display = 'none';
+            });
+          }
+
+          // 친구 추가 버튼 클릭 → 새 탭 열린 후 30초 뒤 "추가 완료하셨나요?" prompt
+          // 자동 등록은 안 하고 사용자가 AiBriefingPage 에서 "추가 완료" 누르도록 안내
+          var addBtn = document.getElementById('kakaoChannelInviteAddBtn');
+          if (addBtn) {
+            addBtn.addEventListener('click', function() {
+              // 30초 후 안내 토스트 (사용자가 카톡 추가 후 돌아왔다고 가정)
+              setTimeout(function() {
+                if (typeof showToast === 'function') {
+                  showToast('info', '추가하셨나요? AI 브리핑 페이지의 [추가 완료] 버튼을 눌러 등록을 마쳐주세요.', 8000);
+                }
+              }, 30000);
+            });
+          }
         })();
       `}} />
     </Layout>

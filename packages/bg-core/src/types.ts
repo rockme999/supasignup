@@ -37,7 +37,12 @@ export interface Shop {
   store_synced_at?: string | null;
   // ── AI 주간 브리핑 자동 발송 토글 (0033, 기본 ON) ─────────
   auto_briefing_email?: number;     // 0 | 1
-  auto_briefing_alimtalk?: number;  // 0 | 1 (Phase 2)
+  auto_briefing_alimtalk?: number;  // 0 | 1
+  // ── 카톡 채널 친구 추가 + 업데이트 소식 토글 (0034) ────────
+  kakao_channel_added?: number;     // 0 | 1 — Kakao SDK addChannel callback 시 1
+  kakao_channel_added_at?: string | null;
+  update_news_email?: number;       // 0 | 1 (기본 ON) — 비정기 릴리즈/공지 이메일
+  update_news_alimtalk?: number;    // 0 | 1 (기본 ON) — 비정기 릴리즈/공지 알림톡/카톡
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -248,6 +253,8 @@ export interface Env {
   CAFE24_CLIENT_ID: string;
   CAFE24_CLIENT_SECRET: string;
   CAFE24_WEBHOOK_API_KEY: string;
+  // 카카오톡 채널 PFID (Phase 2 친구 추가 흐름) — wrangler.toml [vars]
+  KAKAO_CHANNEL_PFID: string;
   ENCRYPTION_KEY: string;
   JWT_SECRET: string;
   AI: any; // Cloudflare Workers AI binding

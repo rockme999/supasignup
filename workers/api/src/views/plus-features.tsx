@@ -2641,7 +2641,10 @@ export const AiBriefingPage: FC<{
     plan: string;
     store_email?: string | null;             // pickEmail 결과 (cafe24.auto 더미는 null로 정규화됨)
     auto_briefing_email?: number;            // 0/1 (default 1 = ON)
-    auto_briefing_alimtalk?: number;         // 0/1 (Phase 2 — UI는 disabled)
+    auto_briefing_alimtalk?: number;         // 0/1
+    kakao_channel_added?: number;            // 0/1 — 카톡 채널 친구 추가 여부
+    update_news_email?: number;              // 0/1 (default 1)
+    update_news_alimtalk?: number;           // 0/1 (default 1)
   };
   briefings: AiBriefingRow[];
   isCafe24?: boolean;
@@ -2649,7 +2652,8 @@ export const AiBriefingPage: FC<{
   page?: number;
   totalPages?: number;
   totalCount?: number;
-}> = ({ shop, briefings, isCafe24, newBadges, page = 1, totalPages = 1, totalCount = 0 }) => {
+  kakaoChannelPfid?: string;                 // 친구 추가 링크용 PFID (env.KAKAO_CHANNEL_PFID)
+}> = ({ shop, briefings, isCafe24, newBadges, page = 1, totalPages = 1, totalCount = 0, kakaoChannelPfid = '_aUbxbX' }) => {
   const isPlus = shop.plan !== 'free';
   // page=1: latest=briefings[0], history=briefings[1..]
   // page>1: latest=null (헤더/성과 영역 숨김), history=briefings[0..]
@@ -2702,44 +2706,94 @@ export const AiBriefingPage: FC<{
         {weekRange} 기준
       </p>
 
-      {/* AI 주간 브리핑 자동 발송 알림 — 이메일(functioning) + 알림톡(Phase 2 준비중) */}
+      {/* AI 주간 브리핑 + 업데이트 소식 알림 카드 (Phase 1 이메일 + Phase 2 카톡 채널 친구 추가) */}
       <div
-        id="briefingNotifyCard"
-        style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:24px;font-size:13px"
+        id="notifyCard"
+        style="padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:24px"
         data-shop-id={shop.shop_id}
+        data-kakao-pfid={kakaoChannelPfid}
+        data-kakao-added={(shop.kakao_channel_added ?? 0) === 1 ? '1' : '0'}
       >
-        <div style="color:#475569;line-height:1.55">
-          <span style="font-weight:600;color:#1e293b">📨 매주 월요일 09:00 KST 자동 발송</span>
-          <br />
-          <span style="font-size:12px;color:#64748b">
-            수신처:{' '}
-            {shop.store_email
-              ? <strong style="color:#1e293b">{shop.store_email}</strong>
-              : <span style="color:#dc2626">미등록 (카페24 운영자 정보 미동기화)</span>
-            }
-            {' · '}회신: <strong style="color:#1e293b">help@suparain.com</strong>
-          </span>
+        <div style="font-size:14px;font-weight:600;color:#1e293b;margin-bottom:4px">📨 알림 수신 설정</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.55">
+          이메일 수신처:{' '}
+          {shop.store_email
+            ? <strong style="color:#1e293b">{shop.store_email}</strong>
+            : <span style="color:#dc2626">미등록 (카페24 운영자 정보 미동기화)</span>
+          }
+          {' · '}회신: <strong style="color:#1e293b">help@suparain.com</strong>
         </div>
-        <div style="display:flex;gap:14px;align-items:center;flex-shrink:0">
-          {/* 이메일 토글 — functioning */}
-          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#475569">
+
+        {/* 토글 4개 — 2x2 그리드 */}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13px">
+          {/* 1. AI 주간 브리핑 — 이메일 */}
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#475569">
+            <input type="checkbox" id="autoBriefingEmailToggle" checked={(shop.auto_briefing_email ?? 1) === 1} style="width:14px;height:14px;cursor:pointer" />
+            <span>📊 AI 주간 브리핑 — 이메일</span>
+          </label>
+          {/* 2. AI 주간 브리핑 — 카톡 채널 */}
+          <label style={`display:flex;align-items:center;gap:8px;color:${(shop.kakao_channel_added ?? 0) === 1 ? '#475569' : '#94a3b8'};cursor:${(shop.kakao_channel_added ?? 0) === 1 ? 'pointer' : 'not-allowed'}`}>
             <input
               type="checkbox"
-              id="autoBriefingEmailToggle"
-              checked={(shop.auto_briefing_email ?? 1) === 1}
-              style="width:14px;height:14px;cursor:pointer"
+              id="autoBriefingAlimtalkToggle"
+              checked={(shop.auto_briefing_alimtalk ?? 1) === 1}
+              disabled={(shop.kakao_channel_added ?? 0) !== 1}
+              style="width:14px;height:14px"
             />
-            <span>이메일</span>
+            <span>📊 AI 주간 브리핑 — 카톡 {(shop.kakao_channel_added ?? 0) !== 1 && <span style="font-size:10px;color:#cbd5e1">(친구 추가 필요)</span>}</span>
           </label>
-          {/* 알림톡 토글 — Phase 2 준비중 (disabled) */}
-          <label
-            style="display:inline-flex;align-items:center;gap:6px;cursor:not-allowed;font-size:12px;color:#94a3b8"
-            title="알림톡 발송은 다음 버전에서 지원될 예정입니다"
-          >
-            <input type="checkbox" disabled style="width:14px;height:14px;cursor:not-allowed" />
-            <span>알림톡 <span style="font-size:10px;color:#cbd5e1">(준비중)</span></span>
+          {/* 3. 업데이트 소식 — 이메일 */}
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#475569">
+            <input type="checkbox" id="updateNewsEmailToggle" checked={(shop.update_news_email ?? 1) === 1} style="width:14px;height:14px;cursor:pointer" />
+            <span>🔔 업데이트 소식 — 이메일</span>
+          </label>
+          {/* 4. 업데이트 소식 — 카톡 채널 */}
+          <label style={`display:flex;align-items:center;gap:8px;color:${(shop.kakao_channel_added ?? 0) === 1 ? '#475569' : '#94a3b8'};cursor:${(shop.kakao_channel_added ?? 0) === 1 ? 'pointer' : 'not-allowed'}`}>
+            <input
+              type="checkbox"
+              id="updateNewsAlimtalkToggle"
+              checked={(shop.update_news_alimtalk ?? 1) === 1}
+              disabled={(shop.kakao_channel_added ?? 0) !== 1}
+              style="width:14px;height:14px"
+            />
+            <span>🔔 업데이트 소식 — 카톡 {(shop.kakao_channel_added ?? 0) !== 1 && <span style="font-size:10px;color:#cbd5e1">(친구 추가 필요)</span>}</span>
           </label>
         </div>
+
+        {/* 카톡 채널 친구 추가 — 미추가 시 강조, 추가 후 상태 표시 */}
+        {(shop.kakao_channel_added ?? 0) === 1 ? (
+          <div style="margin-top:14px;padding:10px 14px;background:#dcfce7;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#15803d;display:flex;align-items:center;gap:8px">
+            <span>✅ 카톡 채널 <strong>@번개가입</strong> 친구 추가 완료</span>
+            <button id="kakaoChannelRemoveBtn" type="button" style="margin-left:auto;padding:4px 10px;background:transparent;border:1px solid #86efac;border-radius:6px;font-size:11px;color:#15803d;cursor:pointer">상태 해제</button>
+          </div>
+        ) : (
+          <div style="margin-top:14px;padding:14px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fcd34d;border-radius:8px">
+            <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:6px">💛 카톡 채널 추가하면 카톡으로도 받을 수 있어요</div>
+            <div style="font-size:12px;color:#78350f;line-height:1.55;margin-bottom:10px">
+              <strong>@번개가입</strong> 채널을 친구로 추가하면 매주 AI 브리핑과 새 기능 소식을 카톡으로도 받을 수 있어요.
+              {/* (Phase 3 예고) */}
+              <br />차후 업데이트로 카톡에서 바로 통계 조회·문의도 가능해질 예정입니다.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <a
+                id="kakaoChannelAddBtn"
+                href={`https://pf.kakao.com/${kakaoChannelPfid}`}
+                target="_blank"
+                rel="noopener"
+                style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fee500;color:#3c1e1e;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600"
+              >
+                💬 친구 추가하러 가기
+              </a>
+              <button
+                id="kakaoChannelConfirmBtn"
+                type="button"
+                style="padding:8px 14px;background:#fff;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer"
+              >
+                ✅ 추가 완료
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 브리핑 없음 (page=1, 데이터 없음) */}
@@ -3067,38 +3121,94 @@ export const AiBriefingPage: FC<{
         `}} />
       )}
 
-      {/* 자동 발송 토글 PUT 호출 — 카드 내 변경 시 즉시 반영 */}
+      {/* 알림 카드 인터랙션 — 토글 4개 + 카톡 채널 친구 추가/해제 */}
       <script dangerouslySetInnerHTML={{__html: `
         (function() {
-          var card = document.getElementById('briefingNotifyCard');
+          var card = document.getElementById('notifyCard');
           if (!card) return;
           var shopId = card.getAttribute('data-shop-id');
           if (!shopId) return;
-          var emailToggle = document.getElementById('autoBriefingEmailToggle');
-          if (!emailToggle) return;
-          emailToggle.addEventListener('change', async function() {
-            var enabled = emailToggle.checked ? 1 : 0;
+
+          // 공통 PUT 헬퍼 — 변경 실패 시 토글 원복 + 토스트
+          async function putShop(payload, successLabel, originalEl) {
             try {
               var resp = await fetch('/api/dashboard/shops/' + shopId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify({ auto_briefing_email: enabled }),
+                body: JSON.stringify(payload),
               });
-              if (!resp.ok) {
-                throw new Error('save_failed');
-              }
+              if (!resp.ok) throw new Error('save_failed');
               if (typeof showToast === 'function') {
-                showToast('success', '이메일 발송 ' + (enabled ? '활성화' : '비활성화') + '되었습니다.');
+                showToast('success', successLabel);
               }
+              return true;
             } catch (e) {
-              // 실패 시 토글 원복
-              emailToggle.checked = !emailToggle.checked;
+              if (originalEl && 'checked' in originalEl) {
+                originalEl.checked = !originalEl.checked;
+              }
               if (typeof showToast === 'function') {
                 showToast('error', '저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
               }
+              return false;
             }
+          }
+
+          // 토글 4개 바인딩 (id, payload key, 라벨)
+          var toggles = [
+            ['autoBriefingEmailToggle',    'auto_briefing_email',    'AI 브리핑 이메일'],
+            ['autoBriefingAlimtalkToggle', 'auto_briefing_alimtalk', 'AI 브리핑 카톡'],
+            ['updateNewsEmailToggle',      'update_news_email',      '업데이트 이메일'],
+            ['updateNewsAlimtalkToggle',   'update_news_alimtalk',   '업데이트 카톡'],
+          ];
+          toggles.forEach(function(t) {
+            var el = document.getElementById(t[0]);
+            if (!el || el.disabled) return;
+            el.addEventListener('change', function() {
+              var enabled = el.checked ? 1 : 0;
+              var payload = {};
+              payload[t[1]] = enabled;
+              putShop(payload, t[2] + ' ' + (enabled ? '활성화' : '비활성화') + '되었습니다.', el);
+            });
           });
+
+          // 카톡 채널 "추가 완료" 버튼 — 사용자 self-report로 DB 갱신
+          var confirmBtn = document.getElementById('kakaoChannelConfirmBtn');
+          if (confirmBtn) {
+            confirmBtn.addEventListener('click', async function() {
+              confirmBtn.disabled = true;
+              var ok = await putShop(
+                { kakao_channel_added: 1, kakao_channel_added_at: new Date().toISOString() },
+                '카톡 채널 친구 추가 등록 완료. 이번 주부터 카톡으로도 받아보세요.',
+                null
+              );
+              if (ok) {
+                // 페이지 reload — 카드 상태 + 토글 disabled 풀림 반영
+                setTimeout(function() { window.location.reload(); }, 800);
+              } else {
+                confirmBtn.disabled = false;
+              }
+            });
+          }
+
+          // 카톡 채널 "상태 해제" — 친구 추가 완료 표시 되돌리기 (잘못 등록한 경우)
+          var removeBtn = document.getElementById('kakaoChannelRemoveBtn');
+          if (removeBtn) {
+            removeBtn.addEventListener('click', async function() {
+              if (!confirm('카톡 채널 친구 추가 상태를 해제하시겠어요? 매주 카톡 알림이 발송되지 않습니다.')) return;
+              removeBtn.disabled = true;
+              var ok = await putShop(
+                { kakao_channel_added: 0 },
+                '카톡 채널 친구 추가 상태가 해제되었습니다.',
+                null
+              );
+              if (ok) {
+                setTimeout(function() { window.location.reload(); }, 800);
+              } else {
+                removeBtn.disabled = false;
+              }
+            });
+          }
         })();
       `}} />
     </Layout>

@@ -65,7 +65,9 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
             created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
             shop_identity, live_counter_config,
             store_email, store_phone, store_admin_name, store_synced_at,
-            auto_briefing_email, auto_briefing_alimtalk
+            auto_briefing_email, auto_briefing_alimtalk,
+            kakao_channel_added, kakao_channel_added_at,
+            update_news_email, update_news_alimtalk
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
     coupon_config: string | null;
@@ -83,6 +85,10 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
     store_synced_at: string | null;
     auto_briefing_email: number;
     auto_briefing_alimtalk: number;
+    kakao_channel_added: number;
+    kakao_channel_added_at: string | null;
+    update_news_email: number;
+    update_news_alimtalk: number;
   }>();
 }
 
@@ -535,6 +541,7 @@ pages.get('/dashboard', async (c) => {
         sso_configured: shop.sso_configured,
         monthly_signups: billingResult?.monthly_signups ?? 0,
         coupon_enabled: couponEnabled,
+        kakao_channel_added: shop.kakao_channel_added,
       }}
       stats={{
         total_signups: totalResult?.signups ?? 0,
@@ -548,6 +555,7 @@ pages.get('/dashboard', async (c) => {
       plusPerformance={plusPerformance.totalCaptured > 0 ? plusPerformance : null}
       latestBriefing={latestBriefing}
       isCafe24={c.get('isCafe24')}
+      kakaoChannelPfid={c.env.KAKAO_CHANNEL_PFID}
     />
   );
 });
@@ -1369,6 +1377,7 @@ pages.get('/dashboard/ai-briefing', async (c) => {
       page={safePage}
       totalPages={totalPages}
       totalCount={totalCount}
+      kakaoChannelPfid={c.env.KAKAO_CHANNEL_PFID}
     />
   );
 });

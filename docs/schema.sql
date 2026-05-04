@@ -82,6 +82,11 @@
 --   2026-05-04: shops.auto_briefing_email / auto_briefing_alimtalk 추가 (0033) — AI 주간 브리핑
 --                자동 발송 채널 토글. 둘 다 기본 1(ON). 운영자가 어드민에서 OFF 가능.
 --                알림톡(Phase 2)은 컬럼만 미리 추가, 발송 코드는 이메일 안정화 후 별도 작업.
+--   2026-05-04: shops.kakao_channel_added/added_at + update_news_email/alimtalk 추가 (0034) —
+--                카카오톡 채널 친구 추가 흐름 (B-1: 자체 구축, 발송대행사 미사용).
+--                kakao_channel_added: 운영자가 @번개가입 채널을 친구로 추가했는지 (Kakao SDK callback 시 1).
+--                update_news_*: AI 브리핑과 별개로 "번개가입 앱 업데이트 소식" 수신 토글 (둘 다 기본 ON).
+--                Phase 2: 친구 추가 흐름 + 매주 manual broadcast (콘솔 GUI). 발송 자동화는 v2.6+ 검토.
 
 -- ============================================================
 -- 1. owners — 운영자 계정
@@ -140,7 +145,11 @@ CREATE TABLE IF NOT EXISTS shops (
   store_admin_name       TEXT,                                    -- 운영자명 (admin_name ?? president_name) — 메일 인사말용
   store_synced_at        TEXT,                                    -- store_* 컬럼 마지막 sync 시각 (ISO 8601)
   auto_briefing_email    INTEGER NOT NULL DEFAULT 1,              -- AI 주간 브리핑 이메일 발송 토글 (기본 ON)
-  auto_briefing_alimtalk INTEGER NOT NULL DEFAULT 1,              -- AI 주간 브리핑 알림톡 발송 토글 (기본 ON, Phase 2)
+  auto_briefing_alimtalk INTEGER NOT NULL DEFAULT 1,              -- AI 주간 브리핑 알림톡/카톡 채널 토글 (기본 ON)
+  kakao_channel_added    INTEGER NOT NULL DEFAULT 0,              -- @번개가입 카톡 채널 친구 추가 여부 (Kakao SDK callback 시 1)
+  kakao_channel_added_at TEXT,                                    -- 친구 추가 시각 (ISO 8601)
+  update_news_email      INTEGER NOT NULL DEFAULT 1,              -- 번개가입 앱 업데이트 소식 이메일 토글 (기본 ON)
+  update_news_alimtalk   INTEGER NOT NULL DEFAULT 1,              -- 번개가입 앱 업데이트 소식 알림톡/카톡 채널 토글 (기본 ON)
   UNIQUE(mall_id, platform)
 );
 
