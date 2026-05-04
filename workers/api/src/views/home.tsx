@@ -58,42 +58,6 @@ export const HomePage: FC<{
       <h1>대시보드</h1>
       <p style="font-size:14px;color:#64748b;margin-bottom:16px">쇼핑몰 현황을 한눈에 확인하세요.</p>
 
-      {/* 카톡 채널 친구 추가 권유 — 미추가 + dismiss 안 한 운영자에게만 노출 */}
-      {(shop.kakao_channel_added ?? 0) === 0 && (
-        <div
-          id="kakaoChannelInviteCard"
-          data-shop-id={shop.shop_id}
-          data-pfid={kakaoChannelPfid}
-          style="display:none;margin-bottom:16px;padding:14px 18px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fcd34d;border-radius:10px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"
-        >
-          <div style="flex:1;min-width:240px">
-            <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:4px">💛 카톡으로도 받아보세요</div>
-            <div style="font-size:12px;color:#78350f;line-height:1.55">
-              <strong>@번개가입</strong> 친구 추가하면 매주 AI 브리핑·새 기능 소식을 카톡으로도 받을 수 있어요.
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-            <a
-              href={`https://pf.kakao.com/${kakaoChannelPfid}`}
-              target="_blank"
-              rel="noopener"
-              id="kakaoChannelInviteAddBtn"
-              style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fee500;color:#3c1e1e;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap"
-            >
-              💬 친구 추가
-            </a>
-            <button
-              id="kakaoChannelInviteDismissBtn"
-              type="button"
-              style="padding:6px 10px;background:transparent;color:#92400e;border:none;font-size:12px;cursor:pointer;white-space:nowrap"
-              title="7일간 안 보기"
-            >
-              나중에
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* SSO 미설정 경고 */}
       {!shop.sso_configured && (
         <div class="alert alert-warn alert-banner" style="margin-bottom:16px">
@@ -364,6 +328,42 @@ export const HomePage: FC<{
         <div style="padding:14px 20px;background:#fafafa;border:1px dashed #cbd5e1;border-radius:10px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
           <span style="font-size:13px;font-weight:700;color:#94a3b8;background:#f1f5f9;border-radius:4px;padding:2px 6px;flex-shrink:0">✨ AI 브리핑</span>
           <p style="font-size:13px;color:#94a3b8;margin:0">데이터 수집 중 — 가입이 누적되면 인사이트를 보여드릴게요</p>
+        </div>
+      )}
+
+      {/* 카톡 채널 친구 추가 권유 — 미추가 + dismiss 안 한 운영자에게만 노출 (AI 브리핑 카드 아래) */}
+      {(shop.kakao_channel_added ?? 0) === 0 && (
+        <div
+          id="kakaoChannelInviteCard"
+          data-shop-id={shop.shop_id}
+          data-pfid={kakaoChannelPfid}
+          style="display:none;margin-bottom:16px;padding:14px 18px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fcd34d;border-radius:10px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"
+        >
+          <div style="flex:1;min-width:240px">
+            <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:4px">💛 카톡으로도 받아보세요</div>
+            <div style="font-size:12px;color:#78350f;line-height:1.55">
+              <strong>@번개가입</strong> 친구 추가하면 매주 AI 브리핑·새 기능 소식을 카톡으로도 받을 수 있어요.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <a
+              href={`https://pf.kakao.com/${kakaoChannelPfid}`}
+              target="_blank"
+              rel="noopener"
+              id="kakaoChannelInviteAddBtn"
+              style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fee500;color:#3c1e1e;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap"
+            >
+              💬 친구 추가
+            </a>
+            <button
+              id="kakaoChannelInviteDismissBtn"
+              type="button"
+              style="padding:6px 10px;background:transparent;color:#92400e;border:none;font-size:12px;cursor:pointer;white-space:nowrap"
+              title="7일간 안 보기"
+            >
+              나중에
+            </button>
+          </div>
         </div>
       )}
 
