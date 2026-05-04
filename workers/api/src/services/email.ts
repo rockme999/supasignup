@@ -39,10 +39,10 @@ export async function sendEmail(env: Env, opts: SendEmailOptions): Promise<SendE
     await env.EMAIL.send({
       from,
       to: opts.to,
+      reply_to: replyTo,    // 별도 필드 (custom Reply-To 헤더는 화이트리스트 거부됨)
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
-      headers: { 'Reply-To': replyTo },
     });
     return { ok: true };
   } catch (err: any) {

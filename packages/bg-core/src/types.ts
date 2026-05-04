@@ -268,11 +268,14 @@ export interface Env {
   EMAIL?: {
     send(message: {
       from: string;
-      to: string;
+      to: string | string[];
+      cc?: string | string[];
+      bcc?: string | string[];
+      reply_to?: string;
       subject: string;
       text?: string;
       html?: string;
-      headers?: Record<string, string>;
+      headers?: Record<string, string>;     // 화이트리스트만 허용 (List-Unsubscribe, X-* 등). Reply-To는 reply_to 필드 사용.
     }): Promise<unknown>;
   };
   // ── (DEPRECATED) Ecount SMTP relay — 외국 IP 차단으로 미사용. 향후 제거 예정. ──
