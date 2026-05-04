@@ -2,9 +2,9 @@
  * Cloudflare Email Sending (2026-04-16 public beta) 기반 운영자 발송.
  *
  * - Binding: env.EMAIL.send({ from, to, subject, html, text, headers })
- * - 발송 도메인: suparain.kr (Cloudflare 대시보드 → Email Sending → Add Domain)
- *   등록 시 SPF/DKIM/DMARC 자동 추가.
- * - 발송자: noreply@suparain.kr (등록 도메인 하위 자유 지정)
+ * - 발송 도메인: mail.suparain.kr (발송 전용 서브도메인. CF 대시보드 → Email Sending → Onboard Domain)
+ *   메인 suparain.kr 의 Ecount 수신 흐름에 영향 없도록 서브도메인 분리. SPF/DKIM/DMARC 자동.
+ * - 발송자: noreply@mail.suparain.kr (등록 도메인 하위)
  * - Reply-To: help@suparain.com (운영자가 회신 시 Ecount 메일함으로 도착)
  * - Workers Paid 필수 — 기존 Queues 사용 중이라 추가 비용 0.
  *
@@ -26,7 +26,7 @@ export interface SendEmailOptions {
 
 export type SendEmailResult = { ok: true } | { ok: false; error: string };
 
-const DEFAULT_FROM_ADDRESS = 'noreply@suparain.kr';
+const DEFAULT_FROM_ADDRESS = 'noreply@mail.suparain.kr';
 const DEFAULT_REPLY_TO = 'help@suparain.com';
 
 export async function sendEmail(env: Env, opts: SendEmailOptions): Promise<SendEmailResult> {

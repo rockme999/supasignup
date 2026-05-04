@@ -55,8 +55,9 @@ max_retries = 2
 dead_letter_queue = "bg-briefing-dlq"
 
 # Email Sending (Cloudflare 자체 발송, 2026-04-16 public beta)
-# 도메인 등록: Cloudflare 대시보드 → Email → Email Sending → Add Domain → suparain.kr
-# 등록 시 SPF/DKIM/DMARC 자동 추가됨. from 주소: noreply@suparain.kr
+# 도메인 등록: Cloudflare 대시보드 → Email Sending → Onboard Domain → mail.suparain.kr
+# 발송 전용 서브도메인 — 메인 suparain.kr Ecount 수신 흐름과 분리.
+# from 주소: noreply@mail.suparain.kr (등록 도메인 하위 자유 지정)
 [[send_email]]
 name = "EMAIL"
 remote = true
