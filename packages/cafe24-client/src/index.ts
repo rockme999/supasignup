@@ -21,6 +21,7 @@ export {
   type Customer,
   type ScriptTag,
   type StoreInfo,
+  type StoreContact,
   type WebhookPayload,
 } from "./types";
 

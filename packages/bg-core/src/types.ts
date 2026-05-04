@@ -28,6 +28,16 @@ export interface Shop {
   /** @deprecated 2026-04-30 — 이탈 감지 팝업(popup_config)으로 통합됨. 코드 미사용. 차후 DROP 예정. */
   exit_intent_config?: string | null;
   live_counter_config?: string | null; // Plus: 라이브 가입자 카운터 설정 JSON
+  // ── 카페24 운영자 연락처 캐시 (0033) ──────────────────────
+  // owners.email은 카페24 가입 시 @cafe24.auto 더미라 발송 불가 → /admin/store API로 가져온
+  // 진짜 연락처를 저장. 새 install 시 자동 sync, 그 외 backfill 또는 lazy refresh.
+  store_email?: string | null;
+  store_phone?: string | null;
+  store_admin_name?: string | null;
+  store_synced_at?: string | null;
+  // ── AI 주간 브리핑 자동 발송 토글 (0033, 기본 ON) ─────────
+  auto_briefing_email?: number;     // 0 | 1
+  auto_briefing_alimtalk?: number;  // 0 | 1 (Phase 2)
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -252,6 +262,10 @@ export interface Env {
   VERSION: string;       // SemVer (예: '2.0.0') — workers/api/package.json 기준
   COMMIT_SHA: string;    // git short hash (예: 'd8ab2bb') — 'unknown'이면 로컬 dev
   BUILD_TIME: string;    // ISO 8601 UTC (예: '2026-04-27T08:30:00Z')
+  // ── SMTP 발송 (Ecount wsmtp.ecount.com:587 STARTTLS, AI 주간 브리핑 등 운영자 발송) ──
+  // wrangler secret put SMTP_USER / SMTP_PASS 로 등록. 미등록 환경에서는 발송 시도 자체 skip.
+  SMTP_USER?: string;
+  SMTP_PASS?: string;
 }
 
 // Billing

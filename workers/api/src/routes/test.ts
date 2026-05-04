@@ -642,4 +642,78 @@ test.post('/coupons/issue', async (c) => {
   }
 });
 
+// ─── GET /backfill-store-contact ──────────────────────────────
+//   ?mall_id=<>     — 단일 쇼핑몰
+//   ?all=1          — 모든 활성 cafe24 쇼핑몰 순차 (스테이징 일회성)
+// AI 주간 브리핑 발송 전 운영자 연락처(store_email/phone) 일괄 채움.
+test.get('/backfill-store-contact', async (c) => {
+  const { syncStoreContactByMallId, pickEmail, pickPhone } = await import('../services/store-contact');
+
+  const single = c.req.query('mall_id');
+  const all = c.req.query('all') === '1';
+  if (!single && !all) {
+    return c.json({ error: 'mall_id 또는 all=1 파라미터 필요' }, 400);
+  }
+
+  if (single) {
+    const result = await syncStoreContactByMallId(c.env, single);
+    return c.json(result);
+  }
+
+  // 전체 처리 — 카페24 활성 쇼핑몰만
+  const shops = await c.env.DB.prepare(
+    `SELECT mall_id FROM shops
+     WHERE platform = 'cafe24' AND deleted_at IS NULL
+     ORDER BY created_at ASC`
+  ).all<{ mall_id: string }>();
+  const malls = shops.results ?? [];
+
+  const summary: Array<{
+    mall_id: string;
+    ok: boolean;
+    email?: string | null;
+    phone?: string | null;
+    reason?: string;
+  }> = [];
+
+  for (const { mall_id } of malls) {
+    const r = await syncStoreContactByMallId(c.env, mall_id);
+    summary.push({
+      mall_id,
+      ok: r.ok,
+      email: r.email ?? (r.contact ? pickEmail(r.contact) : undefined),
+      phone: r.phone ?? (r.contact ? pickPhone(r.contact) : undefined),
+      reason: r.reason,
+    });
+  }
+
+  const ok = summary.filter(s => s.ok).length;
+  const fail = summary.length - ok;
+  return c.json({ total: summary.length, ok, fail, summary });
+});
+
+// ─── GET /send-email ──────────────────────────────────────────
+//   ?to=<email>           — 수신자 (필수)
+//   ?subject=<text>       — 제목 (default: STAGING SMTP test)
+//   ?body=<text>          — 본문 text (default: 기본 메시지)
+// Ecount SMTP relay 연결 검증용. 첫 발송으로 wsmtp.ecount.com:587 STARTTLS + AUTH 흐름 확인.
+test.get('/send-email', async (c) => {
+  const { sendEmail } = await import('../services/email');
+
+  const to = c.req.query('to');
+  if (!to) return c.json({ error: 'to query param required' }, 400);
+  const subject = c.req.query('subject') ?? '[번개가입 STAGING] SMTP 연결 테스트';
+  const body = c.req.query('body')
+    ?? '안녕하세요. 번개가입 스테이징 워커가 Ecount SMTP relay를 통해 보내는 첫 발송 테스트입니다.\n\n수신 확인 시 다음 단계로 AI 주간 브리핑 이메일 발송을 활성화합니다.\n\n번개가입 — Suparain.com';
+
+  const result = await sendEmail(c.env, {
+    to,
+    subject,
+    text: body,
+    html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+  });
+
+  return c.json(result);
+});
+
 export default test;

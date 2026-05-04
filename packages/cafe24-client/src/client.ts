@@ -11,6 +11,7 @@ import {
   type Cafe24ClientConfig,
   type Customer,
   type ScriptTag,
+  type StoreContact,
   type StoreInfo,
   type TokenRefresher,
   type TokenResponse,
@@ -490,6 +491,40 @@ export class Cafe24Client {
       console.warn(`Failed to get store info: mall=${mallId}`, err);
       return { shop_name: "", shop_domain: "" };
     }
+  }
+
+  /**
+   * /admin/store 에서 운영자 연락처 11개 필드 추출.
+   * 운영자 알림(주간 브리핑 등) 발송 대상 결정에 사용. getStoreInfo 와 별도로 둔 이유는
+   * 호출 의도(연락처 vs 도메인) 구분 + StoreContact 가 nullable 정규화를 거치기 때문.
+   * 빈 문자열은 null 로 변환 — 호출 측에서 ?? 로 우선순위 선택 가능.
+   */
+  async getStoreContact(
+    mallId: string,
+    accessToken: string,
+  ): Promise<StoreContact> {
+    const result = await this.apiGet<{ store?: Record<string, string> }>(
+      mallId,
+      accessToken,
+      "/admin/store",
+    );
+    const store = result.store ?? {};
+    const trim = (v: string | undefined): string | null => {
+      const s = (v ?? "").trim();
+      return s.length > 0 ? s : null;
+    };
+    return {
+      email: trim(store.email),
+      notification_only_email: trim(store.notification_only_email),
+      customer_service_email: trim(store.customer_service_email),
+      privacy_officer_email: trim(store.privacy_officer_email),
+      phone: trim(store.phone),
+      customer_service_phone: trim(store.customer_service_phone),
+      privacy_officer_phone: trim(store.privacy_officer_phone),
+      admin_name: trim(store.admin_name),
+      president_name: trim(store.president_name),
+      company_name: trim(store.company_name),
+    };
   }
 
   /**

@@ -74,6 +74,14 @@
 --   2026-05-01: shops.icon_providers 추가 (0032) — 아이콘 모드 프로바이더 ID JSON 배열.
 --                enabled_providers의 부분집합으로, 아이콘 row(44×44)로 컴팩트 노출. 빈 배열이면
 --                전부 풀버튼 모드(기존 동작 동일). last-used override는 모드 무관하게 풀버튼 promote.
+--   2026-05-04: shops.store_email/store_phone/store_admin_name/store_synced_at 추가 (0033) —
+--                카페24 /admin/store API에서 가져온 운영자 연락처. owners.email은 카페24 가입 시
+--                @cafe24.auto 더미로 채워지므로 발송 불가 → 진짜 운영자 연락처를 별도 컬럼에 저장.
+--                pickEmail/pickPhone 우선순위로 1개씩만 선택 (notification_only_email > email,
+--                010 패턴 phone > customer_service_phone). store_synced_at은 마지막 sync 시각.
+--   2026-05-04: shops.auto_briefing_email / auto_briefing_alimtalk 추가 (0033) — AI 주간 브리핑
+--                자동 발송 채널 토글. 둘 다 기본 1(ON). 운영자가 어드민에서 OFF 가능.
+--                알림톡(Phase 2)은 컬럼만 미리 추가, 발송 코드는 이메일 안정화 후 별도 작업.
 
 -- ============================================================
 -- 1. owners — 운영자 계정
@@ -127,6 +135,12 @@ CREATE TABLE IF NOT EXISTS shops (
   auto_reply_inquiries   INTEGER NOT NULL DEFAULT 0,              -- AI 자동답변 on/off
   plan                   TEXT NOT NULL DEFAULT 'free',            -- 'free' | 'plus' (CHECK 없음, 앱 레이어 검증)
   icon_providers         TEXT NOT NULL DEFAULT '[]',              -- JSON 배열: 아이콘 모드인 프로바이더 ID (enabled_providers 부분집합)
+  store_email            TEXT,                                    -- 카페24 /admin/store에서 가져온 운영자 이메일 (발송 가능한 진짜 주소)
+  store_phone            TEXT,                                    -- 카페24 /admin/store에서 가져온 운영자 핸드폰 (010 패턴, 알림톡용)
+  store_admin_name       TEXT,                                    -- 운영자명 (admin_name ?? president_name) — 메일 인사말용
+  store_synced_at        TEXT,                                    -- store_* 컬럼 마지막 sync 시각 (ISO 8601)
+  auto_briefing_email    INTEGER NOT NULL DEFAULT 1,              -- AI 주간 브리핑 이메일 발송 토글 (기본 ON)
+  auto_briefing_alimtalk INTEGER NOT NULL DEFAULT 1,              -- AI 주간 브리핑 알림톡 발송 토글 (기본 ON, Phase 2)
   UNIQUE(mall_id, platform)
 );
 

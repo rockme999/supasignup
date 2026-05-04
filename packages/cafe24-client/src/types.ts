@@ -124,6 +124,24 @@ export interface StoreInfo {
   shop_domain: string;
 }
 
+/**
+ * Store contact (운영자 연락처) — `/admin/store` 응답에서 추출한 11개 연락 필드.
+ * AI 주간 브리핑 발송, 운영 안내 메일 등 운영자 직접 연락이 필요한 경우 사용.
+ * 모든 필드는 카페24 운영자가 EC어드민에서 입력하는 값이며 빈 문자열이면 null로 정규화.
+ */
+export interface StoreContact {
+  email: string | null;                    // 대표 이메일
+  notification_only_email: string | null;  // 알림 전용 이메일 (있으면 우선)
+  customer_service_email: string | null;   // 고객센터 이메일
+  privacy_officer_email: string | null;    // 개인정보책임자 이메일
+  phone: string | null;                    // 대표 전화 (010 패턴 = 핸드폰)
+  customer_service_phone: string | null;   // 고객센터 전화
+  privacy_officer_phone: string | null;    // 개인정보책임자 전화
+  admin_name: string | null;               // 관리자명 (예: "대표 관리자")
+  president_name: string | null;           // 대표자명
+  company_name: string | null;             // 회사/쇼핑몰명
+}
+
 // ---------------------------------------------------------------------------
 // Webhook
 // ---------------------------------------------------------------------------

@@ -9,8 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.7.0",
     "@supasignup/bg-core": "*",
-    "@supasignup/cafe24-client": "*"
+    "@supasignup/cafe24-client": "*",
+    "hono": "^4.7.0",
+    "worker-mailer": "^1.2.1"
   }
 }

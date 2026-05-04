@@ -20,3 +20,7 @@ scripts/.env.bench
 
 # tsc/dist-check 임시 출력
 workers/api/dist-check/
+
+# Local-only secrets reference (never commit)
+.secrets/
+credentials.local.json
