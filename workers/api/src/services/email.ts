@@ -53,7 +53,10 @@ export async function sendEmail(env: Env, opts: SendEmailOptions): Promise<SendE
           username: env.SMTP_USER,
           password: env.SMTP_PASS,
         },
-        authType: 'plain',
+        // Ecount는 AUTH PLAIN/LOGIN 둘 다 advertise 하지만 실제로 PLAIN 거부 (535).
+        // worker-mailer 소스는 authType array 순서를 무시하고 PLAIN을 우선 시도하므로,
+        // 'plain'을 빼서 LOGIN만 강제. (검증: openssl s_client AUTH LOGIN 성공)
+        authType: 'login',
       },
       {
         from: { name: fromName, email: fromAddress },
