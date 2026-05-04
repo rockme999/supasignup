@@ -63,7 +63,9 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
     `SELECT shop_id, shop_name, mall_id, client_id, client_secret, platform, plan,
             enabled_providers, icon_providers, sso_configured, sso_type, sso_verified_at, sso_verified_slots,
             created_at, coupon_config, kakao_channel_id, widget_style, banner_config,
-            shop_identity, live_counter_config
+            shop_identity, live_counter_config,
+            store_email, store_phone, store_admin_name, store_synced_at,
+            auto_briefing_email, auto_briefing_alimtalk
      FROM shops WHERE owner_id = ? AND deleted_at IS NULL LIMIT 1`,
   ).bind(ownerId).first<ShopRow & {
     coupon_config: string | null;
@@ -75,6 +77,12 @@ async function getOwnerShop(db: D1Database, ownerId: string) {
     sso_type: string | null;
     sso_verified_at: string | null;
     sso_verified_slots: string | null;
+    store_email: string | null;
+    store_phone: string | null;
+    store_admin_name: string | null;
+    store_synced_at: string | null;
+    auto_briefing_email: number;
+    auto_briefing_alimtalk: number;
   }>();
 }
 

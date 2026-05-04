@@ -702,9 +702,9 @@ test.get('/send-email', async (c) => {
 
   const to = c.req.query('to');
   if (!to) return c.json({ error: 'to query param required' }, 400);
-  const subject = c.req.query('subject') ?? '[번개가입 STAGING] SMTP 연결 테스트';
+  const subject = c.req.query('subject') ?? '[번개가입 STAGING] 발송 테스트';
   const body = c.req.query('body')
-    ?? '안녕하세요. 번개가입 스테이징 워커가 Ecount SMTP relay를 통해 보내는 첫 발송 테스트입니다.\n\n수신 확인 시 다음 단계로 AI 주간 브리핑 이메일 발송을 활성화합니다.\n\n번개가입 — Suparain.com';
+    ?? '안녕하세요. 번개가입 스테이징 워커가 Cloudflare Email Sending 으로 보내는 발송 테스트입니다.\n\n번개가입 — Suparain.com';
 
   const result = await sendEmail(c.env, {
     to,
@@ -714,6 +714,64 @@ test.get('/send-email', async (c) => {
   });
 
   return c.json(result);
+});
+
+// ─── GET /trigger-briefing-send ───────────────────────────────
+//   ?mall_id=<>   — 해당 쇼핑몰의 가장 최근 ai_briefing 1건을 store_email 로 발송 (검증용).
+// 새 브리핑 생성하지 않고 기존 브리핑을 재발송. scheduled.ts hook 동작과 동일 흐름 검증.
+test.get('/trigger-briefing-send', async (c) => {
+  const { sendBriefingEmail } = await import('../services/email');
+
+  const mallId = c.req.query('mall_id');
+  if (!mallId) return c.json({ error: 'mall_id query param required' }, 400);
+
+  const shop = await c.env.DB.prepare(
+    `SELECT shop_id, shop_name, store_email, store_admin_name, auto_briefing_email
+     FROM shops WHERE mall_id = ? AND platform = 'cafe24' AND deleted_at IS NULL`
+  ).bind(mallId).first<{
+    shop_id: string;
+    shop_name: string;
+    store_email: string | null;
+    store_admin_name: string | null;
+    auto_briefing_email: number;
+  }>();
+  if (!shop) return c.json({ error: 'shop_not_found' }, 404);
+  if (!shop.store_email) {
+    return c.json({ error: 'no_store_email', detail: '/test/backfill-store-contact 먼저 실행' }, 400);
+  }
+
+  const briefing = await c.env.DB.prepare(
+    `SELECT performance, headline, created_at
+     FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(shop.shop_id).first<{ performance: string; headline: string | null; created_at: string }>();
+  if (!briefing) return c.json({ error: 'no_briefing', detail: '발송 가능한 브리핑이 아직 없음' }, 404);
+
+  const baseUrl = (c.env as Env).BASE_URL ?? 'https://bg-dev.suparain.kr';
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const dow = kst.getUTCDay();
+  const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(kst.getTime() - daysSinceMonday * 86400000);
+  const sunday = new Date(monday.getTime() + 6 * 86400000);
+  const fmt = (d: Date) => `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
+
+  const result = await sendBriefingEmail(c.env, {
+    toEmail: shop.store_email,
+    shopName: shop.shop_name,
+    adminName: shop.store_admin_name,
+    headline: briefing.headline,
+    performance: briefing.performance,
+    briefingUrl: `${baseUrl}/dashboard/ai-briefing`,
+    weekRange: `${fmt(monday)} ~ ${fmt(sunday)}`,
+  });
+
+  return c.json({
+    ...result,
+    sent_to: shop.store_email,
+    shop_name: shop.shop_name,
+    briefing_created_at: briefing.created_at,
+    auto_briefing_email_toggle: shop.auto_briefing_email,
+  });
 });
 
 export default test;

@@ -143,8 +143,11 @@ async function handleWeeklyBriefings(env: Env): Promise<void> {
 // ─── AI 브리핑 생성 (Queue consumer에서 호출) ────────────────
 export async function generateBriefingForShop(env: Env, shopId: string): Promise<void> {
   // 쇼핑몰 전체 정보 조회 (identity, banner_config 등 포함)
+  // 0033: 발송용 컬럼(store_email/admin_name/auto_briefing_email)도 SELECT
   const shop = await env.DB.prepare(
-    `SELECT shop_id, shop_name, shop_identity, banner_config, popup_config, escalation_config, widget_style, coupon_config, kakao_channel_id, live_counter_config, plan, client_id
+    `SELECT shop_id, shop_name, shop_identity, banner_config, popup_config, escalation_config,
+            widget_style, coupon_config, kakao_channel_id, live_counter_config, plan, client_id,
+            store_email, store_admin_name, auto_briefing_email
      FROM shops WHERE shop_id = ? AND deleted_at IS NULL`
   ).bind(shopId).first<{
     shop_id: string;
@@ -159,6 +162,9 @@ export async function generateBriefingForShop(env: Env, shopId: string): Promise
     live_counter_config: string | null;
     plan: string;
     client_id: string;
+    store_email: string | null;
+    store_admin_name: string | null;
+    auto_briefing_email: number;
   }>();
 
   if (!shop) {
@@ -313,4 +319,44 @@ JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actio
   }
 
   console.log(`[Queue] Briefing created for ${shop.shop_name} (${shop.shop_id})`);
+
+  // ── AI 주간 브리핑 이메일 자동 발송 (0033) ──
+  // 조건: 토글 ON (default 1) + store_email 채워짐 (NULL/cafe24.auto는 sync 시점에 이미 거름).
+  // 실패해도 throw 안 함 — 브리핑 생성은 이미 성공이라 발송 실패는 별도 추적 (console.error만).
+  if (shop.auto_briefing_email !== 0 && shop.store_email) {
+    try {
+      const { sendBriefingEmail } = await import('./email');
+      const baseUrl = env.BASE_URL ?? 'https://bg.suparain.kr';
+      // 이번 주 KST 월요일~일요일 표기 (브리핑 본문에서 사용된 것과 동일 규칙)
+      const now = new Date();
+      const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+      const dow = kst.getUTCDay();
+      const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+      const monday = new Date(kst.getTime() - daysSinceMonday * 86400000);
+      const sunday = new Date(monday.getTime() + 6 * 86400000);
+      const fmt = (d: Date) => `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
+      const weekRange = `${fmt(monday)} ~ ${fmt(sunday)}`;
+
+      const result = await sendBriefingEmail(env, {
+        toEmail: shop.store_email,
+        shopName: shop.shop_name || shop.shop_id,
+        adminName: shop.store_admin_name,
+        headline: parsed.headline ?? null,
+        performance: parsed.performance,
+        briefingUrl: `${baseUrl}/dashboard/ai-briefing`,
+        weekRange,
+      });
+
+      if (result.ok) {
+        console.log(`[email] Briefing sent: ${shop.shop_name} → ${shop.store_email}`);
+      } else {
+        console.error(`[email] Briefing send failed: ${shop.shop_name} → ${shop.store_email}: ${result.error}`);
+      }
+    } catch (err: any) {
+      console.error(`[email] Briefing send threw: ${shop.shop_name}`, err?.message ?? err);
+    }
+  } else {
+    const reason = shop.auto_briefing_email === 0 ? 'toggle OFF' : 'no store_email';
+    console.log(`[email] Briefing send skipped (${reason}): ${shop.shop_name}`);
+  }
 }

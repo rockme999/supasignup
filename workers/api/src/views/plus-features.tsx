@@ -2634,7 +2634,15 @@ export type AiBriefingRow = {
 };
 
 export const AiBriefingPage: FC<{
-  shop: { shop_id: string; shop_name: string; mall_id: string; plan: string };
+  shop: {
+    shop_id: string;
+    shop_name: string;
+    mall_id: string;
+    plan: string;
+    store_email?: string | null;             // pickEmail 결과 (cafe24.auto 더미는 null로 정규화됨)
+    auto_briefing_email?: number;            // 0/1 (default 1 = ON)
+    auto_briefing_alimtalk?: number;         // 0/1 (Phase 2 — UI는 disabled)
+  };
   briefings: AiBriefingRow[];
   isCafe24?: boolean;
   newBadges?: Partial<Record<string, boolean>>;
@@ -2690,9 +2698,49 @@ export const AiBriefingPage: FC<{
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:4px">
         <h1 style="margin-bottom:0">AI 브리핑</h1>
       </div>
-      <p style="font-size:14px;color:#64748b;margin-bottom:24px">
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px">
         {weekRange} 기준
       </p>
+
+      {/* AI 주간 브리핑 자동 발송 알림 — 이메일(functioning) + 알림톡(Phase 2 준비중) */}
+      <div
+        id="briefingNotifyCard"
+        style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:24px;font-size:13px"
+        data-shop-id={shop.shop_id}
+      >
+        <div style="color:#475569;line-height:1.55">
+          <span style="font-weight:600;color:#1e293b">📨 매주 월요일 09:00 KST 자동 발송</span>
+          <br />
+          <span style="font-size:12px;color:#64748b">
+            수신처:{' '}
+            {shop.store_email
+              ? <strong style="color:#1e293b">{shop.store_email}</strong>
+              : <span style="color:#dc2626">미등록 (카페24 운영자 정보 미동기화)</span>
+            }
+            {' · '}회신: <strong style="color:#1e293b">help@suparain.com</strong>
+          </span>
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;flex-shrink:0">
+          {/* 이메일 토글 — functioning */}
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#475569">
+            <input
+              type="checkbox"
+              id="autoBriefingEmailToggle"
+              checked={(shop.auto_briefing_email ?? 1) === 1}
+              style="width:14px;height:14px;cursor:pointer"
+            />
+            <span>이메일</span>
+          </label>
+          {/* 알림톡 토글 — Phase 2 준비중 (disabled) */}
+          <label
+            style="display:inline-flex;align-items:center;gap:6px;cursor:not-allowed;font-size:12px;color:#94a3b8"
+            title="알림톡 발송은 다음 버전에서 지원될 예정입니다"
+          >
+            <input type="checkbox" disabled style="width:14px;height:14px;cursor:not-allowed" />
+            <span>알림톡 <span style="font-size:10px;color:#cbd5e1">(준비중)</span></span>
+          </label>
+        </div>
+      </div>
 
       {/* 브리핑 없음 (page=1, 데이터 없음) */}
       {page === 1 && !latest && totalCount === 0 && (
@@ -3018,6 +3066,41 @@ export const AiBriefingPage: FC<{
           })();
         `}} />
       )}
+
+      {/* 자동 발송 토글 PUT 호출 — 카드 내 변경 시 즉시 반영 */}
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          var card = document.getElementById('briefingNotifyCard');
+          if (!card) return;
+          var shopId = card.getAttribute('data-shop-id');
+          if (!shopId) return;
+          var emailToggle = document.getElementById('autoBriefingEmailToggle');
+          if (!emailToggle) return;
+          emailToggle.addEventListener('change', async function() {
+            var enabled = emailToggle.checked ? 1 : 0;
+            try {
+              var resp = await fetch('/api/dashboard/shops/' + shopId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ auto_briefing_email: enabled }),
+              });
+              if (!resp.ok) {
+                throw new Error('save_failed');
+              }
+              if (typeof showToast === 'function') {
+                showToast('success', '이메일 발송 ' + (enabled ? '활성화' : '비활성화') + '되었습니다.');
+              }
+            } catch (e) {
+              // 실패 시 토글 원복
+              emailToggle.checked = !emailToggle.checked;
+              if (typeof showToast === 'function') {
+                showToast('error', '저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+              }
+            }
+          });
+        })();
+      `}} />
     </Layout>
   );
 };
