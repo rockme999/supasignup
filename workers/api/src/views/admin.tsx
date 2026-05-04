@@ -443,16 +443,27 @@ export const AdminShopsPage: FC<{
                       <code style="font-size:12px">{shop.mall_id}</code>
                     </a>
                   </td>
-                  <td style="font-size:12px">
+                  <td style="font-size:12px;max-width:180px">
                     {shop.shop_url ? (
-                      <a href={shop.shop_url} target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none" title={shop.shop_url}>
+                      <a
+                        href={shop.shop_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="color:#2563eb;text-decoration:none;display:inline-block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom"
+                        title={shop.shop_url}
+                      >
                         {shop.shop_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                       </a>
                     ) : <span style="color:#94a3b8">-</span>}
                   </td>
-                  <td style="font-size:12px">
+                  <td style="font-size:12px;max-width:200px">
                     {shop.store_email ? (
-                      <span title={shop.store_email} style="color:#475569">{shop.store_email}</span>
+                      <span
+                        title={shop.store_email}
+                        style="color:#475569;display:inline-block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom"
+                      >
+                        {shop.store_email}
+                      </span>
                     ) : (
                       <span style="color:#dc2626" title="카페24 운영자 정보 미동기화 — sync 또는 OAuth 만료">미백필</span>
                     )}
