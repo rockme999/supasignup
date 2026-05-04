@@ -255,6 +255,21 @@ cafe24.get('/callback', async (c) => {
     }).catch((err) => console.error('[SSO Probe] failed:', err))
   );
 
+  // 백그라운드 운영자 연락처 sync — /admin/store에서 store_email/phone/admin_name 백필 (0033)
+  // 신규 install + reinstall 모두 적용. 이미 발급된 access_token으로 즉시 호출 가능.
+  // 실패해도 install 흐름은 성공 — 다음 매주 cron 또는 supadmin maintenance에서 재시도 기회 있음.
+  c.executionCtx.waitUntil(
+    (async () => {
+      const { syncStoreContactByMallId } = await import('../services/store-contact');
+      const r = await syncStoreContactByMallId(c.env, mallId);
+      if (r.ok) {
+        console.log(`[store-contact] install sync ok: mall=${mallId} email=${r.email ?? 'null'}`);
+      } else {
+        console.warn(`[store-contact] install sync failed: mall=${mallId} reason=${r.reason}`);
+      }
+    })().catch((err) => console.error('[store-contact] install sync threw:', err))
+  );
+
   // Auto-login: issue JWT cookie for the owner so they can access the dashboard
   const token = await createToken(shop.owner_id, c.env.JWT_SECRET);
   const authCookie = `bg_token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;

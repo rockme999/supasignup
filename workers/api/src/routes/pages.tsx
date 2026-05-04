@@ -1847,7 +1847,7 @@ pages.get('/supadmin/shops', async (c) => {
   const search = c.req.query('search') || '';
 
   let query =
-    'SELECT s.shop_id, s.shop_name, s.mall_id, s.shop_url, s.plan, s.deleted_at, s.created_at FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE 1=1';
+    'SELECT s.shop_id, s.shop_name, s.mall_id, s.shop_url, s.plan, s.deleted_at, s.created_at, s.store_email FROM shops s JOIN owners o ON s.owner_id = o.owner_id WHERE 1=1';
   const params: string[] = [];
 
   const escapedSearch = search ? escapeLike(search) : '';
@@ -1867,6 +1867,7 @@ pages.get('/supadmin/shops', async (c) => {
     c.env.DB.prepare(query).bind(...params).all<{
       shop_id: string; shop_name: string; mall_id: string; plan: string;
       shop_url: string | null; deleted_at: string | null; created_at: string;
+      store_email: string | null;
     }>(),
     search
       ? c.env.DB.prepare(countQuery).bind(`%${escapedSearch}%`, `%${escapedSearch}%`, `%${escapedSearch}%`).first<{ total: number }>()

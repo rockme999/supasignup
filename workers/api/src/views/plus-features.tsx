@@ -2807,16 +2807,6 @@ export const AiBriefingPage: FC<{
           <p style="font-size:13px;color:#94a3b8">
             가입 데이터가 누적될수록 더 정확한 인사이트를 제공합니다.
           </p>
-          {isPlus && (
-            <button
-              id="generateBriefingBtn"
-              class="btn btn-primary"
-              style="margin-top:20px;width:auto"
-              data-shop-id={shop.shop_id}
-            >
-              지금 브리핑 생성하기
-            </button>
-          )}
         </div>
       )}
 
@@ -2836,16 +2826,7 @@ export const AiBriefingPage: FC<{
                 </div>
                 <div style="font-size:12px;color:#94a3b8;margin-top:6px">{formatDate(latest.created_at)} 생성</div>
               </div>
-              {isPlus && (
-                <button
-                  id="generateBriefingBtn"
-                  class="btn btn-sm btn-outline"
-                  style="white-space:nowrap;flex-shrink:0"
-                  data-shop-id={shop.shop_id}
-                >
-                  새 브리핑 생성
-                </button>
-              )}
+              {/* '새 브리핑 생성' 버튼 제거 (2026-05-04) — AI 비용 통제 + 매주 정기 발송 일관성. 브리핑은 매주 월요일 09:00 KST 자동 생성만. */}
             </div>
 
             {/* 지난주 성과 — Free/Plus 모두 노출 */}
@@ -3083,43 +3064,7 @@ export const AiBriefingPage: FC<{
         </div>
       )}
 
-      {/* 브리핑 생성 JS (Plus만) */}
-      {isPlus && (
-        <script dangerouslySetInnerHTML={{__html: `
-          (function() {
-            var btn = document.getElementById('generateBriefingBtn');
-            if (!btn) return;
-            btn.addEventListener('click', async function() {
-              var shopId = btn.getAttribute('data-shop-id');
-              btn.disabled = true;
-              btn.textContent = '생성 중...';
-              var loadingEl = document.getElementById('briefingLoading');
-              if (loadingEl) loadingEl.style.display = 'block';
-              try {
-                var resp = await fetch('/api/ai/briefing', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'same-origin',
-                  body: JSON.stringify({ shop_id: shopId }),
-                });
-                if (resp.ok) {
-                  window.location.reload();
-                } else {
-                  var err = await resp.json();
-                  showToast('error', err.message || '브리핑 생성에 실패했습니다.');
-                }
-              } catch (e) {
-                showToast('error', '네트워크 오류가 발생했습니다.');
-              } finally {
-                btn.disabled = false;
-                btn.textContent = btn.getAttribute('data-original-text') || '새 브리핑 생성';
-                if (loadingEl) loadingEl.style.display = 'none';
-              }
-            });
-            btn.setAttribute('data-original-text', btn.textContent);
-          })();
-        `}} />
-      )}
+      {/* '새 브리핑 생성' JS 제거 (2026-05-04) — UI 버튼 모두 제거됨. 매주 자동 cron 만 사용. */}
 
       {/* 알림 카드 인터랙션 — 토글 4개 + 카톡 채널 친구 추가/해제 */}
       <script dangerouslySetInnerHTML={{__html: `

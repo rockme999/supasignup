@@ -373,6 +373,7 @@ type AdminShopRow = {
   plan: string;
   deleted_at: string | null;
   created_at: string;
+  store_email: string | null;        // 카페24 운영자 연락처 (이메일 발송 대상)
 };
 
 type AdminShopsPagination = {
@@ -426,6 +427,7 @@ export const AdminShopsPage: FC<{
                 <th>쇼핑몰명</th>
                 <th>Mall ID</th>
                 <th>도메인</th>
+                <th>발송 이메일</th>
                 <th>플랜</th>
                 <th>상태</th>
                 <th>등록일</th>
@@ -447,6 +449,13 @@ export const AdminShopsPage: FC<{
                         {shop.shop_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                       </a>
                     ) : <span style="color:#94a3b8">-</span>}
+                  </td>
+                  <td style="font-size:12px">
+                    {shop.store_email ? (
+                      <span title={shop.store_email} style="color:#475569">{shop.store_email}</span>
+                    ) : (
+                      <span style="color:#dc2626" title="카페24 운영자 정보 미동기화 — sync 또는 OAuth 만료">미백필</span>
+                    )}
                   </td>
                   <td>
                     <select
