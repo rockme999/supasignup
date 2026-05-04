@@ -8,23 +8,52 @@
 
 작업 중인 변경사항.
 
+### ✨ 신규 — AI 주간 브리핑 자동 이메일 발송 (Phase 1)
+
+- **첫 실 운영자 메일 발송 성공** (2026-05-04): 19 활성 쇼핑몰 중 16 eligible → 15 신규 + 1 KV dedup hit + 0 failed
+- **인프라**: Cloudflare Email Sending public beta (2026-04-16 출시) 채택. 발송 도메인 `mail.suparain.kr`. 전 Ecount SMTP는 외국 IP에서 535 거부로 우회.
+- **From**: `noreply@mail.suparain.kr` / **Reply-To**: `help@suparain.com` (회신 시 Ecount 메일함 도착)
+- **자동 cron**: 매주 월요일 09:00 KST `services/scheduled.ts:generateBriefingForShop` 끝의 hook으로 자동 발송. KV `briefing-email-sent:{briefing_id}` 30일 dedup TTL.
+- **마이그레이션 0033** — `shops` 6개 컬럼 추가:
+  - `store_email`, `store_phone`, `store_admin_name`, `store_synced_at` (카페24 운영자 연락처 sync 캐시)
+  - `auto_briefing_email`, `auto_briefing_alimtalk` (발송 토글, 둘 다 기본 ON)
+- **운영자 연락처 sync**:
+  - 신규 install/reinstall 시 `routes/cafe24.ts` callback에서 `syncStoreContactByMallId` 자동 호출 (백그라운드 waitUntil)
+  - 카페24 `/admin/store` API에서 11개 필드 추출 (`packages/cafe24-client` 의 `getStoreContact` 신설)
+  - 우선순위: `notification_only_email` > `email` > `customer_service_email`. `@cafe24.auto` 더미 자동 제외
+- **이메일 템플릿** (옵션 B 부분 노출): 헤드라인 + 지난주 성과 + 이번 주 전략 첫 1~2 문장 미리보기 + "이어서 보기" CTA. HTML/평문 양쪽 지원
+- **어드민 토글 UI**: `/dashboard/ai-briefing` 알림 카드에 이메일 토글 + "발송 이메일" 노출
+- **supadmin maintenance endpoint** (production-callable, supadmin 인증):
+  - `GET /api/supadmin/maintenance/sync-store-contact?mall_id=<>|all=1` — 백필
+  - `GET /api/supadmin/maintenance/resend-recent-briefings?since_hours=N&dry_run=0&confirm=yes` — 재발송 (KV dedup 자동)
+
+### ✨ 신규 — 카톡 채널 친구 추가 흐름 Phase 2 B-1 (스테이징 only)
+
+- **자체 구축, 발송대행사 미사용** — 카카오 알림톡·친구톡 자동 발송은 발송대행사 필수 (정책상 일반 사업자 직접 API 불가)
+- **마이그레이션 0034** — `shops` 4개 컬럼: `kakao_channel_added`, `kakao_channel_added_at`, `update_news_email`, `update_news_alimtalk`
+- **카카오톡 채널** `@번개가입` (PFID `_aUbxbX`) 비즈채널 심사 진행 중
+- **친구 추가 흐름**: `/dashboard/ai-briefing` 알림 카드 + 홈 dismissible 카드. 단순 링크 + "추가 완료" self-report 방식
+- **프로덕션 UI 가드**: `KAKAO_CHANNEL_UI_ENABLED='0'` 으로 프로덕션 모든 카톡 UI 숨김. 매핑 X manual broadcast 가치가 약함 → Phase 3 카카오 i 오픈빌더 챗봇 매핑 도입 시 노출 예정
+
 ### 🐛 수정
 
 - 어드민 페이지의 plan UI를 0027 마이그레이션 후의 `'free'|'plus'` + `billing_cycle` 분리 구조에 맞춰 정정 (d8ab2bb 백엔드 fix의 프런트엔드 후속). 어드민이 "월간" 선택 후 저장 시 백엔드 validation에서 거부되던 사고 해결. 구독 현황 페이지에 `billing_cycle` 컬럼 추가, `AdminPlanCounts` 타입 명칭 명확화(`cycleMonthly`/`cycleYearly`).
+- 어드민 시간 표시 KST 변환 — `inquiry`·`audit_logs`·`ai_briefings`·`shops` 등 D1 datetime을 `.slice(0,16)` 그대로 노출하던 9곳 → `formatKstShort` 헬퍼로 통합 (1707f30, 2026-05-04)
+- `/dashboard/session-expired` 페이지에 카페24 로그인 링크 2개 (쇼핑몰 관리자 / 카페24) 추가
+- supadmin 쇼핑몰 리스트의 도메인·이메일 컬럼 길이 제한 (max-width + ellipsis + tooltip) — 긴 값으로 레이아웃 무너지던 문제 해결
+
+### 🚮 제거
+
+- 운영자 대시보드 `/dashboard/ai-briefing` 의 "새 브리핑 생성" 버튼 2곳 모두 제거 — AI 비용 통제 + 매주 정기 발송 일관성. 자동 cron 만 사용. (POST `/api/ai/briefing` endpoint는 보존 — supadmin/Phase 3 챗봇용)
 
 ### 🔒 보안 / 운영 안전망
 
 - d1_migrations 메타데이터 정합성 복구 — 0021~0027 7개 마이그레이션이 추적 누락된 상태 발견 후 양쪽 환경(스테이징·프로덕션) 메타데이터 보강 (데이터 변경 0)
 
-### 🚀 개선
-
-- `/version` 엔드포인트 추가 (예정) — 현재 배포된 commit hash·버전·빌드 시각 외부 검증 가능
-- `/health` 엔드포인트 강화 (예정) — DB·KV·R2 ping 포함
-- `scripts/deploy.sh` 강화 (예정) — 코드 commit 갭 감지 + 마이그레이션 위험 가드 + 롤백 자비
-
 ### 📚 문서
 
-- `docs/CHANGELOG.md` 신설 (이 파일) — 향후 모든 변경사항 누적 기록
+- `docs/CHANGELOG.md` 신설 — 향후 모든 변경사항 누적 기록
+- KB #683 (Cloudflare Email Sending API), #684 (Ecount SMTP 외국 IP 차단), #685 (카카오 알림톡 발송대행사 정책) 신설
 
 ---
 

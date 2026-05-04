@@ -4,24 +4,32 @@
 
 ---
 
-## 0. 프로덕션 운영 모니터링 (다음 세션 즉시 시작)
+## 0. AI 보고 시스템 Phase 3 (v2.6+)
 
-### 0-1. AI 자동답변 4/22→5/1 회귀 추적
-- **현황**: 4/22 02:38 inquiry(suparain999, "디자인 프리셋 종류")는 18초 후 정상 자동답변. 5/1 05:47 inquiry(sik59, "로그인 문의")는 status='pending' 그대로 + `ai_auto_reply_failures` 0건.
-- **원인 미확정**: 코드는 정상 (전역 토글 ON, dashboard.ts:986-990 호출 분기), 실패 기록도 없음 — `autoReplyInquiry` 함수가 silent fail 또는 호출 자체 안 됨.
-- **다음 점검**: 새 inquiry 발생 시 wrangler tail로 실시간 로그 확인 → `[auto-reply]` 로그 출력 여부, 실패 시 reason. Cloudflare Workers AI binding 상태 + D1 INSERT 실패 가능성.
-- **운영자 영향**: 자동답변 토글 ON인데 답변 안 가는 inquiry 발생 가능 → 다음 사례 시 즉시 진단.
+Phase 1·2 완성 (2026-05-04) 후 다음 단계. 자세한 컨텍스트는 메모리 `project_v2_5_next_steps.md` 참조.
 
-### 0-2. suparain999 orphan 쿠폰 5장 정리 (운영자 수동)
-- 카페24 어드민 → 프로모션 → 쿠폰 관리에서 D1 매핑 안 된 5장 status='D' 처리 권장.
-- D1 매핑된 5장: cafe24_coupon_no `6085083913400005278`, `5280`, `5282`, `5284`, `5286` (보존)
-- 나머지 5장(같은 이름)은 삭제 — 신규 가입자에게 10장 발급되는 위험 차단.
-- 향후 이중 등록은 v2.5.1 fix(KV mutex + enabled:true 제거 + body.enabled===undefined 분기)로 차단됨.
+### 0-1. 카카오 i 오픈빌더 챗봇 매핑 (가장 큰 차별화)
+- **목적**: 카톡 채널 친구 추가 시 user_id ↔ shop_id 매핑 + 24/7 reactive Q&A
+- **활용 자산**: AI 자동답변 (inquiry), shop_identity, KB, ai_briefing, D1 통계
+- **시나리오 예시**: "이번 주 가입자 몇 명?" → D1 조회 / "쿠폰팩 어떻게 등록?" → KB 검색 / "AI 브리핑 보내줘" → 즉시 발송
+- **구현**: 카카오 i 오픈빌더 GUI 시나리오 + 워커 webhook (`POST /api/kakao/skill`) + 5초 응답 제약
+- **선결**: 카카오톡 채널 비즈채널 심사 통과
+- **노출 가드**: 매핑 도입 후 `KAKAO_CHANNEL_UI_ENABLED='1'` 변경하면 즉시 활성화 (현재 staging만 노출, production hide)
 
-### 0-3. v2.5.1 추가 핫픽스 프로덕션 배포 미완료
-- 직전 commit `ec82741` (미니배너 isTabSticky 가드 보강) — 스테이징만 배포, 프로덕션 미반영.
-- 다른 미배포 commit: `a0e0452` (이중 등록 fix + fullWidth 기본값 OFF), `78c3834` (UI 톤 다듬기)
-- **다음 세션**: `git push origin main` + `printf 'yes\nyes\n' | bash scripts/deploy.sh production` 컨펌 진행.
+### 0-2. 친구톡 자동 발송 (발송대행사 1건 도입, 가입자 100명+ 시)
+- **현황**: 카톡 자동 broadcast = 발송대행사 필수 (KB #685 참조). 일반 사업자 자체 직접 API 불가
+- **후보**: SOLAPI (13원/건 알림톡 / 19원 친구톡) — REST API 깔끔
+- **수요 검증**: 친구 추가 운영자 비율, 메일 미열람률, "카톡으로도 받기" 요청 빈도로 판단
+- **도입 시 작업**: SOLAPI 가입 + 채널 발신프로필 연동 + 카카오 템플릿 검수 + worker fetch 호출
+
+### 0-3. ai_briefings.email_sent_at 컬럼 추가 (KV dedup 보강)
+- 현재 KV 30일 TTL — 만료 후 잘못 재호출 시 중복 발송 위험 (희박)
+- 영구 추적은 D1 컬럼이 안전 (마이그레이션 0035 후보)
+- 우선순위 낮음 — 운영 6개월 안정 후 검토
+
+### 0-4. 자동 발송 통계 supadmin 대시보드
+- 매주 발송 성공률, 친구 추가율, 토글 OFF 비율 등
+- 운영 가시성 향상
 
 ---
 
