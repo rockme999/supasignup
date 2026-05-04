@@ -343,6 +343,7 @@ JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actio
         adminName: shop.store_admin_name,
         headline: parsed.headline ?? null,
         performance: parsed.performance,
+        strategy: parsed.strategy ?? null,    // 옵션 B: 첫 1~2 문장 미리보기 → 클릭 유도
         briefingUrl: `${baseUrl}/dashboard/ai-briefing`,
         weekRange,
       });

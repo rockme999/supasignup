@@ -741,9 +741,9 @@ test.get('/trigger-briefing-send', async (c) => {
   }
 
   const briefing = await c.env.DB.prepare(
-    `SELECT performance, headline, created_at
+    `SELECT performance, strategy, headline, created_at
      FROM ai_briefings WHERE shop_id = ? ORDER BY created_at DESC LIMIT 1`
-  ).bind(shop.shop_id).first<{ performance: string; headline: string | null; created_at: string }>();
+  ).bind(shop.shop_id).first<{ performance: string; strategy: string | null; headline: string | null; created_at: string }>();
   if (!briefing) return c.json({ error: 'no_briefing', detail: '발송 가능한 브리핑이 아직 없음' }, 404);
 
   const baseUrl = (c.env as Env).BASE_URL ?? 'https://bg-dev.suparain.kr';
@@ -761,6 +761,7 @@ test.get('/trigger-briefing-send', async (c) => {
     adminName: shop.store_admin_name,
     headline: briefing.headline,
     performance: briefing.performance,
+    strategy: briefing.strategy,
     briefingUrl: `${baseUrl}/dashboard/ai-briefing`,
     weekRange: `${fmt(monday)} ~ ${fmt(sunday)}`,
   });

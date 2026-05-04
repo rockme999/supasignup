@@ -344,16 +344,29 @@ pages.get('/dashboard/session-expired', (c) => {
           p { font-size: 14px; color: #64748b; line-height: 1.7; margin-bottom: 8px; }
           .icon { font-size: 48px; margin-bottom: 16px; }
           .info { background: #dbeafe; color: #1e40af; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-top: 20px; text-align: left; line-height: 1.6; }
+          .login-links { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+          .login-links a { display: block; padding: 12px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: opacity 0.15s; }
+          .login-links a:hover { opacity: 0.9; }
+          .btn-primary { background: #6366f1; color: #fff; }
+          .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
         `}</style>
       </head>
       <body>
         <div class="card">
           <div class="icon">⏰</div>
           <h1>세션이 만료되었습니다</h1>
-          <p>로그인 세션이 만료되어 대시보드에 접근할 수 없습니다.</p>
+          <p>대시보드 접근을 위해 카페24 관리자 로그인이 필요합니다.</p>
+          <div class="login-links">
+            <a class="btn-primary" href="https://eclogin.cafe24.com/Shop/" target="_blank" rel="noopener">
+              🛒 쇼핑몰 관리자 로그인
+            </a>
+            <a class="btn-secondary" href="https://www.cafe24.com/member/login.html" target="_blank" rel="noopener">
+              카페24 로그인
+            </a>
+          </div>
           <div class="info">
-            카페24 쇼핑몰 관리자에서 <strong>번개가입 앱</strong>을 다시 실행해주세요.<br />
-            앱 실행 시 자동으로 로그인됩니다.
+            로그인 후 카페24 쇼핑몰 관리자에서 <strong>번개가입 앱</strong>을 다시 실행해주세요.<br />
+            앱 실행 시 자동으로 대시보드에 로그인됩니다.
           </div>
         </div>
       </body>

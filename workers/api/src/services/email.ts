@@ -62,8 +62,24 @@ export interface BriefingEmailInput {
   adminName: string | null;       // 인사말 (없으면 "운영자" 기본)
   headline: string | null;        // AI 한 줄 요약
   performance: string;            // 지난주 성과 본문
+  strategy?: string | null;       // 이번 주 전략 (옵션 B: 첫 1~2 문장만 미리보기로 노출, 클릭 유도)
   briefingUrl: string;            // /dashboard/ai-briefing 링크
   weekRange: string;              // "5월 4일 ~ 5월 10일"
+}
+
+/**
+ * 텍스트를 1~2 문장 또는 첫 줄로 미리보기 자르기.
+ * 한국어/영어 마침표·물음표·느낌표 기준으로 끊고 길이 제한.
+ */
+function previewSentences(s: string | null | undefined, maxLen = 180): string {
+  if (!s) return '';
+  const trimmed = s.trim();
+  if (!trimmed) return '';
+  // 첫 1~2 문장 추출
+  const match = trimmed.match(/^(.{0,200}?[.!?。!?])(\s|$)/);
+  let preview = match ? match[1].trim() : trimmed.split('\n')[0];
+  if (preview.length > maxLen) preview = preview.slice(0, maxLen).trim() + '…';
+  return preview;
 }
 
 export async function sendBriefingEmail(
@@ -72,6 +88,7 @@ export async function sendBriefingEmail(
 ): Promise<SendEmailResult> {
   const greeting = input.adminName ? `${input.adminName} 님` : '운영자 님';
   const headlineLine = input.headline?.trim() || `${input.shopName} 의 이번 주 성과를 확인해 보세요.`;
+  const strategyPreview = previewSentences(input.strategy);
 
   // 평문 (HTML 미지원 환경 fallback)
   const text = [
@@ -82,8 +99,16 @@ export async function sendBriefingEmail(
     '',
     '────── 지난주 성과 ──────',
     input.performance,
-    '',
-    `자세한 전략·추천 액션·AI 인사이트는 대시보드에서 확인하세요:`,
+    ...(strategyPreview ? [
+      '',
+      '────── 이번 주 전략 (미리보기) ──────',
+      strategyPreview,
+      '',
+      '... 추천 액션 3가지 + AI 인사이트는 대시보드에서 이어서 확인:',
+    ] : [
+      '',
+      '이번 주 전략·추천 액션·AI 인사이트는 대시보드에서:',
+    ]),
     input.briefingUrl,
     '',
     '— 번개가입',
@@ -105,11 +130,17 @@ export async function sendBriefingEmail(
     </div>
 
     <div style="font-size:13px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">지난주 성과</div>
-    <div style="font-size:14px;line-height:1.7;color:#374151;margin-bottom:28px;padding:16px;background:#f8fafc;border-radius:8px;white-space:pre-wrap">${performanceHtml}</div>
+    <div style="font-size:14px;line-height:1.7;color:#374151;margin-bottom:24px;padding:16px;background:#f8fafc;border-radius:8px;white-space:pre-wrap">${performanceHtml}</div>
+
+    ${strategyPreview ? `
+    <div style="font-size:13px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">이번 주 전략 <span style="font-weight:500;color:#94a3b8;text-transform:none;letter-spacing:0">(미리보기)</span></div>
+    <div style="font-size:14px;line-height:1.7;color:#374151;margin-bottom:8px;padding:16px;background:#fdf2f8;border-radius:8px;border-left:3px solid #ec4899">${escapeHtml(strategyPreview)}</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:24px;text-align:right">… 추천 액션 3가지 + AI 인사이트가 이어집니다</div>
+    ` : ''}
 
     <div style="text-align:center;margin-bottom:32px">
-      <a href="${escapeAttr(input.briefingUrl)}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px">
-        대시보드에서 자세히 보기 →
+      <a href="${escapeAttr(input.briefingUrl)}" style="display:inline-block;padding:14px 28px;background:#6366f1;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(99,102,241,0.25)">
+        ${strategyPreview ? '이어서 보기 — 전략·추천 액션·AI 인사이트 →' : '대시보드에서 자세히 보기 →'}
       </a>
     </div>
 
