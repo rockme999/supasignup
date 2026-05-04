@@ -11,7 +11,6 @@
   "dependencies": {
     "@supasignup/bg-core": "*",
     "@supasignup/cafe24-client": "*",
-    "hono": "^4.7.0",
-    "worker-mailer": "^1.2.1"
+    "hono": "^4.7.0"
   }
 }

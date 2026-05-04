@@ -262,8 +262,20 @@ export interface Env {
   VERSION: string;       // SemVer (예: '2.0.0') — workers/api/package.json 기준
   COMMIT_SHA: string;    // git short hash (예: 'd8ab2bb') — 'unknown'이면 로컬 dev
   BUILD_TIME: string;    // ISO 8601 UTC (예: '2026-04-27T08:30:00Z')
-  // ── SMTP 발송 (Ecount wsmtp.ecount.com:587 STARTTLS, AI 주간 브리핑 등 운영자 발송) ──
-  // wrangler secret put SMTP_USER / SMTP_PASS 로 등록. 미등록 환경에서는 발송 시도 자체 skip.
+  // ── 이메일 발송 (Cloudflare Email Sending public beta, 2026-04-16) ──
+  // wrangler.toml [[send_email]] binding. 발송 도메인: suparain.kr (CF 대시보드 등록).
+  // Ecount SMTP 우회 (외국 IP 535 거부)로 CF native API 채택.
+  EMAIL?: {
+    send(message: {
+      from: string;
+      to: string;
+      subject: string;
+      text?: string;
+      html?: string;
+      headers?: Record<string, string>;
+    }): Promise<unknown>;
+  };
+  // ── (DEPRECATED) Ecount SMTP relay — 외국 IP 차단으로 미사용. 향후 제거 예정. ──
   SMTP_USER?: string;
   SMTP_PASS?: string;
 }

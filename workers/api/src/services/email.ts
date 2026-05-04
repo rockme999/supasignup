@@ -1,72 +1,49 @@
 /**
- * Ecount SMTP relay 기반 운영자 발송 (AI 주간 브리핑 등).
+ * Cloudflare Email Sending (2026-04-16 public beta) 기반 운영자 발송.
  *
- * - 호스트: wsmtp.ecount.com:587 (STARTTLS) 또는 :465 (SSL)
- * - 인증: rockme@suparain.com / SMTP_PASS (wrangler secret)
- * - 발송자: help@suparain.com (Ecount alias)
+ * - Binding: env.EMAIL.send({ from, to, subject, html, text, headers })
+ * - 발송 도메인: suparain.kr (Cloudflare 대시보드 → Email Sending → Add Domain)
+ *   등록 시 SPF/DKIM/DMARC 자동 추가.
+ * - 발송자: noreply@suparain.kr (등록 도메인 하위 자유 지정)
+ * - Reply-To: help@suparain.com (운영자가 회신 시 Ecount 메일함으로 도착)
+ * - Workers Paid 필수 — 기존 Queues 사용 중이라 추가 비용 0.
  *
- * 주의:
- * - SMTP_USER / SMTP_PASS 미등록 환경에서는 즉시 fail (운영 안전망).
- * - 실패 시 throw 하지 않고 { ok: false, error } 반환 — caller 가 retry/skip 결정.
- * - DKIM/DMARC 미설정 상태이므로 SPF만으로 발송. Gmail/Naver 정상 분류는 도메인 SPF에 spf.ecounterp.com 포함되어야 함.
+ * 채택 이유: Ecount SMTP relay가 외국/Cloudflare edge IP에서 535 거부.
+ * 동일 자격증명을 한국 IP openssl 직접 시도하면 235 success 확인됨.
+ * Admin UI에 노출되지 않은 백엔드 anti-abuse로 추정. CF native API로 우회.
  */
 
-import { WorkerMailer } from 'worker-mailer';
 import type { Env } from '@supasignup/bg-core';
 
 export interface SendEmailOptions {
-  to: string;                  // 수신 이메일 (단일)
+  to: string;
   subject: string;
   text: string;                // 평문 본문 (필수)
   html?: string;               // HTML 본문 (옵션)
-  fromName?: string;           // 표시 이름 (default '번개가입')
-  fromAddress?: string;        // From 주소 (default 'help@suparain.com')
-  replyTo?: string;            // 회신 주소 (default fromAddress)
+  fromAddress?: string;        // default 'noreply@suparain.kr'
+  replyTo?: string;            // default 'help@suparain.com'
 }
 
-export type SendEmailResult =
-  | { ok: true; messageId?: string }
-  | { ok: false; error: string };
+export type SendEmailResult = { ok: true } | { ok: false; error: string };
 
-const SMTP_HOST = 'wsmtp.ecount.com';
-const SMTP_PORT = 587;
-const DEFAULT_FROM_NAME = '번개가입';
-const DEFAULT_FROM_ADDRESS = 'help@suparain.com';
+const DEFAULT_FROM_ADDRESS = 'noreply@suparain.kr';
+const DEFAULT_REPLY_TO = 'help@suparain.com';
 
 export async function sendEmail(env: Env, opts: SendEmailOptions): Promise<SendEmailResult> {
-  if (!env.SMTP_USER || !env.SMTP_PASS) {
-    return { ok: false, error: 'smtp_credentials_missing' };
+  if (!env.EMAIL) {
+    return { ok: false, error: 'email_binding_missing' };
   }
-
-  const fromName = opts.fromName ?? DEFAULT_FROM_NAME;
-  const fromAddress = opts.fromAddress ?? DEFAULT_FROM_ADDRESS;
-  const replyTo = opts.replyTo ?? fromAddress;
-
+  const from = opts.fromAddress ?? DEFAULT_FROM_ADDRESS;
+  const replyTo = opts.replyTo ?? DEFAULT_REPLY_TO;
   try {
-    await WorkerMailer.send(
-      {
-        host: SMTP_HOST,
-        port: SMTP_PORT,
-        secure: false,
-        startTls: true,
-        credentials: {
-          username: env.SMTP_USER,
-          password: env.SMTP_PASS,
-        },
-        // Ecount는 AUTH PLAIN/LOGIN 둘 다 advertise 하지만 실제로 PLAIN 거부 (535).
-        // worker-mailer 소스는 authType array 순서를 무시하고 PLAIN을 우선 시도하므로,
-        // 'plain'을 빼서 LOGIN만 강제. (검증: openssl s_client AUTH LOGIN 성공)
-        authType: 'login',
-      },
-      {
-        from: { name: fromName, email: fromAddress },
-        to: opts.to,
-        subject: opts.subject,
-        text: opts.text,
-        html: opts.html,
-        reply: replyTo,
-      },
-    );
+    await env.EMAIL.send({
+      from,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
+      headers: { 'Reply-To': replyTo },
+    });
     return { ok: true };
   } catch (err: any) {
     const msg = err?.message ?? String(err);

@@ -54,6 +54,13 @@ max_batch_size = 5
 max_retries = 2
 dead_letter_queue = "bg-briefing-dlq"
 
+# Email Sending (Cloudflare 자체 발송, 2026-04-16 public beta)
+# 도메인 등록: Cloudflare 대시보드 → Email → Email Sending → Add Domain → suparain.kr
+# 등록 시 SPF/DKIM/DMARC 자동 추가됨. from 주소: noreply@suparain.kr
+[[send_email]]
+name = "EMAIL"
+remote = true
+
 # ══════════════════════════════════════════════════════════════
 # 스테이징 (개발) — npx wrangler deploy --env dev
 # ══════════════════════════════════════════════════════════════
@@ -106,6 +113,11 @@ binding = "BRIEFING_QUEUE"
 queue = "bg-briefing-queue-dev"
 max_batch_size = 5
 max_retries = 2
+
+# Email Sending (스테이징도 동일 도메인 suparain.kr 사용 — 한 번 등록하면 양 환경 공유)
+[[env.dev.send_email]]
+name = "EMAIL"
+remote = true
 
 # ══════════════════════════════════════════════════════════════
 # Secrets (wrangler secret put 으로 등록):
