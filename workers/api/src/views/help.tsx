@@ -3,7 +3,7 @@
  */
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
-import { inquiryStatusLabel } from './shared';
+import { inquiryStatusLabel, formatKstShort } from './shared';
 import { mdToHtml } from '../utils/markdown';
 
 export const QuickStartPage: FC<{ shop: { sso_configured: number; plan: string } | null; isCafe24?: boolean }> = ({ shop, isCafe24 }) => (
@@ -1555,7 +1555,7 @@ export const InquiryDetailPage: FC<{
           <span class={`badge ${st.cls}`}>{st.label}</span>
         </div>
         <div style="font-size:12px;color:#94a3b8;margin-bottom:16px">
-          {inquiry.shop_name || inquiry.mall_id} · {inquiry.created_at.slice(0, 16).replace('T', ' ')}
+          {inquiry.shop_name || inquiry.mall_id} · {formatKstShort(inquiry.created_at)}
         </div>
         <div style="font-size:14px;line-height:1.8;white-space:pre-wrap;border-top:1px solid #f1f5f9;padding-top:16px">
           {inquiry.content}
@@ -1594,7 +1594,7 @@ export const InquiryDetailPage: FC<{
         <div class="card" style="border-left:4px solid #2563eb">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <span style="font-weight:700;font-size:14px;color:#2563eb">관리자 답변</span>
-            <span style="font-size:12px;color:#94a3b8">{inquiry.replied_at ? inquiry.replied_at.slice(0, 16).replace('T', ' ') : ''}</span>
+            <span style="font-size:12px;color:#94a3b8">{formatKstShort(inquiry.replied_at)}</span>
           </div>
           <div class="md-reply" style="font-size:14px;line-height:1.75" dangerouslySetInnerHTML={{ __html: mdToHtml(inquiry.reply) }} />
           {inquiry.status === 'auto_replied' && (

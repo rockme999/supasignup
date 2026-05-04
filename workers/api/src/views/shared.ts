@@ -167,3 +167,15 @@ export const inquiryStatusLabel = (status: string) => {
   if (status === 'closed') return { label: '종료', cls: 'badge-gray' };
   return { label: status, cls: 'badge-gray' };
 };
+
+// D1 datetime ('YYYY-MM-DD HH:MM:SS' UTC, no Z) → KST 'YYYY-MM-DD HH:MM[:SS]' 표시.
+// Workers V8과 브라우저가 'YYYY-MM-DD HH:MM:SS' 를 일관되게 UTC로 파싱하도록 ISO+Z 로 정규화.
+export function formatKstShort(utc: string | null | undefined, withSeconds = false): string {
+  if (!utc) return '';
+  let iso = utc.includes('T') ? utc : utc.replace(' ', 'T');
+  if (!iso.endsWith('Z')) iso += 'Z';
+  const kst = new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  const base = `${kst.getUTCFullYear()}-${p(kst.getUTCMonth() + 1)}-${p(kst.getUTCDate())} ${p(kst.getUTCHours())}:${p(kst.getUTCMinutes())}`;
+  return withSeconds ? `${base}:${p(kst.getUTCSeconds())}` : base;
+}

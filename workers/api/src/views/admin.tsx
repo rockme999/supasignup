@@ -4,7 +4,7 @@
 import type { FC } from 'hono/jsx';
 import { Layout } from './layout';
 import { ProgressBar } from './charts';
-import { providerColors, providerDisplayNames, inquiryStatusLabel } from './shared';
+import { providerColors, providerDisplayNames, inquiryStatusLabel, formatKstShort } from './shared';
 
 // ─── Admin Pages ─────────────────────────────────────────────
 
@@ -191,7 +191,7 @@ export const AdminHomePage: FC<{
                   <td style="font-size:13px">{inq.title}</td>
                   <td style="font-size:12px;color:#64748b">{inq.shop_name || '-'}</td>
                   <td style="font-size:12px;color:#64748b">{inq.owner_email}</td>
-                  <td style="font-size:12px;color:#94a3b8">{inq.created_at.slice(0, 16).replace('T', ' ')}</td>
+                  <td style="font-size:12px;color:#94a3b8">{formatKstShort(inq.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -714,7 +714,7 @@ export const AdminAuditLogPage: FC<{
               <tbody>
                 {logs.map((log) => (
                   <tr>
-                    <td style="white-space:nowrap;font-size:12px;color:#64748b">{log.created_at.slice(0, 16).replace('T', ' ')}</td>
+                    <td style="white-space:nowrap;font-size:12px;color:#64748b">{formatKstShort(log.created_at)}</td>
                     <td style="font-size:13px">{log.actor_email || <span style="color:#94a3b8">시스템</span>}</td>
                     <td><span class="badge badge-gray">{log.action}</span></td>
                     <td style="font-size:13px">{log.target_type}</td>
@@ -1134,9 +1134,9 @@ export const AdminInquiriesPage: FC<{
                         return null;
                       })()}
                     </td>
-                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{inq.created_at.slice(0, 16).replace('T', ' ')}</td>
+                    <td style="font-size:12px;color:#64748b;white-space:nowrap">{formatKstShort(inq.created_at)}</td>
                     <td style="font-size:12px;color:#64748b;white-space:nowrap">
-                      {inq.replied_at ? inq.replied_at.slice(0, 16).replace('T', ' ') : '-'}
+                      {formatKstShort(inq.replied_at) || '-'}
                     </td>
                     <td>
                       <button
@@ -1312,6 +1312,18 @@ export const AdminInquiriesPage: FC<{
     </div>
 
     <script dangerouslySetInnerHTML={{__html: `
+      // D1 datetime (UTC, no Z) → KST 'YYYY-MM-DD HH:MM[:SS]'.
+      function fmtKst(s, withSec) {
+        if (!s) return '';
+        var iso = s.indexOf('T') >= 0 ? s : s.replace(' ', 'T');
+        if (iso.charAt(iso.length - 1) !== 'Z') iso += 'Z';
+        var d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000);
+        var p = function(n) { return n < 10 ? '0' + n : '' + n; };
+        var base = d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate())
+          + ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
+        return withSec ? base + ':' + p(d.getUTCSeconds()) : base;
+      }
+
       var modal = document.getElementById('replyModal');
       var inquiryData = {};
       try {
@@ -1337,7 +1349,7 @@ export const AdminInquiriesPage: FC<{
         document.getElementById('replyTargetShopId').value = inq.shop_id || '';
         document.getElementById('replyModalTitle').textContent = inq.title;
         document.getElementById('replyModalMeta').textContent =
-          inq.owner_email + ' · ' + inq.shop + ' · ' + inq.created_at.slice(0, 16).replace('T', ' ');
+          inq.owner_email + ' · ' + inq.shop + ' · ' + fmtKst(inq.created_at);
         document.getElementById('replyModalContent').textContent = inq.content || '(내용 없음)';
 
         // 첨부 이미지 갤러리 렌더링
@@ -1400,7 +1412,7 @@ export const AdminInquiriesPage: FC<{
             autoReplyDisclaimer.style.display = (inq.status === 'auto_replied') ? 'block' : 'none';
           }
           document.getElementById('existingReplyMeta').textContent =
-            inq.replied_at ? '(' + inq.replied_at.slice(0, 16).replace('T', ' ') + ')' : '';
+            inq.replied_at ? '(' + fmtKst(inq.replied_at) + ')' : '';
           // 답변완료 상태: 수정 모드로 진입하기 전까지 textarea 숨김
           formWrap.style.display = 'none';
           submitBtn.style.display = 'none';
@@ -1448,7 +1460,7 @@ export const AdminInquiriesPage: FC<{
                 'held_for_review': '리뷰 보류',
                 'unexpected_error': '예상 외 오류'
               }[f.reason] || f.reason;
-              var ts = (f.created_at || '').slice(0, 19).replace('T', ' ');
+              var ts = fmtKst(f.created_at, true);
               var elapsed = f.ai_elapsed_ms ? (' · ' + f.ai_elapsed_ms + 'ms') : '';
               var detail = f.detail ? ('\\n  → ' + String(f.detail).slice(0, 200)) : '';
               // 보안: HTML escape 후 줄바꿈만 유지
@@ -1795,12 +1807,12 @@ export const AdminAiReportDetailPage: FC<{
           <div class="card" style="margin-bottom:16px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:13px;font-weight:600;color:#1e293b">{b.created_at.slice(0, 10)}</span>
+                <span style="font-size:13px;font-weight:600;color:#1e293b">{formatKstShort(b.created_at).slice(0, 10)}</span>
                 <span class={`badge ${b.source === 'scheduled' ? 'badge-blue' : 'badge-gray'}`} style="font-size:11px">
                   {b.source === 'scheduled' ? '자동' : '수동'}
                 </span>
               </div>
-              <span style="font-size:11px;color:#94a3b8">{b.created_at.slice(0, 16).replace('T', ' ')}</span>
+              <span style="font-size:11px;color:#94a3b8">{formatKstShort(b.created_at)}</span>
             </div>
 
             <div style="display:grid;gap:12px">
@@ -1942,8 +1954,8 @@ export const AdminShopDetailPage: FC<{
               <tr><th>SSO 연동</th><td>{shop.sso_configured ? <span class="badge badge-green">완료</span> : <span class="badge badge-yellow">미완료</span>}</td></tr>
               <tr><th>활성 프로바이더</th><td>{providers.length > 0 ? providers.map(p => <span class="badge badge-gray" style="margin-right:4px">{providerDisplayNames[p] || p}</span>) : '-'}</td></tr>
               <tr><th>카카오 채널</th><td>{shop.kakao_channel_id || '-'}</td></tr>
-              <tr><th>등록일</th><td>{shop.created_at?.slice(0, 16).replace('T', ' ')}</td></tr>
-              <tr><th>최종 수정</th><td>{shop.updated_at?.slice(0, 16).replace('T', ' ') || '-'}</td></tr>
+              <tr><th>등록일</th><td>{formatKstShort(shop.created_at)}</td></tr>
+              <tr><th>최종 수정</th><td>{formatKstShort(shop.updated_at) || '-'}</td></tr>
             </tbody>
           </table>
         </div>
