@@ -65,7 +65,15 @@ export interface BriefingEmailInput {
   strategy?: string | null;       // 이번 주 전략 (옵션 B: 첫 1~2 문장만 미리보기로 노출, 클릭 유도)
   briefingUrl: string;            // /dashboard/ai-briefing 링크
   weekRange: string;              // "5월 4일 ~ 5월 10일"
+  briefingId?: string;            // KV 기반 중복 발송 방지 (30일 TTL). 미제공 시 dedup 미적용.
 }
+
+export type BriefingEmailResult =
+  | { ok: true; alreadySent?: false }
+  | { ok: true; alreadySent: true; sentAt: string; sentTo?: string }    // dedup hit
+  | { ok: false; error: string };
+
+const BRIEFING_DEDUP_TTL_SECONDS = 30 * 24 * 60 * 60;  // 30일
 
 /**
  * 텍스트를 1~2 문장 또는 첫 줄로 미리보기 자르기.
@@ -85,7 +93,21 @@ function previewSentences(s: string | null | undefined, maxLen = 180): string {
 export async function sendBriefingEmail(
   env: Env,
   input: BriefingEmailInput,
-): Promise<SendEmailResult> {
+): Promise<BriefingEmailResult> {
+  // KV 기반 중복 발송 방지 — briefingId 제공 + KV binding 가능 시
+  if (input.briefingId && env.KV) {
+    const dedupKey = `briefing-email-sent:${input.briefingId}`;
+    const existing = await env.KV.get(dedupKey);
+    if (existing) {
+      try {
+        const meta = JSON.parse(existing) as { sentAt: string; to?: string };
+        return { ok: true, alreadySent: true, sentAt: meta.sentAt, sentTo: meta.to };
+      } catch {
+        // KV 데이터 손상 시 재발송 (안전 fallback)
+      }
+    }
+  }
+
   const greeting = input.adminName ? `${input.adminName} 님` : '운영자 님';
   const headlineLine = input.headline?.trim() || `${input.shopName} 의 이번 주 성과를 확인해 보세요.`;
   const strategyPreview = previewSentences(input.strategy);
@@ -153,12 +175,30 @@ export async function sendBriefingEmail(
 </body>
 </html>`;
 
-  return sendEmail(env, {
+  const result = await sendEmail(env, {
     to: input.toEmail,
     subject: `[번개가입] 이번 주 AI 브리핑 — ${input.shopName}`,
     text,
     html,
   });
+
+  // 발송 성공 시 KV에 dedup marker 기록 (briefingId 있을 때만)
+  if (result.ok && input.briefingId && env.KV) {
+    const dedupKey = `briefing-email-sent:${input.briefingId}`;
+    const sentAt = new Date().toISOString();
+    try {
+      await env.KV.put(
+        dedupKey,
+        JSON.stringify({ sentAt, to: input.toEmail }),
+        { expirationTtl: BRIEFING_DEDUP_TTL_SECONDS },
+      );
+    } catch (err) {
+      // KV 실패해도 발송은 성공이라 throw X — 다음 발송 시 중복될 가능성만 있음
+      console.warn('[email] dedup KV put failed:', err);
+    }
+  }
+
+  return result;
 }
 
 function escapeHtml(s: string): string {

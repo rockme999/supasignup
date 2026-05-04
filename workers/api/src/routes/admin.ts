@@ -1019,4 +1019,231 @@ async function recordAuditLog(
     .run();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 운영자 전용 maintenance endpoints (production-callable, supadmin 인증 필수)
+// ═══════════════════════════════════════════════════════════════
+
+// ─── GET /maintenance/sync-store-contact ──────────────────────
+//   ?mall_id=<id>   — 단일 카페24 쇼핑몰 store_email/phone/admin_name 백필
+//   ?all=1          — 모든 활성 카페24 쇼핑몰 순차 백필
+// 새 install 시점에는 cafe24.ts가 자동 sync 하지만, 0033 이전 가입 쇼핑몰은 수동 백필 필요.
+// /test/backfill-store-contact 와 동일 로직이지만 production-callable (devOnly 가드 없음).
+admin.get('/maintenance/sync-store-contact', async (c) => {
+  const { syncStoreContactByMallId, pickEmail, pickPhone } = await import('../services/store-contact');
+
+  const single = c.req.query('mall_id');
+  const all = c.req.query('all') === '1';
+  if (!single && !all) {
+    return c.json({ error: 'mall_id 또는 all=1 파라미터 필요' }, 400);
+  }
+
+  if (single) {
+    const result = await syncStoreContactByMallId(c.env, single);
+    return c.json(result);
+  }
+
+  // 전체 처리 — 카페24 활성 쇼핑몰만, 순차
+  const shops = await c.env.DB.prepare(
+    `SELECT mall_id FROM shops
+     WHERE platform = 'cafe24' AND deleted_at IS NULL
+     ORDER BY created_at ASC`
+  ).all<{ mall_id: string }>();
+  const malls = shops.results ?? [];
+
+  const summary: Array<{
+    mall_id: string;
+    ok: boolean;
+    email?: string | null;
+    phone?: string | null;
+    reason?: string;
+  }> = [];
+
+  for (const { mall_id } of malls) {
+    const r = await syncStoreContactByMallId(c.env, mall_id);
+    summary.push({
+      mall_id,
+      ok: r.ok,
+      email: r.email ?? (r.contact ? pickEmail(r.contact) : undefined),
+      phone: r.phone ?? (r.contact ? pickPhone(r.contact) : undefined),
+      reason: r.reason,
+    });
+  }
+
+  const ok = summary.filter(s => s.ok).length;
+  const fail = summary.length - ok;
+  return c.json({ total: summary.length, ok, fail, summary });
+});
+
+// ─── GET /maintenance/resend-recent-briefings ─────────────────
+//   ?mall_id=<id>                   — 단일 쇼핑몰 (즉시 발송, dry_run 무시)
+//   ?all=1                          — 전체 (기본 dry_run=1)
+//   ?since_hours=N                  — N시간 내 생성된 ai_briefings (default 24)
+//   ?dry_run=1|0                    — 0이면 실제 발송 (all=1 시 confirm=yes 필수)
+//   ?confirm=yes                    — all=1 + dry_run=0 시 명시 안전장치
+// KV 기반 dedup으로 같은 briefing 중복 발송 자동 방지 (30일 TTL).
+// 발송 조건: shop.auto_briefing_email !== 0 + store_email 채워짐 + cafe24.auto 더미 아님.
+admin.get('/maintenance/resend-recent-briefings', async (c) => {
+  const { sendBriefingEmail } = await import('../services/email');
+
+  const single = c.req.query('mall_id');
+  const all = c.req.query('all') === '1';
+  if (!single && !all) {
+    return c.json({ error: 'mall_id 또는 all=1 파라미터 필요' }, 400);
+  }
+
+  const sinceHours = Math.max(1, Math.min(720, parseInt(c.req.query('since_hours') ?? '24', 10) || 24));
+  // 단일 mall_id 는 즉시 발송 (테스트 의도). all=1 은 dry_run 기본 1.
+  const dryRun = single
+    ? c.req.query('dry_run') === '1'
+    : c.req.query('dry_run') !== '0';
+  const confirmed = c.req.query('confirm') === 'yes';
+
+  if (all && !dryRun && !confirmed) {
+    return c.json({
+      error: 'broadcast_unconfirmed',
+      detail: '전체 발송은 ?dry_run=0&confirm=yes 명시 필수. 먼저 dry_run=1 로 미리보기를 권장합니다.',
+    }, 400);
+  }
+
+  const baseUrl = c.env.BASE_URL ?? 'https://bg.suparain.kr';
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const dow = kst.getUTCDay();
+  const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(kst.getTime() - daysSinceMonday * 86400000);
+  const sunday = new Date(monday.getTime() + 6 * 86400000);
+  const fmt = (d: Date) => `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
+  const weekRange = `${fmt(monday)} ~ ${fmt(sunday)}`;
+
+  // 발송 후보 조회 — 단일 또는 전체
+  type Candidate = {
+    shop_id: string;
+    mall_id: string;
+    shop_name: string;
+    store_email: string | null;
+    store_admin_name: string | null;
+    auto_briefing_email: number;
+    briefing_id: string | null;
+    headline: string | null;
+    performance: string | null;
+    strategy: string | null;
+    briefing_created_at: string | null;
+  };
+
+  let rows: Candidate[];
+  if (single) {
+    const r = await c.env.DB.prepare(
+      `SELECT s.shop_id, s.mall_id, s.shop_name, s.store_email, s.store_admin_name, s.auto_briefing_email,
+              b.id AS briefing_id, b.headline, b.performance, b.strategy, b.created_at AS briefing_created_at
+       FROM shops s
+       LEFT JOIN ai_briefings b ON b.shop_id = s.shop_id AND b.id = (
+         SELECT id FROM ai_briefings WHERE shop_id = s.shop_id
+         AND created_at >= datetime('now', ?) ORDER BY created_at DESC LIMIT 1
+       )
+       WHERE s.mall_id = ? AND s.platform = 'cafe24' AND s.deleted_at IS NULL`
+    ).bind(`-${sinceHours} hours`, single).all<Candidate>();
+    rows = (r.results ?? []) as Candidate[];
+  } else {
+    const r = await c.env.DB.prepare(
+      `SELECT s.shop_id, s.mall_id, s.shop_name, s.store_email, s.store_admin_name, s.auto_briefing_email,
+              b.id AS briefing_id, b.headline, b.performance, b.strategy, b.created_at AS briefing_created_at
+       FROM shops s
+       LEFT JOIN ai_briefings b ON b.shop_id = s.shop_id AND b.id = (
+         SELECT id FROM ai_briefings WHERE shop_id = s.shop_id
+         AND created_at >= datetime('now', ?) ORDER BY created_at DESC LIMIT 1
+       )
+       WHERE s.platform = 'cafe24' AND s.deleted_at IS NULL
+       ORDER BY s.created_at ASC`
+    ).bind(`-${sinceHours} hours`).all<Candidate>();
+    rows = (r.results ?? []) as Candidate[];
+  }
+
+  // 분류 — 발송 가능 / 스킵 사유별
+  const eligible: Candidate[] = [];
+  const skipped: Array<{ mall_id: string; shop_name: string; reason: string }> = [];
+
+  for (const row of rows) {
+    if (!row.briefing_id) {
+      skipped.push({ mall_id: row.mall_id, shop_name: row.shop_name, reason: 'no_briefing_in_window' });
+      continue;
+    }
+    if (row.auto_briefing_email === 0) {
+      skipped.push({ mall_id: row.mall_id, shop_name: row.shop_name, reason: 'toggle_off' });
+      continue;
+    }
+    if (!row.store_email) {
+      skipped.push({ mall_id: row.mall_id, shop_name: row.shop_name, reason: 'no_store_email' });
+      continue;
+    }
+    if (row.store_email.toLowerCase().endsWith('@cafe24.auto')) {
+      skipped.push({ mall_id: row.mall_id, shop_name: row.shop_name, reason: 'cafe24_auto_dummy_email' });
+      continue;
+    }
+    eligible.push(row);
+  }
+
+  // dry_run: 발송하지 않고 후보만 반환
+  if (dryRun) {
+    return c.json({
+      mode: 'dry_run',
+      since_hours: sinceHours,
+      week_range: weekRange,
+      total_candidates: rows.length,
+      eligible_count: eligible.length,
+      skipped_count: skipped.length,
+      eligible: eligible.map(e => ({
+        mall_id: e.mall_id,
+        shop_name: e.shop_name,
+        store_email: e.store_email,
+        briefing_id: e.briefing_id,
+        briefing_created_at: e.briefing_created_at,
+      })),
+      skipped,
+    });
+  }
+
+  // 실 발송 — 순차, KV dedup 자동
+  const sent: Array<{ mall_id: string; to: string; alreadySent?: boolean }> = [];
+  const failed: Array<{ mall_id: string; to: string; error: string }> = [];
+
+  for (const row of eligible) {
+    const result = await sendBriefingEmail(c.env, {
+      toEmail: row.store_email!,
+      shopName: row.shop_name || row.mall_id,
+      adminName: row.store_admin_name,
+      headline: row.headline,
+      performance: row.performance ?? '',
+      strategy: row.strategy,
+      briefingUrl: `${baseUrl}/dashboard/ai-briefing`,
+      weekRange,
+      briefingId: row.briefing_id!,
+    });
+
+    if (result.ok) {
+      sent.push({
+        mall_id: row.mall_id,
+        to: row.store_email!,
+        alreadySent: 'alreadySent' in result && result.alreadySent ? true : undefined,
+      });
+    } else {
+      failed.push({ mall_id: row.mall_id, to: row.store_email!, error: result.error });
+    }
+  }
+
+  return c.json({
+    mode: 'send',
+    since_hours: sinceHours,
+    week_range: weekRange,
+    total_candidates: rows.length,
+    eligible_count: eligible.length,
+    skipped_count: skipped.length,
+    sent_count: sent.filter(s => !s.alreadySent).length,
+    already_sent_count: sent.filter(s => s.alreadySent).length,
+    failed_count: failed.length,
+    sent,
+    skipped,
+    failed,
+  });
+});
+
 export default admin;

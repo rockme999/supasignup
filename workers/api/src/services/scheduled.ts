@@ -346,9 +346,12 @@ JSON만 응답: {"performance":"성과 요약","strategy":"전략 제안","actio
         strategy: parsed.strategy ?? null,    // 옵션 B: 첫 1~2 문장 미리보기 → 클릭 유도
         briefingUrl: `${baseUrl}/dashboard/ai-briefing`,
         weekRange,
+        briefingId,                           // KV dedup — cron 중복 호출 방지
       });
 
-      if (result.ok) {
+      if (result.ok && (result as { alreadySent?: boolean }).alreadySent) {
+        console.log(`[email] Briefing already sent (dedup): ${shop.shop_name} (${briefingId})`);
+      } else if (result.ok) {
         console.log(`[email] Briefing sent: ${shop.shop_name} → ${shop.store_email}`);
       } else {
         console.error(`[email] Briefing send failed: ${shop.shop_name} → ${shop.store_email}: ${result.error}`);
