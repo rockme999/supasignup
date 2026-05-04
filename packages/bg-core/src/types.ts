@@ -255,6 +255,8 @@ export interface Env {
   CAFE24_WEBHOOK_API_KEY: string;
   // 카카오톡 채널 PFID (Phase 2 친구 추가 흐름) — wrangler.toml [vars]
   KAKAO_CHANNEL_PFID: string;
+  // 카톡 채널 UI 노출 가드 — '1' 시 노출, 그 외 모두 숨김. Phase 3 챗봇 매핑 도입 전까지 프로덕션 hide.
+  KAKAO_CHANNEL_UI_ENABLED?: string;
   ENCRYPTION_KEY: string;
   JWT_SECRET: string;
   AI: any; // Cloudflare Workers AI binding

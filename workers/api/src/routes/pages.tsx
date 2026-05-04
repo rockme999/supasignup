@@ -556,6 +556,7 @@ pages.get('/dashboard', async (c) => {
       latestBriefing={latestBriefing}
       isCafe24={c.get('isCafe24')}
       kakaoChannelPfid={c.env.KAKAO_CHANNEL_PFID}
+      kakaoUiEnabled={c.env.KAKAO_CHANNEL_UI_ENABLED === '1'}
     />
   );
 });
@@ -1378,6 +1379,7 @@ pages.get('/dashboard/ai-briefing', async (c) => {
       totalPages={totalPages}
       totalCount={totalCount}
       kakaoChannelPfid={c.env.KAKAO_CHANNEL_PFID}
+      kakaoUiEnabled={c.env.KAKAO_CHANNEL_UI_ENABLED === '1'}
     />
   );
 });

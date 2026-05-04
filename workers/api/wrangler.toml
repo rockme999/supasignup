@@ -18,6 +18,9 @@ BASE_URL = "https://bg.suparain.kr"
 # 카카오톡 채널 (B-1: 친구 추가 흐름) — @번개가입
 # 검색용 ID '@번개가입' / 채널 URL https://pf.kakao.com/_aUbxbX / PFID '_aUbxbX'
 KAKAO_CHANNEL_PFID = "_aUbxbX"
+# 카톡 채널 UI 노출 가드 — 프로덕션 미설정/"0" 일 때 친구 추가 UI 모두 숨김.
+# Phase 2 manual broadcast는 운영자별 매핑 X 라 가치가 약함 → Phase 3 챗봇 매핑 도입 후 노출.
+KAKAO_CHANNEL_UI_ENABLED = "0"
 # ── 빌드 메타데이터 (deploy.sh가 --var로 override) ────────────
 # 로컬 wrangler dev 시 그대로 사용됨. 실제 배포 시 git rev-parse + date로 주입.
 VERSION = "2.0.0"
@@ -84,6 +87,8 @@ custom_domain = true
 BASE_URL = "https://bg-dev.suparain.kr"
 # 스테이징도 동일 카카오톡 채널 사용 (심사·운영 비용 절감)
 KAKAO_CHANNEL_PFID = "_aUbxbX"
+# 스테이징은 카톡 채널 UI 노출 — Phase 3 매핑 검증 + 운영 dogfooding 용
+KAKAO_CHANNEL_UI_ENABLED = "1"
 VERSION = "2.0.0"
 COMMIT_SHA = "unknown"
 BUILD_TIME = "unknown"

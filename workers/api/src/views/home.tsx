@@ -35,7 +35,8 @@ export const HomePage: FC<{
   latestBriefing?: HomeBriefing | null;
   isCafe24?: boolean;
   kakaoChannelPfid?: string;          // 친구 추가 안내 카드용
-}> = ({ shop, stats, funnelSummary, lossAversion, plusPerformance, latestBriefing, isCafe24, kakaoChannelPfid = '_aUbxbX' }) => {
+  kakaoUiEnabled?: boolean;           // env.KAKAO_CHANNEL_UI_ENABLED === '1' 일 때만 노출
+}> = ({ shop, stats, funnelSummary, lossAversion, plusPerformance, latestBriefing, isCafe24, kakaoChannelPfid = '_aUbxbX', kakaoUiEnabled = false }) => {
   // 앱 미설치 상태
   if (!shop) {
     return (
@@ -331,8 +332,8 @@ export const HomePage: FC<{
         </div>
       )}
 
-      {/* 카톡 채널 친구 추가 권유 — 미추가 + dismiss 안 한 운영자에게만 노출 (AI 브리핑 카드 아래) */}
-      {(shop.kakao_channel_added ?? 0) === 0 && (
+      {/* 카톡 채널 친구 추가 권유 — kakaoUiEnabled 일 때만, 미추가 + dismiss 안 한 운영자에게만 노출 */}
+      {kakaoUiEnabled && (shop.kakao_channel_added ?? 0) === 0 && (
         <div
           id="kakaoChannelInviteCard"
           data-shop-id={shop.shop_id}
